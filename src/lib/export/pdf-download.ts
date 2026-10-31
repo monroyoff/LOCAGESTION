@@ -66,3 +66,4 @@ Signé électroniquement et scellé avec piste d'audit horodatée SHA-256.
 Mamadou DIALLO                             ${lease.tenantName}
 `;
 }
+
