@@ -19,6 +19,7 @@ export type UnitType =
   | 'appartement_3p'
   | 'appartement_4p'
   | 'villa'
+  | 'meuble'
   | 'bureau'
   | 'boutique';
 
@@ -134,7 +135,7 @@ export interface DashboardKPIs {
 export interface RentalListing {
   id: string;
   title: string;
-  propertyType: 'Appartement' | 'Studio' | 'Villa' | 'Bureau' | 'Boutique';
+  propertyType: 'Appartement' | 'Studio' | 'Villa' | 'Meublé' | 'Bureau' | 'Boutique';
   country: string;
   countryCode: 'BJ' | 'CI' | 'SN' | 'TG' | 'CM' | 'NE' | 'ML' | 'BF' | 'GW';
   flag: string;
