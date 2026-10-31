@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import {
   Menu,
   Search,
@@ -29,27 +29,36 @@ export function Header({
   onOpenTenantAction,
 }: HeaderProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const todayFormatted = formatDateFR(new Date());
   const { isLandlord, isTenant } = useSpace();
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+
+  // Redirection immédiate vers la section Annonces & Visites (/listings)
+  const handleOpenSearch = () => {
+    if (pathname === '/listings') {
+      const searchInput = document.getElementById('listings-search-input') as HTMLInputElement | null;
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else {
+      router.push('/listings');
+    }
+  };
 
   // Global ⌘K / Ctrl+K keyboard shortcut
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setIsSearchModalOpen(true);
+        handleOpenSearch();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const handleSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSearchModalOpen(true);
-  };
+  }, [pathname]);
 
   return (
     <>
@@ -90,12 +99,13 @@ export function Header({
           </div>
         </div>
 
-        {/* Middle: Global Search Bar - Clic opens all filters */}
+        {/* Middle: Global Search Bar - Clic renvoie directement vers Annonces & Visites */}
         <div className="hidden md:flex items-center flex-1 max-w-md mx-2 lg:mx-4">
           <button
             type="button"
-            onClick={() => setIsSearchModalOpen(true)}
-            className="w-full relative flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-sm text-xs text-slate-500 shadow-xs transition-all cursor-pointer group text-left"
+            onClick={handleOpenSearch}
+            className="w-full relative flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200/90 hover:border-brand-400 hover:shadow-sm text-xs text-slate-500 shadow-xs transition-all cursor-pointer group text-left"
+            title="Aller à la section Annonces & Visites"
           >
             <div className="flex items-center gap-2.5 min-w-0 pr-2">
               <Search className="w-4 h-4 text-slate-400 group-hover:text-brand-500 transition-colors flex-shrink-0" />
@@ -103,9 +113,14 @@ export function Header({
                 Rechercher une location (Pays, Ville, Budget...)
               </span>
             </div>
-            <kbd className="flex-shrink-0 px-2 py-0.5 text-[10px] font-mono font-bold text-slate-400 bg-slate-100 border border-slate-200/80 rounded-md group-hover:text-slate-600">
-              ⌘K
-            </kbd>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className="text-[10px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-200/60 group-hover:bg-brand-500 group-hover:text-white transition-colors">
+                Annonces
+              </span>
+              <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-400 bg-slate-100 border border-slate-200/80 rounded-md group-hover:text-slate-600">
+                ⌘K
+              </kbd>
+            </div>
           </button>
         </div>
 
@@ -114,9 +129,9 @@ export function Header({
           {/* Mobile Search Button */}
           <button
             type="button"
-            onClick={() => setIsSearchModalOpen(true)}
-            className="md:hidden p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer"
-            aria-label="Ouvrir le moteur de recherche et filtres"
+            onClick={handleOpenSearch}
+            className="md:hidden p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 shadow-sm transition-colors cursor-pointer"
+            aria-label="Aller à la section Annonces & Visites"
           >
             <Search className="w-4 h-4 text-slate-600" />
           </button>
