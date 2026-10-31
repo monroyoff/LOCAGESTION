@@ -14,6 +14,7 @@ export type PaymentStatus = 'paye' | 'partiel' | 'en_retard' | 'en_attente';
 export type UnitStatus = 'occupe' | 'vacant' | 'travaux' | 'reserve';
 
 export type UnitType =
+  | 'chambre_salon_sanitaire'
   | 'studio'
   | 'appartement_2p'
   | 'appartement_3p'
@@ -132,10 +133,19 @@ export interface DashboardKPIs {
   };
 }
 
+export type RentalPropertyType =
+  | 'Chambre salon sanitaire'
+  | 'Appartement'
+  | 'Meublé'
+  | 'Studio'
+  | 'Villa'
+  | 'Bureau'
+  | 'Boutique';
+
 export interface RentalListing {
   id: string;
   title: string;
-  propertyType: 'Appartement' | 'Studio' | 'Villa' | 'Meublé' | 'Bureau' | 'Boutique';
+  propertyType: RentalPropertyType;
   country: string;
   countryCode: 'BJ' | 'CI' | 'SN' | 'TG' | 'CM' | 'NE' | 'ML' | 'BF' | 'GW';
   flag: string;

@@ -53,7 +53,7 @@ const PRICE_PRESETS = [
   { label: '> 1 000 000 FCFA', min: 1000000, max: 0 },
 ];
 
-const PROPERTY_TYPES = ['Tous', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique'];
+const PROPERTY_TYPES = ['Tous', 'Chambre salon sanitaire', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique'];
 
 export default function ListingsPage() {
   const router = useRouter();

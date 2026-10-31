@@ -60,7 +60,7 @@ export function PublishListingModal({
   onPublish,
 }: PublishListingModalProps) {
   const [title, setTitle] = useState('');
-  const [propertyType, setPropertyType] = useState<RentalListing['propertyType']>('Appartement');
+  const [propertyType, setPropertyType] = useState<RentalListing['propertyType']>('Chambre salon sanitaire');
   const [country, setCountry] = useState('Bénin');
   const [city, setCity] = useState('Cotonou');
   const [district, setDistrict] = useState('');
@@ -231,7 +231,7 @@ export function PublishListingModal({
               required
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Ex: Appartement Meublé 3 Pièces avec Vue Dégagée"
+              placeholder="Ex: Chambre Salon Sanitaire Rénovée avec Balcon Personnel"
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
@@ -242,7 +242,7 @@ export function PublishListingModal({
               Type de bien *
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {(['Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique'] as const).map((t) => (
+              {(['Chambre salon sanitaire', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique'] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
