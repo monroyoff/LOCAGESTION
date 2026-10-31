@@ -364,87 +364,97 @@ export default function TenantPortalPage() {
                 </div>
               </div>
 
-              {/* 3 Cartes Principales Cliquables (Bail & Bailleur regroupés dans Mon Bail & Contrat) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                {/* 1. Mes Quittances & Reçus */}
-                <div
-                  onClick={() => handleTabChange('quittances')}
-                  className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-soft transition-all cursor-pointer group hover:shadow-card-hover hover:border-emerald-300 flex flex-col justify-between"
-                >
+              {/* Aperçu Rapide des Règlements & Bailleur */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Dernier Règlement Récent */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft flex flex-col justify-between space-y-4">
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <Receipt className="w-6 h-6" />
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+                          <Receipt className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900">Dernière Quittance Émise</h4>
+                          <span className="text-[10px] text-slate-400">Réf : {receiptsList[0].receiptNumber}</span>
+                        </div>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        {receiptsList.length} Quittances Soldées
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                        Soldé ✓
                       </span>
                     </div>
-                    <h3 className="font-black text-base text-slate-900 group-hover:text-emerald-700 transition-colors">
-                      Mes Quittances & Reçus
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      Historique complet de vos règlements, reçus conformes OHADA téléchargeables en PDF avec QR code certifié.
-                    </p>
+
+                    <div className="pt-3 space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Période concernée :</span>
+                        <strong className="text-slate-900">{receiptsList[0].period}</strong>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Montant réglé :</span>
+                        <strong className="text-emerald-700 font-black">{formatFCFA(receiptsList[0].amount)}</strong>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-slate-500">Moyen de paiement :</span>
+                        <span className="text-slate-700 font-medium">Wave Mobile Money</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-emerald-700">
-                    <span>Consulter mes reçus</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('quittances')}
+                    className="w-full py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-slate-200/60"
+                  >
+                    <span>Voir toutes les quittances ({receiptsList.length})</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
                 </div>
 
-                {/* 2. Mon Bail & Contrat (Contient Bail & État des Lieux ET Mon Bailleur) */}
-                <div
-                  onClick={() => handleTabChange('bail')}
-                  className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-soft transition-all cursor-pointer group hover:shadow-card-hover hover:border-brand-300 flex flex-col justify-between"
-                >
+                {/* Mon Bailleur & Contact Rapide */}
+                <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft flex flex-col justify-between space-y-4">
                   <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <FileText className="w-6 h-6" />
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <div className="flex items-center gap-2">
+                        <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black">
+                          <Building2 className="w-5 h-5 text-brand-400" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-black text-slate-900">{tenant.landlord.name}</h4>
+                          <span className="text-[10px] text-slate-400">Bailleur & Gestionnaire Dédié</span>
+                        </div>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-brand-50 text-brand-700 border border-brand-200">
-                        Bail + État des Lieux + Bailleur
+                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                        {tenant.landlord.contactPerson}
                       </span>
                     </div>
-                    <h3 className="font-black text-base text-slate-900 group-hover:text-brand-600 transition-colors">
-                      Mon Bail & Contrat
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      Contrat signé Réf {tenant.leaseRef}, photos d'état des lieux d'entrée et coordonnées directes de votre bailleur.
-                    </p>
-                  </div>
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-brand-600">
-                    <span>Voir le contrat & mon bailleur</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
 
-                {/* 3. Passeport Solvabilité */}
-                <div
-                  onClick={() => handleTabChange('solvabilite')}
-                  className="p-6 rounded-3xl bg-white border border-slate-200/80 shadow-soft transition-all cursor-pointer group hover:shadow-card-hover hover:border-blue-300 flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                        <ShieldCheck className="w-6 h-6" />
+                    <div className="pt-3 space-y-1.5 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Téléphone :</span>
+                        <a href={`tel:${tenant.landlord.phone}`} className="font-bold text-slate-800 hover:text-brand-600">
+                          {tenant.landlord.phone}
+                        </a>
                       </div>
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-blue-50 text-blue-700 border border-blue-200">
-                        Score : 96/100
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Email :</span>
+                        <span className="text-slate-700 font-medium truncate max-w-[180px]">{tenant.landlord.email}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500">Contrat :</span>
+                        <span className="text-slate-800 font-mono font-bold">{tenant.leaseRef}</span>
+                      </div>
                     </div>
-                    <h3 className="font-black text-base text-slate-900 group-hover:text-blue-600 transition-colors">
-                      Passeport Solvabilité
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                      Profil locatif certifié, 22 mois consécutifs sans retard. Valorisez votre ponctualité pour vos futurs baux.
-                    </p>
                   </div>
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-blue-600">
-                    <span>Gérer mon profil & partage</span>
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </div>
+
+                  <a
+                    href={`https://wa.me/${tenant.landlord.whatsapp}?text=Bonjour%20M.%20Diallo,%20je%20suis%20Koffi%20Mensah%20(Appt%20A3).`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                  >
+                    <MessageCircle className="w-3.5 h-3.5" />
+                    <span>Écrire sur WhatsApp au Bailleur</span>
+                  </a>
                 </div>
               </div>
 
