@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Menu,
   Search,
@@ -26,8 +27,17 @@ export function Header({
   onOpenQuickAction,
   onOpenTenantAction,
 }: HeaderProps) {
+  const router = useRouter();
   const todayFormatted = formatDateFR(new Date());
   const { isLandlord, isTenant } = useSpace();
+  const [searchVal, setSearchVal] = useState('');
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchVal.trim()) {
+      router.push(`/listings?q=${encodeURIComponent(searchVal.trim())}`);
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-4 sm:px-8 py-4 border-b border-slate-200/80 flex items-center justify-between gap-4">
@@ -67,24 +77,22 @@ export function Header({
         </div>
       </div>
 
-      {/* Middle: Search Bar (Desktop) */}
-      <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
+      {/* Middle: Global Search Bar */}
+      <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center flex-1 max-w-md mx-4">
         <div className="relative w-full">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
-            placeholder={
-              isLandlord
-                ? 'Rechercher un locataire, bien, lot, quittance... (⌘K)'
-                : 'Rechercher une quittance, document, bail... (⌘K)'
-            }
-            className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-sm transition-all"
+            value={searchVal}
+            onChange={(e) => setSearchVal(e.target.value)}
+            placeholder="Rechercher une location (Cotonou, Abidjan, Villa, Budget...) ↵"
+            className="w-full pl-10 pr-12 py-2.5 rounded-2xl bg-white border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-sm transition-all"
           />
           <kbd className="absolute right-3 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-400 bg-slate-100 border border-slate-200 rounded-md">
-            ⌘K
+            ↵
           </kbd>
         </div>
-      </div>
+      </form>
 
       {/* Right: Space-Specific Action Buttons */}
       <div className="flex items-center gap-2 sm:gap-3">

@@ -131,3 +131,27 @@ export interface DashboardKPIs {
   };
 }
 
+export interface RentalListing {
+  id: string;
+  title: string;
+  propertyType: 'Appartement' | 'Studio' | 'Villa' | 'Bureau' | 'Boutique';
+  country: string;
+  countryCode: 'BJ' | 'CI' | 'SN' | 'TG' | 'CM';
+  flag: string;
+  city: string;
+  district: string;
+  landmark: string; // Repère local africain (ex: "Derrière pharmacie Haie Vive")
+  monthlyRent: number; // Loyer mensuel en FCFA
+  charges: number; // Charges mensuelles en FCFA
+  depositMonths: number;
+  advanceMonths: number;
+  agencyFees: number;
+  surface: number; // m²
+  bedrooms: number;
+  bathrooms: number;
+  images: string[];
+  amenities: string[];
+  isVerified: boolean;
+  status: 'disponible' | 'reserve' | 'loue';
+}
+
