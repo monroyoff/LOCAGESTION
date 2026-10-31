@@ -121,12 +121,6 @@ export function Header({
             <Search className="w-4 h-4 text-slate-600" />
           </button>
 
-          {/* Currency Pill */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100/80 border border-slate-200 text-slate-700 text-xs font-bold">
-            <span className="w-2 h-2 rounded-full bg-emerald-500" />
-            <span>FCFA (XOF)</span>
-          </div>
-
           {/* ============================================================== */}
           {/* ACTIONS STRICTEMENT RÉSERVÉES AU BAILLEUR                      */}
           {/* ============================================================== */}
