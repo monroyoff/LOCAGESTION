@@ -18,10 +18,12 @@ import {
   RotateCcw,
   Sparkles,
   Lock,
+  Download,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
+import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 
 export default function NewLeasePage() {
   const router = useRouter();
@@ -113,9 +115,10 @@ export default function NewLeasePage() {
     setHasSignature(false);
   };
 
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
   const handleFinish = () => {
-    alert(`Contrat de bail scellé avec succès pour ${tenantName} ! Redirection vers la liste des baux.`);
-    router.push('/leases');
+    setShowSuccessModal(true);
   };
 
   const steps = [
@@ -501,6 +504,73 @@ export default function NewLeasePage() {
           </div>
         </main>
       </div>
+
+      {/* Modal de Succès & Scellement de Bail */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 text-center space-y-4">
+            <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-8 h-8" />
+            </div>
+
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Scellement Électronique Conforme UEMOA
+              </span>
+              <h3 className="text-lg font-black text-slate-900 mt-2">
+                Bail Émis avec Succès !
+              </h3>
+              <p className="text-xs text-slate-500 mt-1">
+                Le contrat de bail pour <strong>{tenantName}</strong> sur le lot <strong>{unitNumber}</strong> a été horodaté et archivé avec sa piste d'audit numérique.
+              </p>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs space-y-1">
+              <div className="flex justify-between">
+                <span className="text-slate-400">Réf. Contrat :</span>
+                <span className="font-mono font-bold text-slate-800">BAIL-2026-N09</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Loyer Mensuel :</span>
+                <span className="font-extrabold text-brand-600">{formatFCFA(parseInt(monthlyRent, 10) || 220000)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Caution Déposée :</span>
+                <span className="font-bold text-slate-700">{formatFCFA((parseInt(monthlyRent, 10) || 220000) * (parseInt(depositMonths, 10) || 3))}</span>
+              </div>
+            </div>
+
+            <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const content = generateLeaseContent({
+                    id: 'BAIL-2026-N09',
+                    tenantName,
+                    propertyName: selectedProperty,
+                    unit: unitNumber,
+                    rent: parseInt(monthlyRent, 10) || 220000,
+                    startDate: '2026-11-01',
+                  });
+                  downloadDocument('contrat-bail-BAIL-2026-N09.txt', content);
+                }}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Télécharger le Bail</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => router.push('/leases')}
+                className="flex-1 py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all cursor-pointer"
+              >
+                <span>Voir les baux</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

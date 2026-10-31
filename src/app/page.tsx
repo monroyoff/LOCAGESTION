@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { StatCards } from '@/components/dashboard/StatCards';
@@ -21,6 +22,7 @@ import { useSpace } from '@/lib/context/space-context';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight } from 'lucide-react';
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { activeSpace, switchSpace, isLandlord, isTenant } = useSpace();
 
@@ -105,12 +107,12 @@ export default function DashboardPage() {
           <section className="space-y-5" aria-label="Parc et occupation">
             <HeroPropertyCard
               property={MOCK_FEATURED_PROPERTY}
-              onViewDetails={() => showToast('Ouverture de la fiche Résidence Les Cocotiers (12 lots)')}
+              onViewDetails={() => router.push('/properties')}
             />
 
             <OccupancyStatusBanner
               occupancy={MOCK_KPIS.occupancyRate}
-              onFilterStatus={(st) => showToast(`Filtrage des lots : ${st}`)}
+              onFilterStatus={() => router.push('/properties')}
             />
           </section>
 

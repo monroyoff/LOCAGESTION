@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -22,6 +23,10 @@ import {
   ShieldAlert,
   ArrowLeft,
   X,
+  FileText,
+  CheckCircle2,
+  MessageCircle,
+  UserCheck,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -233,6 +238,7 @@ const MOCK_CONVERSATIONS: Conversation[] = [
 ];
 
 export default function MessagesPage() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { activeSpace, switchSpace, isLandlord, isTenant } = useSpace();
   const [activeTab, setActiveTab] = useState<'general' | 'archive'>('general');
@@ -240,6 +246,13 @@ export default function MessagesPage() {
   const [selectedConv, setSelectedConv] = useState<Conversation>(MOCK_CONVERSATIONS[0]);
   const [inputText, setInputText] = useState('');
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [optionsMenuOpen, setOptionsMenuOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const filteredConversations = MOCK_CONVERSATIONS.filter((c) => {
     const matchesTab = activeTab === 'general' ? !c.isArchived : c.isArchived;
@@ -271,6 +284,58 @@ export default function MessagesPage() {
     }));
 
     setInputText('');
+  };
+
+  const handleAttachDocument = () => {
+    const docMessage: Message = {
+      id: `m-doc-${Date.now()}`,
+      sender: 'me',
+      senderName: 'Mamadou Diallo',
+      text: '📄 Pièce jointe : Quittance_Loyer_Certifiee_REC-2026-088.pdf (Transmis)',
+      time: 'À l’instant',
+      status: 'sent',
+    };
+
+    setSelectedConv((prev) => ({
+      ...prev,
+      messages: [...prev.messages, docMessage],
+      lastMessage: '📄 Quittance de loyer transmise',
+      lastMessageTime: 'À l’instant',
+    }));
+    showToast('Document officiel attaché et transmis dans la conversation !');
+  };
+
+  const handleAttachPhoto = () => {
+    const photoMessage: Message = {
+      id: `m-img-${Date.now()}`,
+      sender: 'me',
+      senderName: 'Mamadou Diallo',
+      text: 'Voici la photo récente du logement et des équipements :',
+      time: 'À l’instant',
+      status: 'sent',
+      imageUrl: selectedConv.propertyThumbnail,
+    };
+
+    setSelectedConv((prev) => ({
+      ...prev,
+      messages: [...prev.messages, photoMessage],
+      lastMessage: '📷 Photo du logement envoyée',
+      lastMessageTime: 'À l’instant',
+    }));
+    showToast('Photo du logement transmise dans la conversation !');
+  };
+
+  const handleToggleArchive = () => {
+    setOptionsMenuOpen(false);
+    setSelectedConv((prev) => ({
+      ...prev,
+      isArchived: !prev.isArchived,
+    }));
+    showToast(
+      !selectedConv.isArchived
+        ? 'Conversation archivée avec succès.'
+        : 'Conversation réintégrée dans la boîte principale.'
+    );
   };
 
   return (
@@ -485,7 +550,7 @@ export default function MessagesPage() {
               </div>
 
               {/* Top Action Icons (Phone, Options) */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 relative">
                 <a
                   href={`tel:+2290195444430`}
                   title="Appeler"
@@ -493,12 +558,56 @@ export default function MessagesPage() {
                 >
                   <Phone className="w-4 h-4" />
                 </a>
-                <button
-                  title="Options"
-                  className="p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setOptionsMenuOpen(!optionsMenuOpen)}
+                    title="Options de conversation"
+                    className="p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors cursor-pointer"
+                  >
+                    <MoreVertical className="w-4 h-4" />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {optionsMenuOpen && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs font-bold text-slate-700 animate-in fade-in zoom-in-95 duration-150">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOptionsMenuOpen(false);
+                          router.push('/tenants');
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 flex items-center gap-2 cursor-pointer"
+                      >
+                        <UserCheck className="w-4 h-4 text-slate-500" />
+                        <span>Fiche locataire & solvabilité</span>
+                      </button>
+
+                      <a
+                        href={`https://wa.me/2290195444430?text=${encodeURIComponent(
+                          `Bonjour ${selectedConv.tenantName}, suite à nos échanges sur la messagerie LOCAGESTION...`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setOptionsMenuOpen(false)}
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-50 text-emerald-700 flex items-center gap-2 cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4 text-emerald-600" />
+                        <span>Contacter sur WhatsApp</span>
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={handleToggleArchive}
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-slate-50 flex items-center gap-2 cursor-pointer text-slate-600"
+                      >
+                        <Archive className="w-4 h-4 text-slate-400" />
+                        <span>{selectedConv.isArchived ? 'Désarchiver' : 'Archiver la conversation'}</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -592,15 +701,17 @@ export default function MessagesPage() {
               <div className="flex items-center gap-1">
                 <button
                   type="button"
-                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
-                  title="Pièce jointe"
+                  onClick={handleAttachDocument}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="Attacher un document (Quittance, bail, pièce)"
                 >
                   <Paperclip className="w-4 h-4" />
                 </button>
                 <button
                   type="button"
-                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
-                  title="Photo du logement"
+                  onClick={handleAttachPhoto}
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="Attacher une photo du logement"
                 >
                   <ImageIcon className="w-4 h-4" />
                 </button>
@@ -610,7 +721,7 @@ export default function MessagesPage() {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Rédiger votre réponse à Edwin Johnson..."
+                placeholder={`Rédiger votre réponse à ${selectedConv.tenantName}...`}
                 className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
 
@@ -625,6 +736,14 @@ export default function MessagesPage() {
           </div>
         </div>
       </div>
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 }

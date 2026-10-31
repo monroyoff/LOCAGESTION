@@ -17,6 +17,7 @@ import {
   ShieldCheck,
   History,
   Sparkles,
+  X,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -27,6 +28,13 @@ export default function RemindersCenterPage() {
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
   const [collectiveAuto, setCollectiveAuto] = useState(true);
   const [selectedReminderTarget, setSelectedReminderTarget] = useState<any | null>(null);
+  const [showCollectiveModal, setShowCollectiveModal] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
 
   const pendingOverdue = [
     {
@@ -160,8 +168,8 @@ export default function RemindersCenterPage() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => alert('Aperçu du gabarit du 25 envoyé à 28 locataires')}
-                  className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold"
+                  onClick={() => setShowCollectiveModal(true)}
+                  className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
                 >
                   Envoyer manuellement
                 </button>
@@ -283,6 +291,78 @@ export default function RemindersCenterPage() {
           payment={selectedReminderTarget}
           onClose={() => setSelectedReminderTarget(null)}
         />
+      )}
+
+      {/* Modal Rappel Collectif du 25 */}
+      {showCollectiveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold">
+                  <Send className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm">
+                    Diffusion du Rappel Collectif (Le 25)
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    Campagne informative pour 28 locataires actifs
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCollectiveModal(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-slate-800 whitespace-pre-wrap leading-relaxed font-sans">
+                {`Bonjour [Nom du Locataire],\n\nLe Cabinet DIALLO Patrimoine vous rappelle que l'échéance de votre loyer du mois prochain sera exigible le 05.\n\nModes de règlement acceptés :\n• Wave : +229 97 12 34 56 (Réf: Votre nom)\n• MTN Mobile Money : +229 95 12 34 56\n• Virement BOA Bénin\n\nVotre quittance certifiée vous sera immédiatement délivrée dès validation.\n\nExcellente fin de mois,\nLa Direction de Gestion`}
+              </div>
+
+              <div className="p-3 bg-blue-50 rounded-2xl border border-blue-200 text-[11px] text-blue-800 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                <span>
+                  Envoi simultané par WhatsApp et SMS avec journalisation de livraison.
+                </span>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowCollectiveModal(false)}
+                  className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCollectiveModal(false);
+                    showToast('Rappel collectif diffusé avec succès aux 28 locataires actifs !');
+                  }}
+                  className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black shadow-pink-glow flex items-center gap-1.5"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Diffuser maintenant (28 locataires)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
       )}
     </div>
   );

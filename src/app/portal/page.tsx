@@ -37,10 +37,12 @@ import {
   ChevronRight,
   Info,
   Eye,
+  Wrench,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { PaymentTransaction } from '@/lib/types';
+import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 
 export default function TenantPortalPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -53,6 +55,10 @@ export default function TenantPortalPage() {
   const [bailSubTab, setBailSubTab] = useState<'tout' | 'bail_etat' | 'bailleur'>('tout');
 
   const [declarationModalOpen, setDeclarationModalOpen] = useState(false);
+  const [reportIssueModalOpen, setReportIssueModalOpen] = useState(false);
+  const [issueCategory, setIssueCategory] = useState('Plomberie / Fuite d’eau');
+  const [issueDesc, setIssueDesc] = useState('');
+  const [issueUrgency, setIssueUrgency] = useState<'normale' | 'urgente' | 'critique'>('normale');
   const [selectedReceipt, setSelectedReceipt] = useState<PaymentTransaction | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -246,7 +252,7 @@ export default function TenantPortalPage() {
             if (action === 'declare_payment') {
               setDeclarationModalOpen(true);
             } else if (action === 'report_issue') {
-              showToast('Signalement de panne transmis avec succès au bailleur.');
+              setReportIssueModalOpen(true);
             }
           }}
         />
@@ -685,8 +691,19 @@ export default function TenantPortalPage() {
 
                       <button
                         type="button"
-                        onClick={() => showToast('Téléchargement du contrat de bail officiel (PDF)...')}
-                        className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold flex items-center gap-2 shadow-pink-glow transition-all"
+                        onClick={() => {
+                          const content = generateLeaseContent({
+                            id: tenant.leaseRef,
+                            tenantName: tenant.name,
+                            propertyName: tenant.property,
+                            unit: tenant.unit,
+                            rent: tenant.monthlyRent,
+                            startDate: tenant.leaseStartDate,
+                          });
+                          downloadDocument(`contrat-bail-${tenant.leaseRef}.txt`, content);
+                          showToast(`Contrat de bail ${tenant.leaseRef} téléchargé avec succès !`);
+                        }}
+                        className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold flex items-center gap-2 shadow-pink-glow transition-all cursor-pointer"
                       >
                         <Download className="w-4 h-4" />
                         <span>Télécharger le Bail (PDF)</span>
@@ -763,8 +780,36 @@ export default function TenantPortalPage() {
 
                       <button
                         type="button"
-                        onClick={() => showToast('Téléchargement du procès-verbal d’état des lieux...')}
-                        className="py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-sm"
+                        onClick={() => {
+                          const pvContent = `================================================================================
+                    RÉPUBLIQUE DU BÉNIN / ZONE UEMOA & OHADA
+                PROCÈS-VERBAL CONTRADICTOIRE D'ÉTAT DES LIEUX D'ENTRÉE
+================================================================================
+RÉFÉRENCE DU BAIL : ${tenant.leaseRef}
+DATE DU CONSTAT  : ${tenant.inventoryDate}
+LOCATAIRE        : ${tenant.name}
+LOGEMENT         : ${tenant.unit}, ${tenant.property}
+
+RELEVÉS DES COMPTEURS D'ÉNERGIE & FLUIDES :
+• Compteur Électricité : ${tenant.meterCashPower}
+• Compteur Eau : ${tenant.meterWater}
+• Clés remises : ${tenant.keysDelivered}
+
+CONSTAT DES PIÈCES & ÉQUIPEMENTS :
+• Séjour / Salon : Peinture neuve, carrelage intact, split fonctionnel
+• Chambres : Portes et serrures conformes, prises de courant sécurisées
+• Salle d'eau : Chauffe-eau électrique opérationnel, robinetterie sans fuite
+• Cuisine : Plan de travail propre, évier et évacuation vérifiés
+
+Photos contradictoires annexées : 8 clichés horodatés scellés numériquement.
+
+[Approuvé et contresigné par le Bailleur]    [Approuvé et contresigné par le Preneur]
+Cabinet DIALLO Patrimoine                    ${tenant.name}
+`;
+                          downloadDocument(`etat-des-lieux-${tenant.leaseRef}.txt`, pvContent);
+                          showToast(`Procès-verbal d'état des lieux téléchargé avec succès !`);
+                        }}
+                        className="py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
                       >
                         <Download className="w-4 h-4" />
                         <span>Télécharger le PV (PDF)</span>
@@ -1159,6 +1204,131 @@ export default function TenantPortalPage() {
                   className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-pink-glow"
                 >
                   Envoyer la déclaration
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Signaler une Panne / Incident Technique */}
+      {reportIssueModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div
+            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Wrench className="w-5 h-5 text-brand-400" />
+                <h3 className="font-extrabold text-sm">
+                  Signaler un Incident / Panne
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReportIssueModalOpen(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setReportIssueModalOpen(false);
+                showToast(`Incident (${issueCategory}) signalé au bailleur ! Prise en charge sous 24h.`);
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Catégorie du problème *
+                </label>
+                <select
+                  value={issueCategory}
+                  onChange={(e) => setIssueCategory(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                >
+                  <option value="Plomberie / Fuite d’eau">🚰 Plomberie / Fuite d’eau</option>
+                  <option value="Électricité / Compteur Cash Power">⚡ Électricité / Compteur Cash Power</option>
+                  <option value="Climatisation / Split en panne">❄️ Climatisation / Split en panne</option>
+                  <option value="Serrurerie / Porte bloquée">🔑 Serrurerie / Porte bloquée</option>
+                  <option value="Infiltration d’eau / Toiture">🌧️ Infiltration d’eau / Toiture</option>
+                  <option value="Autre demande technique">🛠️ Autre demande technique</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Degré d’urgence *
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIssueUrgency('normale')}
+                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer ${
+                      issueUrgency === 'normale'
+                        ? 'border-brand-500 bg-brand-50 text-brand-700 font-extrabold ring-1 ring-brand-500'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    Normale
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIssueUrgency('urgente')}
+                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer ${
+                      issueUrgency === 'urgente'
+                        ? 'border-amber-500 bg-amber-50 text-amber-700 font-extrabold ring-1 ring-amber-500'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    Urgente
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIssueUrgency('critique')}
+                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer ${
+                      issueUrgency === 'critique'
+                        ? 'border-rose-500 bg-rose-50 text-rose-700 font-extrabold ring-1 ring-rose-500'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    Critique
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Description détaillée du problème *
+                </label>
+                <textarea
+                  rows={3}
+                  required
+                  value={issueDesc}
+                  onChange={(e) => setIssueDesc(e.target.value)}
+                  placeholder="Ex: Le split du salon ne refroidit plus depuis hier soir..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setReportIssueModalOpen(false)}
+                  className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-pink-glow flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Wrench className="w-3.5 h-3.5" />
+                  <span>Transmettre au bailleur</span>
                 </button>
               </div>
             </form>

@@ -9,6 +9,7 @@ import { useSpace } from '@/lib/context/space-context';
 import { formatFCFA } from '@/lib/money/format';
 import { RentalListing } from '@/lib/types';
 import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
+import { PublishListingModal } from '@/components/listings/PublishListingModal';
 import {
   Compass,
   MapPin,
@@ -70,6 +71,8 @@ export default function ListingsPage() {
   const [sortBy, setSortBy] = useState<'featured' | 'price_asc' | 'price_desc' | 'surface_desc'>('featured');
 
   // Modals & Notifications
+  const [listings, setListings] = useState<RentalListing[]>(MOCK_RENTAL_LISTINGS);
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [selectedListingForVisit, setSelectedListingForVisit] = useState<RentalListing | null>(null);
   const [visitDate, setVisitDate] = useState('2026-11-04');
   const [visitTimeSlot, setVisitTimeSlot] = useState('15:00 - 17:00');
@@ -78,6 +81,11 @@ export default function ListingsPage() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handlePublishListing = (newListing: RentalListing) => {
+    setListings((prev) => [newListing, ...prev]);
+    showToast(`Annonce « ${newListing.title} » publiée avec succès !`);
   };
 
   // Sync with URL Query Parameters (ex: from Global Header Search)
@@ -124,11 +132,11 @@ export default function ListingsPage() {
   // Count available listings per country
   const countryCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    MOCK_RENTAL_LISTINGS.forEach((l) => {
+    listings.forEach((l) => {
       counts[l.country] = (counts[l.country] || 0) + 1;
     });
     return counts;
-  }, []);
+  }, [listings]);
 
   // Compute Active Price Range
   const { minRent, maxRent } = useMemo(() => {
@@ -144,7 +152,7 @@ export default function ListingsPage() {
 
   // Filter listings
   const filteredListings = useMemo(() => {
-    return MOCK_RENTAL_LISTINGS.filter((l) => {
+    return listings.filter((l) => {
       // 1. Country Filter
       if (selectedCountry !== 'all' && l.country !== selectedCountry) {
         return false;
@@ -286,7 +294,7 @@ export default function ListingsPage() {
             {isLandlord && (
               <button
                 type="button"
-                onClick={() => showToast('Ouverture de l’assistant de publication d’annonce')}
+                onClick={() => setPublishModalOpen(true)}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
@@ -834,6 +842,13 @@ export default function ListingsPage() {
           </div>
         </div>
       )}
+
+      {/* Assistant Publication Annonce Bailleur */}
+      <PublishListingModal
+        isOpen={publishModalOpen}
+        onClose={() => setPublishModalOpen(false)}
+        onPublish={handlePublishListing}
+      />
 
       {/* Toast Notification */}
       {toastMessage && (

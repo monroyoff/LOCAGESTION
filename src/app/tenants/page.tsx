@@ -28,12 +28,17 @@ import {
   ExternalLink,
   MessageCircle,
   Eye,
+  X,
+  Copy,
+  Send,
+  Download,
 } from 'lucide-react';
 import { formatFCFA, formatDateFR } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
+import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 
 interface TenantDetail {
   id: string;
@@ -333,6 +338,9 @@ export default function TenantsPage() {
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
   const [receiptPayment, setReceiptPayment] = useState<any | null>(null);
   const [reminderPayment, setReminderPayment] = useState<any | null>(null);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteName, setInviteName] = useState('');
+  const [invitePhone, setInvitePhone] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -420,7 +428,8 @@ export default function TenantsPage() {
 
             {/* Top Action */}
             <button
-              onClick={() => showToast('Génération du lien d’invitation locataire /invite/[token]')}
+              type="button"
+              onClick={() => setShowInviteModal(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
             >
               <UserCheck className="w-4 h-4 text-brand-400" />
@@ -793,8 +802,19 @@ export default function TenantsPage() {
 
                       <button
                         type="button"
-                        onClick={() => showToast('Téléchargement du contrat de bail scellé avec piste d’audit')}
-                        className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-sm"
+                        onClick={() => {
+                          const content = generateLeaseContent({
+                            id: selectedTenant.lease.id,
+                            tenantName: selectedTenant.fullName,
+                            propertyName: selectedTenant.property.name,
+                            unit: selectedTenant.property.unit,
+                            rent: selectedTenant.financials.monthlyRent,
+                            startDate: selectedTenant.lease.startDate,
+                          });
+                          downloadDocument(`contrat-bail-${selectedTenant.lease.id}.txt`, content);
+                          showToast(`Contrat de bail ${selectedTenant.lease.id} téléchargé avec succès !`);
+                        }}
+                        className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-sm transition-all cursor-pointer"
                       >
                         Consulter (PDF)
                       </button>
@@ -855,8 +875,9 @@ export default function TenantsPage() {
                         Quittances Émises ({selectedTenant.recentReceipts.length})
                       </span>
                       <button
-                        onClick={() => showToast('Ouverture saisie paiement direct')}
-                        className="text-xs font-bold text-brand-600 hover:text-brand-700"
+                        type="button"
+                        onClick={() => setQuickAction('new_payment')}
+                        className="text-xs font-bold text-brand-600 hover:text-brand-700 cursor-pointer"
                       >
                         + Encaisser une mensualité
                       </button>
@@ -913,6 +934,108 @@ export default function TenantsPage() {
           </div>
         </main>
       </div>
+
+      {/* Modal Inviter un Locataire */}
+      {showInviteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-brand-400" />
+                <h3 className="font-extrabold text-sm">
+                  Inviter un Nouveau Locataire
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                setShowInviteModal(false);
+                showToast(`Lien d’invitation généré et envoyé à ${inviteName || 'nouveau locataire'} !`);
+              }}
+              className="p-6 space-y-4 text-xs"
+            >
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Nom complet du locataire *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={inviteName}
+                  onChange={(e) => setInviteName(e.target.value)}
+                  placeholder="Ex: Ibrahim Traoré"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">
+                  Numéro WhatsApp / Téléphone *
+                </label>
+                <input
+                  type="tel"
+                  required
+                  value={invitePhone}
+                  onChange={(e) => setInvitePhone(e.target.value)}
+                  placeholder="Ex: +229 97 00 00 00"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </div>
+
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">
+                  Lien d'invitation sécurisé à usage unique :
+                </span>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value="https://site.omegafacture.app/invite/tok_8942abc"
+                    className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText('https://site.omegafacture.app/invite/tok_8942abc');
+                      showToast('Lien d’invitation copié dans le presse-papier !');
+                    }}
+                    className="py-1.5 px-3 rounded-lg bg-slate-900 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copier</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-pink-glow flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  <span>Envoyer l'invitation</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastMessage && (

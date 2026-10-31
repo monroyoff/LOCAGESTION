@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -21,11 +22,32 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
+import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 
 export default function LeasesPage() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleDownloadLeasePDF = (lease: any) => {
+    const content = generateLeaseContent({
+      id: lease.id,
+      tenantName: lease.tenant,
+      propertyName: lease.property,
+      unit: lease.unit,
+      rent: lease.rent,
+      startDate: lease.startDate,
+    });
+    downloadDocument(`contrat-bail-${lease.id}.txt`, content);
+    showToast(`Contrat ${lease.id} (${lease.tenant}) téléchargé avec succès !`);
+  };
 
   const leases = [
     {
@@ -200,7 +222,8 @@ export default function LeasesPage() {
 
                     <button
                       type="button"
-                      className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all"
+                      onClick={() => handleDownloadLeasePDF(lease)}
+                      className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Télécharger (PDF)</span>
@@ -217,8 +240,16 @@ export default function LeasesPage() {
         <QuickActionModal
           actionType={quickAction}
           onClose={() => setQuickAction(null)}
-          onSuccess={() => {}}
+          onSuccess={(msg) => showToast(msg)}
         />
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
       )}
     </div>
   );

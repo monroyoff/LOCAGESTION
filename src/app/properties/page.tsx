@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -24,11 +25,18 @@ import { Property, UserSpace } from '@/lib/types';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 
 export default function PropertiesPage() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
   const [selectedProperty, setSelectedProperty] = useState<Property>(MOCK_PROPERTIES[0]);
   const [searchQuery, setSearchQuery] = useState('');
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const filteredProperties = MOCK_PROPERTIES.filter(
     (p) =>
@@ -188,11 +196,19 @@ export default function PropertiesPage() {
                 ].map((l, idx) => (
                   <div
                     key={idx}
-                    className="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between"
+                    onClick={() => {
+                      if (l.status === 'occupe') {
+                        router.push('/tenants');
+                      } else {
+                        router.push('/leases/new');
+                      }
+                    }}
+                    className="p-4 bg-slate-50 hover:bg-white hover:shadow-sm hover:border-slate-300 rounded-2xl border border-slate-200/80 flex items-center justify-between transition-all cursor-pointer group"
+                    title={l.status === 'occupe' ? 'Voir le dossier du locataire' : 'Attribuer / Rédiger un nouveau bail'}
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-black text-xs text-slate-900">{l.unit}</span>
+                        <span className="font-black text-xs text-slate-900 group-hover:text-brand-600 transition-colors">{l.unit}</span>
                         <span
                           className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
                             l.status === 'occupe'
@@ -213,7 +229,9 @@ export default function PropertiesPage() {
                       <span className="text-xs font-black text-slate-900 block">
                         {formatFCFA(l.rent)}
                       </span>
-                      <span className="text-[10px] text-slate-400 block">par mois</span>
+                      <span className="text-[10px] text-brand-600 font-bold block group-hover:underline">
+                        {l.status === 'occupe' ? 'Voir locataire ➔' : 'Créer bail ➔'}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -227,8 +245,16 @@ export default function PropertiesPage() {
         <QuickActionModal
           actionType={quickAction}
           onClose={() => setQuickAction(null)}
-          onSuccess={() => {}}
+          onSuccess={(msg) => showToast(msg)}
         />
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
       )}
     </div>
   );

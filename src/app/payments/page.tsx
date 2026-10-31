@@ -21,6 +21,7 @@ import { RecentPaymentsTable } from '@/components/dashboard/RecentPaymentsTable'
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
+import { downloadCSV } from '@/lib/export/csv-export';
 
 export default function PaymentsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -28,6 +29,45 @@ export default function PaymentsPage() {
   const [selectedPayment, setSelectedPayment] = useState<PaymentTransaction | null>(null);
   const [reminderPayment, setReminderPayment] = useState<PaymentTransaction | null>(null);
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleExportCSV = () => {
+    const headers = [
+      'N° Quittance',
+      'Locataire',
+      'Résidence',
+      'Lot / Unité',
+      'Période',
+      'Date Règlement',
+      'Moyen de paiement',
+      'Montant Encaissé (FCFA)',
+      'Montant Attendu (FCFA)',
+      'Statut',
+      'Certification',
+    ];
+
+    const rows = MOCK_RECENT_PAYMENTS.map((p) => [
+      p.receiptNumber,
+      p.tenantName,
+      p.propertyName,
+      p.unitNumber,
+      p.period,
+      p.paymentDate,
+      p.method.toUpperCase(),
+      p.amount,
+      p.expectedAmount,
+      p.status === 'paye' ? 'SOLDÉ' : p.status === 'en_retard' ? 'EN RETARD' : 'PARTIEL',
+      p.isVerified ? 'CERTIFIÉ UEMOA' : 'EN ATTENTE',
+    ]);
+
+    downloadCSV('grand-livre-encaissements-locagestion-2026', headers, rows);
+    showToast(`Grand livre des encaissements exporté avec succès (${MOCK_RECENT_PAYMENTS.length} écritures) !`);
+  };
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-900 flex">
@@ -63,16 +103,18 @@ export default function PaymentsPage() {
 
             <div className="flex items-center gap-2.5 self-start sm:self-auto">
               <button
-                onClick={() => alert('Téléchargement du grand livre des encaissements en format CSV certifié RFC 4180')}
-                className="py-2.5 px-3.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-sm transition-all flex items-center gap-1.5"
+                type="button"
+                onClick={handleExportCSV}
+                className="py-2.5 px-3.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-sm hover:border-slate-300 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Download className="w-4 h-4 text-slate-500" />
                 <span>Exporter CSV / Excel</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setQuickAction('new_payment')}
-                className="py-2.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-1.5"
+                className="py-2.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>+ Encaisser un loyer</span>
@@ -107,8 +149,16 @@ export default function PaymentsPage() {
         <QuickActionModal
           actionType={quickAction}
           onClose={() => setQuickAction(null)}
-          onSuccess={() => {}}
+          onSuccess={(msg) => showToast(msg)}
         />
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          <span>{toastMessage}</span>
+        </div>
       )}
     </div>
   );
