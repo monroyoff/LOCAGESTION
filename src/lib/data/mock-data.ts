@@ -248,6 +248,45 @@ export const MOCK_RECENT_PAYMENTS: PaymentTransaction[] = [
   },
 ];
 
+export const COUNTRIES_CITIES: Record<string, { flag: string; cities: string[] }> = {
+  'Bénin': {
+    flag: '🇧🇯',
+    cities: ['Cotonou', 'Abomey-Calavi', 'Porto-Novo', 'Parakou'],
+  },
+  'Burkina Faso': {
+    flag: '🇧🇫',
+    cities: ['Ouagadougou', 'Bobo-Dioulasso', 'Koudougou'],
+  },
+  'Côte d’Ivoire': {
+    flag: '🇨🇮',
+    cities: ['Abidjan', 'Bouaké', 'Yamoussoukro', 'San-Pédro'],
+  },
+  'Guinée-Bissau': {
+    flag: '🇬🇼',
+    cities: ['Bissau', 'Bafatá', 'Gabú'],
+  },
+  'Mali': {
+    flag: '🇲🇱',
+    cities: ['Bamako', 'Sikasso', 'Ségou'],
+  },
+  'Niger': {
+    flag: '🇳🇪',
+    cities: ['Niamey', 'Maradi', 'Zinder'],
+  },
+  'Sénégal': {
+    flag: '🇸🇳',
+    cities: ['Dakar', 'Thiès', 'Saly', 'Saint-Louis'],
+  },
+  'Togo': {
+    flag: '🇹🇬',
+    cities: ['Lomé', 'Kpalimé'],
+  },
+  'Cameroun': {
+    flag: '🇨🇲',
+    cities: ['Douala', 'Yaoundé'],
+  },
+};
+
 export const MOCK_RENTAL_LISTINGS: RentalListing[] = [
   {
     id: 'list-01',

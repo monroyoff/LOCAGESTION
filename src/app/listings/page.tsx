@@ -8,7 +8,7 @@ import { Header } from '@/components/layout/Header';
 import { useSpace } from '@/lib/context/space-context';
 import { formatFCFA } from '@/lib/money/format';
 import { RentalListing } from '@/lib/types';
-import { MOCK_RENTAL_LISTINGS } from '@/lib/data/mock-data';
+import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import {
   Compass,
   MapPin,
@@ -38,46 +38,6 @@ import {
   Globe,
   Coins,
 } from 'lucide-react';
-
-// Pays & Villes de la zone UEMOA et CEMAC couverts par LOCAGESTION
-const COUNTRIES_CITIES: Record<string, { flag: string; cities: string[] }> = {
-  'Bénin': {
-    flag: '🇧🇯',
-    cities: ['Cotonou', 'Abomey-Calavi', 'Porto-Novo', 'Parakou'],
-  },
-  'Burkina Faso': {
-    flag: '🇧🇫',
-    cities: ['Ouagadougou', 'Bobo-Dioulasso', 'Koudougou'],
-  },
-  'Côte d’Ivoire': {
-    flag: '🇨🇮',
-    cities: ['Abidjan', 'Bouaké', 'Yamoussoukro', 'San-Pédro'],
-  },
-  'Guinée-Bissau': {
-    flag: '🇬🇼',
-    cities: ['Bissau', 'Bafatá', 'Gabú'],
-  },
-  'Mali': {
-    flag: '🇲🇱',
-    cities: ['Bamako', 'Sikasso', 'Ségou'],
-  },
-  'Niger': {
-    flag: '🇳🇪',
-    cities: ['Niamey', 'Maradi', 'Zinder'],
-  },
-  'Sénégal': {
-    flag: '🇸🇳',
-    cities: ['Dakar', 'Thiès', 'Saly', 'Saint-Louis'],
-  },
-  'Togo': {
-    flag: '🇹🇬',
-    cities: ['Lomé', 'Kpalimé'],
-  },
-  'Cameroun': {
-    flag: '🇨🇲',
-    cities: ['Douala', 'Yaoundé'],
-  },
-};
 
 const ALL_CITIES = Array.from(
   new Set(Object.values(COUNTRIES_CITIES).flatMap((c) => c.cities))
