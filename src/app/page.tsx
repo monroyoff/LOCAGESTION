@@ -17,11 +17,12 @@ import {
   MOCK_RECENT_PAYMENTS,
 } from '@/lib/data/mock-data';
 import { UserSpace, PaymentTransaction } from '@/lib/types';
+import { useSpace } from '@/lib/context/space-context';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight } from 'lucide-react';
 
 export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+  const { activeSpace, switchSpace, isLandlord, isTenant } = useSpace();
 
   // Modals state
   const [selectedPayment, setSelectedPayment] = useState<PaymentTransaction | null>(null);
@@ -43,10 +44,7 @@ export default function DashboardPage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         activeSpace={activeSpace}
-        onSpaceChange={(space) => {
-          setActiveSpace(space);
-          showToast(`Basculement vers l’${space === 'bailleur' ? 'Espace Bailleur' : 'Espace Locataire'}`);
-        }}
+        onSpaceChange={switchSpace}
       />
 
       {/* 2. Main Content Layout */}

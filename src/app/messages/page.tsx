@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
+import { useSpace } from '@/lib/context/space-context';
 
 interface Message {
   id: string;
@@ -233,7 +234,7 @@ const MOCK_CONVERSATIONS: Conversation[] = [
 
 export default function MessagesPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+  const { activeSpace, switchSpace, isLandlord, isTenant } = useSpace();
   const [activeTab, setActiveTab] = useState<'general' | 'archive'>('general');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedConv, setSelectedConv] = useState<Conversation>(MOCK_CONVERSATIONS[0]);
@@ -279,7 +280,7 @@ export default function MessagesPage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         activeSpace={activeSpace}
-        onSpaceChange={setActiveSpace}
+        onSpaceChange={switchSpace}
       />
 
       {/* 2. Main 3-Panel Messaging View */}

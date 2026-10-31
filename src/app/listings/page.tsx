@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
+import { useSpace } from '@/lib/context/space-context';
 
 interface Listing {
   id: string;
@@ -136,7 +137,7 @@ const MOCK_LISTINGS: Listing[] = [
 
 export default function ListingsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+  const { activeSpace, switchSpace, isLandlord, isTenant } = useSpace();
   const [searchCity, setSearchCity] = useState('');
 
   const calculateTotalEntryCost = (l: Listing) => {
@@ -151,7 +152,7 @@ export default function ListingsPage() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         activeSpace={activeSpace}
-        onSpaceChange={setActiveSpace}
+        onSpaceChange={switchSpace}
       />
 
       <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
@@ -161,7 +162,7 @@ export default function ListingsPage() {
         />
 
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
-          {/* Top Title & Publish CTA */}
+          {/* Top Title & Context Action */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
@@ -177,13 +178,24 @@ export default function ListingsPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => alert('Ouverture assistant de publication d’annonce')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Publier une annonce</span>
-            </button>
+            {/* SEULEMENT LE BAILLEUR PEUT PUBLIER UNE ANNONCE */}
+            {isLandlord && (
+              <button
+                onClick={() => alert('Ouverture de l’assistant de publication d’annonce')}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Publier une annonce</span>
+              </button>
+            )}
+
+            {/* LE LOCATAIRE EXPLORE ET TROUVE UN LOGEMENT SANS BOUTON BAILLEUR */}
+            {isTenant && (
+              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold self-start sm:self-auto">
+                <Compass className="w-4 h-4 text-emerald-600" />
+                <span>Recherche de logement locataire</span>
+              </div>
+            )}
           </div>
 
           {/* Listings Grid */}
@@ -298,3 +310,4 @@ export default function ListingsPage() {
     </div>
   );
 }
+

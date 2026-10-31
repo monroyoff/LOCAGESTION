@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { SpaceProvider } from '@/lib/context/space-context';
 
 export const metadata: Metadata = {
   title: 'LOCAGESTION — Plateforme de Gestion Locative & Immobilière UEMOA',
@@ -22,9 +23,8 @@ export default function RootLayout({
   return (
     <html lang="fr" className="h-full">
       <body className="h-full bg-[#F4F6F9] text-slate-900 antialiased selection:bg-brand-500 selection:text-white">
-        {children}
+        <SpaceProvider>{children}</SpaceProvider>
       </body>
     </html>
   );
 }
-

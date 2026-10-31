@@ -1,7 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/layout/Header';
+import { useSpace } from '@/lib/context/space-context';
 import {
   Home,
   Receipt,
@@ -29,10 +32,27 @@ import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { PaymentTransaction } from '@/lib/types';
 
 export default function TenantPortalPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { switchSpace } = useSpace();
   const [activeTab, setActiveTab] = useState<'accueil' | 'quittances' | 'bail' | 'solvabilite'>('accueil');
   const [declarationModalOpen, setDeclarationModalOpen] = useState(false);
   const [selectedReceipt, setSelectedReceipt] = useState<PaymentTransaction | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Sync hash with active tab
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const handleHash = () => {
+        const hash = window.location.hash.replace('#', '');
+        if (hash === 'quittances' || hash === 'bail' || hash === 'solvabilite' || hash === 'accueil') {
+          setActiveTab(hash as any);
+        }
+      };
+      handleHash();
+      window.addEventListener('hashchange', handleHash);
+      return () => window.removeEventListener('hashchange', handleHash);
+    }
+  }, []);
 
   // Tenant state
   const [consentGranted, setConsentGranted] = useState(true);
@@ -131,50 +151,30 @@ export default function TenantPortalPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#F4F6F9] text-slate-900 pb-16">
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 sm:px-8 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white font-black text-sm shadow-md shadow-brand-500/20">
-              Ω
-            </div>
-            <div>
-              <span className="text-base font-black tracking-tight text-slate-900 flex items-center gap-1">
-                LOCA<span className="text-brand-500">GESTION</span>
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 block -mt-1 uppercase tracking-wider">
-                Espace Locataire
-              </span>
-            </div>
-          </Link>
-        </div>
+    <div className="min-h-screen bg-[#F4F6F9] text-slate-900 flex">
+      {/* 1. Sidebar configured for Locataire */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeSpace="locataire"
+        onSpaceChange={switchSpace}
+      />
 
-        {/* Switch back to Landlord space */}
-        <div className="flex items-center gap-3">
-          <Link
-            href="/"
-            className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5"
-          >
-            <Repeat className="w-3.5 h-3.5 text-slate-500" />
-            <span className="hidden sm:inline">Passer en</span> Espace Bailleur
-          </Link>
+      {/* 2. Main Tenant Space Layout */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
+        <Header
+          onToggleSidebar={() => setSidebarOpen(true)}
+          onOpenTenantAction={(action) => {
+            if (action === 'declare_payment') {
+              setDeclarationModalOpen(true);
+            } else if (action === 'report_issue') {
+              showToast('Signalement de panne transmis avec succès au bailleur.');
+            }
+          }}
+        />
 
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-            <img
-              src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80"
-              alt={tenant.name}
-              className="w-8 h-8 rounded-full object-cover ring-2 ring-brand-500/30"
-            />
-            <span className="text-xs font-bold text-slate-800 hidden sm:inline">
-              {tenant.name}
-            </span>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 space-y-6">
+        {/* Main Tenant Container */}
+        <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-5xl mx-auto w-full">
         {/* Hero Banner: Rent Due & Quick Payment */}
         <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
           <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -465,6 +465,7 @@ export default function TenantPortalPage() {
           </div>
         )}
       </main>
+      </div>
 
       {/* Modal: Déclaration de Paiement avec Preuve */}
       {declarationModalOpen && (
@@ -592,3 +593,4 @@ export default function TenantPortalPage() {
     </div>
   );
 }
+
