@@ -1,0 +1,629 @@
+'use client';
+
+import React, { useState } from 'react';
+import Link from 'next/link';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { Header } from '@/components/layout/Header';
+import {
+  Search,
+  Phone,
+  MoreVertical,
+  Send,
+  Paperclip,
+  Image as ImageIcon,
+  Smile,
+  Check,
+  CheckCheck,
+  Building2,
+  Calendar,
+  Sparkles,
+  ExternalLink,
+  Archive,
+  ShieldAlert,
+  ArrowLeft,
+  X,
+} from 'lucide-react';
+import { formatFCFA } from '@/lib/money/format';
+import { UserSpace } from '@/lib/types';
+
+interface Message {
+  id: string;
+  sender: 'them' | 'me';
+  senderName: string;
+  text?: string;
+  imageUrl?: string;
+  time: string;
+  status: 'sent' | 'delivered' | 'read';
+}
+
+interface Conversation {
+  id: string;
+  tenantName: string;
+  tenantAvatar: string;
+  isOnline: boolean;
+  propertyTitle: string;
+  propertyUnit: string;
+  propertySurface: string; // "55 m²"
+  propertyPrice: number; // FCFA/mois
+  propertyThumbnail: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount?: number;
+  isRead?: boolean;
+  isArchived?: boolean;
+  messages: Message[];
+}
+
+const MOCK_CONVERSATIONS: Conversation[] = [
+  {
+    id: 'conv-01',
+    tenantName: 'Edwin Johnson',
+    tenantAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
+    isOnline: true,
+    propertyTitle: 'Résidence Les Cocotiers',
+    propertyUnit: 'Appartement 2 Pièces',
+    propertySurface: '55 m²',
+    propertyPrice: 180000,
+    propertyThumbnail: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=160&auto=format&fit=crop&q=80',
+    lastMessage: 'D’accord très bien ! Y a-t-il une place de parking réservée ?',
+    lastMessageTime: '09:01',
+    isRead: true,
+    messages: [
+      {
+        id: 'm1',
+        sender: 'them',
+        senderName: 'Edwin Johnson',
+        text: 'Bonjour M. Diallo ! Je suis très intéressé par l’appartement 2 pièces à Haie Vive que j’ai vu sur votre annonce. Est-il toujours disponible pour une entrée début décembre ?',
+        time: '08:35',
+        status: 'read',
+      },
+      {
+        id: 'm2',
+        sender: 'me',
+        senderName: 'Mamadou Diallo',
+        text: 'Bonjour Edwin ! Oui, il est parfaitement disponible. Pour confirmer votre dossier, serez-vous seul ou accompagné ?',
+        time: '08:51',
+        status: 'read',
+      },
+      {
+        id: 'm3',
+        sender: 'them',
+        senderName: 'Edwin Johnson',
+        text: 'Ce sera pour moi et mon épouse. Nous cherchons un cadre calme et sécurisé avec balcon.',
+        time: '08:54',
+        status: 'read',
+      },
+      {
+        id: 'm4',
+        sender: 'them',
+        senderName: 'Edwin Johnson',
+        text: 'Pouvez-vous me montrer la vue depuis le balcon du séjour ?',
+        time: '08:55',
+        status: 'read',
+      },
+      {
+        id: 'm5',
+        sender: 'me',
+        senderName: 'Mamadou Diallo',
+        imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=80',
+        text: 'Voici la terrasse principale orientée Sud-Est sans vis-à-vis !',
+        time: '08:59',
+        status: 'read',
+      },
+      {
+        id: 'm6',
+        sender: 'them',
+        senderName: 'Edwin Johnson',
+        text: 'D’accord très bien ! Y a-t-il une place de parking réservée ?',
+        time: '09:01',
+        status: 'read',
+      },
+    ],
+  },
+  {
+    id: 'conv-02',
+    tenantName: 'Albert Flores',
+    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+    isOnline: false,
+    propertyTitle: 'Immeuble Palmier Royal',
+    propertyUnit: 'Studio Meublé B12',
+    propertySurface: '32 m²',
+    propertyPrice: 140000,
+    propertyThumbnail: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=160&auto=format&fit=crop&q=80',
+    lastMessage: 'Parfait, je transmets mon attestation de travail.',
+    lastMessageTime: '10:37',
+    isRead: true,
+    messages: [
+      {
+        id: 'm20',
+        sender: 'them',
+        senderName: 'Albert Flores',
+        text: 'Bonjour, je viens de finaliser mon dossier locatif sur LOCAGESTION.',
+        time: '10:35',
+        status: 'read',
+      },
+      {
+        id: 'm21',
+        sender: 'me',
+        senderName: 'Mamadou Diallo',
+        text: 'Bien reçu Albert, nous étudions votre profil.',
+        time: '10:36',
+        status: 'read',
+      },
+      {
+        id: 'm22',
+        sender: 'them',
+        senderName: 'Albert Flores',
+        text: 'Parfait, je transmets mon attestation de travail.',
+        time: '10:37',
+        status: 'read',
+      },
+    ],
+  },
+  {
+    id: 'conv-03',
+    tenantName: 'Annette Black',
+    tenantAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&auto=format&fit=crop&q=80',
+    isOnline: true,
+    propertyTitle: 'Villa Émeraude',
+    propertyUnit: 'Villa R+1 Ouest',
+    propertySurface: '180 m²',
+    propertyPrice: 350000,
+    propertyThumbnail: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=160&auto=format&fit=crop&q=80',
+    lastMessage: 'Bonjour, j’arriverai demain matin vers 10h pour l’état des lieux.',
+    lastMessageTime: '09:15',
+    unreadCount: 1,
+    messages: [
+      {
+        id: 'm30',
+        sender: 'them',
+        senderName: 'Annette Black',
+        text: 'Bonjour, j’arriverai demain matin vers 10h pour l’état des lieux.',
+        time: '09:15',
+        status: 'delivered',
+      },
+    ],
+  },
+  {
+    id: 'conv-04',
+    tenantName: 'Jerome Bell',
+    tenantAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&auto=format&fit=crop&q=80',
+    isOnline: false,
+    propertyTitle: 'Résidence Marina Golfe',
+    propertyUnit: 'Boutique Commerciale RDC',
+    propertySurface: '60 m²',
+    propertyPrice: 150000,
+    propertyThumbnail: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=160&auto=format&fit=crop&q=80',
+    lastMessage: 'J’ai bien reçu le reçu de mon virement d’avance de loyer.',
+    lastMessageTime: 'Jeu',
+    isRead: true,
+    messages: [],
+  },
+  {
+    id: 'conv-05',
+    tenantName: 'Darrell Steward',
+    tenantAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=160&auto=format&fit=crop&q=80',
+    isOnline: true,
+    propertyTitle: 'Résidence Les Cocotiers',
+    propertyUnit: 'Appt A3',
+    propertySurface: '75 m²',
+    propertyPrice: 220000,
+    propertyThumbnail: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=160&auto=format&fit=crop&q=80',
+    lastMessage: 'Merci pour le passage rapide du technicien de climatisation.',
+    lastMessageTime: 'Jeu',
+    isRead: true,
+    messages: [],
+  },
+  {
+    id: 'conv-06',
+    tenantName: 'Steven Jordan',
+    tenantAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+    isOnline: false,
+    propertyTitle: 'Immeuble Palmier Royal',
+    propertyUnit: 'Appt 4B',
+    propertySurface: '68 m²',
+    propertyPrice: 240000,
+    propertyThumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=160&auto=format&fit=crop&q=80',
+    lastMessage: 'Je confirme la date de signature électronique du bail.',
+    lastMessageTime: 'Mer',
+    unreadCount: 2,
+    messages: [],
+  },
+];
+
+export default function MessagesPage() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+  const [activeTab, setActiveTab] = useState<'general' | 'archive'>('general');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedConv, setSelectedConv] = useState<Conversation>(MOCK_CONVERSATIONS[0]);
+  const [inputText, setInputText] = useState('');
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+
+  const filteredConversations = MOCK_CONVERSATIONS.filter((c) => {
+    const matchesTab = activeTab === 'general' ? !c.isArchived : c.isArchived;
+    const matchesSearch =
+      c.tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.propertyTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  const handleSendMessage = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    const newMessage: Message = {
+      id: `m-${Date.now()}`,
+      sender: 'me',
+      senderName: 'Mamadou Diallo',
+      text: inputText,
+      time: 'À l’instant',
+      status: 'sent',
+    };
+
+    setSelectedConv((prev) => ({
+      ...prev,
+      messages: [...prev.messages, newMessage],
+      lastMessage: inputText,
+      lastMessageTime: 'À l’instant',
+    }));
+
+    setInputText('');
+  };
+
+  return (
+    <div className="h-screen bg-[#F4F6F9] text-slate-900 flex overflow-hidden">
+      {/* 1. Dark Sidebar (StayWise Style) */}
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeSpace={activeSpace}
+        onSpaceChange={setActiveSpace}
+      />
+
+      {/* 2. Main 3-Panel Messaging View */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-72 h-full">
+        <Header
+          onToggleSidebar={() => setSidebarOpen(true)}
+          onOpenQuickAction={() => {}}
+        />
+
+        {/* 3-Panel Content Wrapper */}
+        <div className="flex-1 flex overflow-hidden p-4 sm:p-6 gap-5">
+          {/* Middle Panel: Conversations List (StayWise White Card with Pink Pill) */}
+          <div
+            className={`w-full lg:w-96 bg-white rounded-3xl border border-slate-200/80 shadow-soft flex flex-col overflow-hidden shrink-0 ${
+              mobileChatOpen ? 'hidden lg:flex' : 'flex'
+            }`}
+          >
+            {/* Panel Header: Title & Segmented Pills */}
+            <div className="p-5 pb-3 border-b border-slate-100">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight mb-4">
+                Messages
+              </h2>
+
+              {/* Segmented Pill Tabs (StayWise Pink Style) */}
+              <div className="p-1 bg-slate-100 rounded-2xl flex items-center mb-3">
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('general')}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeTab === 'general'
+                      ? 'bg-brand-500 text-white shadow-pink-glow'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Boîte Principale</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                    activeTab === 'general' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    6
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('archive')}
+                  className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                    activeTab === 'archive'
+                      ? 'bg-brand-500 text-white shadow-pink-glow'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Archives</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                    activeTab === 'archive' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
+                  }`}>
+                    2
+                  </span>
+                </button>
+              </div>
+
+              {/* Search Box */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Rechercher une conversation..."
+                  className="w-full pl-3.5 pr-10 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+                <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2" />
+              </div>
+            </div>
+
+            {/* Conversations Scrollable List */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
+              {filteredConversations.map((conv) => {
+                const isSelected = selectedConv.id === conv.id;
+
+                return (
+                  <div
+                    key={conv.id}
+                    onClick={() => {
+                      setSelectedConv(conv);
+                      setMobileChatOpen(true);
+                    }}
+                    className={`p-3 rounded-2xl transition-all cursor-pointer flex items-center gap-3 relative ${
+                      isSelected
+                        ? 'bg-slate-100/90 shadow-sm'
+                        : 'hover:bg-slate-50'
+                    }`}
+                  >
+                    {/* Apartment Thumbnail on the left (as in StayWise) */}
+                    <img
+                      src={conv.propertyThumbnail}
+                      alt={conv.propertyTitle}
+                      className="w-12 h-12 rounded-2xl object-cover shrink-0 ring-1 ring-slate-200"
+                    />
+
+                    {/* Contact Mini Avatar Overlap */}
+                    <div className="relative -ml-5 shrink-0">
+                      <img
+                        src={conv.tenantAvatar}
+                        alt={conv.tenantName}
+                        className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
+                      />
+                      {conv.isOnline && (
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                      )}
+                    </div>
+
+                    {/* Middle Info */}
+                    <div className="min-w-0 flex-1 pl-1">
+                      <div className="flex items-center justify-between gap-1 mb-0.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <h4 className="text-xs font-bold text-slate-900 truncate">
+                            {conv.tenantName}
+                          </h4>
+                          {conv.isOnline && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
+                          )}
+                        </div>
+                        <span className="text-[10px] text-slate-400 font-semibold shrink-0">
+                          {conv.lastMessageTime}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-slate-500 truncate leading-relaxed">
+                        {conv.lastMessage}
+                      </p>
+                    </div>
+
+                    {/* Right Badge / Status */}
+                    <div className="shrink-0 flex items-center justify-center">
+                      {conv.unreadCount ? (
+                        <span className="w-5 h-5 rounded-full bg-brand-500 text-white font-black text-[10px] flex items-center justify-center shadow-md">
+                          {conv.unreadCount}
+                        </span>
+                      ) : (
+                        <CheckCheck className="w-3.5 h-3.5 text-brand-500" />
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Right Panel: Active Chat Stream (StayWise Faithful Reproduction) */}
+          <div
+            className={`flex-1 bg-white rounded-3xl border border-slate-200/80 shadow-soft flex flex-col overflow-hidden ${
+              mobileChatOpen ? 'flex' : 'hidden lg:flex'
+            }`}
+          >
+            {/* Conversation Top Header */}
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between gap-4 bg-white/90 backdrop-blur-sm z-10">
+              {/* Back to list on mobile */}
+              <button
+                onClick={() => setMobileChatOpen(false)}
+                className="lg:hidden p-2 rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+
+              {/* Contact & Apartment Info */}
+              <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                <img
+                  src={selectedConv.propertyThumbnail}
+                  alt={selectedConv.propertyTitle}
+                  className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-200 shrink-0"
+                />
+                <div className="relative -ml-5 shrink-0">
+                  <img
+                    src={selectedConv.tenantAvatar}
+                    alt={selectedConv.tenantName}
+                    className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
+                  />
+                  {selectedConv.isOnline && (
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
+                  )}
+                </div>
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-slate-900 truncate">
+                      {selectedConv.tenantName}
+                    </h3>
+                    {selectedConv.isOnline && (
+                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        En ligne
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
+                    <span className="truncate">
+                      {selectedConv.propertyUnit}, {selectedConv.propertySurface}
+                    </span>
+                    <span className="text-slate-300">•</span>
+                    <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-extrabold text-[11px]">
+                      {formatFCFA(selectedConv.propertyPrice)}/mois
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Action Icons (Phone, Options) */}
+              <div className="flex items-center gap-2">
+                <a
+                  href={`tel:+2290195444430`}
+                  title="Appeler"
+                  className="p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors cursor-pointer"
+                >
+                  <Phone className="w-4 h-4" />
+                </a>
+                <button
+                  title="Options"
+                  className="p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors"
+                >
+                  <MoreVertical className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Chat Messages Stream */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#FAFBFD]">
+              {selectedConv.messages.map((msg) => {
+                const isMe = msg.sender === 'me';
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex items-end gap-3 ${
+                      isMe ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {/* Left avatar for received message */}
+                    {!isMe && (
+                      <img
+                        src={selectedConv.tenantAvatar}
+                        alt={msg.senderName}
+                        className="w-8 h-8 rounded-full object-cover shrink-0 mb-1"
+                      />
+                    )}
+
+                    {/* Bubble Container */}
+                    <div className="max-w-md space-y-1">
+                      {/* Name tag on received message */}
+                      {!isMe && (
+                        <span className="text-[10px] font-bold text-slate-400 pl-3">
+                          {msg.senderName}
+                        </span>
+                      )}
+
+                      <div
+                        className={`p-4 rounded-3xl text-xs leading-relaxed shadow-sm ${
+                          isMe
+                            ? 'bg-brand-500 text-white rounded-br-none shadow-pink-glow'
+                            : 'bg-slate-100 text-slate-800 rounded-bl-none'
+                        }`}
+                      >
+                        {/* Image attachment if any */}
+                        {msg.imageUrl && (
+                          <div className="rounded-2xl overflow-hidden mb-2.5 ring-2 ring-white/20">
+                            <img
+                              src={msg.imageUrl}
+                              alt="Photo"
+                              className="w-full h-44 object-cover"
+                            />
+                          </div>
+                        )}
+
+                        {/* Text */}
+                        {msg.text && <p>{msg.text}</p>}
+
+                        {/* Timestamp & Checkmarks */}
+                        <div
+                          className={`flex items-center justify-end gap-1 text-[10px] mt-1.5 ${
+                            isMe ? 'text-white/80' : 'text-slate-400'
+                          }`}
+                        >
+                          <span>{msg.time}</span>
+                          {isMe && <CheckCheck className="w-3.5 h-3.5 text-white" />}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right avatar for sent message */}
+                    {isMe && (
+                      <img
+                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80"
+                        alt="Mamadou Diallo"
+                        className="w-8 h-8 rounded-full object-cover shrink-0 mb-1 ring-1 ring-brand-500/50"
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Anti-fraud banner */}
+            <div className="px-6 py-2 bg-amber-50 border-t border-amber-200/60 flex items-center justify-between text-[11px] text-amber-900">
+              <span className="flex items-center gap-1.5 font-semibold">
+                <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                Sécurité LOCAGESTION : Ne versez jamais de caution avant d’avoir visité les lieux en personne.
+              </span>
+              <span className="font-bold text-amber-700 hidden sm:inline">UEMOA Protection</span>
+            </div>
+
+            {/* Message Input Box (Bottom) */}
+            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t border-slate-100 flex items-center gap-2">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                  title="Pièce jointe"
+                >
+                  <Paperclip className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  className="p-2 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
+                  title="Photo du logement"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </button>
+              </div>
+
+              <input
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                placeholder="Rédiger votre réponse à Edwin Johnson..."
+                className="flex-1 px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+
+              <button
+                type="submit"
+                className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-pink-glow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <span>Envoyer</span>
+                <Send className="w-3.5 h-3.5" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
