@@ -39,15 +39,31 @@ import {
   Coins,
 } from 'lucide-react';
 
-// Pays & Villes d'Afrique de l'Ouest et Centrale couvertes par LOCAGESTION
+// Pays & Villes de la zone UEMOA et CEMAC couverts par LOCAGESTION
 const COUNTRIES_CITIES: Record<string, { flag: string; cities: string[] }> = {
   'Bénin': {
     flag: '🇧🇯',
     cities: ['Cotonou', 'Abomey-Calavi', 'Porto-Novo', 'Parakou'],
   },
+  'Burkina Faso': {
+    flag: '🇧🇫',
+    cities: ['Ouagadougou', 'Bobo-Dioulasso', 'Koudougou'],
+  },
   'Côte d’Ivoire': {
     flag: '🇨🇮',
     cities: ['Abidjan', 'Bouaké', 'Yamoussoukro', 'San-Pédro'],
+  },
+  'Guinée-Bissau': {
+    flag: '🇬🇼',
+    cities: ['Bissau', 'Bafatá', 'Gabú'],
+  },
+  'Mali': {
+    flag: '🇲🇱',
+    cities: ['Bamako', 'Sikasso', 'Ségou'],
+  },
+  'Niger': {
+    flag: '🇳🇪',
+    cities: ['Niamey', 'Maradi', 'Zinder'],
   },
   'Sénégal': {
     flag: '🇸🇳',
@@ -144,6 +160,15 @@ export default function ListingsPage() {
     }
     return COUNTRIES_CITIES[selectedCountry]?.cities || [];
   }, [selectedCountry]);
+
+  // Count available listings per country
+  const countryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    MOCK_RENTAL_LISTINGS.forEach((l) => {
+      counts[l.country] = (counts[l.country] || 0) + 1;
+    });
+    return counts;
+  }, []);
 
   // Compute Active Price Range
   const { minRent, maxRent } = useMemo(() => {
@@ -336,7 +361,7 @@ export default function ListingsPage() {
                     onChange={(e) => handleCountryChange(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer"
                   >
-                    <option value="all">🌍 Tous les pays (5)</option>
+                    <option value="all">🌍 Tous les pays ({Object.keys(COUNTRIES_CITIES).length})</option>
                     {Object.entries(COUNTRIES_CITIES).map(([country, data]) => (
                       <option key={country} value={country}>
                         {data.flag} {country}
@@ -435,6 +460,49 @@ export default function ListingsPage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            {/* Raccourcis Pays (Zone UEMOA & CEMAC) */}
+            <div className="pt-2 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+              <span className="text-[10px] font-bold text-slate-400 uppercase mr-1 whitespace-nowrap hidden sm:inline">
+                Pays :
+              </span>
+              <button
+                type="button"
+                onClick={() => handleCountryChange('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  selectedCountry === 'all'
+                    ? 'bg-rose-500 text-white shadow-sm'
+                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                }`}
+              >
+                🌍 Tous ({MOCK_RENTAL_LISTINGS.length})
+              </button>
+              {Object.entries(COUNTRIES_CITIES).map(([country, data]) => {
+                const count = countryCounts[country] || 0;
+                return (
+                  <button
+                    key={country}
+                    type="button"
+                    onClick={() => handleCountryChange(country)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
+                      selectedCountry === country
+                        ? 'bg-rose-500 text-white shadow-sm'
+                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                    }`}
+                  >
+                    <span>{data.flag}</span>
+                    <span>{country}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                        selectedCountry === country ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-500'
+                      }`}
+                    >
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* Ligne 2 : Type de Bien, Tranches Précises Min/Max & Tri */}

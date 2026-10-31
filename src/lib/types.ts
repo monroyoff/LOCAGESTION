@@ -136,7 +136,7 @@ export interface RentalListing {
   title: string;
   propertyType: 'Appartement' | 'Studio' | 'Villa' | 'Bureau' | 'Boutique';
   country: string;
-  countryCode: 'BJ' | 'CI' | 'SN' | 'TG' | 'CM';
+  countryCode: 'BJ' | 'CI' | 'SN' | 'TG' | 'CM' | 'NE' | 'ML' | 'BF' | 'GW';
   flag: string;
   city: string;
   district: string;
