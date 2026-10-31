@@ -50,6 +50,26 @@ export function Sidebar({
   const isLandlord = activeSpace === 'bailleur';
   const isTenant = activeSpace === 'locataire';
 
+  // Track active tenant tab from URL
+  const [currentTab, setCurrentTab] = React.useState<string>('accueil');
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const update = () => {
+        const params = new URLSearchParams(window.location.search);
+        const tab = params.get('tab') || window.location.hash.replace('#', '');
+        setCurrentTab(tab || 'accueil');
+      };
+      update();
+      window.addEventListener('popstate', update);
+      window.addEventListener('hashchange', update);
+      return () => {
+        window.removeEventListener('popstate', update);
+        window.removeEventListener('hashchange', update);
+      };
+    }
+  }, [pathname]);
+
   const handleSpaceChange = (target: UserSpace) => {
     if (context) {
       context.switchSpace(target);
@@ -124,26 +144,26 @@ export function Sidebar({
       name: 'Mon Logement & Loyer',
       href: '/portal',
       icon: Home,
-      active: pathname === '/portal',
+      active: pathname === '/portal' && (currentTab === 'accueil' || !currentTab),
     },
     {
       name: 'Mes Quittances & Reçus',
-      href: '/portal',
+      href: '/portal?tab=quittances',
       icon: Receipt,
-      active: pathname === '/portal' && typeof window !== 'undefined' && window.location.hash === '#quittances',
+      active: pathname === '/portal' && currentTab === 'quittances',
       count: '3',
     },
     {
       name: 'Mon Bail & Contrat',
-      href: '/portal',
+      href: '/portal?tab=bail',
       icon: FileText,
-      active: pathname === '/portal' && typeof window !== 'undefined' && window.location.hash === '#bail',
+      active: pathname === '/portal' && currentTab === 'bail',
     },
     {
       name: 'Passeport Solvabilité',
-      href: '/portal',
+      href: '/portal?tab=solvabilite',
       icon: ShieldCheck,
-      active: pathname === '/portal' && typeof window !== 'undefined' && window.location.hash === '#solvabilite',
+      active: pathname === '/portal' && currentTab === 'solvabilite',
       badge: '96/100',
     },
     {
