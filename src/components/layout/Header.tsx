@@ -12,7 +12,6 @@ import {
   Smartphone,
   Wrench,
   ShieldCheck,
-  SlidersHorizontal,
 } from 'lucide-react';
 import { formatDateFR } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
@@ -92,31 +91,22 @@ export function Header({
         </div>
 
         {/* Middle: Global Search Bar - Clic opens all filters */}
-        <div className="hidden md:flex items-center flex-1 max-w-md mx-4">
-          <div
+        <div className="hidden md:flex items-center flex-1 max-w-md mx-2 lg:mx-4">
+          <button
+            type="button"
             onClick={() => setIsSearchModalOpen(true)}
-            className="relative w-full cursor-pointer group"
+            className="w-full relative flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200/90 hover:border-slate-300 hover:shadow-sm text-xs text-slate-500 shadow-xs transition-all cursor-pointer group text-left"
           >
-            <Search className="w-4 h-4 text-slate-400 group-hover:text-brand-500 transition-colors absolute left-3.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              readOnly
-              value={searchVal}
-              onClick={() => setIsSearchModalOpen(true)}
-              onFocus={() => setIsSearchModalOpen(true)}
-              placeholder="Rechercher une location (Pays, Ville, Budget FCFA...) ↵"
-              className="w-full pl-10 pr-24 py-2.5 rounded-2xl bg-white border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none group-hover:border-brand-400 group-hover:ring-2 group-hover:ring-brand-500/10 shadow-sm transition-all cursor-pointer"
-            />
-            <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 pointer-events-none">
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-extrabold text-brand-600 bg-brand-50 border border-brand-200 rounded-md">
-                <SlidersHorizontal className="w-2.5 h-2.5" />
-                Filtres
+            <div className="flex items-center gap-2.5 min-w-0 pr-2">
+              <Search className="w-4 h-4 text-slate-400 group-hover:text-brand-500 transition-colors flex-shrink-0" />
+              <span className="truncate text-slate-400 group-hover:text-slate-600 font-medium">
+                Rechercher une location (Pays, Ville, Budget...)
               </span>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold text-slate-400 bg-slate-100 border border-slate-200 rounded-md">
-                ⌘K
-              </kbd>
             </div>
-          </div>
+            <kbd className="flex-shrink-0 px-2 py-0.5 text-[10px] font-mono font-bold text-slate-400 bg-slate-100 border border-slate-200/80 rounded-md group-hover:text-slate-600">
+              ⌘K
+            </kbd>
+          </button>
         </div>
 
         {/* Right: Space-Specific Action Buttons */}
