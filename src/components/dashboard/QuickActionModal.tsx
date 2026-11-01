@@ -11,6 +11,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
+import { notifySave } from '@/lib/notifications/action-notifier';
 
 interface QuickActionModalProps {
   actionType: 'new_lease' | 'new_payment' | 'new_property' | null;
@@ -34,11 +35,17 @@ export function QuickActionModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (actionType === 'new_payment') {
-      onSuccess(`Encaissement de ${formatFCFA(amount)} enregistré avec succès pour ${tenantName || 'le locataire'}.`);
+      const msg = `Encaissement de ${formatFCFA(amount)} enregistré avec succès pour ${tenantName || 'le locataire'}.`;
+      onSuccess(msg);
+      notifySave(msg, 'Encaissement enregistré !');
     } else if (actionType === 'new_lease') {
-      onSuccess(`Contrat de bail généré pour ${tenantName || 'le locataire'} sur ${unitChoice}.`);
+      const msg = `Contrat de bail généré pour ${tenantName || 'le locataire'} sur ${unitChoice}.`;
+      onSuccess(msg);
+      notifySave(msg, 'Bail généré avec succès !');
     } else {
-      onSuccess(`Nouvelle résidence enregistrée dans le parc immobilier.`);
+      const msg = `Nouvelle résidence enregistrée dans le parc immobilier.`;
+      onSuccess(msg);
+      notifySave(msg, 'Résidence enregistrée !');
     }
     onClose();
   };

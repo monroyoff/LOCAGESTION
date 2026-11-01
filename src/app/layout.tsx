@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { SpaceProvider } from '@/lib/context/space-context';
 import { GlobalDownloadToast } from '@/components/ui/GlobalDownloadToast';
+import { GlobalCenterToast } from '@/components/ui/GlobalCenterToast';
 
 export const metadata: Metadata = {
   title: 'LOCAGESTION — Plateforme de Gestion Locative & Immobilière UEMOA',
@@ -27,6 +28,7 @@ export default function RootLayout({
         <SpaceProvider>
           {children}
           <GlobalDownloadToast />
+          <GlobalCenterToast />
         </SpaceProvider>
       </body>
     </html>

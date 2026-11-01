@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { PaymentTransaction } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
+import { notifyAction } from '@/lib/notifications/action-notifier';
 
 interface WhatsAppReminderModalProps {
   payment: PaymentTransaction | null;
@@ -65,6 +66,7 @@ DIALLO PATRIMOINE SARL`;
   const handleCopy = () => {
     navigator.clipboard.writeText(messageText);
     setCopied(true);
+    notifyAction('Message de relance copié dans le presse-papier !', 'Relance copiée !', 'success');
     setTimeout(() => setCopied(false), 2500);
   };
 

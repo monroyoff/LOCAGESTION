@@ -39,6 +39,7 @@ import {
   IncidentUrgency,
 } from '@/lib/services/incident-service';
 import { LandlordIncidentModal } from '@/components/dashboard/LandlordIncidentModal';
+import { notifySave, notifyUpdate } from '@/lib/notifications/action-notifier';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -159,9 +160,9 @@ function IncidentsPageContent() {
       'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
     ]);
 
-    setToastMessage(
-      `✅ Panne signalée avec succès (${photoCount} photo${photoCount > 1 ? 's' : ''}) ! Votre bailleur et le gestionnaire ont été alertés.`
-    );
+    const successMsg = `Panne signalée avec succès (${photoCount} photo${photoCount > 1 ? 's' : ''}) ! Votre bailleur et le gestionnaire ont été alertés.`;
+    setToastMessage(`✅ ${successMsg}`);
+    notifySave(successMsg, 'Panne signalée avec succès !');
   };
 
   // Changement rapide de statut par le bailleur
@@ -173,7 +174,10 @@ function IncidentsPageContent() {
     e.stopPropagation();
     IncidentService.updateIncidentStatus(id, newStatus);
     loadIncidents();
-    setToastMessage(`Statut de la panne mis à jour : ${newStatus === 'resolu' ? 'Résolu' : 'Pris en charge'}`);
+    const label = newStatus === 'resolu' ? 'Résolu' : 'Pris en charge';
+    const updateMsg = `Statut de la panne mis à jour : ${label}`;
+    setToastMessage(updateMsg);
+    notifyUpdate(updateMsg, 'Intervention mise à jour !');
   };
 
   // Compteurs statistiques

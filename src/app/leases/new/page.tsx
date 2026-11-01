@@ -32,6 +32,7 @@ import {
   Lease,
 } from '@/lib/services/lease-service';
 import { TransmitLeaseModal } from '@/components/leases/TransmitLeaseModal';
+import { notifySave } from '@/lib/notifications/action-notifier';
 
 export default function NewLeasePage() {
   const router = useRouter();
@@ -631,6 +632,10 @@ export default function NewLeasePage() {
           onClose={() => setIsTransmitModalOpen(false)}
           onTransmittedSuccess={(transmittedLease) => {
             setIsTransmitModalOpen(false);
+            notifySave(
+              `Le contrat ${transmittedLease.id} a été validé et transmis à ${transmittedLease.tenant}.`,
+              'Bail enregistré & transmis !'
+            );
             router.push('/leases');
           }}
         />

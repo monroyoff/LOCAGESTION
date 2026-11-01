@@ -22,6 +22,7 @@ import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { downloadCSV } from '@/lib/export/csv-export';
+import { notifySave } from '@/lib/notifications/action-notifier';
 
 export default function PaymentsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -33,6 +34,7 @@ export default function PaymentsPage() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
+    notifySave(msg, 'Encaissement validé !');
     setTimeout(() => setToastMessage(null), 4000);
   };
 

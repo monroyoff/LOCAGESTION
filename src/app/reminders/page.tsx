@@ -22,6 +22,7 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
+import { notifyAction } from '@/lib/notifications/action-notifier';
 
 export default function RemindersCenterPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -33,6 +34,7 @@ export default function RemindersCenterPage() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
+    notifyAction(msg, 'Relance transmise !', 'success');
     setTimeout(() => setToastMessage(null), 4000);
   };
 

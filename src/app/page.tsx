@@ -22,6 +22,7 @@ import { UserSpace, PaymentTransaction } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
 import { IncidentService } from '@/lib/services/incident-service';
+import { notifyAction } from '@/lib/notifications/action-notifier';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -51,6 +52,7 @@ export default function DashboardPage() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
+    notifyAction(msg, 'Enregistrement validé !', 'success');
     setTimeout(() => {
       setToastMessage(null);
     }, 4000);

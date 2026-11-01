@@ -28,6 +28,7 @@ import { Property, UserSpace } from '@/lib/types';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { PropertyDetailModal } from '@/components/properties/PropertyDetailModal';
 import { NewPropertyModal } from '@/components/properties/NewPropertyModal';
+import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 
 export default function PropertiesPage() {
   const router = useRouter();
@@ -48,6 +49,7 @@ export default function PropertiesPage() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
+    notifyAction(msg, 'Enregistrement validé !', 'success');
     setTimeout(() => setToastMessage(null), 3500);
   };
 
@@ -60,14 +62,18 @@ export default function PropertiesPage() {
       }
       return updated;
     });
-    showToast(`Le bien « ${propertyName} » a été supprimé du patrimoine avec succès.`);
+    const msg = `Le bien « ${propertyName} » a été supprimé du patrimoine avec succès.`;
+    showToast(msg);
+    notifyDelete(msg, 'Bien supprimé du patrimoine');
   };
 
   // Ajout d'un nouveau bien
   const handleAddProperty = (newProp: Property) => {
     setProperties((prev) => [newProp, ...prev]);
     setSelectedProperty(newProp);
-    showToast(`La résidence « ${newProp.name} » a été ajoutée au patrimoine avec succès !`);
+    const msg = `La résidence « ${newProp.name} » a été ajoutée au patrimoine avec succès !`;
+    showToast(msg);
+    notifySave(msg, 'Résidence enregistrée !');
   };
 
   const filteredProperties = properties.filter(

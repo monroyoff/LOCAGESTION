@@ -53,6 +53,7 @@ import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-downloa
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
 import { IncidentService, ReportedIncident } from '@/lib/services/incident-service';
+import { notifyAction, notifySave } from '@/lib/notifications/action-notifier';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -155,9 +156,9 @@ export default function TenantPortalPage() {
     setReportIssueModalOpen(false);
     setIssuePhotos([]);
     setIssueDesc('');
-    showToast(
-      `Incident (${issueCategory})${photoCount > 0 ? ` avec ${photoCount} photo(s)` : ''} transmis instantanément au bailleur ! Prise en charge sous 24h.`
-    );
+    const issueMsg = `Incident (${issueCategory})${photoCount > 0 ? ` avec ${photoCount} photo(s)` : ''} transmis instantanément au bailleur ! Prise en charge sous 24h.`;
+    showToast(issueMsg);
+    notifySave(issueMsg, 'Panne signalée avec succès !');
   };
 
   // Sync search param & hash with active tab
@@ -240,7 +241,9 @@ export default function TenantPortalPage() {
   const handleDeclarePayment = (e: React.FormEvent) => {
     e.preventDefault();
     setDeclarationModalOpen(false);
-    showToast(`Déclaration de ${formatFCFA(declaredAmount)} envoyée au bailleur ! Quittance émise dès validation.`);
+    const payMsg = `Déclaration de ${formatFCFA(declaredAmount)} envoyée au bailleur ! Quittance émise dès validation.`;
+    showToast(payMsg);
+    notifySave(payMsg, 'Paiement déclaré avec succès !');
   };
 
   const tenant = {
@@ -1858,9 +1861,9 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
           isOpen={isSignModalOpen}
           onClose={() => setIsSignModalOpen(false)}
           onSignedSuccess={(updatedLease) => {
-            showToast(
-              `Bail ${updatedLease.id} contresigné avec succès ! Notification et email transmis au bailleur.`
-            );
+            const signMsg = `Bail ${updatedLease.id} contresigné avec succès ! Notification et email transmis au bailleur.`;
+            showToast(signMsg);
+            notifySave(signMsg, 'Bail contresigné avec succès !');
             checkLeases();
           }}
         />

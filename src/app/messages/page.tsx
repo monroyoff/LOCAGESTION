@@ -31,6 +31,7 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
+import { notifyAction } from '@/lib/notifications/action-notifier';
 
 interface Message {
   id: string;
@@ -251,6 +252,7 @@ export default function MessagesPage() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
+    notifyAction(msg, 'Messagerie en direct', 'success');
     setTimeout(() => setToastMessage(null), 3500);
   };
 

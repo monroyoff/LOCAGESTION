@@ -32,6 +32,7 @@ import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminate
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { useSpace } from '@/lib/context/space-context';
+import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 
 export default function LeasesPage() {
   const router = useRouter();
@@ -79,7 +80,9 @@ export default function LeasesPage() {
     LeaseService.terminateLease(lease.id, reason);
     setLastResiliatedId(lease.id);
     refreshLeases();
-    showToast(`⚠️ Bail ${lease.id} (${lease.tenant}) résilié. Le logement est dissocié.`);
+    const msg = `Bail ${lease.id} (${lease.tenant}) résilié. Le logement est dissocié.`;
+    showToast(`⚠️ ${msg}`);
+    notifyDelete(msg, 'Bail résilié !');
   };
 
   // Action Bailleur : Réactiver le bail sans autres démarches
@@ -87,7 +90,9 @@ export default function LeasesPage() {
     LeaseService.reactivateLease(lease.id);
     setLastResiliatedId(null);
     refreshLeases();
-    showToast(`✅ Bail ${lease.id} (${lease.tenant}) réactivé avec succès ! Liaison rétablie.`);
+    const msg = `Bail ${lease.id} (${lease.tenant}) réactivé avec succès ! Liaison rétablie sans autres démarches.`;
+    showToast(`✅ ${msg}`);
+    notifySave(msg, 'Bail réactivé avec succès !');
   };
 
   const handleDownloadLeasePDF = (lease: Lease) => {

@@ -10,6 +10,7 @@ import { formatFCFA } from '@/lib/money/format';
 import { RentalListing } from '@/lib/types';
 import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
+import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier';
 import {
   Compass,
   MapPin,
@@ -91,6 +92,9 @@ export default function ListingsPage() {
   const handlePublishListing = (newListing: RentalListing) => {
     setListings((prev) => [newListing, ...prev]);
     showToast(`Annonce « ${newListing.title} » publiée avec succès !`);
+    notifyPublish(
+      `Votre annonce « ${newListing.title} » est désormais en ligne et diffusée avec succès sur toute la plateforme !`
+    );
   };
 
   // Sync with URL Query Parameters (ex: from Global Header Search)
@@ -255,9 +259,9 @@ export default function ListingsPage() {
   const handleBookVisitSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedListingForVisit) return;
-    showToast(
-      `Demande de visite confirmée pour le ${visitDate} (${visitTimeSlot}) — ${selectedListingForVisit.title} ! Notification envoyée au bailleur.`
-    );
+    const msg = `Demande de visite confirmée pour le ${visitDate} (${visitTimeSlot}) — ${selectedListingForVisit.title} ! Notification envoyée au bailleur.`;
+    showToast(msg);
+    notifyAction(msg, 'Demande de visite transmise !', 'success');
     setSelectedListingForVisit(null);
   };
 

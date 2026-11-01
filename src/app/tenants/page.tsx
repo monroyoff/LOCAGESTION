@@ -43,6 +43,7 @@ import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
+import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 
 interface TenantDetail {
   id: string;
@@ -378,14 +379,18 @@ export default function TenantsPage() {
     LeaseService.terminateLease(leaseId, reason);
     setLastResiliatedId(leaseId);
     setLeases(LeaseService.getLeases());
-    showToast(`⚠️ Bail ${leaseId} (${tenantName}) résilié. Le logement est dissocié.`);
+    const msg = `Bail ${leaseId} (${tenantName}) résilié. Le logement est dissocié.`;
+    showToast(`⚠️ ${msg}`);
+    notifyDelete(msg, 'Bail résilié !');
   };
 
   const handleReactivateTenantLease = (leaseId: string, tenantName: string) => {
     LeaseService.reactivateLease(leaseId);
     setLastResiliatedId(null);
     setLeases(LeaseService.getLeases());
-    showToast(`✅ Bail ${leaseId} (${tenantName}) réactivé avec succès ! Liaison rétablie sans autres démarches.`);
+    const msg = `Bail ${leaseId} (${tenantName}) réactivé avec succès ! Liaison rétablie sans autres démarches.`;
+    showToast(`✅ ${msg}`);
+    notifySave(msg, 'Bail réactivé avec succès !');
   };
 
   const filteredTenants = MOCK_TENANTS.filter((t) => {
@@ -1074,7 +1079,9 @@ export default function TenantsPage() {
               onSubmit={(e) => {
                 e.preventDefault();
                 setShowInviteModal(false);
-                showToast(`Lien d’invitation généré et envoyé à ${inviteName || 'nouveau locataire'} !`);
+                const msg = `Lien d’invitation généré et envoyé à ${inviteName || 'nouveau locataire'} !`;
+                showToast(msg);
+                notifySave(msg, 'Locataire invité avec succès !');
               }}
               className="p-6 space-y-4 text-xs"
             >

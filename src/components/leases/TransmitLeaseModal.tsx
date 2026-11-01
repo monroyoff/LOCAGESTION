@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { formatFCFA } from '@/lib/money/format';
+import { notifySave } from '@/lib/notifications/action-notifier';
 
 interface TransmitLeaseModalProps {
   isOpen: boolean;
@@ -84,6 +85,10 @@ export function TransmitLeaseModal({
       const transmitted = LeaseService.transmitLeaseToTenant(activeLease);
       setIsTransmitting(false);
       setIsSuccess(true);
+      notifySave(
+        `Le contrat ${activeLease.id} a été déposé avec succès sur le portail résidentiel de ${activeLease.tenant} pour contresignature.`,
+        'Bail transmis au locataire !'
+      );
       if (onTransmitted) onTransmitted(transmitted);
       if (onTransmittedSuccess) onTransmittedSuccess(transmitted);
     }, 600);
