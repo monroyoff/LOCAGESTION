@@ -12,6 +12,14 @@ import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
 import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier';
 import {
+  getUserResidenceCountry,
+  getUserResidenceCity,
+  detectUserGeoLocation,
+  calculateDistanceKm,
+  resolveLocationCoordinates,
+  UserGeoLocation,
+} from '@/lib/services/geo-service';
+import {
   Compass,
   MapPin,
   Search,
@@ -42,6 +50,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageIcon,
+  Navigation,
 } from 'lucide-react';
 
 const ALL_CITIES = Array.from(
@@ -66,13 +75,59 @@ export default function ListingsPage() {
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCountry, setSelectedCountry] = useState('all');
+  // Pays de résidence renseigné lors de l'inscription / géolocalisation par défaut (Bénin par défaut)
+  const [selectedCountry, setSelectedCountry] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const queryCountry = params.get('country');
+      if (queryCountry && (queryCountry in COUNTRIES_CITIES || queryCountry === 'all')) {
+        return queryCountry;
+      }
+    }
+    return getUserResidenceCountry(); // 'Bénin' par défaut !
+  });
   const [selectedCity, setSelectedCity] = useState('all');
   const [pricePresetIdx, setPricePresetIdx] = useState(0);
   const [customMinPrice, setCustomMinPrice] = useState<string>('');
   const [customMaxPrice, setCustomMaxPrice] = useState<string>('');
   const [selectedPropertyType, setSelectedPropertyType] = useState('Tous');
-  const [sortBy, setSortBy] = useState<'featured' | 'price_asc' | 'price_desc' | 'surface_desc'>('featured');
+  // Tri prioritaire par proximité géographique / GPS
+  const [sortBy, setSortBy] = useState<'proximity' | 'featured' | 'price_asc' | 'price_desc' | 'surface_desc'>('proximity');
+
+  // Géolocalisation dynamique de l'utilisateur
+  const [userLocation, setUserLocation] = useState<UserGeoLocation | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLocating(true);
+    detectUserGeoLocation()
+      .then((geo) => {
+        if (isMounted) {
+          setUserLocation(geo);
+          setIsLocating(false);
+        }
+      })
+      .catch(() => {
+        if (isMounted) setIsLocating(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const handleRefreshGPS = async () => {
+    setIsLocating(true);
+    try {
+      const geo = await detectUserGeoLocation();
+      setUserLocation(geo);
+      showToast(`Position GPS actualisée : ${geo.label}`);
+    } catch (e) {
+      showToast('Position GPS actualisée.');
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   // Modals & Notifications
   const [listings, setListings] = useState<RentalListing[]>(MOCK_RENTAL_LISTINGS);
@@ -159,10 +214,19 @@ export default function ListingsPage() {
     return { minRent: preset.min, maxRent: preset.max };
   }, [pricePresetIdx, customMinPrice, customMaxPrice]);
 
-  // Filter listings
+  // Active user coordinates for proximity calculation
+  const userCoords = useMemo(() => {
+    if (userLocation) {
+      return { lat: userLocation.latitude, lng: userLocation.longitude };
+    }
+    const country = selectedCountry !== 'all' ? selectedCountry : getUserResidenceCountry();
+    return resolveLocationCoordinates(country, 'Cotonou');
+  }, [userLocation, selectedCountry]);
+
+  // Filter listings & Calculate GPS Proximity
   const filteredListings = useMemo(() => {
-    return listings.filter((l) => {
-      // 1. Country Filter
+    const list = listings.filter((l) => {
+      // 1. Country Filter (Par défaut strict Bénin selon le profil utilisateur)
       if (selectedCountry !== 'all' && l.country !== selectedCountry) {
         return false;
       }
@@ -208,16 +272,43 @@ export default function ListingsPage() {
       }
 
       return true;
-    }).sort((a, b) => {
+    }).map((l) => {
+      let lat = l.latitude;
+      let lng = l.longitude;
+      if (lat === undefined || lng === undefined) {
+        const resolved = resolveLocationCoordinates(l.country, l.city, l.district);
+        lat = resolved.lat;
+        lng = resolved.lng;
+      }
+      const distanceKm = userCoords
+        ? calculateDistanceKm(userCoords.lat, userCoords.lng, lat, lng)
+        : undefined;
+
+      return {
+        ...l,
+        latitude: lat,
+        longitude: lng,
+        distanceKm,
+      };
+    });
+
+    return list.sort((a, b) => {
+      // 1. Tri prioritaire par proximité géographique / GPS
+      if (sortBy === 'proximity') {
+        const distA = a.distanceKm ?? 9999;
+        const distB = b.distanceKm ?? 9999;
+        return distA - distB;
+      }
       if (sortBy === 'price_asc') return a.monthlyRent - b.monthlyRent;
       if (sortBy === 'price_desc') return b.monthlyRent - a.monthlyRent;
       if (sortBy === 'surface_desc') return b.surface - a.surface;
-      // Default: verified first, then ID
+      // Default: verified first, then proximity
       if (a.isVerified && !b.isVerified) return -1;
       if (!a.isVerified && b.isVerified) return 1;
-      return 0;
+      return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999);
     });
   }, [
+    listings,
     selectedCountry,
     selectedCity,
     selectedPropertyType,
@@ -225,24 +316,25 @@ export default function ListingsPage() {
     maxRent,
     searchQuery,
     sortBy,
+    userCoords,
   ]);
 
-  // Clear all filters back to default
+  // Clear all filters back to default (Bénin par défaut)
   const resetFilters = () => {
     setSearchQuery('');
-    setSelectedCountry('all');
+    setSelectedCountry(getUserResidenceCountry());
     setSelectedCity('all');
     setPricePresetIdx(0);
     setCustomMinPrice('');
     setCustomMaxPrice('');
     setSelectedPropertyType('Tous');
-    setSortBy('featured');
-    showToast('Filtres de recherche réinitialisés.');
+    setSortBy('proximity');
+    showToast('Filtres réinitialisés sur votre pays de résidence (Bénin) et proximité GPS.');
   };
 
   const hasActiveFilters =
     searchQuery.trim() !== '' ||
-    selectedCountry !== 'all' ||
+    selectedCountry !== getUserResidenceCountry() ||
     selectedCity !== 'all' ||
     pricePresetIdx !== 0 ||
     customMinPrice !== '' ||
@@ -318,6 +410,68 @@ export default function ListingsPage() {
                 <span>Recherche de logement certifiée</span>
               </div>
             )}
+          </div>
+
+          {/* Bannière de Géolocalisation Intelligente & Pays de Résidence */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-brand-500/10 via-emerald-500/10 to-tealAccent-500/5 border border-brand-200/80 shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-11 h-11 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-black shrink-0 shadow-md shadow-brand-500/20">
+                <Compass className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight">
+                    {selectedCountry === 'Bénin'
+                      ? 'Logements exclusifs au Bénin (Votre pays de résidence)'
+                      : `Logements sélectionnés : ${selectedCountry}`}
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand-500 text-white shadow-sm flex items-center gap-1">
+                    <MapPin className="w-3 h-3" />
+                    <span>
+                      {userLocation ? userLocation.label : 'Cotonou (Bénin)'}
+                    </span>
+                  </span>
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Proximité GPS active
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 mt-1 max-w-2xl">
+                  {selectedCountry === 'Bénin'
+                    ? 'Par défaut, vous visualisez exclusivement les annonces situées au Bénin, classées en priorité selon leur proximité géographique avec votre position.'
+                    : `Filtre actif sur ${selectedCountry}. Vous pouvez revenir en 1 clic aux annonces exclusives de votre pays de résidence.`}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start md:self-auto shrink-0 flex-wrap">
+              {selectedCountry !== 'Bénin' ? (
+                <button
+                  type="button"
+                  onClick={() => handleCountryChange('Bénin')}
+                  className="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <span>🇧🇯 Revenir au Bénin</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleCountryChange('all')}
+                  className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 transition-colors cursor-pointer"
+                >
+                  <span>🌍 Voir tous les pays</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={handleRefreshGPS}
+                disabled={isLocating}
+                className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Actualiser votre position géographique"
+              >
+                <Navigation className={`w-3.5 h-3.5 text-brand-500 ${isLocating ? 'animate-spin' : ''}`} />
+                <span>{isLocating ? 'Actualisation...' : 'Actualiser GPS'}</span>
+              </button>
+            </div>
           </div>
 
           {/* ==================================================================== */}
@@ -515,10 +669,11 @@ export default function ListingsPage() {
                     onChange={(e) => setSortBy(e.target.value as any)}
                     className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
                   >
-                    <option value="featured">En vedette</option>
-                    <option value="price_asc">Loyer croissant</option>
-                    <option value="price_desc">Loyer décroissant</option>
-                    <option value="surface_desc">Plus grand (m²)</option>
+                    <option value="proximity">📍 Plus proches de moi (GPS)</option>
+                    <option value="featured">⭐ En vedette</option>
+                    <option value="price_asc">💰 Loyer croissant</option>
+                    <option value="price_desc">💎 Loyer décroissant</option>
+                    <option value="surface_desc">📐 Plus grand (m²)</option>
                   </select>
                 </div>
 
@@ -650,6 +805,13 @@ export default function ListingsPage() {
                             {listing.propertyType}
                           </span>
 
+                          {listing.distanceKm !== undefined && listing.distanceKm <= 10 && (
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-600/95 backdrop-blur-md text-white text-[10px] font-black border border-white/20 flex items-center gap-1 shadow-sm">
+                              <MapPin className="w-3 h-3 text-white" />
+                              <span>{listing.distanceKm < 1 ? '< 1 km' : `~${listing.distanceKm} km`}</span>
+                            </span>
+                          )}
+
                           {listing.isVerified && (
                             <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-emerald-400 text-[10px] font-bold border border-white/10 flex items-center gap-1">
                               <ShieldCheck className="w-3 h-3 text-emerald-400" />
@@ -696,11 +858,19 @@ export default function ListingsPage() {
                         </h3>
 
                         <div className="text-xs text-slate-500 space-y-1">
-                          <div className="flex items-center gap-1 font-bold text-slate-800">
-                            <MapPin className="w-3.5 h-3.5 text-brand-500 shrink-0" />
-                            <span>
-                              {listing.district}, {listing.city} ({listing.country})
-                            </span>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <div className="flex items-center gap-1 font-bold text-slate-800">
+                              <MapPin className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                              <span>
+                                {listing.district}, {listing.city} ({listing.country})
+                              </span>
+                            </div>
+                            {listing.distanceKm !== undefined && (
+                              <span className="text-[10px] font-black text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                                <Compass className="w-3 h-3 text-brand-500" />
+                                <span>{listing.distanceKm < 1 ? '< 1 km' : `~${listing.distanceKm} km`}</span>
+                              </span>
+                            )}
                           </div>
                           <p className="text-[11px] text-slate-400 italic">
                             Repère : « {listing.landmark} »

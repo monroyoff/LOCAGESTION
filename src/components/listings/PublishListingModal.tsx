@@ -20,6 +20,11 @@ import {
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { RentalListing } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
+import {
+  getUserResidenceCountry,
+  getUserResidenceCity,
+  resolveLocationCoordinates,
+} from '@/lib/services/geo-service';
 
 interface PublishListingModalProps {
   isOpen: boolean;
@@ -61,8 +66,9 @@ export function PublishListingModal({
 }: PublishListingModalProps) {
   const [title, setTitle] = useState('');
   const [propertyType, setPropertyType] = useState<RentalListing['propertyType']>('Chambre salon sanitaire');
-  const [country, setCountry] = useState('Bénin');
-  const [city, setCity] = useState('Cotonou');
+  // Pays de résidence renseigné lors de l'inscription / géolocalisation par défaut
+  const [country, setCountry] = useState(() => getUserResidenceCountry());
+  const [city, setCity] = useState(() => getUserResidenceCity());
   const [isCustomCity, setIsCustomCity] = useState(false);
   const [customCity, setCustomCity] = useState('');
   const [district, setDistrict] = useState('');
@@ -185,6 +191,7 @@ export function PublishListingModal({
       .filter((line) => line.length > 0);
 
     const finalCity = isCustomCity && customCity.trim() ? customCity.trim() : city;
+    const coords = resolveLocationCoordinates(country, finalCity, district);
 
     const newListing: RentalListing = {
       id: `list-${Date.now()}`,
@@ -196,6 +203,8 @@ export function PublishListingModal({
       city: finalCity,
       district: district || 'Centre-ville',
       landmark: landmark || 'Accès bitumé et sécurisé',
+      latitude: coords.lat,
+      longitude: coords.lng,
       monthlyRent: parseInt(monthlyRent, 10) || 200000,
       charges: parseInt(charges, 10) || 20000,
       depositMonths,
@@ -259,6 +268,18 @@ export function PublishListingModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 text-xs">
+          {/* Badge Pays de Résidence & Géolocalisation */}
+          <div className="flex items-center gap-2.5 p-3 bg-brand-50/90 rounded-2xl border border-brand-200/90 text-xs text-brand-950">
+            <MapPin className="w-4 h-4 text-brand-600 shrink-0" />
+            <div className="leading-snug">
+              <span>
+                Pays de résidence par défaut appliqué : <strong>{country}</strong> ({city}).
+              </span>
+              <span className="text-[10px] text-brand-700 block mt-0.5">
+                Votre annonce ciblera en exclusivité et priorité les locataires résidant dans cette zone.
+              </span>
+            </div>
+          </div>
           {/* Titre */}
           <div>
             <label className="font-bold text-slate-700 block mb-1">

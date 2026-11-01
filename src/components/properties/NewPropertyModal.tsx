@@ -16,6 +16,7 @@ import {
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { Property } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
+import { getUserResidenceCountry, getUserResidenceCity } from '@/lib/services/geo-service';
 
 interface NewPropertyModalProps {
   isOpen: boolean;
@@ -50,8 +51,8 @@ export function NewPropertyModal({
 }: NewPropertyModalProps) {
   const [name, setName] = useState('');
   const [type, setType] = useState<string>('Chambre salon sanitaire');
-  const [country, setCountry] = useState('Bénin');
-  const [city, setCity] = useState('Cotonou');
+  const [country, setCountry] = useState(() => getUserResidenceCountry());
+  const [city, setCity] = useState(() => getUserResidenceCity());
   const [isCustomCity, setIsCustomCity] = useState(false);
   const [customCity, setCustomCity] = useState('');
   const [district, setDistrict] = useState('');

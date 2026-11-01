@@ -17,6 +17,7 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { COUNTRIES_CITIES, MOCK_RENTAL_LISTINGS } from '@/lib/data/mock-data';
 import { RentalListing } from '@/lib/types';
+import { getUserResidenceCountry } from '@/lib/services/geo-service';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -43,9 +44,9 @@ export function GlobalSearchModal({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter States
+  // Filter States (Pays de résidence par défaut)
   const [query, setQuery] = useState(initialQuery);
-  const [selectedCountry, setSelectedCountry] = useState('all');
+  const [selectedCountry, setSelectedCountry] = useState(() => getUserResidenceCountry());
   const [selectedCity, setSelectedCity] = useState('all');
   const [selectedType, setSelectedType] = useState('Tous');
   const [pricePresetIdx, setPricePresetIdx] = useState(0);

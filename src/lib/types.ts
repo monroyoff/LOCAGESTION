@@ -202,6 +202,9 @@ export interface RentalListing {
   amenities: string[];
   description?: string; // Description détaillée du bien
   descriptionLines?: string[]; // Lignes de description cochées dans l'annonce
+  latitude?: number; // Coordonnées GPS pour proximité
+  longitude?: number;
+  distanceKm?: number; // Distance calculée par rapport à l'utilisateur
   isVerified: boolean;
   status: 'disponible' | 'reserve' | 'loue';
 }
