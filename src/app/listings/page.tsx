@@ -45,7 +45,7 @@ import {
 
 const ALL_CITIES = Array.from(
   new Set(Object.values(COUNTRIES_CITIES).flatMap((c) => c.cities))
-).sort();
+).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
 
 const PRICE_PRESETS = [
   { label: 'Tous les montants', min: 0, max: 0 },

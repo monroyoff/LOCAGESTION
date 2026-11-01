@@ -108,7 +108,7 @@ export function GlobalSearchModal({
     if (selectedCountry === 'all') {
       return Array.from(
         new Set(Object.values(COUNTRIES_CITIES).flatMap((c) => c.cities))
-      ).sort();
+      ).sort((a, b) => a.localeCompare(b, 'fr', { sensitivity: 'base' }));
     }
     return COUNTRIES_CITIES[selectedCountry]?.cities || [];
   }, [selectedCountry]);
