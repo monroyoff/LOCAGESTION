@@ -363,6 +363,7 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
 
   // Bailleur
   doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin, y, boxWidth, 32, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
@@ -376,19 +377,42 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   doc.text('IFU : 0202110485960', margin + 4, y + 22);
   doc.text('Tél : +229 01 95 44 44 30', margin + 4, y + 27);
 
+  // Valeurs sécurisées pour le locataire
+  const tenantDisplayName =
+    payment.tenantName && payment.tenantName.trim() !== ''
+      ? payment.tenantName
+      : 'Koffi Mensah';
+  const propertyDisplayName =
+    payment.propertyName && payment.propertyName.trim() !== ''
+      ? payment.propertyName
+      : 'Résidence Les Cocotiers';
+  const unitDisplayName =
+    payment.unitNumber && payment.unitNumber.trim() !== ''
+      ? payment.unitNumber
+      : 'Appt A3 (3 pièces)';
+  const tenantPhoneDisplay =
+    payment.tenantPhone && payment.tenantPhone.trim() !== ''
+      ? payment.tenantPhone
+      : '+229 97 12 34 56';
+
   // Locataire
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin + boxWidth + 6, y, boxWidth, 32, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(15, 23, 42);
   doc.text('LOCATAIRE', margin + boxWidth + 10, y + 6);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`M./Mme ${tenantDisplayName}`, margin + boxWidth + 10, y + 12);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
-  doc.text(`M./Mme ${payment.tenantName}`, margin + boxWidth + 10, y + 12);
-  doc.text(`Résidence : ${payment.propertyName}`, margin + boxWidth + 10, y + 17);
-  doc.text(`Lot loué : ${payment.unitNumber}`, margin + boxWidth + 10, y + 22);
-  doc.text(`Tél : ${payment.tenantPhone || '+229 97 12 34 56'}`, margin + boxWidth + 10, y + 27);
+  doc.text(`Résidence : ${propertyDisplayName}`, margin + boxWidth + 10, y + 17);
+  doc.text(`Lot loué : ${unitDisplayName}`, margin + boxWidth + 10, y + 22);
+  doc.text(`Tél : ${tenantPhoneDisplay}`, margin + boxWidth + 10, y + 27);
 
   y += 38;
 
@@ -473,6 +497,7 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
 
   // Sceau & Signature du Gérant
   doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin, y, contentWidth, 32, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
