@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { PaymentTransaction } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
+import { downloadDocument } from '@/lib/export/pdf-download';
 
 interface ReceiptModalProps {
   payment: PaymentTransaction | null;
@@ -22,6 +23,43 @@ interface ReceiptModalProps {
 
 export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
   if (!payment) return null;
+
+  const handleDownloadQuittance = () => {
+    const quittanceContent = `================================================================================
+                    RÉPUBLIQUE DU BÉNIN / ZONE UEMOA & OHADA
+              QUITTANCE DE LOYER OFFICIELLE CERTIFIÉE
+================================================================================
+RÉFÉRENCE QUITTANCE : ${payment.receiptNumber}
+DATE D'ÉMISSION     : ${payment.paymentDate}
+STATUT DU PAIEMENT  : LOYER INTÉGRALEMENT SOLDÉ (Conforme UEMOA & OHADA)
+
+1. BAILLEUR ÉMETTEUR :
+   DIALLO PATRIMOINE SARL
+   Rue 340 Haie Vive • Cotonou, République du Bénin
+   IFU : 0202110485960 • RCCM : RB/COT/21 B 1042
+   Tél : +229 01 95 44 44 30 • contact@diallo-patrimoine.bj
+
+2. LOCATAIRE TITULAIRE :
+   ${payment.tenantName}
+   Résidant : ${payment.propertyName} - Lot ${payment.unitNumber}
+
+3. DÉTAIL DES MONTANTS :
+   - Période : ${payment.period}
+   - Mode de règlement : ${payment.method}
+   - Total quittancé et encaissé : ${payment.amount.toLocaleString('fr-FR')} FCFA
+
+ATTESTATION LÉGALE :
+Je soussigné, représentant légal de DIALLO PATRIMOINE SARL, reconnais avoir reçu de M./Mme
+${payment.tenantName} la somme de ${payment.amount.toLocaleString('fr-FR')} FCFA au titre du règlement
+du loyer pour la période susmentionnée.
+
+Signé numériquement par Mamadou Diallo • Gérant
+Empreinte SHA-256 certifiée • Code vérification : /verify/${payment.id}
+================================================================================`;
+
+    downloadDocument(`quittance-${payment.receiptNumber}.txt`, quittanceContent);
+    window.print();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -214,8 +252,8 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               Fermer
             </button>
             <button
-              onClick={() => window.print()}
-              className="py-2 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-pink-glow transition-all flex items-center gap-1.5"
+              onClick={handleDownloadQuittance}
+              className="py-2 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-pink-glow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
             >
               <Download className="w-3.5 h-3.5" />
               <span>Télécharger Quittance (PDF)</span>

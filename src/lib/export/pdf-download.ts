@@ -2,6 +2,8 @@
  * Utilitaire de téléchargement de documents officiels (Contrats de bail, quittances, états des lieux)
  */
 
+import { notifyDownloadComplete } from './download-notifier';
+
 export function downloadDocument(filename: string, content: string, mimeType: string = 'text/plain') {
   if (typeof window === 'undefined') return;
 
@@ -14,6 +16,9 @@ export function downloadDocument(filename: string, content: string, mimeType: st
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+
+  // Déclenchement de la notification de téléchargement sur l'écran
+  notifyDownloadComplete(filename);
 }
 
 export function generateLeaseContent(lease: {
