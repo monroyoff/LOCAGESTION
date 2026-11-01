@@ -401,7 +401,6 @@ export const COUNTRIES_CITIES: Record<string, { flag: string; cities: string[] }
       'Djidja',
       'Djougou',
       'Dogbo',
-      'Fidjrosè',
       'Fidjrossè',
       'Glazoué',
       'Godomey',
