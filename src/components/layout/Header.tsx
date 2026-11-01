@@ -23,16 +23,10 @@ import {
 import { formatDateFR } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
-import { UserProfileModal } from '@/components/profile/UserProfileModal';
 import {
   LeaseService,
   LandlordNotification,
 } from '@/lib/services/lease-service';
-import {
-  getUserProfile,
-  getUserResidenceCountry,
-} from '@/lib/services/geo-service';
-import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -51,24 +45,6 @@ export function Header({
   const { isLandlord, isTenant, activeSpace } = useSpace();
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState(() => getUserProfile(activeSpace));
-
-  useEffect(() => {
-    setUserProfile(getUserProfile(activeSpace));
-  }, [activeSpace]);
-
-  useEffect(() => {
-    const handleProfileUpdate = () => {
-      setUserProfile(getUserProfile(activeSpace));
-    };
-    window.addEventListener('locagestion:profile_updated', handleProfileUpdate);
-    window.addEventListener('locagestion:residence_updated', handleProfileUpdate);
-    return () => {
-      window.removeEventListener('locagestion:profile_updated', handleProfileUpdate);
-      window.removeEventListener('locagestion:residence_updated', handleProfileUpdate);
-    };
-  }, [activeSpace]);
 
   // Notifications Bailleur
   const [notifications, setNotifications] = useState<LandlordNotification[]>([]);
@@ -422,43 +398,8 @@ export function Header({
               </button>
             </>
           )}
-
-          {/* Profil Utilisateur & Informations d'Inscription */}
-          <button
-            type="button"
-            onClick={() => setIsProfileModalOpen(true)}
-            className="flex items-center gap-2 p-1.5 sm:px-3 sm:py-1.5 rounded-2xl bg-white border border-slate-200 hover:border-brand-300 hover:shadow-sm text-slate-700 transition-all cursor-pointer group"
-            title={`Profil & Inscription (${userProfile.residenceCountry})`}
-          >
-            <div className="relative">
-              <img
-                src={userProfile.avatarUrl || (isLandlord
-                  ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80'
-                  : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')}
-                alt={userProfile.name}
-                className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-cover ring-2 ring-slate-100 group-hover:ring-brand-200 transition-all"
-              />
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
-            </div>
-            <div className="hidden sm:flex flex-col text-left">
-              <span className="text-xs font-black text-slate-800 leading-none truncate max-w-[100px]">
-                {userProfile.name.split(' ')[0]}
-              </span>
-              <span className="text-[10px] font-bold text-slate-400 leading-tight flex items-center gap-0.5">
-                <span>{COUNTRIES_CITIES[userProfile.residenceCountry]?.flag || '🇧🇯'}</span>
-                <span>{userProfile.residenceCountry}</span>
-              </span>
-            </div>
-          </button>
         </div>
       </header>
-
-      {/* User Profile & Inscription Modal */}
-      <UserProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        activeSpace={isLandlord ? 'bailleur' : 'locataire'}
-      />
 
       {/* Global Search & Multi-Criteria Filters Modal */}
       <GlobalSearchModal
