@@ -918,6 +918,72 @@ export default function TenantPortalPage() {
                   </Link>
                 </div>
               </div>
+
+              {/* Artisans mandatés actifs pour le locataire */}
+              {reportedIncidents.filter((i) => i.status !== 'resolu' && i.assignedTechnician).length > 0 && (
+                <div className="space-y-3">
+                  {reportedIncidents
+                    .filter((i) => i.status !== 'resolu' && i.assignedTechnician)
+                    .map((inc) => (
+                      <div
+                        key={inc.id}
+                        className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-blue-50/90 border border-blue-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                      >
+                        <div className="flex items-center gap-3.5">
+                          <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+                            <Wrench className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-600 text-white shadow-xs">
+                                Artisan Mandaté par le bailleur
+                              </span>
+                              <span className="text-xs font-bold text-slate-600">
+                                {inc.assignedTechnician?.trade || 'Artisan Qualifié'}
+                              </span>
+                            </div>
+                            <h4 className="font-black text-slate-900 text-sm sm:text-base mt-1">
+                              {inc.assignedTechnician?.name}
+                            </h4>
+                            <p className="text-xs font-bold text-blue-700 flex items-center gap-1.5 mt-0.5">
+                              <Phone className="w-3.5 h-3.5 text-blue-600" />
+                              <span>{inc.assignedTechnician?.phone}</span>
+                              <span className="text-slate-400 font-normal">
+                                • Dossier #{inc.id} ({inc.category})
+                              </span>
+                            </p>
+                            {inc.resolutionNotes && (
+                              <p className="text-[11px] text-slate-600 font-medium mt-1 bg-white/70 px-2.5 py-1 rounded-lg border border-blue-100 inline-block">
+                                💬 Note : {inc.resolutionNotes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                          <a
+                            href={`tel:${inc.assignedTechnician?.phone.replace(/[^0-9+]/g, '')}`}
+                            className="py-2 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          >
+                            <Phone className="w-3.5 h-3.5" />
+                            <span>Appeler</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/${inc.assignedTechnician?.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                              `Bonjour ${inc.assignedTechnician?.name},\n\nJe suis le locataire pour l'intervention #${inc.id} (${inc.category}) concernant le logement ${inc.unit}.\nQuand seriez-vous disponible pour intervenir ?\n\nMerci.`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="py-2 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>WhatsApp</span>
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
             </div>
           )}
 

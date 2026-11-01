@@ -203,6 +203,43 @@ export const IncidentService = {
     return updated;
   },
 
+  // Mise à jour complète de la fiche et de la mission artisan
+  updateIncidentFull(
+    id: string,
+    updates: {
+      status?: IncidentStatus;
+      resolutionNotes?: string;
+      assignedTechnician?: {
+        name: string;
+        phone: string;
+        trade: string;
+      };
+    }
+  ): ReportedIncident | null {
+    const current = this.getIncidents();
+    const index = current.findIndex((i) => i.id === id);
+    if (index === -1) return null;
+
+    const incident = current[index];
+    const nowFormatted = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+    });
+
+    const updated: ReportedIncident = {
+      ...incident,
+      status: updates.status ?? incident.status,
+      resolutionNotes: updates.resolutionNotes !== undefined ? updates.resolutionNotes : incident.resolutionNotes,
+      assignedTechnician: updates.assignedTechnician !== undefined ? updates.assignedTechnician : incident.assignedTechnician,
+      resolvedAt: updates.status === 'resolu' ? nowFormatted : incident.resolvedAt,
+    };
+
+    current[index] = updated;
+    this.saveAllIncidents(current);
+    return updated;
+  },
+
   // Attribution d'un artisan ou technicien
   assignTechnician(
     id: string,

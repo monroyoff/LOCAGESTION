@@ -819,18 +819,81 @@ function IncidentsPageContent() {
                             </div>
                           )}
 
+                          {/* Artisan mandaté pour le locataire */}
+                          {incident.assignedTechnician && (
+                            <div className="mt-3 p-3.5 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50/70 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
+                                  <Wrench className="w-5 h-5" />
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-600 text-white">
+                                      Artisan Mandaté
+                                    </span>
+                                    <span className="text-xs font-bold text-slate-600">
+                                      {incident.assignedTechnician.trade || 'Technicien / Artisan'}
+                                    </span>
+                                  </div>
+                                  <p className="font-black text-slate-900 text-sm mt-0.5">
+                                    {incident.assignedTechnician.name}
+                                  </p>
+                                  <p className="text-xs font-bold text-blue-700 flex items-center gap-1.5 mt-0.5">
+                                    <Phone className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>{incident.assignedTechnician.phone}</span>
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                                <a
+                                  href={`tel:${incident.assignedTechnician.phone.replace(/[^0-9+]/g, '')}`}
+                                  className="py-1.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                >
+                                  <Phone className="w-3.5 h-3.5" />
+                                  <span>Appeler l'artisan</span>
+                                </a>
+                                <a
+                                  href={`https://wa.me/${incident.assignedTechnician.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                                    `Bonjour ${incident.assignedTechnician.name},\n\nJe suis le locataire pour l'intervention #${incident.id} (${incident.category}) sur mon logement ${incident.unit}.\nQuand seriez-vous disponible pour intervenir ?\n\nMerci.`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="py-1.5 px-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Notes de suivi du bailleur pour le locataire */}
+                          {incident.resolutionNotes && (
+                            <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
+                              <span className="font-bold text-slate-900 block mb-0.5">
+                                📝 Suivi du bailleur :
+                              </span>
+                              <p className="text-slate-600 font-medium">{incident.resolutionNotes}</p>
+                            </div>
+                          )}
+
                           {/* Statut d'avancement pour le locataire */}
                           <div className="mt-3 pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
                             <div className="flex items-center gap-2">
-                              {isInProgress && incident.assignedTechnician ? (
+                              {isInProgress ? (
                                 <div className="text-blue-700 font-bold flex items-center gap-1.5">
                                   <Wrench className="w-3.5 h-3.5 text-blue-500" />
-                                  <span>Un artisan a été mandaté : {incident.assignedTechnician.name}</span>
+                                  <span>
+                                    {incident.assignedTechnician
+                                      ? `Intervention planifiée avec ${incident.assignedTechnician.name}`
+                                      : 'Prise en charge par le bailleur'}
+                                  </span>
                                 </div>
                               ) : isResolved ? (
                                 <div className="text-emerald-700 font-bold flex items-center gap-1.5">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                                  <span>Intervention clôturée avec succès</span>
+                                  <span>Intervention clôturée avec succès {incident.resolvedAt ? `le ${incident.resolvedAt}` : ''}</span>
                                 </div>
                               ) : (
                                 <div className="text-amber-700 font-bold flex items-center gap-1.5">
@@ -843,14 +906,14 @@ function IncidentsPageContent() {
                             {/* Contact Bailleur WhatsApp direct */}
                             <a
                               href={`https://wa.me/22997000000?text=${encodeURIComponent(
-                                `Bonjour cher bailleur,\n\nJe reviens vers vous concernant la panne signalée (${incident.id} - ${incident.category}) sur mon logement Appt A3.\nPouvez-vous me tenir informé de l'avancement de l'artisan ?\n\nMerci.`
+                                `Bonjour cher bailleur,\n\nJe reviens vers vous concernant la panne signalée (${incident.id} - ${incident.category}) sur mon logement Appt A3.\nPouvez-vous me tenir informé de l'avancement ?\n\nMerci.`
                               )}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="py-1.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1.5 border border-emerald-200 transition-all self-start sm:self-auto"
+                              className="py-1.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold flex items-center gap-1.5 border border-emerald-200 transition-all self-start sm:self-auto cursor-pointer"
                             >
                               <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Relancer le bailleur via WhatsApp</span>
+                              <span>Contacter le bailleur</span>
                             </a>
                           </div>
                         </div>

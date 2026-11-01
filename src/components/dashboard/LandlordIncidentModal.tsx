@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Wrench,
   X,
@@ -17,8 +17,10 @@ import {
   User,
   Building2,
   FileCheck,
+  Save,
 } from 'lucide-react';
 import { ReportedIncident, IncidentService, IncidentStatus } from '@/lib/services/incident-service';
+import { notifySave } from '@/lib/notifications/action-notifier';
 
 interface LandlordIncidentModalProps {
   incident: ReportedIncident | null;
@@ -48,16 +50,28 @@ export function LandlordIncidentModal({
     incident?.assignedTechnician?.trade || 'Technicien / Artisan'
   );
 
+  useEffect(() => {
+    if (incident) {
+      setCurrentStatus(incident.status);
+      setResolutionNotes(incident.resolutionNotes || '');
+      setArtisanName(incident.assignedTechnician?.name || '');
+      setArtisanPhone(incident.assignedTechnician?.phone || '+229 95 00 22 33');
+      setArtisanTrade(incident.assignedTechnician?.trade || 'Technicien / Artisan');
+    }
+  }, [incident]);
+
   if (!incident) return null;
 
   const handleUpdateStatus = (newStatus: IncidentStatus) => {
     setCurrentStatus(newStatus);
     IncidentService.updateIncidentStatus(incident.id, newStatus, resolutionNotes);
+    notifySave(`Statut de l'incident mis à jour : ${newStatus.toUpperCase()}`);
     if (onStatusUpdated) onStatusUpdated();
   };
 
   const handleSaveNotes = () => {
     IncidentService.updateIncidentStatus(incident.id, currentStatus, resolutionNotes);
+    notifySave('Notes de suivi de l’incident enregistrées avec succès.');
     if (onStatusUpdated) onStatusUpdated();
   };
 
@@ -65,12 +79,46 @@ export function LandlordIncidentModal({
     if (artisanName.trim()) {
       IncidentService.assignTechnician(incident.id, {
         name: artisanName.trim(),
-        phone: artisanPhone.trim(),
-        trade: artisanTrade.trim(),
+        phone: artisanPhone.trim() || '+229 95 00 22 33',
+        trade: artisanTrade.trim() || 'Technicien / Artisan',
       });
       setCurrentStatus('pris_en_charge');
+      notifySave(
+        `Artisan ${artisanName.trim()} (${artisanPhone.trim()}) mandaté avec succès ! Coordonnées transmises au locataire.`,
+        'Mission artisan enregistrée'
+      );
       if (onStatusUpdated) onStatusUpdated();
     }
+  };
+
+  const handleSaveAll = () => {
+    if (!incident) return;
+    const hasArtisan = artisanName.trim().length > 0;
+    const tech = hasArtisan
+      ? {
+          name: artisanName.trim(),
+          phone: artisanPhone.trim() || '+229 95 00 22 33',
+          trade: artisanTrade.trim() || 'Technicien / Artisan',
+        }
+      : incident.assignedTechnician;
+
+    const targetStatus = currentStatus === 'en_attente' && hasArtisan ? 'pris_en_charge' : currentStatus;
+
+    IncidentService.updateIncidentFull(incident.id, {
+      status: targetStatus,
+      resolutionNotes,
+      assignedTechnician: tech,
+    });
+
+    notifySave(
+      hasArtisan
+        ? `Fiche mise à jour ! Artisan mandaté : ${artisanName} (${artisanPhone}). Le locataire a immédiatement accès à son numéro.`
+        : 'Fiche incident enregistrée avec succès.',
+      'Fiche & Artisan enregistrés'
+    );
+
+    if (onStatusUpdated) onStatusUpdated();
+    onClose();
   };
 
   // WhatsApp au locataire pour accuser réception
@@ -380,11 +428,11 @@ export function LandlordIncidentModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex flex-wrap items-center justify-between gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="py-2 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-100 transition-colors cursor-pointer"
+            className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-100 text-slate-700 text-xs transition-colors cursor-pointer"
           >
             Fermer
           </button>
@@ -392,11 +440,19 @@ export function LandlordIncidentModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={handleSaveAll}
+              className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black text-xs flex items-center gap-2 shadow-pink-glow transition-all cursor-pointer active:scale-95"
+            >
+              <Save className="w-4 h-4" />
+              <span>Enregistrer les modifications</span>
+            </button>
+            <button
+              type="button"
               onClick={() => {
                 handleUpdateStatus('resolu');
                 onClose();
               }}
-              className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer text-xs"
             >
               <CheckCircle2 className="w-4 h-4" />
               <span>Clôturer l'incident (Résolu)</span>
