@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Plus,
@@ -65,6 +65,13 @@ export function NewPropertyModal({
     'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
   ]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setCountry(getUserResidenceCountry());
+      setCity(getUserResidenceCity());
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

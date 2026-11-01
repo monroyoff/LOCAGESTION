@@ -14,6 +14,8 @@ import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier
 import {
   getUserResidenceCountry,
   getUserResidenceCity,
+  getUserResidenceDistrict,
+  setUserResidenceDistrict,
   detectUserGeoLocation,
   calculateDistanceKm,
   resolveLocationCoordinates,
@@ -75,7 +77,7 @@ export default function ListingsPage() {
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
-  // Pays de résidence renseigné lors de l'inscription / géolocalisation par défaut (Bénin par défaut)
+  // Pays de résidence renseigné lors de l'inscription (mis par défaut pour toute recherche)
   const [selectedCountry, setSelectedCountry] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -84,9 +86,10 @@ export default function ListingsPage() {
         return queryCountry;
       }
     }
-    return getUserResidenceCountry(); // 'Bénin' par défaut !
+    return getUserResidenceCountry();
   });
   const [selectedCity, setSelectedCity] = useState('all');
+  const [currentDistrict, setCurrentDistrict] = useState<string>(() => getUserResidenceDistrict());
   const [pricePresetIdx, setPricePresetIdx] = useState(0);
   const [customMinPrice, setCustomMinPrice] = useState<string>('');
   const [customMaxPrice, setCustomMaxPrice] = useState<string>('');
@@ -115,6 +118,35 @@ export default function ListingsPage() {
       isMounted = false;
     };
   }, []);
+
+  // Écoute de mise à jour du profil d'inscription
+  useEffect(() => {
+    const handleResidenceUpdate = () => {
+      const country = getUserResidenceCountry();
+      const dist = getUserResidenceDistrict();
+      setSelectedCountry(country);
+      setCurrentDistrict(dist);
+      detectUserGeoLocation().then((geo) => setUserLocation(geo)).catch(() => {});
+    };
+    window.addEventListener('locagestion:residence_updated', handleResidenceUpdate);
+    return () => window.removeEventListener('locagestion:residence_updated', handleResidenceUpdate);
+  }, []);
+
+  const handleDistrictChange = (dist: string) => {
+    setCurrentDistrict(dist);
+    setUserResidenceDistrict(dist);
+    const resolved = resolveLocationCoordinates(selectedCountry, 'Cotonou', dist);
+    setUserLocation({
+      country: selectedCountry,
+      city: 'Cotonou',
+      district: dist,
+      latitude: resolved.lat,
+      longitude: resolved.lng,
+      source: 'manual',
+      label: `${dist}, Cotonou (${selectedCountry})`,
+    });
+    showToast(`Position actuelle définie sur : ${dist}. Annonces classées par proximité.`);
+  };
 
   const handleRefreshGPS = async () => {
     setIsLocating(true);
@@ -220,8 +252,10 @@ export default function ListingsPage() {
       return { lat: userLocation.latitude, lng: userLocation.longitude };
     }
     const country = selectedCountry !== 'all' ? selectedCountry : getUserResidenceCountry();
-    return resolveLocationCoordinates(country, 'Cotonou');
-  }, [userLocation, selectedCountry]);
+    const city = getUserResidenceCity();
+    const district = currentDistrict || getUserResidenceDistrict();
+    return resolveLocationCoordinates(country, city, district);
+  }, [userLocation, selectedCountry, currentDistrict]);
 
   // Filter listings & Calculate GPS Proximity
   const filteredListings = useMemo(() => {
@@ -319,17 +353,18 @@ export default function ListingsPage() {
     userCoords,
   ]);
 
-  // Clear all filters back to default (Bénin par défaut)
+  // Clear all filters back to default (Pays de résidence d'inscription par défaut)
   const resetFilters = () => {
+    const defaultCountry = getUserResidenceCountry();
     setSearchQuery('');
-    setSelectedCountry(getUserResidenceCountry());
+    setSelectedCountry(defaultCountry);
     setSelectedCity('all');
     setPricePresetIdx(0);
     setCustomMinPrice('');
     setCustomMaxPrice('');
     setSelectedPropertyType('Tous');
     setSortBy('proximity');
-    showToast('Filtres réinitialisés sur votre pays de résidence (Bénin) et proximité GPS.');
+    showToast(`Filtres réinitialisés sur votre pays de résidence d'inscription (${defaultCountry}) et proximité.`);
   };
 
   const hasActiveFilters =
@@ -412,7 +447,7 @@ export default function ListingsPage() {
             )}
           </div>
 
-          {/* Bannière de Géolocalisation Intelligente & Pays de Résidence */}
+          {/* Bannière de Géolocalisation Intelligente & Pays de Résidence d'Inscription */}
           <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-brand-500/10 via-emerald-500/10 to-tealAccent-500/5 border border-brand-200/80 shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5">
               <div className="w-11 h-11 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-black shrink-0 shadow-md shadow-brand-500/20">
@@ -421,14 +456,14 @@ export default function ListingsPage() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight">
-                    {selectedCountry === 'Bénin'
-                      ? 'Logements exclusifs au Bénin (Votre pays de résidence)'
+                    {selectedCountry === getUserResidenceCountry()
+                      ? `Logements exclusifs au ${selectedCountry} (Votre pays de résidence d'inscription)`
                       : `Logements sélectionnés : ${selectedCountry}`}
                   </h3>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-brand-500 text-white shadow-sm flex items-center gap-1">
                     <MapPin className="w-3 h-3" />
                     <span>
-                      {userLocation ? userLocation.label : 'Cotonou (Bénin)'}
+                      {userLocation ? userLocation.label : `${currentDistrict || 'Cotonou'} (${selectedCountry})`}
                     </span>
                   </span>
                   <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -436,21 +471,47 @@ export default function ListingsPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-600 mt-1 max-w-2xl">
-                  {selectedCountry === 'Bénin'
-                    ? 'Par défaut, vous visualisez exclusivement les annonces situées au Bénin, classées en priorité selon leur proximité géographique avec votre position.'
-                    : `Filtre actif sur ${selectedCountry}. Vous pouvez revenir en 1 clic aux annonces exclusives de votre pays de résidence.`}
+                  {selectedCountry === getUserResidenceCountry()
+                    ? `Par défaut, vous visualisez exclusivement les annonces situées au ${selectedCountry}, classées en priorité selon leur proximité géographique avec votre position.`
+                    : `Filtre actif sur ${selectedCountry}. Vous pouvez revenir en 1 clic aux annonces exclusives de votre pays de résidence d'inscription.`}
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 self-start md:self-auto shrink-0 flex-wrap">
-              {selectedCountry !== 'Bénin' ? (
+              {/* Sélecteur rapide de quartier pour tester la proximité instantanée */}
+              {selectedCountry === 'Bénin' && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white border border-slate-200 shadow-xs text-xs">
+                  <span className="text-[10px] font-bold text-slate-400">Position :</span>
+                  <select
+                    value={currentDistrict.toLowerCase()}
+                    onChange={(e) => handleDistrictChange(e.target.value)}
+                    className="bg-transparent font-black text-slate-900 focus:outline-none cursor-pointer text-xs"
+                    title="Changer votre position pour recalculer la proximité"
+                  >
+                    <option value="haie vive">📍 Haie Vive (Cotonou)</option>
+                    <option value="cadjèhoun">📍 Cadjèhoun (Cotonou)</option>
+                    <option value="agla">📍 Agla (Cotonou)</option>
+                    <option value="fidjrossè">📍 Fidjrossè (Cotonou)</option>
+                    <option value="akpakpa">📍 Akpakpa (Cotonou)</option>
+                    <option value="menontin">📍 Menontin (Cotonou)</option>
+                    <option value="zogbo">📍 Zogbo (Cotonou)</option>
+                    <option value="godomey">📍 Godomey (Calavi)</option>
+                    <option value="cocotomey">📍 Cocotomey (Calavi)</option>
+                    <option value="cococodji">📍 Cococodji (Calavi)</option>
+                    <option value="arconville">📍 Arconville / UAC</option>
+                    <option value="porto-novo">📍 Porto-Novo</option>
+                  </select>
+                </div>
+              )}
+
+              {selectedCountry !== getUserResidenceCountry() ? (
                 <button
                   type="button"
-                  onClick={() => handleCountryChange('Bénin')}
+                  onClick={() => handleCountryChange(getUserResidenceCountry())}
                   className="px-3.5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <span>🇧🇯 Revenir au Bénin</span>
+                  <span>🇧🇯 Revenir à mon pays ({getUserResidenceCountry()})</span>
                 </button>
               ) : (
                 <button

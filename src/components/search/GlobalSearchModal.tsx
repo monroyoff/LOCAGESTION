@@ -52,9 +52,10 @@ export function GlobalSearchModal({
   const [pricePresetIdx, setPricePresetIdx] = useState(0);
   const [customMaxPrice, setCustomMaxPrice] = useState('');
 
-  // Auto focus input when modal opens
+  // Auto focus input when modal opens and synchronize default residence country
   useEffect(() => {
     if (isOpen) {
+      setSelectedCountry(getUserResidenceCountry());
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);

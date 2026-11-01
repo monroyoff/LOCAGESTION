@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   X,
   Plus,
@@ -94,6 +94,15 @@ export function PublishListingModal({
   const [urlInput, setUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      const defaultCountry = getUserResidenceCountry();
+      const defaultCity = getUserResidenceCity();
+      setCountry(defaultCountry);
+      setCity(defaultCity);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

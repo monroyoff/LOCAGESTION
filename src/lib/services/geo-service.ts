@@ -1,6 +1,6 @@
 'use client';
 
-import { RentalListing } from '../types';
+import { RentalListing, UserProfile, UserSpace } from '../types';
 
 export interface UserGeoLocation {
   country: string;
@@ -8,17 +8,21 @@ export interface UserGeoLocation {
   district?: string;
   latitude: number;
   longitude: number;
-  source: 'gps' | 'profile' | 'timezone';
+  source: 'gps' | 'profile' | 'timezone' | 'manual';
   accuracy?: number;
   label: string;
 }
 
 const STORAGE_KEY_COUNTRY = 'locagestion:user_residence_country';
 const STORAGE_KEY_CITY = 'locagestion:user_residence_city';
+const STORAGE_KEY_DISTRICT = 'locagestion:user_residence_district';
+const STORAGE_KEY_PROFILE = 'locagestion:user_profile';
 const STORAGE_KEY_GPS = 'locagestion:user_gps_coords';
 
 export const DEFAULT_RESIDENCE_COUNTRY = 'Bénin';
 export const DEFAULT_RESIDENCE_CITY = 'Cotonou';
+export const DEFAULT_RESIDENCE_DISTRICT = 'Haie Vive';
+
 
 /**
  * Coordonnées GPS des principales communes, villes et quartiers
@@ -166,16 +170,118 @@ export function getUserResidenceCity(): string {
 }
 
 /**
- * Met à jour la ville de résidence de l'utilisateur.
+ * Récupère le quartier de résidence de l'utilisateur (défini à l'inscription ou dans le profil).
+ * Par défaut : Haie Vive.
  */
-export function setUserResidenceCity(city: string): void {
+export function getUserResidenceDistrict(): string {
+  if (typeof window === 'undefined') return DEFAULT_RESIDENCE_DISTRICT;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY_DISTRICT);
+    if (saved && saved.trim() !== '') {
+      return saved;
+    }
+  } catch (e) {
+    console.error('Erreur lecture quartier de résidence:', e);
+  }
+  return DEFAULT_RESIDENCE_DISTRICT;
+}
+
+/**
+ * Met à jour le quartier de résidence de l'utilisateur.
+ */
+export function setUserResidenceDistrict(district: string): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY_CITY, city);
+    localStorage.setItem(STORAGE_KEY_DISTRICT, district);
+    window.dispatchEvent(new CustomEvent('locagestion:residence_updated', { detail: { district } }));
   } catch (e) {
-    console.error('Erreur sauvegarde ville de résidence:', e);
+    console.error('Erreur sauvegarde quartier de résidence:', e);
   }
 }
+
+/**
+ * Récupère le profil complet de l'utilisateur actif (locataire ou bailleur).
+ */
+export function getUserProfile(role: UserSpace = 'locataire'): UserProfile {
+  const country = getUserResidenceCountry();
+  const city = getUserResidenceCity();
+  const district = getUserResidenceDistrict();
+
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem(`${STORAGE_KEY_PROFILE}:${role}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          ...parsed,
+          residenceCountry: parsed.residenceCountry || country,
+          residenceCity: parsed.residenceCity || city,
+          residenceDistrict: parsed.residenceDistrict || district,
+        };
+      }
+    } catch (e) {}
+  }
+
+  if (role === 'bailleur') {
+    return {
+      id: 'usr-bailleur-01',
+      name: 'Mamadou Diallo',
+      email: 'contact@diallo-patrimoine.bj',
+      phone: '+229 01 95 44 44 30',
+      role: 'bailleur',
+      residenceCountry: country,
+      residenceCity: city,
+      residenceDistrict: district,
+      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+      registrationDate: '15/01/2025',
+    };
+  }
+
+  return {
+    id: 'usr-locataire-01',
+    name: 'Koffi Mensah',
+    email: 'koffi.mensah@fintech-africa.com',
+    phone: '+229 97 12 34 56',
+    role: 'locataire',
+    residenceCountry: country,
+    residenceCity: city,
+    residenceDistrict: district,
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+    registrationDate: '01/11/2025',
+  };
+}
+
+/**
+ * Sauvegarde le profil utilisateur complet et synchronise les paramètres de résidence.
+ */
+export function saveUserProfile(profile: UserProfile): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(`${STORAGE_KEY_PROFILE}:${profile.role}`, JSON.stringify(profile));
+    if (profile.residenceCountry) {
+      localStorage.setItem(STORAGE_KEY_COUNTRY, profile.residenceCountry);
+    }
+    if (profile.residenceCity) {
+      localStorage.setItem(STORAGE_KEY_CITY, profile.residenceCity);
+    }
+    if (profile.residenceDistrict) {
+      localStorage.setItem(STORAGE_KEY_DISTRICT, profile.residenceDistrict);
+    }
+    window.dispatchEvent(new CustomEvent('locagestion:profile_updated', { detail: profile }));
+    window.dispatchEvent(
+      new CustomEvent('locagestion:residence_updated', {
+        detail: {
+          country: profile.residenceCountry,
+          city: profile.residenceCity,
+          district: profile.residenceDistrict,
+        },
+      })
+    );
+  } catch (e) {
+    console.error('Erreur sauvegarde profil:', e);
+  }
+}
+
 
 /**
  * Recherche les coordonnées GPS pour une localité (quartier, ville, pays).
@@ -227,12 +333,13 @@ export function resolveLocationCoordinates(
  * 3. Le fuseau horaire du système (Heuristique UEMOA)
  */
 export async function detectUserGeoLocation(): Promise<UserGeoLocation> {
-  // Profil de base
+  // Profil de base de l'utilisateur (renseigné lors de l'inscription)
   const profileCountry = getUserResidenceCountry();
   const profileCity = getUserResidenceCity();
-  const defaultCoords = resolveLocationCoordinates(profileCountry, profileCity);
+  const profileDistrict = getUserResidenceDistrict();
+  const defaultCoords = resolveLocationCoordinates(profileCountry, profileCity, profileDistrict);
 
-  // 1. Essai de l'API de Géolocalisation du navigateur
+  // 1. Essai de l'API de Géolocalisation native du navigateur (GPS)
   if (typeof window !== 'undefined' && 'geolocation' in navigator) {
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
@@ -262,12 +369,12 @@ export async function detectUserGeoLocation(): Promise<UserGeoLocation> {
         }
       }
 
+      // Si le GPS correspond à une zone connue dans un rayon de 150 km
       if (closestZone && closestZone.distance < 150) {
-        // Position reconnue dans la zone
         return {
           country: closestZone.data.country,
           city: closestZone.data.city,
-          district: closestZone.data.district,
+          district: closestZone.data.district || closestZone.name,
           latitude,
           longitude,
           source: 'gps',
@@ -276,51 +383,23 @@ export async function detectUserGeoLocation(): Promise<UserGeoLocation> {
         };
       }
 
-      // Si GPS fonctionne mais en dehors des zones UEMOA enregistrées, conserver les coordonnées réelles
-      return {
-        country: profileCountry,
-        city: profileCity,
-        latitude,
-        longitude,
-        source: 'gps',
-        accuracy: Math.round(accuracy),
-        label: `${profileCity} (${profileCountry})`,
-      };
+      // Si le GPS est valide mais en dehors des zones UEMOA enregistrées (ex: développement ou voyage),
+      // et que l'utilisateur est enregistré dans un pays UEMOA (ex: Bénin),
+      // on privilégie les coordonnées de son lieu de résidence d'inscription pour un classement pertinent.
     } catch (err) {
       // Géolocalisation refusée ou indisponible
     }
   }
 
-  // 2. Détection via Fuseau Horaire
-  let detectedCountry = profileCountry;
-  let detectedCity = profileCity;
-
-  if (typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    if (tz.includes('Porto-Novo') || tz.includes('Lagos') || tz.includes('Cotonou')) {
-      detectedCountry = 'Bénin';
-      detectedCity = 'Cotonou';
-    } else if (tz.includes('Abidjan')) {
-      detectedCountry = 'Côte d’Ivoire';
-      detectedCity = 'Abidjan';
-    } else if (tz.includes('Dakar')) {
-      detectedCountry = 'Sénégal';
-      detectedCity = 'Dakar';
-    } else if (tz.includes('Lome')) {
-      detectedCountry = 'Togo';
-      detectedCity = 'Lomé';
-    }
-  }
-
-  const coords = resolveLocationCoordinates(detectedCountry, detectedCity);
-
+  // 2. Détection par défaut basée sur le profil d'inscription
   return {
-    country: detectedCountry,
-    city: detectedCity,
-    latitude: coords.lat,
-    longitude: coords.lng,
-    source: detectedCountry === profileCountry ? 'profile' : 'timezone',
-    label: `${detectedCity} (${detectedCountry})`,
+    country: profileCountry,
+    city: profileCity,
+    district: profileDistrict,
+    latitude: defaultCoords.lat,
+    longitude: defaultCoords.lng,
+    source: 'profile',
+    label: `${profileDistrict ? `${profileDistrict}, ` : ''}${profileCity} (${profileCountry})`,
   };
 }
 

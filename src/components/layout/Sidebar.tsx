@@ -29,6 +29,9 @@ import {
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
 import { IncidentService } from '@/lib/services/incident-service';
+import { UserProfileModal } from '@/components/profile/UserProfileModal';
+import { getUserProfile } from '@/lib/services/geo-service';
+import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 
 interface NavItem {
   name: string;
@@ -71,6 +74,24 @@ export function Sidebar({
   };
 
   const [pendingIncidents, setPendingIncidents] = useState(0);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState(() => getUserProfile(activeSpace));
+
+  useEffect(() => {
+    setUserProfile(getUserProfile(activeSpace));
+  }, [activeSpace]);
+
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      setUserProfile(getUserProfile(activeSpace));
+    };
+    window.addEventListener('locagestion:profile_updated', handleProfileUpdate);
+    window.addEventListener('locagestion:residence_updated', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('locagestion:profile_updated', handleProfileUpdate);
+      window.removeEventListener('locagestion:residence_updated', handleProfileUpdate);
+    };
+  }, [activeSpace]);
 
   useEffect(() => {
     const updateCount = () => {
@@ -340,43 +361,59 @@ export function Sidebar({
         {/* Bottom: User Profile Card (Adapts to Active Role) */}
         <div className="p-4 border-t border-white/5 bg-[#0a0d12]">
           <div className="p-3 bg-[#131720] rounded-2xl border border-white/5 flex items-center justify-between group hover:border-white/20 transition-all">
-            <div className="flex items-center gap-3 min-w-0">
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center gap-3 min-w-0 text-left cursor-pointer flex-1"
+              title="Modifier votre profil & informations d'inscription"
+            >
               <div className="relative">
                 <img
                   src={
-                    isLandlord
+                    userProfile.avatarUrl ||
+                    (isLandlord
                       ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80'
-                      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80'
+                      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')
                   }
-                  alt={isLandlord ? 'Mamadou Diallo' : 'Koffi Mensah'}
-                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10"
+                  alt={userProfile.name}
+                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 group-hover:ring-brand-400 transition-all"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-[#131720]" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <h4 className="text-xs font-bold text-white truncate">
-                    {isLandlord ? 'Mamadou Diallo' : 'Koffi Mensah'}
+                    {userProfile.name}
                   </h4>
                   <ShieldCheck className="w-3.5 h-3.5 text-tealAccent-400 shrink-0" />
                 </div>
-                <p className="text-[10px] text-slate-400 truncate">
-                  {isLandlord ? 'Diallo Patrimoine (Bailleur)' : 'Locataire (Appt A3)'}
+                <p className="text-[10px] text-slate-400 truncate flex items-center gap-1">
+                  <span>{COUNTRIES_CITIES[userProfile.residenceCountry]?.flag || '🇧🇯'}</span>
+                  <span>{userProfile.residenceCountry}</span>
+                  <span className="text-slate-500">•</span>
+                  <span>{isLandlord ? 'Bailleur' : 'Locataire'}</span>
                 </p>
               </div>
-            </div>
+            </button>
 
             <button
               type="button"
               onClick={() => handleSpaceChange(isLandlord ? 'locataire' : 'bailleur')}
               title="Changer d'espace"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors ml-2"
             >
               <ChevronDown className="w-4 h-4" />
             </button>
           </div>
         </div>
       </aside>
+
+      {/* User Profile & Inscription Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        activeSpace={isLandlord ? 'bailleur' : 'locataire'}
+      />
     </>
   );
 }

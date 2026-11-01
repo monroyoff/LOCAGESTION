@@ -209,3 +209,23 @@ export interface RentalListing {
   status: 'disponible' | 'reserve' | 'loue';
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: UserSpace;
+  residenceCountry: string; // Pays de résidence renseigné lors de l'inscription (ex: 'Bénin')
+  residenceCity: string;    // Ville de résidence (ex: 'Cotonou')
+  residenceDistrict?: string; // Quartier / Lieu actuel (ex: 'Haie Vive', 'Agla', etc.)
+  avatarUrl?: string;
+  registrationDate?: string;
+  currentLocation?: {
+    latitude: number;
+    longitude: number;
+    label: string;
+    source: 'gps' | 'profile' | 'timezone' | 'manual';
+  };
+}
+
+
