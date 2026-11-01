@@ -161,16 +161,22 @@ export default function TenantPortalPage() {
     notifySave(issueMsg, 'Panne signalée avec succès !');
   };
 
-  // Sync search param & hash with active tab
+  // Sync search param & hash with active tab & actions
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const updateFromUrl = () => {
         const params = new URLSearchParams(window.location.search);
         const queryTab = params.get('tab');
+        const action = params.get('action');
         const hash = window.location.hash.replace('#', '');
         const target = queryTab || hash;
         if (target === 'quittances' || target === 'bail' || target === 'solvabilite' || target === 'accueil') {
           setActiveTab(target as any);
+        }
+        if (action === 'declare_payment' || action === 'declare') {
+          setDeclarationModalOpen(true);
+        } else if (action === 'report_issue' || action === 'incident') {
+          setReportIssueModalOpen(true);
         }
       };
       updateFromUrl();
@@ -234,18 +240,39 @@ export default function TenantPortalPage() {
   const [declaredMethod, setDeclaredMethod] = useState('wave');
   const [declaredRef, setDeclaredRef] = useState('WAVE-TX-984210');
 
+  const [proofFile, setProofFile] = useState<{ name: string; size: string; preview?: string } | null>(null);
+  const proofFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const sizeKB = Math.round(file.size / 1024);
+    const sizeStr = sizeKB > 1024 ? `${(sizeKB / 1024).toFixed(1)} Mo` : `${sizeKB} Ko`;
+    if (file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setProofFile({
+          name: file.name,
+          size: sizeStr,
+          preview: event.target?.result as string,
+        });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setProofFile({
+        name: file.name,
+        size: sizeStr,
+      });
+    }
+    e.target.value = '';
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleDeclarePayment = (e: React.FormEvent) => {
-    e.preventDefault();
-    setDeclarationModalOpen(false);
-    const payMsg = `Déclaration de ${formatFCFA(declaredAmount)} (${declaredPeriod}) envoyée au bailleur ! Quittance émise dès validation.`;
-    showToast(payMsg);
-    notifySave(payMsg, 'Paiement déclaré avec succès !');
-  };
+
 
   const tenant = {
     name: 'Koffi Mensah',
@@ -311,7 +338,7 @@ export default function TenantPortalPage() {
     },
   ];
 
-  const receiptsList: PaymentTransaction[] = [
+  const DEFAULT_TENANT_RECEIPTS: PaymentTransaction[] = [
     {
       id: 'rec-01',
       receiptNumber: 'QUITT-2026-1048',
@@ -364,6 +391,78 @@ export default function TenantPortalPage() {
       isVerified: true,
     },
   ];
+
+  const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>(DEFAULT_TENANT_RECEIPTS);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('locagestion:declared_payments');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setReceiptsList(parsed);
+          }
+        }
+      } catch (err) {
+        console.error('Erreur lecture paiements déclarés:', err);
+      }
+    }
+  }, []);
+
+  const handleDeclarePayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    const numAmount = parseInt(declaredAmount) || tenant.monthlyRent;
+    const dateStr = new Date().toLocaleDateString('fr-FR');
+    const newTx: PaymentTransaction = {
+      id: `decl-${Date.now()}`,
+      receiptNumber: `DEC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+      tenantId: 'ten-01',
+      tenantName: tenant.name,
+      tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+      tenantPhone: tenant.phone,
+      propertyName: tenant.property,
+      unitNumber: tenant.unit,
+      amount: numAmount,
+      expectedAmount: tenant.monthlyRent,
+      period: declaredPeriod,
+      paymentDate: dateStr,
+      method: declaredMethod as any,
+      status: 'paye',
+      isVerified: false,
+    };
+
+    const updated = [newTx, ...receiptsList];
+    setReceiptsList(updated);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('locagestion:declared_payments', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Erreur sauvegarde paiement:', err);
+      }
+    }
+
+    // Alerter le bailleur via le service partagé
+    LeaseService.addLandlordNotification({
+      id: `notif-pay-${Date.now()}`,
+      title: `Paiement déclaré par ${tenant.name}`,
+      message: `Déclaration de loyer de ${formatFCFA(numAmount)} pour la période ${declaredPeriod} via ${declaredMethod.toUpperCase()} (Réf: ${declaredRef || 'Non spécifiée'}).`,
+      type: 'payment_declared',
+      read: false,
+      timestamp: `À l'instant`,
+      tenantName: tenant.name,
+      unit: tenant.unit,
+      property: tenant.property,
+    });
+
+    setDeclarationModalOpen(false);
+    setProofFile(null);
+    const payMsg = `Déclaration de ${formatFCFA(numAmount)} (${declaredPeriod}) transmise avec succès au bailleur ! Quittance émise dès validation.`;
+    showToast(payMsg);
+    notifySave(payMsg, 'Paiement déclaré avec succès !');
+
+    handleTabChange('quittances');
+  };
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-900 flex">
@@ -552,6 +651,7 @@ export default function TenantPortalPage() {
                   {/* Big Action Button */}
                   <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
                     <button
+                      type="button"
                       onClick={() => setDeclarationModalOpen(true)}
                       className="w-full sm:w-auto py-3.5 px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs sm:text-sm font-black shadow-pink-glow active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
@@ -582,26 +682,30 @@ export default function TenantPortalPage() {
                         </div>
                         <div>
                           <h4 className="text-xs font-black text-slate-900">Dernière Quittance Émise</h4>
-                          <span className="text-[10px] text-slate-400">Réf : {receiptsList[0].receiptNumber}</span>
+                          <span className="text-[10px] text-slate-400">Réf : {receiptsList[0]?.receiptNumber || 'QUITT-2026-1048'}</span>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                        Soldé ✓
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        receiptsList[0]?.isVerified
+                          ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                          : 'text-amber-700 bg-amber-50 border-amber-200'
+                      }`}>
+                        {receiptsList[0]?.isVerified ? 'Soldé ✓' : 'En validation ⏳'}
                       </span>
                     </div>
 
                     <div className="pt-3 space-y-1.5">
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500">Période concernée :</span>
-                        <strong className="text-slate-900">{receiptsList[0].period}</strong>
+                        <strong className="text-slate-900">{receiptsList[0]?.period || 'Octobre 2026'}</strong>
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500">Montant réglé :</span>
-                        <strong className="text-emerald-700 font-black">{formatFCFA(receiptsList[0].amount)}</strong>
+                        <strong className="text-emerald-700 font-black">{formatFCFA(receiptsList[0]?.amount || 220000)}</strong>
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="text-slate-500">Moyen de paiement :</span>
-                        <span className="text-slate-700 font-medium">Wave Mobile Money</span>
+                        <span className="text-slate-700 font-medium">{receiptsList[0]?.method ? receiptsList[0].method.toUpperCase() : 'WAVE'} Mobile Money</span>
                       </div>
                     </div>
                   </div>
@@ -771,7 +875,7 @@ export default function TenantPortalPage() {
                   className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
                 >
                   <Smartphone className="w-4 h-4" />
-                  <span>Déclarer un loyer</span>
+                  <span>Déclarer un paiement</span>
                 </button>
               </div>
 
@@ -812,11 +916,11 @@ export default function TenantPortalPage() {
                         <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-medium">
                           <span className="font-mono text-slate-600 font-bold">{rec.receiptNumber}</span>
                           <span>•</span>
-                          <span>Payé le {rec.paymentDate} via {rec.method.toUpperCase()}</span>
+                          <span>Payé le {rec.paymentDate} via {rec.method ? rec.method.toUpperCase() : 'WAVE'}</span>
                           <span>•</span>
                           <span className="text-emerald-600 font-bold flex items-center gap-1">
                             <ShieldCheck className="w-3 h-3" />
-                            Certifié QR Code
+                            {rec.isVerified ? 'Certifié QR Code' : 'Enregistré'}
                           </span>
                         </div>
                       </div>
@@ -827,9 +931,15 @@ export default function TenantPortalPage() {
                         <span className="text-sm font-black text-slate-900 block">
                           {formatFCFA(rec.amount)}
                         </span>
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                          Soldé ✓
-                        </span>
+                        {rec.isVerified ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                            Soldé ✓
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 animate-pulse">
+                            En validation ⏳
+                          </span>
+                        )}
                       </div>
 
                       <button
@@ -1407,7 +1517,10 @@ export default function TenantPortalPage() {
 
       {/* Modal: Déclaration de Paiement avec Preuve */}
       {declarationModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setDeclarationModalOpen(false)}
+        >
           <div
             className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
@@ -1420,8 +1533,9 @@ export default function TenantPortalPage() {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setDeclarationModalOpen(false)}
-                className="p-1 rounded-xl text-slate-400 hover:text-white"
+                className="p-1 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1432,14 +1546,14 @@ export default function TenantPortalPage() {
                 <label className="font-bold text-slate-700 block mb-1">
                   Moyen de paiement utilisé *
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <button
                     type="button"
                     onClick={() => setDeclaredMethod('wave')}
-                    className={`py-2 px-3 rounded-xl border font-bold text-center ${
+                    className={`py-2 px-2.5 rounded-xl border font-bold text-center cursor-pointer transition-all ${
                       declaredMethod === 'wave'
                         ? 'border-brand-500 bg-brand-50 text-brand-600 ring-2 ring-brand-500/20'
-                        : 'border-slate-200 bg-slate-50'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     Wave Money
@@ -1447,24 +1561,35 @@ export default function TenantPortalPage() {
                   <button
                     type="button"
                     onClick={() => setDeclaredMethod('mtn')}
-                    className={`py-2 px-3 rounded-xl border font-bold text-center ${
+                    className={`py-2 px-2.5 rounded-xl border font-bold text-center cursor-pointer transition-all ${
                       declaredMethod === 'mtn'
                         ? 'border-brand-500 bg-brand-50 text-brand-600 ring-2 ring-brand-500/20'
-                        : 'border-slate-200 bg-slate-50'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     MTN Mobile
                   </button>
                   <button
                     type="button"
-                    onClick={() => setDeclaredMethod('virement')}
-                    className={`py-2 px-3 rounded-xl border font-bold text-center ${
-                      declaredMethod === 'virement'
+                    onClick={() => setDeclaredMethod('moov')}
+                    className={`py-2 px-2.5 rounded-xl border font-bold text-center cursor-pointer transition-all ${
+                      declaredMethod === 'moov'
                         ? 'border-brand-500 bg-brand-50 text-brand-600 ring-2 ring-brand-500/20'
-                        : 'border-slate-200 bg-slate-50'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    Virement BOA
+                    Moov Money
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeclaredMethod('virement')}
+                    className={`py-2 px-2.5 rounded-xl border font-bold text-center cursor-pointer transition-all ${
+                      declaredMethod === 'virement'
+                        ? 'border-brand-500 bg-brand-50 text-brand-600 ring-2 ring-brand-500/20'
+                        : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    Virement
                   </button>
                 </div>
               </div>
@@ -1510,6 +1635,8 @@ export default function TenantPortalPage() {
                   </label>
                   <input
                     type="number"
+                    required
+                    min="1"
                     value={declaredAmount}
                     onChange={(e) => setDeclaredAmount(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold"
@@ -1521,6 +1648,7 @@ export default function TenantPortalPage() {
                   </label>
                   <input
                     type="text"
+                    required
                     value={declaredRef}
                     onChange={(e) => setDeclaredRef(e.target.value)}
                     placeholder="Ex: WAVE-109283"
@@ -1534,30 +1662,74 @@ export default function TenantPortalPage() {
                 <label className="font-bold text-slate-700 block mb-1">
                   Capture d'écran du reçu Mobile Money / Virement
                 </label>
-                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center hover:border-brand-500 transition-colors cursor-pointer bg-slate-50">
-                  <UploadCloud className="w-8 h-8 text-brand-500 mx-auto mb-1" />
-                  <span className="font-bold text-slate-700 block">
-                    Cliquer pour joindre une photo
-                  </span>
-                  <span className="text-[10px] text-slate-400">
-                    PNG, JPG ou PDF (max 5 Mo)
-                  </span>
-                </div>
+                <input
+                  type="file"
+                  ref={proofFileInputRef}
+                  onChange={handleProofUpload}
+                  accept="image/*,.pdf"
+                  className="hidden"
+                />
+                {proofFile ? (
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-50 border border-emerald-200">
+                    <div className="flex items-center gap-2.5">
+                      {proofFile.preview ? (
+                        <img
+                          src={proofFile.preview}
+                          alt="Reçu"
+                          className="w-10 h-10 object-cover rounded-xl border border-emerald-300"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">
+                          PDF
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-xs font-bold text-emerald-950 truncate max-w-[200px]">
+                          {proofFile.name}
+                        </p>
+                        <p className="text-[10px] text-emerald-700">
+                          {proofFile.size} • Preuve jointe ✓
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setProofFile(null)}
+                      className="p-1.5 rounded-lg text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => proofFileInputRef.current?.click()}
+                    className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center hover:border-brand-500 hover:bg-brand-50/20 transition-all cursor-pointer bg-slate-50"
+                  >
+                    <UploadCloud className="w-8 h-8 text-brand-500 mx-auto mb-1" />
+                    <span className="font-bold text-slate-700 block">
+                      Cliquer pour joindre une photo ou capture
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      PNG, JPG ou PDF (max 5 Mo)
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setDeclarationModalOpen(false)}
-                  className="py-2.5 px-4 rounded-xl bg-slate-100 font-bold"
+                  className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold transition-colors cursor-pointer"
                 >
                   Annuler
                 </button>
                 <button
                   type="submit"
-                  className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-pink-glow"
+                  className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer flex items-center gap-2"
                 >
-                  Envoyer la déclaration
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Envoyer la déclaration</span>
                 </button>
               </div>
             </form>

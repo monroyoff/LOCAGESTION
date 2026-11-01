@@ -301,6 +301,18 @@ export function Header({
                                   <span>Traiter la panne</span>
                                   <ExternalLink className="w-3 h-3" />
                                 </button>
+                              ) : n.type === 'payment_declared' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsNotifOpen(false);
+                                    router.push('/payments');
+                                  }}
+                                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <span>Vérifier le paiement</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </button>
                               ) : (
                                 <button
                                   type="button"
@@ -324,7 +336,14 @@ export function Header({
               </div>
 
               <button
-                onClick={() => onOpenQuickAction?.('new_payment')}
+                type="button"
+                onClick={() => {
+                  if (onOpenQuickAction) {
+                    onOpenQuickAction('new_payment');
+                  } else {
+                    router.push('/payments?action=new');
+                  }
+                }}
                 className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
               >
                 <Receipt className="w-4 h-4" />
@@ -332,6 +351,7 @@ export function Header({
               </button>
 
               <button
+                type="button"
                 onClick={() => router.push('/leases/new')}
                 className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer"
               >
@@ -347,14 +367,22 @@ export function Header({
           {isTenant && (
             <>
               <button
-                onClick={() => onOpenTenantAction?.('declare_payment')}
+                type="button"
+                onClick={() => {
+                  if (onOpenTenantAction) {
+                    onOpenTenantAction('declare_payment');
+                  } else {
+                    router.push('/portal?action=declare_payment');
+                  }
+                }}
                 className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/25 active:scale-95 transition-all cursor-pointer"
               >
                 <Smartphone className="w-4 h-4" />
-                <span>Déclarer un loyer</span>
+                <span>Déclarer un paiement</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => {
                   if (onOpenTenantAction) {
                     onOpenTenantAction('report_issue');

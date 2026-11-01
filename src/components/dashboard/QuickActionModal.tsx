@@ -72,7 +72,7 @@ export function QuickActionModal({
             <div>
               <h3 className="text-sm font-bold">
                 {actionType === 'new_payment'
-                  ? 'Encaisser un Loyer / Émettre Reçu'
+                  ? 'Encaisser / Déclarer un Paiement de Loyer'
                   : actionType === 'new_lease'
                   ? 'Création d’un Nouveau Bail'
                   : 'Ajouter un Bien / Immeuble'}

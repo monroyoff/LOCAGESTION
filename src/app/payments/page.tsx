@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -31,6 +31,16 @@ export default function PaymentsPage() {
   const [reminderPayment, setReminderPayment] = useState<PaymentTransaction | null>(null);
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      if (action === 'new' || action === 'declare' || action === 'new_payment') {
+        setQuickAction('new_payment');
+      }
+    }
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
