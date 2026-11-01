@@ -73,6 +73,11 @@ export function PublishListingModal({
   const [bedrooms, setBedrooms] = useState(2);
   const [bathrooms, setBathrooms] = useState(2);
 
+  // Description détaillée concernant le bien (cochée ligne par ligne dans l'annonce)
+  const [description, setDescription] = useState(
+    'Chambre spacieuse et lumineuse entièrement carrelée\nSalle d’eau privative avec douche à l’italienne et WC moderne\nCompteur électrique à prépaiement individuel (Cash Power)\nApprovisionnement régulier en eau avec suppresseur et réserve\nAccès sécurisé avec cour clôturée et gardiennage 24/7\nBalcon privé avec aération naturelle'
+  );
+
   // Photos de l'annonce
   const [images, setImages] = useState<string[]>([
     'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80',
@@ -154,6 +159,11 @@ export function PublishListingModal({
       'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80',
     ];
 
+    const descriptionLines = description
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+
     const newListing: RentalListing = {
       id: `list-${Date.now()}`,
       title: title || `${propertyType} Moderne à ${district || city}`,
@@ -173,7 +183,13 @@ export function PublishListingModal({
       bedrooms,
       bathrooms,
       images: finalImages,
-      amenities: [
+      description: description.trim(),
+      descriptionLines: descriptionLines.length > 0 ? descriptionLines : [
+        'Logement moderne et entretenu avec soin',
+        'Compteur individuel et approvisionnement en eau garanti',
+        'Accès sécurisé dans un quartier recherché',
+      ],
+      amenities: descriptionLines.length > 0 ? descriptionLines : [
         'Compteur d’électricité individuel',
         'Approvisionnement eau avec réserve',
         'Gardiennage sécurisé 24/7',
@@ -242,7 +258,7 @@ export function PublishListingModal({
               Type de bien *
             </label>
             <div className="flex flex-wrap gap-1.5">
-              {(['Chambre salon sanitaire', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique'] as const).map((t) => (
+              {(['Chambre salon sanitaire', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique', 'Autres'] as const).map((t) => (
                 <button
                   key={t}
                   type="button"
@@ -257,6 +273,29 @@ export function PublishListingModal({
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* Description détaillée concernant le bien (Cochée ligne par ligne) */}
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="font-bold text-slate-700 block">
+                Description & Caractéristiques du bien *
+              </label>
+              <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                1 ligne = 1 puce cochée (✓)
+              </span>
+            </div>
+            <textarea
+              rows={5}
+              required
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={`Ex:\nChambre spacieuse et lumineuse avec placard\nSalle d’eau privative moderne avec douche et WC\nCompteur Cash Power SBEE individuel\nApprovisionnement régulier en eau avec réserve et suppresseur\nRésidence calme et sécurisée avec gardien 24/7`}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 leading-relaxed"
+            />
+            <p className="text-[10px] text-slate-400 mt-1">
+              Chaque ligne saisie dans ce champ sera automatiquement affichée comme un point fort coché avec une coche verte (✓) sur la carte de l'annonce.
+            </p>
           </div>
 
           {/* Pays & Ville */}

@@ -38,6 +38,9 @@ import {
   Check,
   Globe,
   Coins,
+  ChevronLeft,
+  ChevronRight,
+  ImageIcon,
 } from 'lucide-react';
 
 const ALL_CITIES = Array.from(
@@ -53,7 +56,7 @@ const PRICE_PRESETS = [
   { label: '> 1 000 000 FCFA', min: 1000000, max: 0 },
 ];
 
-const PROPERTY_TYPES = ['Tous', 'Chambre salon sanitaire', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique'];
+const PROPERTY_TYPES = ['Tous', 'Chambre salon sanitaire', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique', 'Autres'];
 
 export default function ListingsPage() {
   const router = useRouter();
@@ -73,6 +76,8 @@ export default function ListingsPage() {
   // Modals & Notifications
   const [listings, setListings] = useState<RentalListing[]>(MOCK_RENTAL_LISTINGS);
   const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [selectedListingForDetail, setSelectedListingForDetail] = useState<RentalListing | null>(null);
+  const [currentDetailPhotoIdx, setCurrentDetailPhotoIdx] = useState(0);
   const [selectedListingForVisit, setSelectedListingForVisit] = useState<RentalListing | null>(null);
   const [visitDate, setVisitDate] = useState('2026-11-04');
   const [visitTimeSlot, setVisitTimeSlot] = useState('15:00 - 17:00');
@@ -614,8 +619,15 @@ export default function ListingsPage() {
                     className="bg-white rounded-3xl border border-slate-200/80 shadow-soft overflow-hidden flex flex-col justify-between group hover:shadow-card-hover transition-all"
                   >
                     <div>
-                      {/* Image Header with Price Tag & Badges */}
-                      <div className="relative h-52 overflow-hidden">
+                      {/* Image Header with Price Tag & Badges (Click to inspect all photos & details) */}
+                      <div
+                        onClick={() => {
+                          setSelectedListingForDetail(listing);
+                          setCurrentDetailPhotoIdx(0);
+                        }}
+                        className="relative h-52 overflow-hidden cursor-pointer group/img"
+                        title="Cliquer pour voir toutes les photos et la description complète"
+                      >
                         <img
                           src={listing.images[0]}
                           alt={listing.title}
@@ -642,6 +654,14 @@ export default function ListingsPage() {
                           )}
                         </div>
 
+                        {/* Photos count pill */}
+                        {listing.images.length > 1 && (
+                          <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 flex items-center gap-1">
+                            <ImageIcon className="w-3 h-3" />
+                            <span>{listing.images.length} photos</span>
+                          </div>
+                        )}
+
                         {/* Bottom rent overlay */}
                         <div className="absolute bottom-3 left-4 right-4 text-white flex items-baseline justify-between">
                           <div>
@@ -660,7 +680,14 @@ export default function ListingsPage() {
 
                       {/* Listing Content */}
                       <div className="p-5 space-y-3">
-                        <h3 className="font-extrabold text-sm text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1">
+                        <h3
+                          onClick={() => {
+                            setSelectedListingForDetail(listing);
+                            setCurrentDetailPhotoIdx(0);
+                          }}
+                          className="font-extrabold text-sm text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1 cursor-pointer"
+                          title="Cliquer pour voir la description complète"
+                        >
                           {listing.title}
                         </h3>
 
@@ -689,19 +716,36 @@ export default function ListingsPage() {
                           </span>
                         </div>
 
-                        {/* Équipements essentiels africains */}
-                        <div className="pt-2 border-t border-slate-100">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                            Équipements Clés Inclus :
-                          </span>
-                          <div className="space-y-1">
-                            {listing.amenities.slice(0, 3).map((a, idx) => (
+                        {/* Description concernant le bien cochée ligne par ligne */}
+                        <div className="pt-2.5 border-t border-slate-100 space-y-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span>Description du bien :</span>
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {((listing.descriptionLines && listing.descriptionLines.length > 0)
+                                ? listing.descriptionLines
+                                : listing.description
+                                ? listing.description.split('\n').filter((l) => l.trim().length > 0)
+                                : listing.amenities
+                              ).length} points clés
+                            </span>
+                          </div>
+
+                          <div className="space-y-1.5 bg-slate-50/90 p-2.5 rounded-xl border border-slate-100">
+                            {((listing.descriptionLines && listing.descriptionLines.length > 0)
+                              ? listing.descriptionLines
+                              : listing.description
+                              ? listing.description.split('\n').filter((l) => l.trim().length > 0)
+                              : listing.amenities
+                            ).map((line, idx) => (
                               <div
                                 key={idx}
-                                className="flex items-center gap-1.5 text-[11px] text-slate-600 font-medium"
+                                className="flex items-start gap-1.5 text-[11px] text-slate-700 font-medium"
                               >
-                                <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0" />
-                                <span className="truncate">{a}</span>
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                                <span className="leading-snug">{line.replace(/^[-•*✓✔]\s*/, '')}</span>
                               </div>
                             ))}
                           </div>
@@ -711,6 +755,17 @@ export default function ListingsPage() {
 
                     {/* Actions */}
                     <div className="p-5 pt-0 flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedListingForDetail(listing);
+                          setCurrentDetailPhotoIdx(0);
+                        }}
+                        className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                        title="Voir photos et détails complets"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
                       <Link
                         href="/messages"
                         className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold text-center transition-all shadow-sm"
@@ -778,8 +833,13 @@ export default function ListingsPage() {
             </div>
 
             <form onSubmit={handleBookVisitSubmit} className="p-6 space-y-4 text-xs">
-              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                <span className="text-[10px] font-bold text-brand-600 uppercase">Bien ciblé :</span>
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-brand-600 uppercase">Bien ciblé :</span>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white text-slate-700 font-bold border border-slate-200">
+                    {selectedListingForVisit.propertyType}
+                  </span>
+                </div>
                 <h4 className="font-extrabold text-xs text-slate-900">
                   {selectedListingForVisit.title}
                 </h4>
@@ -787,6 +847,27 @@ export default function ListingsPage() {
                   {selectedListingForVisit.district}, {selectedListingForVisit.city} ({selectedListingForVisit.country})
                   • <strong>{formatFCFA(selectedListingForVisit.monthlyRent)}/mois</strong>
                 </p>
+
+                {/* Description cochée ligne par ligne dans la modale */}
+                <div className="pt-2 border-t border-slate-200 space-y-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Description & Points Clés :</span>
+                  </span>
+                  <div className="space-y-1 bg-white p-2.5 rounded-xl border border-slate-200 max-h-36 overflow-y-auto">
+                    {((selectedListingForVisit.descriptionLines && selectedListingForVisit.descriptionLines.length > 0)
+                      ? selectedListingForVisit.descriptionLines
+                      : selectedListingForVisit.description
+                      ? selectedListingForVisit.description.split('\n').filter((l) => l.trim().length > 0)
+                      : selectedListingForVisit.amenities
+                    ).map((line, idx) => (
+                      <div key={idx} className="flex items-start gap-1.5 text-[11px] text-slate-700 font-medium">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="leading-snug">{line.replace(/^[-•*✓✔]\s*/, '')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -840,6 +921,224 @@ export default function ListingsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================================================================== */}
+      {/* MODALE D’INSPECTION COMPLÈTE & DESCRIPTION COCHÉE DU BIEN            */}
+      {/* ==================================================================== */}
+      {selectedListingForDetail && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+          <div
+            className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] my-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
+                  <Compass className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm line-clamp-1 text-white">
+                    {selectedListingForDetail.title}
+                  </h3>
+                  <p className="text-[11px] text-slate-300">
+                    {selectedListingForDetail.propertyType} • {selectedListingForDetail.district}, {selectedListingForDetail.city} ({selectedListingForDetail.country})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedListingForDetail(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-6 overflow-y-auto space-y-5 text-xs">
+              {/* Photo Gallery Viewer */}
+              <div className="relative rounded-2xl overflow-hidden bg-slate-900 aspect-video shadow-inner group">
+                <img
+                  src={selectedListingForDetail.images[currentDetailPhotoIdx] || selectedListingForDetail.images[0]}
+                  alt={selectedListingForDetail.title}
+                  className="w-full h-full object-cover transition-all"
+                />
+
+                {/* Left/Right controls if multiple photos */}
+                {selectedListingForDetail.images.length > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentDetailPhotoIdx((prev) =>
+                          prev === 0 ? selectedListingForDetail.images.length - 1 : prev - 1
+                        )
+                      }
+                      className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 text-white hover:bg-black/90 flex items-center justify-center backdrop-blur-sm transition-all"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCurrentDetailPhotoIdx((prev) =>
+                          prev === selectedListingForDetail.images.length - 1 ? 0 : prev + 1
+                        )
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/60 text-white hover:bg-black/90 flex items-center justify-center backdrop-blur-sm transition-all"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </button>
+                    <div className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-white text-[11px] font-mono font-bold">
+                      {currentDetailPhotoIdx + 1} / {selectedListingForDetail.images.length}
+                    </div>
+                  </>
+                )}
+
+                {/* Badges on main photo */}
+                <div className="absolute top-3 left-3 flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-full bg-brand-500 text-white text-[10px] font-black shadow-md flex items-center gap-1">
+                    <span>{selectedListingForDetail.flag}</span>
+                    <span>{selectedListingForDetail.country}</span>
+                  </span>
+                  <span className="px-2.5 py-1 rounded-full bg-black/70 backdrop-blur-md text-white text-[10px] font-bold">
+                    {selectedListingForDetail.propertyType}
+                  </span>
+                  {selectedListingForDetail.isVerified && (
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-600 text-white text-[10px] font-bold flex items-center gap-1 shadow-md">
+                      <ShieldCheck className="w-3 h-3" />
+                      Vérifié
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Thumbnails row */}
+              {selectedListingForDetail.images.length > 1 && (
+                <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                  {selectedListingForDetail.images.map((img, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setCurrentDetailPhotoIdx(idx)}
+                      className={`relative w-16 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
+                        currentDetailPhotoIdx === idx
+                          ? 'border-brand-500 ring-2 ring-brand-500/20 scale-105'
+                          : 'border-slate-200 opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      <img src={img} alt="Aperçu" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Pricing Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Loyer Mensuel Principal
+                  </span>
+                  <div className="text-xl font-black text-slate-900 mt-0.5">
+                    {formatFCFA(selectedListingForDetail.monthlyRent)}
+                    <span className="text-xs text-slate-400 font-semibold"> / mois</span>
+                  </div>
+                  <span className="text-[11px] text-slate-500 block mt-0.5">
+                    Charges forfaitaires : {formatFCFA(selectedListingForDetail.charges)}
+                  </span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-tealAccent-50 border border-emerald-200 text-emerald-950">
+                  <span className="text-[10px] font-bold uppercase tracking-wider block text-emerald-800">
+                    Coût Total à l'Entrée
+                  </span>
+                  <div className="text-xl font-black text-emerald-900 mt-0.5">
+                    {formatFCFA(
+                      selectedListingForDetail.monthlyRent * (1 + selectedListingForDetail.depositMonths + selectedListingForDetail.advanceMonths) +
+                      selectedListingForDetail.charges +
+                      selectedListingForDetail.agencyFees
+                    )}
+                  </div>
+                  <span className="text-[10px] text-emerald-700 block mt-0.5">
+                    (1er loyer + {selectedListingForDetail.depositMonths}m caution + {selectedListingForDetail.advanceMonths}m avance + honoraires)
+                  </span>
+                </div>
+              </div>
+
+              {/* Description Cochée Ligne par Ligne */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2.5">
+                <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                  <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                    <span>Description Détaillée & Points Clés du Bien</span>
+                  </span>
+                  <span className="text-[11px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-200/60">
+                    Caractéristiques certifiées
+                  </span>
+                </div>
+
+                <div className="space-y-2 bg-white p-3.5 rounded-xl border border-slate-200/80">
+                  {((selectedListingForDetail.descriptionLines && selectedListingForDetail.descriptionLines.length > 0)
+                    ? selectedListingForDetail.descriptionLines
+                    : selectedListingForDetail.description
+                    ? selectedListingForDetail.description.split('\n').filter((l) => l.trim().length > 0)
+                    : selectedListingForDetail.amenities
+                  ).map((line, idx) => (
+                    <div key={idx} className="flex items-start gap-2 text-xs text-slate-800 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                      <span className="leading-snug">{line.replace(/^[-•*✓✔]\s*/, '')}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Localisation & Repère Africain */}
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                <MapPin className="w-5 h-5 text-brand-500 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-bold text-xs text-slate-900">
+                    {selectedListingForDetail.district}, {selectedListingForDetail.city} ({selectedListingForDetail.country})
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5 italic">
+                    Indication de repère local : « {selectedListingForDetail.landmark} »
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-2.5">
+              <button
+                type="button"
+                onClick={() => setSelectedListingForDetail(null)}
+                className="w-full sm:w-auto py-2.5 px-4 rounded-xl border border-slate-200 font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                Fermer
+              </button>
+
+              <Link
+                href="/messages"
+                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-center transition-all"
+              >
+                Contacter le bailleur
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const target = selectedListingForDetail;
+                  setSelectedListingForDetail(null);
+                  setSelectedListingForVisit(target);
+                }}
+                className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-black shadow-pink-glow transition-all cursor-pointer"
+              >
+                Demander une visite
+              </button>
+            </div>
           </div>
         </div>
       )}

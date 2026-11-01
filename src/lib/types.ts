@@ -33,7 +33,8 @@ export type PropertyType =
   | 'Bureau'
   | 'Boutique'
   | 'Immeuble'
-  | 'Résidence';
+  | 'Résidence'
+  | 'Autres';
 
 export interface Property {
   id: string;
@@ -162,7 +163,8 @@ export type RentalPropertyType =
   | 'Studio'
   | 'Villa'
   | 'Bureau'
-  | 'Boutique';
+  | 'Boutique'
+  | 'Autres';
 
 export interface RentalListing {
   id: string;
@@ -184,6 +186,8 @@ export interface RentalListing {
   bathrooms: number;
   images: string[];
   amenities: string[];
+  description?: string; // Description détaillée du bien
+  descriptionLines?: string[]; // Lignes de description cochées dans l'annonce
   isVerified: boolean;
   status: 'disponible' | 'reserve' | 'loue';
 }

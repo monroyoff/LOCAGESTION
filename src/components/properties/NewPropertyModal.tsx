@@ -40,6 +40,7 @@ const PROPERTY_TYPES = [
   'Boutique',
   'Immeuble',
   'Résidence',
+  'Autres',
 ] as const;
 
 export function NewPropertyModal({

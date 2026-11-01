@@ -24,7 +24,7 @@ interface GlobalSearchModalProps {
   initialQuery?: string;
 }
 
-const PROPERTY_TYPES = ['Tous', 'Chambre salon sanitaire', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique'];
+const PROPERTY_TYPES = ['Tous', 'Chambre salon sanitaire', 'Appartement', 'Meublé', 'Studio', 'Villa', 'Bureau', 'Boutique', 'Autres'];
 
 const PRICE_PRESETS = [
   { label: 'Tous', min: 0, max: 0 },
