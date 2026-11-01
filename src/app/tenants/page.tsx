@@ -40,6 +40,7 @@ import { UserSpace } from '@/lib/types';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
+import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 
@@ -347,6 +348,13 @@ export default function TenantsPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [leases, setLeases] = useState<Lease[]>([]);
   const [lastResiliatedId, setLastResiliatedId] = useState<string | null>(null);
+  const [leaseToTerminate, setLeaseToTerminate] = useState<{
+    id: string;
+    tenant: string;
+    property?: string;
+    unit?: string;
+    rent?: number;
+  } | null>(null);
 
   useEffect(() => {
     const refreshLeases = () => {
@@ -366,8 +374,8 @@ export default function TenantsPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleTerminateTenantLease = (leaseId: string, tenantName: string) => {
-    LeaseService.terminateLease(leaseId);
+  const handleTerminateTenantLease = (leaseId: string, tenantName: string, reason?: string) => {
+    LeaseService.terminateLease(leaseId, reason);
     setLastResiliatedId(leaseId);
     setLeases(LeaseService.getLeases());
     showToast(`⚠️ Bail ${leaseId} (${tenantName}) résilié. Le logement est dissocié.`);
@@ -889,13 +897,16 @@ export default function TenantsPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                handleTerminateTenantLease(
-                                  selectedTenant.lease.id,
-                                  selectedTenant.fullName
-                                )
+                                setLeaseToTerminate({
+                                  id: selectedTenant.lease.id,
+                                  tenant: selectedTenant.fullName,
+                                  property: selectedTenant.property.name,
+                                  unit: selectedTenant.property.unit,
+                                  rent: selectedTenant.financials.monthlyRent,
+                                })
                               }
                               className="py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                              title="Résilier définitivement le contrat et dissocier le logement"
+                              title="Résilier ce contrat de bail et dissocier le logement"
                             >
                               <Ban className="w-3.5 h-3.5 text-rose-600" />
                               <span>Résilier le bail</span>
@@ -1177,6 +1188,23 @@ export default function TenantsPage() {
           onSuccess={(msg) => showToast(msg)}
         />
       )}
+
+      {/* Modale de Confirmation de Résiliation */}
+      <ConfirmTerminateLeaseModal
+        isOpen={!!leaseToTerminate}
+        lease={leaseToTerminate}
+        onClose={() => setLeaseToTerminate(null)}
+        onConfirm={(reason) => {
+          if (leaseToTerminate) {
+            handleTerminateTenantLease(
+              leaseToTerminate.id,
+              leaseToTerminate.tenant,
+              reason
+            );
+          }
+          setLeaseToTerminate(null);
+        }}
+      />
     </div>
   );
 }

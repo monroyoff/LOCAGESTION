@@ -28,6 +28,7 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
+import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { useSpace } from '@/lib/context/space-context';
@@ -42,6 +43,7 @@ export default function LeasesPage() {
   >(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [lastResiliatedId, setLastResiliatedId] = useState<string | null>(null);
+  const [leaseToTerminate, setLeaseToTerminate] = useState<Lease | null>(null);
 
   // État des baux réactifs gérés par le LeaseService
   const [leases, setLeases] = useState<Lease[]>([]);
@@ -72,9 +74,9 @@ export default function LeasesPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Action Bailleur : Résilier définitivement le bail
-  const handleTerminateLease = (lease: Lease) => {
-    LeaseService.terminateLease(lease.id);
+  // Action Bailleur : Résilier définitivement le bail avec motif
+  const handleTerminateLease = (lease: Lease, reason?: string) => {
+    LeaseService.terminateLease(lease.id, reason);
     setLastResiliatedId(lease.id);
     refreshLeases();
     showToast(`⚠️ Bail ${lease.id} (${lease.tenant}) résilié. Le logement est dissocié.`);
@@ -486,9 +488,9 @@ export default function LeasesPage() {
                         {isActive && (
                           <button
                             type="button"
-                            onClick={() => handleTerminateLease(lease)}
+                            onClick={() => setLeaseToTerminate(lease)}
                             className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                            title="Résilier définitivement ce contrat de bail et dissocier le logement"
+                            title="Résilier ce contrat de bail et dissocier le logement"
                           >
                             <Ban className="w-3.5 h-3.5 text-rose-600" />
                             <span>Résilier le bail</span>
@@ -499,7 +501,7 @@ export default function LeasesPage() {
                         {isPending && (
                           <button
                             type="button"
-                            onClick={() => handleTerminateLease(lease)}
+                            onClick={() => setLeaseToTerminate(lease)}
                             className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-xs font-bold border border-slate-200 hover:border-rose-200 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                             title="Annuler / Résilier ce bail en attente"
                           >
@@ -533,6 +535,19 @@ export default function LeasesPage() {
           onSuccess={(msg) => showToast(msg)}
         />
       )}
+
+      {/* Modale de Confirmation de Résiliation */}
+      <ConfirmTerminateLeaseModal
+        isOpen={!!leaseToTerminate}
+        lease={leaseToTerminate}
+        onClose={() => setLeaseToTerminate(null)}
+        onConfirm={(reason) => {
+          if (leaseToTerminate) {
+            handleTerminateLease(leaseToTerminate, reason);
+          }
+          setLeaseToTerminate(null);
+        }}
+      />
 
       {/* Toast Notification avec option Annuler l'erreur */}
       {toastMessage && (
