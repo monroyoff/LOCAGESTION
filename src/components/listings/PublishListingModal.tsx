@@ -156,6 +156,7 @@ export function PublishListingModal({
     e.preventDefault();
 
     const countryCodeMap: Record<string, RentalListing['countryCode']> = {
+      // Zone UEMOA
       'Bénin': 'BJ',
       'Burkina Faso': 'BF',
       'Côte d’Ivoire': 'CI',
@@ -164,7 +165,13 @@ export function PublishListingModal({
       'Niger': 'NE',
       'Sénégal': 'SN',
       'Togo': 'TG',
+      // Zone CEMAC
       'Cameroun': 'CM',
+      'Centrafrique': 'CF',
+      'Congo': 'CG',
+      'Gabon': 'GA',
+      'Guinée Équatoriale': 'GQ',
+      'Tchad': 'TD',
     };
 
     const finalImages = images.length > 0 ? images : [
@@ -237,7 +244,7 @@ export function PublishListingModal({
                 Publier une Nouvelle Annonce de Location
               </h3>
               <p className="text-[10px] text-slate-400">
-                Diffusion certifiée sur les 9 pays de la zone FCFA
+                Diffusion certifiée sur les 14 pays des zones UEMOA & CEMAC (FCFA)
               </p>
             </div>
           </div>

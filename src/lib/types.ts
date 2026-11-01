@@ -171,7 +171,21 @@ export interface RentalListing {
   title: string;
   propertyType: RentalPropertyType;
   country: string;
-  countryCode: 'BJ' | 'CI' | 'SN' | 'TG' | 'CM' | 'NE' | 'ML' | 'BF' | 'GW';
+  countryCode:
+    | 'BJ'
+    | 'CI'
+    | 'SN'
+    | 'TG'
+    | 'BF'
+    | 'ML'
+    | 'NE'
+    | 'GW'
+    | 'CM'
+    | 'CF'
+    | 'CG'
+    | 'GA'
+    | 'GQ'
+    | 'TD';
   flag: string;
   city: string;
   district: string;

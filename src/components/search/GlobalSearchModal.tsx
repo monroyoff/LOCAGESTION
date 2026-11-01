@@ -221,7 +221,7 @@ export function GlobalSearchModal({
               <h2 className="text-sm sm:text-base font-black tracking-tight text-white flex items-center gap-2">
                 <span>Moteur de Recherche Multi-Critères</span>
                 <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-black bg-brand-500 text-white">
-                  9 Pays UEMOA & CEMAC
+                  14 Pays UEMOA & CEMAC
                 </span>
               </h2>
               <p className="text-[11px] text-slate-400">
@@ -268,7 +268,7 @@ export function GlobalSearchModal({
             </div>
           </div>
 
-          {/* Section 1 : Pays (9 pays UEMOA & CEMAC) */}
+          {/* Section 1 : Pays (14 pays UEMOA & CEMAC) */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
