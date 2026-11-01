@@ -105,22 +105,20 @@ DIALLO PATRIMOINE SARL`;
             <button
               type="button"
               onClick={() => setUrgencyLevel('courtois')}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
-                urgencyLevel === 'courtois'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${urgencyLevel === 'courtois'
+                ? 'bg-white text-slate-900 shadow-sm'
+                : 'text-slate-500 hover:text-slate-900'
+                }`}
             >
               Rappel Courtois (Standard)
             </button>
             <button
               type="button"
               onClick={() => setUrgencyLevel('ferme')}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${
-                urgencyLevel === 'ferme'
-                  ? 'bg-rose-500 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-bold transition-all ${urgencyLevel === 'ferme'
+                ? 'bg-rose-500 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-900'
+                }`}
             >
               Relance Ferme (+15j)
             </button>

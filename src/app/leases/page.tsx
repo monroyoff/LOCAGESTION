@@ -29,7 +29,7 @@ import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
-import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
+import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { useSpace } from '@/lib/context/space-context';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
@@ -96,16 +96,23 @@ export default function LeasesPage() {
   };
 
   const handleDownloadLeasePDF = (lease: Lease) => {
-    const content = generateLeaseContent({
+    generateLeasePDF({
       id: lease.id,
       tenantName: lease.tenant,
+      tenantPhone: lease.tenantPhone,
+      tenantEmail: lease.tenantEmail,
       propertyName: lease.property,
       unit: lease.unit,
       rent: lease.rent,
+      deposit: lease.deposit,
       startDate: lease.startDate,
+      endDate: lease.endDate,
+      durationMonths: lease.durationMonths,
+      landlordSignedAt: lease.landlordSignedAt,
+      tenantSignedAt: lease.tenantSignedAt,
+      hashSha256: lease.hashSha256,
     });
-    downloadDocument(`contrat-bail-${lease.id}.txt`, content);
-    showToast(`Contrat ${lease.id} (${lease.tenant}) téléchargé avec succès !`);
+    showToast(`Contrat ${lease.id} (${lease.tenant}) téléchargé en PDF officiel !`);
   };
 
   const handleSwitchToTenantToSign = (tenantName: string) => {

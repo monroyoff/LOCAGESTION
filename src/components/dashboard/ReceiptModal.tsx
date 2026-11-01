@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { PaymentTransaction } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
-import { downloadDocument } from '@/lib/export/pdf-download';
+import { generateReceiptPDF } from '@/lib/export/pdf-download';
 
 interface ReceiptModalProps {
   payment: PaymentTransaction | null;
@@ -25,40 +25,20 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
   if (!payment) return null;
 
   const handleDownloadQuittance = () => {
-    const quittanceContent = `================================================================================
-                    RÉPUBLIQUE DU BÉNIN / ZONE UEMOA & OHADA
-              QUITTANCE DE LOYER OFFICIELLE CERTIFIÉE
-================================================================================
-RÉFÉRENCE QUITTANCE : ${payment.receiptNumber}
-DATE D'ÉMISSION     : ${payment.paymentDate}
-STATUT DU PAIEMENT  : LOYER INTÉGRALEMENT SOLDÉ (Conforme UEMOA & OHADA)
-
-1. BAILLEUR ÉMETTEUR :
-   DIALLO PATRIMOINE SARL
-   Rue 340 Haie Vive • Cotonou, République du Bénin
-   IFU : 0202110485960 • RCCM : RB/COT/21 B 1042
-   Tél : +229 01 95 44 44 30 • contact@diallo-patrimoine.bj
-
-2. LOCATAIRE TITULAIRE :
-   ${payment.tenantName}
-   Résidant : ${payment.propertyName} - Lot ${payment.unitNumber}
-
-3. DÉTAIL DES MONTANTS :
-   - Période : ${payment.period}
-   - Mode de règlement : ${payment.method}
-   - Total quittancé et encaissé : ${payment.amount.toLocaleString('fr-FR')} FCFA
-
-ATTESTATION LÉGALE :
-Je soussigné, représentant légal de DIALLO PATRIMOINE SARL, reconnais avoir reçu de M./Mme
-${payment.tenantName} la somme de ${payment.amount.toLocaleString('fr-FR')} FCFA au titre du règlement
-du loyer pour la période susmentionnée.
-
-Signé numériquement par Mamadou Diallo • Gérant
-Empreinte SHA-256 certifiée • Code vérification : /verify/${payment.id}
-================================================================================`;
-
-    downloadDocument(`quittance-${payment.receiptNumber}.txt`, quittanceContent);
-    window.print();
+    generateReceiptPDF({
+      id: payment.id,
+      receiptNumber: payment.receiptNumber,
+      tenantName: payment.tenantName,
+      tenantPhone: payment.tenantPhone,
+      propertyName: payment.propertyName,
+      unitNumber: payment.unitNumber,
+      period: payment.period,
+      amount: payment.amount,
+      expectedAmount: payment.expectedAmount,
+      paymentDate: payment.paymentDate,
+      method: payment.method,
+      isVerified: payment.isVerified,
+    });
   };
 
   return (

@@ -49,7 +49,7 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { PaymentTransaction } from '@/lib/types';
-import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
+import { generateLeasePDF, generateInspectionPDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
 import { IncidentService, ReportedIncident } from '@/lib/services/incident-service';
@@ -229,6 +229,7 @@ export default function TenantPortalPage() {
   }, []);
 
   const [consentGranted, setConsentGranted] = useState(true);
+  const [declaredPeriod, setDeclaredPeriod] = useState('Novembre 2026');
   const [declaredAmount, setDeclaredAmount] = useState('220000');
   const [declaredMethod, setDeclaredMethod] = useState('wave');
   const [declaredRef, setDeclaredRef] = useState('WAVE-TX-984210');
@@ -241,7 +242,7 @@ export default function TenantPortalPage() {
   const handleDeclarePayment = (e: React.FormEvent) => {
     e.preventDefault();
     setDeclarationModalOpen(false);
-    const payMsg = `Déclaration de ${formatFCFA(declaredAmount)} envoyée au bailleur ! Quittance émise dès validation.`;
+    const payMsg = `Déclaration de ${formatFCFA(declaredAmount)} (${declaredPeriod}) envoyée au bailleur ! Quittance émise dès validation.`;
     showToast(payMsg);
     notifySave(payMsg, 'Paiement déclaré avec succès !');
   };
@@ -1025,16 +1026,18 @@ export default function TenantPortalPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const content = generateLeaseContent({
-                            id: tenant.leaseRef,
+                          generateLeasePDF({
+                            id: currentLease?.id || tenant.leaseRef,
                             tenantName: tenant.name,
+                            tenantPhone: tenant.phone,
+                            tenantEmail: tenant.email,
                             propertyName: tenant.property,
                             unit: tenant.unit,
                             rent: tenant.monthlyRent,
-                            startDate: tenant.leaseStartDate,
+                            deposit: tenant.deposit,
+                            startDate: currentLease?.startDate || tenant.leaseStartDate,
                           });
-                          downloadDocument(`contrat-bail-${tenant.leaseRef}.txt`, content);
-                          showToast(`Contrat de bail ${tenant.leaseRef} téléchargé avec succès !`);
+                          showToast(`Contrat de bail officiel téléchargé en PDF !`);
                         }}
                         className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold flex items-center gap-2 shadow-pink-glow transition-all cursor-pointer"
                       >
@@ -1114,33 +1117,17 @@ export default function TenantPortalPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          const pvContent = `================================================================================
-                    RÉPUBLIQUE DU BÉNIN / ZONE UEMOA & OHADA
-                PROCÈS-VERBAL CONTRADICTOIRE D'ÉTAT DES LIEUX D'ENTRÉE
-================================================================================
-RÉFÉRENCE DU BAIL : ${tenant.leaseRef}
-DATE DU CONSTAT  : ${tenant.inventoryDate}
-LOCATAIRE        : ${tenant.name}
-LOGEMENT         : ${tenant.unit}, ${tenant.property}
-
-RELEVÉS DES COMPTEURS D'ÉNERGIE & FLUIDES :
-• Compteur Électricité : ${tenant.meterCashPower}
-• Compteur Eau : ${tenant.meterWater}
-• Clés remises : ${tenant.keysDelivered}
-
-CONSTAT DES PIÈCES & ÉQUIPEMENTS :
-• Séjour / Salon : Peinture neuve, carrelage intact, split fonctionnel
-• Chambres : Portes et serrures conformes, prises de courant sécurisées
-• Salle d'eau : Chauffe-eau électrique opérationnel, robinetterie sans fuite
-• Cuisine : Plan de travail propre, évier et évacuation vérifiés
-
-Photos contradictoires annexées : 8 clichés horodatés scellés numériquement.
-
-[Approuvé et contresigné par le Bailleur]    [Approuvé et contresigné par le Preneur]
-Cabinet DIALLO Patrimoine                    ${tenant.name}
-`;
-                          downloadDocument(`etat-des-lieux-${tenant.leaseRef}.txt`, pvContent);
-                          showToast(`Procès-verbal d'état des lieux téléchargé avec succès !`);
+                          generateInspectionPDF({
+                            id: currentLease?.id || tenant.leaseRef,
+                            tenantName: tenant.name,
+                            propertyName: tenant.property,
+                            unit: tenant.unit,
+                            date: tenant.inventoryDate,
+                            meterCashPower: tenant.meterCashPower,
+                            meterWater: tenant.meterWater,
+                            keysDelivered: tenant.keysDelivered,
+                          });
+                          showToast(`Procès-verbal d'état des lieux téléchargé en PDF officiel !`);
                         }}
                         className="py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
                       >
@@ -1480,6 +1467,40 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
                     Virement BOA
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                  <span>Période concernée (Mois du loyer) *</span>
+                  <span className="text-[10px] text-brand-600 font-bold bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
+                    {declaredPeriod}
+                  </span>
+                </label>
+                <select
+                  value={declaredPeriod}
+                  onChange={(e) => setDeclaredPeriod(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
+                >
+                  <optgroup label="Exercice 2026 (Année en cours)">
+                    <option value="Novembre 2026">Novembre 2026 (Mois en cours)</option>
+                    <option value="Octobre 2026">Octobre 2026</option>
+                    <option value="Septembre 2026">Septembre 2026</option>
+                    <option value="Août 2026">Août 2026</option>
+                    <option value="Juillet 2026">Juillet 2026</option>
+                    <option value="Juin 2026">Juin 2026</option>
+                    <option value="Mai 2026">Mai 2026</option>
+                    <option value="Avril 2026">Avril 2026</option>
+                    <option value="Mars 2026">Mars 2026</option>
+                    <option value="Février 2026">Février 2026</option>
+                    <option value="Janvier 2026">Janvier 2026</option>
+                    <option value="Décembre 2026">Décembre 2026</option>
+                  </optgroup>
+                  <optgroup label="Exercice 2025 (Arriérés)">
+                    <option value="Décembre 2025">Décembre 2025</option>
+                    <option value="Novembre 2025">Novembre 2025</option>
+                    <option value="Octobre 2025">Octobre 2025</option>
+                  </optgroup>
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

@@ -25,7 +25,7 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
-import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
+import { generateLeasePDF } from '@/lib/export/pdf-download';
 import {
   REGISTERED_TENANTS,
   LeaseService,
@@ -680,15 +680,15 @@ export default function NewLeasePage() {
               <button
                 type="button"
                 onClick={() => {
-                  const content = generateLeaseContent({
+                  generateLeasePDF({
                     id: 'BAIL-2026-N09',
                     tenantName,
                     propertyName: selectedProperty,
                     unit: unitNumber,
                     rent: parseInt(monthlyRent, 10) || 220000,
+                    deposit: (parseInt(monthlyRent, 10) || 220000) * (parseInt(depositMonths, 10) || 3),
                     startDate: '2026-11-01',
                   });
-                  downloadDocument('contrat-bail-BAIL-2026-N09.txt', content);
                 }}
                 className="flex-1 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
               >

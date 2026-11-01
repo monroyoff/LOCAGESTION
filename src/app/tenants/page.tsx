@@ -41,7 +41,7 @@ import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
-import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
+import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 
@@ -921,16 +921,18 @@ export default function TenantsPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              const content = generateLeaseContent({
+                              generateLeasePDF({
                                 id: selectedTenant.lease.id,
                                 tenantName: selectedTenant.fullName,
+                                tenantPhone: selectedTenant.phone,
+                                tenantEmail: selectedTenant.email,
                                 propertyName: selectedTenant.property.name,
                                 unit: selectedTenant.property.unit,
                                 rent: selectedTenant.financials.monthlyRent,
+                                deposit: selectedTenant.financials.deposit,
                                 startDate: selectedTenant.lease.startDate,
                               });
-                              downloadDocument(`contrat-bail-${selectedTenant.lease.id}.txt`, content);
-                              showToast(`Contrat de bail ${selectedTenant.lease.id} téléchargé avec succès !`);
+                              showToast(`Contrat de bail ${selectedTenant.lease.id} téléchargé en PDF officiel !`);
                             }}
                             className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-sm transition-all cursor-pointer"
                           >

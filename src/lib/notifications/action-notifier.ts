@@ -82,3 +82,4 @@ export const notifyUpdate = (message: string, title = 'Modifications enregistré
 
 export const notifyDelete = (message: string, title = 'Suppression effectuée !') =>
   notifyAction({ title, message, type: 'delete' });
+

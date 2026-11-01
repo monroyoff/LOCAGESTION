@@ -27,6 +27,7 @@ export function QuickActionModal({
   const [tenantName, setTenantName] = useState('');
   const [amount, setAmount] = useState('220000');
   const [method, setMethod] = useState('wave');
+  const [periodChoice, setPeriodChoice] = useState('Novembre 2026');
   const [propertyChoice, setPropertyChoice] = useState('Résidence Les Cocotiers');
   const [unitChoice, setUnitChoice] = useState('Appt B2 (3 pièces)');
 
@@ -35,7 +36,7 @@ export function QuickActionModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (actionType === 'new_payment') {
-      const msg = `Encaissement de ${formatFCFA(amount)} enregistré avec succès pour ${tenantName || 'le locataire'}.`;
+      const msg = `Encaissement de ${formatFCFA(amount)} (${periodChoice}) enregistré avec succès pour ${tenantName || 'le locataire'}.`;
       onSuccess(msg);
       notifySave(msg, 'Encaissement enregistré !');
     } else if (actionType === 'new_lease') {
@@ -144,14 +145,42 @@ export function QuickActionModal({
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1.5">
-                  Période concernée
+                <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center justify-between">
+                  <span>Période concernée (Mois du loyer) *</span>
+                  <span className="text-[10px] text-brand-600 font-bold bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
+                    {periodChoice}
+                  </span>
                 </label>
-                <input
-                  type="text"
-                  defaultValue="Octobre 2026"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800"
-                />
+                <select
+                  value={periodChoice}
+                  onChange={(e) => setPeriodChoice(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
+                >
+                  <optgroup label="Exercice 2026 (Année en cours)">
+                    <option value="Novembre 2026">Novembre 2026 (Mois en cours)</option>
+                    <option value="Octobre 2026">Octobre 2026</option>
+                    <option value="Septembre 2026">Septembre 2026</option>
+                    <option value="Août 2026">Août 2026</option>
+                    <option value="Juillet 2026">Juillet 2026</option>
+                    <option value="Juin 2026">Juin 2026</option>
+                    <option value="Mai 2026">Mai 2026</option>
+                    <option value="Avril 2026">Avril 2026</option>
+                    <option value="Mars 2026">Mars 2026</option>
+                    <option value="Février 2026">Février 2026</option>
+                    <option value="Janvier 2026">Janvier 2026</option>
+                    <option value="Décembre 2026">Décembre 2026</option>
+                  </optgroup>
+                  <optgroup label="Régularisations & Arriérés 2025">
+                    <option value="Décembre 2025">Décembre 2025</option>
+                    <option value="Novembre 2025">Novembre 2025</option>
+                    <option value="Octobre 2025">Octobre 2025</option>
+                    <option value="Septembre 2025">Septembre 2025</option>
+                  </optgroup>
+                  <optgroup label="Avances de Loyer 2027">
+                    <option value="Janvier 2027">Janvier 2027</option>
+                    <option value="Février 2027">Février 2027</option>
+                  </optgroup>
+                </select>
               </div>
             </>
           )}
