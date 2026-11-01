@@ -19,11 +19,19 @@ import {
   Sparkles,
   Lock,
   Download,
+  Send,
+  UserCheck,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
+import {
+  REGISTERED_TENANTS,
+  LeaseService,
+  Lease,
+} from '@/lib/services/lease-service';
+import { TransmitLeaseModal } from '@/components/leases/TransmitLeaseModal';
 
 export default function NewLeasePage() {
   const router = useRouter();
@@ -39,9 +47,25 @@ export default function NewLeasePage() {
   const [surface, setSurface] = useState('78');
 
   const [tenantMode, setTenantMode] = useState<'existing' | 'new'>('existing');
+  const [selectedRegisteredTenantId, setSelectedRegisteredTenantId] = useState<string>('ten-01');
   const [tenantName, setTenantName] = useState('Koffi Mensah');
   const [tenantEmail, setTenantEmail] = useState('koffi.mensah@fintech-africa.com');
-  const [tenantPhone, setTenantPhone] = useState('+229 97 12 34 56');
+  const [tenantPhone, setTenantPhone] = useState('+229 97 00 11 22');
+
+  const [isTransmitModalOpen, setIsTransmitModalOpen] = useState(false);
+  const [preparedLease, setPreparedLease] = useState<Lease | null>(null);
+
+  const handleSelectRegisteredTenant = (id: string) => {
+    setSelectedRegisteredTenantId(id);
+    const found = REGISTERED_TENANTS.find((t) => t.id === id);
+    if (found) {
+      setTenantName(found.name);
+      setTenantEmail(found.email);
+      setTenantPhone(found.phone);
+      if (found.unit) setUnitNumber(found.unit);
+      if (found.property) setSelectedProperty(found.property);
+    }
+  };
 
   const [monthlyRent, setMonthlyRent] = useState('220000');
   const [charges, setCharges] = useState('30000');
@@ -118,7 +142,35 @@ export default function NewLeasePage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleFinish = () => {
-    setShowSuccessModal(true);
+    const signatureData =
+      canvasRef.current?.toDataURL('image/png') ||
+      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><text x="10" y="35" font-family="cursive" font-size="22" fill="%23ec4899">Mamadou Diallo</text></svg>';
+
+    const lease: Lease = {
+      id: `BAIL-2026-${Math.floor(100 + Math.random() * 900)}`,
+      tenant: tenantName,
+      tenantId: tenantMode === 'existing' ? selectedRegisteredTenantId : undefined,
+      tenantEmail,
+      tenantPhone,
+      property: selectedProperty,
+      unit: unitNumber,
+      rent: parseInt(monthlyRent, 10) || 220000,
+      deposit: (parseInt(monthlyRent, 10) || 220000) * (parseInt(depositMonths, 10) || 3),
+      charges: parseInt(charges, 10) || 30000,
+      startDate: '2026-11-01',
+      endDate: '2029-10-31',
+      durationMonths: parseInt(durationMonths, 10) || 36,
+      status: 'en_attente_signature',
+      landlordSignature: {
+        signedBy: 'Mamadou Diallo',
+        date: new Date().toLocaleDateString('fr-FR'),
+        signatureDataUrl: signatureData,
+      },
+      transmittedAt: new Date().toLocaleDateString('fr-FR'),
+    };
+
+    setPreparedLease(lease);
+    setIsTransmitModalOpen(true);
   };
 
   const steps = [
@@ -265,9 +317,70 @@ export default function NewLeasePage() {
             {/* Step 2: Locataire */}
             {currentStep === 2 && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                <h2 className="text-base font-black text-slate-900">
-                  Étape 2 : Identité du Locataire Titulaire
-                </h2>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-base font-black text-slate-900">
+                    Étape 2 : Identité du Locataire Titulaire
+                  </h2>
+                  <span className="text-xs text-brand-600 font-bold bg-brand-50 px-2.5 py-1 rounded-full border border-brand-200/60 flex items-center gap-1">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Compte plateforme</span>
+                  </span>
+                </div>
+
+                {/* Sélecteur de mode : Locataire déjà créé ou Nouveau */}
+                <div className="p-1.5 bg-slate-100 rounded-2xl flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTenantMode('existing');
+                      handleSelectRegisteredTenant('ten-01');
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      tenantMode === 'existing'
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    <UserCheck className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Locataire enregistré (Compte déjà créé)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTenantMode('new')}
+                    className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      tenantMode === 'new'
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    <User className="w-3.5 h-3.5" />
+                    <span>Nouveau locataire (Saisie libre)</span>
+                  </button>
+                </div>
+
+                {tenantMode === 'existing' && (
+                  <div className="p-4 rounded-2xl bg-brand-50/50 border border-brand-200/60 space-y-2">
+                    <label className="text-xs font-black text-brand-950 block">
+                      Sélectionnez le compte locataire qui recevra le bail pour contresignature :
+                    </label>
+                    <select
+                      value={selectedRegisteredTenantId}
+                      onChange={(e) => handleSelectRegisteredTenant(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-300 text-xs font-bold text-slate-900 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-none cursor-pointer"
+                    >
+                      {REGISTERED_TENANTS.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name} — {t.unit || 'Lot'} ({t.property || 'Résidence'}) • {t.email}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-[11px] text-slate-500">
+                      ✓ Dès signature du bailleur, le contrat apparaîtra avec la mention{' '}
+                      <strong className="text-amber-700">« En attente de signature »</strong> et sera
+                      transmis directement dans son Portail Locataire.
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <div>
@@ -493,11 +606,16 @@ export default function NewLeasePage() {
               ) : (
                 <button
                   type="button"
+                  disabled={!hasSignature}
                   onClick={handleFinish}
-                  className="py-3 px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs sm:text-sm font-black shadow-pink-glow flex items-center gap-2 transition-all cursor-pointer"
+                  className={`py-3 px-6 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 shadow-pink-glow transition-all ${
+                    hasSignature
+                      ? 'bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white cursor-pointer active:scale-95'
+                      : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                  }`}
                 >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Finaliser & Émettre le Bail</span>
+                  <Send className="w-4 h-4" />
+                  <span>Signer & Transmettre au Locataire</span>
                 </button>
               )}
             </div>
@@ -505,7 +623,20 @@ export default function NewLeasePage() {
         </main>
       </div>
 
-      {/* Modal de Succès & Scellement de Bail */}
+      {/* Modal de Transmission du Bail au Locataire */}
+      {preparedLease && (
+        <TransmitLeaseModal
+          lease={preparedLease}
+          isOpen={isTransmitModalOpen}
+          onClose={() => setIsTransmitModalOpen(false)}
+          onTransmittedSuccess={(transmittedLease) => {
+            setIsTransmitModalOpen(false);
+            router.push('/leases');
+          }}
+        />
+      )}
+
+      {/* Modal de Succès & Scellement de Bail Direct */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 text-center space-y-4">

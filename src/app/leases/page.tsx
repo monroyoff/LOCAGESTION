@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -18,25 +18,58 @@ import {
   Sparkles,
   ArrowRight,
   PenTool,
+  Send,
+  MessageCircle,
+  ExternalLink,
+  AlertCircle,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
+import { Lease, LeaseService } from '@/lib/services/lease-service';
+import { useSpace } from '@/lib/context/space-context';
 
 export default function LeasesPage() {
   const router = useRouter();
+  const spaceCtx = useSpace();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
-  const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
+  const [quickAction, setQuickAction] = useState<
+    'new_lease' | 'new_payment' | 'new_property' | null
+  >(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // État des baux réactifs gérés par le LeaseService
+  const [leases, setLeases] = useState<Lease[]>([]);
+  const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'active'>('all');
+
+  const refreshLeases = () => {
+    setLeases(LeaseService.getLeases());
+  };
+
+  useEffect(() => {
+    refreshLeases();
+
+    const handleStorageUpdate = () => {
+      refreshLeases();
+    };
+
+    window.addEventListener('locagestion:leases_updated', handleStorageUpdate);
+    window.addEventListener('storage', handleStorageUpdate);
+
+    return () => {
+      window.removeEventListener('locagestion:leases_updated', handleStorageUpdate);
+      window.removeEventListener('storage', handleStorageUpdate);
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const handleDownloadLeasePDF = (lease: any) => {
+  const handleDownloadLeasePDF = (lease: Lease) => {
     const content = generateLeaseContent({
       id: lease.id,
       tenantName: lease.tenant,
@@ -49,56 +82,23 @@ export default function LeasesPage() {
     showToast(`Contrat ${lease.id} (${lease.tenant}) téléchargé avec succès !`);
   };
 
-  const leases = [
-    {
-      id: 'BAIL-2025-089',
-      tenant: 'Koffi Mensah',
-      property: 'Résidence Les Cocotiers',
-      unit: 'Appt A3 (3 pièces)',
-      rent: 220000,
-      deposit: 660000,
-      startDate: '01/01/2025',
-      endDate: '31/12/2025',
-      status: 'actif',
-      signedElectronically: true,
-    },
-    {
-      id: 'BAIL-2025-112',
-      tenant: 'Amina Diop',
-      property: 'Villa Émeraude',
-      unit: 'Villa R+1 Ouest',
-      rent: 350000,
-      deposit: 1050000,
-      startDate: '15/03/2025',
-      endDate: '14/03/2026',
-      status: 'actif',
-      signedElectronically: true,
-    },
-    {
-      id: 'BAIL-2025-045',
-      tenant: 'Fatoumata Traoré',
-      property: 'Résidence Les Cocotiers',
-      unit: 'Appt B1 (2 pièces)',
-      rent: 180000,
-      deposit: 540000,
-      startDate: '01/06/2025',
-      endDate: '31/05/2026',
-      status: 'actif',
-      signedElectronically: true,
-    },
-    {
-      id: 'BAIL-2025-072',
-      tenant: 'Jean-Yves Kouassi',
-      property: 'Immeuble Palmier Royal',
-      unit: 'Studio B12',
-      rent: 140000,
-      deposit: 420000,
-      startDate: '01/02/2025',
-      endDate: '31/01/2026',
-      status: 'actif',
-      signedElectronically: true,
-    },
-  ];
+  const handleSwitchToTenantToSign = (tenantName: string) => {
+    if (spaceCtx) {
+      spaceCtx.switchSpace('locataire');
+    }
+    showToast(`Bascule sur le Portail Résidentiel de ${tenantName}...`);
+    router.push('/portal');
+  };
+
+  // Filtrage des baux
+  const pendingLeases = leases.filter((l) => l.status === 'en_attente_signature');
+  const activeLeases = leases.filter((l) => l.status === 'actif');
+
+  const filteredLeases = leases.filter((l) => {
+    if (filterTab === 'pending') return l.status === 'en_attente_signature';
+    if (filterTab === 'active') return l.status === 'actif';
+    return true;
+  });
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-900 flex">
@@ -124,35 +124,84 @@ export default function LeasesPage() {
                   Baux & Contrats de Location
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand-50 text-brand-600 border border-brand-200">
-                  {leases.length} Baux Actifs
+                  {leases.length} Baux Répertoriés
                 </span>
+                {pendingLeases.length > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-50 text-amber-700 border border-amber-300 flex items-center gap-1 animate-pulse">
+                    <Clock className="w-3 h-3" />
+                    <span>{pendingLeases.length} En attente de signature</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Génération conforme OHADA/UEMOA, signature électronique tactile et échéancier automatique.
+                Génération conforme OHADA/UEMOA, transmission directe aux comptes locataires et
+                contresignature électronique tactile.
               </p>
             </div>
 
             <button
-              onClick={() => setQuickAction('new_lease')}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
+              onClick={() => router.push('/leases/new')}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 stroke-[3]" />
               <span>+ Rédiger un nouveau bail</span>
             </button>
           </div>
 
-          {/* Assistant 5 Étapes Banner */}
-          <div className="p-6 bg-white rounded-3xl border border-slate-200/80 shadow-soft">
-            <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider block mb-3">
-              Assistant de Rédaction de Bail Conforme UEMOA
-            </span>
+          {/* Bannière de notification si baux en attente */}
+          {pendingLeases.length > 0 && (
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-amber-50/80 to-amber-100/60 border border-amber-200/90 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0 border border-amber-500/30">
+                  <Clock className="w-5 h-5 text-amber-700" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-amber-950">
+                      {pendingLeases.length === 1
+                        ? '1 contrat envoyé en attente de contresignature locataire'
+                        : `${pendingLeases.length} contrats envoyés en attente de contresignature locataire`}
+                    </h3>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-200 text-amber-900">
+                      Envoyé pour signature
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-800 mt-0.5">
+                    Le bail a été scellé par vous ({'Mamadou Diallo'}) et transmis au compte de{' '}
+                    <strong>{pendingLeases[0].tenant}</strong>. Une fois contresigné, vous recevrez
+                    une notification instantanée dans l'application et par email.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleSwitchToTenantToSign(pendingLeases[0].tenant)}
+                className="py-2.5 px-4 rounded-xl bg-amber-900 hover:bg-amber-950 text-white text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer"
+              >
+                <span>Tester la signature locataire</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* Assistant 5 Étapes Info Banner */}
+          <div className="p-5 sm:p-6 bg-white rounded-3xl border border-slate-200/80 shadow-soft">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider block">
+                Workflow Sécurisé de Rédaction & Signature UEMOA
+              </span>
+              <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                Valeur légale certifiée conforme droit OHADA
+              </span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
               {[
                 { step: '1', title: 'Sélection du Lot', desc: 'Résidence, type, loyer' },
-                { step: '2', title: 'Identité Locataire', desc: 'Fiche ou invitation' },
-                { step: '3', title: 'Conditions Financières', desc: 'Caution, avance, charges' },
-                { step: '4', title: 'Modèle Juridique', desc: 'Clauses d’habitation' },
-                { step: '5', title: 'Signature Tactile', desc: 'Horodatage & scellement' },
+                { step: '2', title: 'Compte Locataire', desc: 'Compte existant ou nouveau' },
+                { step: '3', title: 'Conditions FCFA', desc: 'Caution, avance, charges' },
+                { step: '4', title: 'Clauses UEMOA', desc: 'Clauses d’habitation' },
+                { step: '5', title: 'Transmission & Sceau', desc: 'Signature bailleur & locataire' },
               ].map((s) => (
                 <div key={s.step} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/60">
                   <div className="flex items-center gap-2 mb-1">
@@ -167,71 +216,198 @@ export default function LeasesPage() {
             </div>
           </div>
 
-          {/* Leases Table */}
-          <div className="bg-white rounded-3xl border border-slate-200/80 shadow-soft overflow-hidden">
-            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="font-black text-sm text-slate-900">
-                Liste des Contrats Actifs
-              </h3>
-            </div>
+          {/* Onglets de filtrage */}
+          <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setFilterTab('all')}
+              className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                filterTab === 'all'
+                  ? 'bg-slate-900 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              Tous les baux ({leases.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab('pending')}
+              className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                filterTab === 'pending'
+                  ? 'bg-amber-600 text-white shadow-sm'
+                  : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>En attente de signature ({pendingLeases.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab('active')}
+              className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                filterTab === 'active'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Baux contresignés & actifs ({activeLeases.length})</span>
+            </button>
+          </div>
 
-            <div className="divide-y divide-slate-100">
-              {leases.map((lease) => (
+          {/* Liste des Baux */}
+          <div className="space-y-4">
+            {filteredLeases.map((lease) => {
+              const isPending = lease.status === 'en_attente_signature';
+
+              return (
                 <div
                   key={lease.id}
-                  className="p-5 hover:bg-slate-50/70 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className={`p-5 rounded-3xl border transition-all ${
+                    isPending
+                      ? 'bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40 border-amber-300 shadow-md ring-1 ring-amber-300/60'
+                      : 'bg-white border-slate-200/80 shadow-soft hover:border-slate-300'
+                  }`}
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-11 h-11 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
-                      <FileText className="w-5 h-5" />
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    {/* Infos Principales */}
+                    <div className="flex items-start gap-4">
+                      <div
+                        className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
+                          isPending
+                            ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                            : 'bg-brand-50 text-brand-600 border border-brand-100'
+                        }`}
+                      >
+                        <FileText className="w-6 h-6" />
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="font-black text-base text-slate-900">{lease.tenant}</h4>
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200">
+                            {lease.id}
+                          </span>
+
+                          {/* Statut Badge */}
+                          {isPending ? (
+                            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs flex items-center gap-1 animate-pulse">
+                              <Clock className="w-3 h-3" />
+                              <span>En attente de signature</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Contresigné & Actif</span>
+                            </span>
+                          )}
+
+                          {isPending && (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 flex items-center gap-1">
+                              <Send className="w-3 h-3" />
+                              <span>Envoyé pour signature</span>
+                            </span>
+                          )}
+                        </div>
+
+                        <span className="text-xs text-slate-700 font-bold block">
+                          {lease.property} • {lease.unit}
+                        </span>
+
+                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+                          <span>Date de prise d'effet : {lease.startDate}</span>
+                          <span>•</span>
+                          <span>Durée : {lease.durationMonths || 36} mois</span>
+                          {isPending && lease.transmittedAt && (
+                            <>
+                              <span>•</span>
+                              <span className="text-amber-800 font-bold">
+                                Transmis au locataire le {lease.transmittedAt}
+                              </span>
+                            </>
+                          )}
+                        </div>
+
+                        {/* Signatures status */}
+                        <div className="pt-2 flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            <span>Signé par le bailleur (Mamadou Diallo)</span>
+                          </span>
+
+                          {isPending ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
+                              <Clock className="w-3 h-3 text-amber-600" />
+                              <span>En attente de signature de {lease.tenant}</span>
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Contresigné par le locataire</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h4 className="font-black text-sm text-slate-900">
-                          {lease.tenant}
-                        </h4>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 font-bold">
-                          {lease.id}
+                    {/* Conditions financières & Actions */}
+                    <div className="flex flex-col sm:flex-row lg:flex-col xl:flex-row items-start sm:items-center lg:items-end xl:items-center justify-between sm:justify-end gap-4 pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-200">
+                      <div className="text-left sm:text-right lg:text-right">
+                        <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">
+                          Loyer mensuel
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          Signé électr.
+                        <span className="text-base font-black text-slate-900 block">
+                          {formatFCFA(lease.rent)}
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">
+                          Caution : {formatFCFA(lease.deposit || lease.rent * 2)}
                         </span>
                       </div>
 
-                      <span className="text-xs text-slate-600 font-semibold block mt-0.5">
-                        {lease.property} • {lease.unit}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isPending ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleSwitchToTenantToSign(lease.tenant)}
+                              className="py-2.5 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+                              title="Basculer sur l'Espace Locataire pour tester la contresignature"
+                            >
+                              <PenTool className="w-3.5 h-3.5" />
+                              <span>Signer (Côté Locataire)</span>
+                            </button>
 
-                      <div className="flex items-center gap-3 text-[11px] text-slate-400 mt-1">
-                        <span>Début : {lease.startDate}</span>
-                        <span>•</span>
-                        <span>Fin : {lease.endDate}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const waUrl = `https://wa.me/${(lease.tenantPhone || '22997001122').replace(/\+/g, '').replace(/\s+/g, '')}?text=${encodeURIComponent(
+                                  `Bonjour ${lease.tenant}, votre contrat de bail officiel (${lease.id}) pour ${lease.unit} vous a été transmis sur votre Portail Résidentiel LOCAGESTION pour contresignature électronique. Rendez-vous sur https://locagestion.app/portal pour le contresigner.`
+                                )}`;
+                                window.open(waUrl, '_blank');
+                              }}
+                              className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                              title="Relancer le locataire via WhatsApp"
+                            >
+                              <MessageCircle className="w-3.5 h-3.5" />
+                              <span>Relancer WhatsApp</span>
+                            </button>
+                          </>
+                        ) : null}
+
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadLeasePDF(lease)}
+                          className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                          <span>PDF</span>
+                        </button>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between sm:justify-end gap-6 pt-2 sm:pt-0 border-t sm:border-0 border-slate-100">
-                    <div>
-                      <span className="text-[10px] text-slate-400 block sm:text-right">Loyer mensuel</span>
-                      <span className="text-sm font-black text-slate-900 block sm:text-right">
-                        {formatFCFA(lease.rent)}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadLeasePDF(lease)}
-                      className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      <span>Télécharger (PDF)</span>
-                    </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </main>
       </div>
@@ -254,4 +430,3 @@ export default function LeasesPage() {
     </div>
   );
 }
-

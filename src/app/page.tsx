@@ -90,8 +90,8 @@ export default function DashboardPage() {
                 + Encaisser
               </button>
               <button
-                onClick={() => setQuickAction('new_lease')}
-                className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all active:scale-95"
+                onClick={() => router.push('/leases/new')}
+                className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all active:scale-95 cursor-pointer"
               >
                 + Nouveau bail
               </button>

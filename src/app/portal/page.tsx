@@ -38,11 +38,15 @@ import {
   Info,
   Eye,
   Wrench,
+  PenTool,
+  Send,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { PaymentTransaction } from '@/lib/types';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
+import { LeaseService, Lease } from '@/lib/services/lease-service';
+import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
 
 export default function TenantPortalPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -100,6 +104,25 @@ export default function TenantPortalPage() {
   };
 
   // Tenant state
+  const [pendingLease, setPendingLease] = useState<Lease | null>(null);
+  const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+
+  const checkPendingLease = () => {
+    const pl = LeaseService.getPendingLeaseForTenant('Koffi Mensah');
+    setPendingLease(pl || null);
+  };
+
+  useEffect(() => {
+    checkPendingLease();
+    const handleUpdate = () => checkPendingLease();
+    window.addEventListener('locagestion:leases_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('locagestion:leases_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
   const [consentGranted, setConsentGranted] = useState(true);
   const [declaredAmount, setDeclaredAmount] = useState('220000');
   const [declaredMethod, setDeclaredMethod] = useState('wave');
@@ -333,6 +356,42 @@ export default function TenantPortalPage() {
           {/* ==================================================================== */}
           {activeTab === 'accueil' && (
             <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Bannière Bail en Attente de Signature Électronique */}
+              {pendingLease && (
+                <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 border border-amber-300 ring-4 ring-amber-500/20 animate-in slide-in-from-top-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                      <PenTool className="w-6 h-6 animate-bounce" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-base font-black text-white">
+                          Nouveau contrat de bail officiel reçu !
+                        </h2>
+                        <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-white text-amber-900 shadow-xs">
+                          En attente de votre contresignature
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-50 leading-relaxed max-w-xl">
+                        Votre bailleur ({pendingLease.landlordSignature?.signedBy || 'Mamadou Diallo'})
+                        a signé et vous a transmis le contrat de bail <strong>{pendingLease.id}</strong>{' '}
+                        pour le lot <strong>{pendingLease.unit}</strong> ({formatFCFA(pendingLease.rent)}/mois).
+                        Veuillez apposer votre signature électronique pour activer le bail.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsSignModalOpen(true)}
+                    className="py-3 px-6 rounded-2xl bg-white hover:bg-amber-50 text-amber-950 font-black text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer active:scale-95"
+                  >
+                    <PenTool className="w-4 h-4 text-amber-600" />
+                    <span>Examiner & Contresigner</span>
+                  </button>
+                </div>
+              )}
+
               {/* Hero Banner: Rent Due & Quick Payment */}
               <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -674,6 +733,81 @@ export default function TenantPortalPage() {
               {/* SOUS-SECTION 1 : BAIL & ÉTAT DES LIEUX */}
               {(bailSubTab === 'tout' || bailSubTab === 'bail_etat') && (
                 <div className="space-y-6">
+                  {/* Contrat en Attente de Signature si présent */}
+                  {pendingLease && (
+                    <div className="bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-3xl p-6 sm:p-7 border-2 border-amber-300 shadow-md space-y-4 ring-2 ring-amber-400/30">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-amber-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md">
+                            <PenTool className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-black text-base text-slate-900">
+                                Nouveau Contrat de Bail à Contresigner
+                              </h3>
+                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-500 text-white animate-pulse">
+                                Requis
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-amber-900 font-medium">
+                              Transmis par votre bailleur le {pendingLease.transmittedAt || '01/11/2026'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => setIsSignModalOpen(true)}
+                          className="py-2.5 px-5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                        >
+                          <PenTool className="w-4 h-4" />
+                          <span>Contresigner ce Bail</span>
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div className="p-3.5 rounded-2xl bg-white/90 border border-amber-200">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Réf. & Logement
+                          </span>
+                          <span className="text-xs font-black text-slate-900 block mt-1">
+                            {pendingLease.id}
+                          </span>
+                          <span className="text-[11px] text-slate-600 block">
+                            {pendingLease.unit} ({pendingLease.property})
+                          </span>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white/90 border border-amber-200">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Loyer & Caution
+                          </span>
+                          <span className="text-xs font-black text-brand-600 block mt-1">
+                            {formatFCFA(pendingLease.rent)} / mois
+                          </span>
+                          <span className="text-[11px] text-slate-600 block">
+                            Caution : {formatFCFA(pendingLease.deposit || pendingLease.rent * 2)}
+                          </span>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-white/90 border border-amber-200">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            État des signatures
+                          </span>
+                          <span className="text-xs font-bold text-emerald-700 block mt-1 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Bailleur : Signé</span>
+                          </span>
+                          <span className="text-[11px] text-amber-700 font-bold block flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" />
+                            <span>Locataire : En attente</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Contrat de Bail Card */}
                   <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5">
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1341,6 +1475,22 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
         <ReceiptModal
           payment={selectedReceipt}
           onClose={() => setSelectedReceipt(null)}
+        />
+      )}
+
+      {/* Modal de Contresignature Électronique du Bail */}
+      {pendingLease && (
+        <TenantSignLeaseModal
+          lease={pendingLease}
+          tenantName={tenant.name}
+          isOpen={isSignModalOpen}
+          onClose={() => setIsSignModalOpen(false)}
+          onSignedSuccess={(updatedLease) => {
+            showToast(
+              `Bail ${updatedLease.id} contresigné avec succès ! Notification et email transmis au bailleur.`
+            );
+            checkPendingLease();
+          }}
         />
       )}
 
