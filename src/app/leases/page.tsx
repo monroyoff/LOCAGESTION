@@ -147,6 +147,41 @@ export default function LeasesPage() {
     return isNaN(d) ? 0 : d;
   };
 
+  /**
+   * Extrait rigoureusement l'année de signature ou d'émission effective du bail
+   * (Exclut la date de fin qui peut déborder sur les années suivantes)
+   */
+  const getLeaseSignedYear = (l: Lease): string => {
+    // 1. Date de signature locataire ou bailleur
+    if (l.tenantSignedAt) {
+      const match = l.tenantSignedAt.match(/\b(202\d)\b/);
+      if (match) return match[1];
+    }
+    if (l.landlordSignedAt) {
+      const match = l.landlordSignedAt.match(/\b(202\d)\b/);
+      if (match) return match[1];
+    }
+    if (l.transmittedAt) {
+      const match = l.transmittedAt.match(/\b(202\d)\b/);
+      if (match) return match[1];
+    }
+    if (l.sentForSignatureAt) {
+      const match = l.sentForSignatureAt.match(/\b(202\d)\b/);
+      if (match) return match[1];
+    }
+    // 2. Date de début de prise d'effet du bail
+    if (l.startDate) {
+      const match = l.startDate.match(/\b(202\d)\b/);
+      if (match) return match[1];
+    }
+    // 3. Année dans la référence du bail (ex: BAIL-2026-N09, BAIL-2025-089)
+    if (l.id) {
+      const match = l.id.match(/\b(202\d)\b/);
+      if (match) return match[1];
+    }
+    return '';
+  };
+
   const filteredLeases = leases
     .filter((l) => {
       // 1. Onglet statut
@@ -166,22 +201,24 @@ export default function LeasesPage() {
         if (!match) return false;
       }
 
-      // 3. Année spécifique
+      const signedYear = getLeaseSignedYear(l);
+
+      // 3. Année de signature spécifique (Filtre strict : affiche les baux signés cette année uniquement)
       if (leaseSelectedYear !== 'all') {
-        if (!l.startDate.includes(leaseSelectedYear) && !(l.endDate && l.endDate.includes(leaseSelectedYear))) {
+        if (signedYear !== leaseSelectedYear) {
           return false;
         }
       }
 
       // 4. Presets de date
       if (leaseDateFilter === 'year_2026') {
-        return l.startDate.includes('2026') || (l.endDate && l.endDate.includes('2026'));
+        return signedYear === '2026';
       }
       if (leaseDateFilter === 'year_2025') {
-        return l.startDate.includes('2025');
+        return signedYear === '2025';
       }
       if (leaseDateFilter === 'recent_3m') {
-        return l.startDate.includes('2026') || l.startDate.includes('/11/2025') || l.startDate.includes('/10/2025');
+        return signedYear === '2026' || l.startDate.includes('/11/2025') || l.startDate.includes('/10/2025');
       }
       if (leaseDateFilter === 'expiring_soon') {
         return l.endDate ? (l.endDate.includes('2026') || l.endDate.includes('2025')) : false;
@@ -416,10 +453,10 @@ export default function LeasesPage() {
                     }}
                     className="py-2 pl-3 pr-7 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
                   >
-                    <option value="all">Toutes années</option>
-                    <option value="2026">Exercice 2026</option>
-                    <option value="2025">Exercice 2025</option>
-                    <option value="2024">Exercice 2024</option>
+                    <option value="all">Toutes années de signature</option>
+                    <option value="2026">Signés en 2026 uniquement</option>
+                    <option value="2025">Signés en 2025 uniquement</option>
+                    <option value="2024">Signés en 2024 uniquement</option>
                   </select>
                 </div>
 
@@ -429,8 +466,8 @@ export default function LeasesPage() {
                     onChange={(e) => setLeaseSortOrder(e.target.value as any)}
                     className="py-2 pl-3 pr-7 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
                   >
-                    <option value="startDate_desc">📅 Début (Plus récent ↓)</option>
-                    <option value="startDate_asc">📅 Début (Plus ancien ↑)</option>
+                    <option value="startDate_desc">📅 Date signature (Plus récent ↓)</option>
+                    <option value="startDate_asc">📅 Date signature (Plus ancien ↑)</option>
                     <option value="rent_desc">💰 Loyer le plus élevé</option>
                     <option value="rent_asc">💰 Loyer le plus accessible</option>
                     <option value="tenant_asc">👤 Locataire (A à Z)</option>
@@ -443,14 +480,14 @@ export default function LeasesPage() {
             <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-brand-500" />
-                <span>Période du bail :</span>
+                <span>Signature :</span>
               </span>
 
               {[
                 { key: 'all', label: 'Tous les baux' },
-                { key: 'year_2026', label: 'En cours (2026)' },
+                { key: 'year_2026', label: 'Signés en 2026' },
+                { key: 'year_2025', label: 'Signés en 2025' },
                 { key: 'recent_3m', label: 'Signés récemment' },
-                { key: 'year_2025', label: 'Baux 2025' },
                 { key: 'expiring_soon', label: 'Échéance proche' },
               ].map((preset) => (
                 <button
@@ -590,8 +627,12 @@ export default function LeasesPage() {
                           {lease.property} • {lease.unit}
                         </span>
 
-                        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
-                          <span>Date de prise d'effet : {lease.startDate}</span>
+                        <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-slate-400">
+                          <span className="px-2 py-0.5 rounded-lg bg-slate-100 font-black text-slate-800 border border-slate-200">
+                            Signé en {getLeaseSignedYear(lease) || '2026'}
+                          </span>
+                          <span>•</span>
+                          <span>Prise d'effet : {lease.startDate}</span>
                           <span>•</span>
                           <span>Durée : {lease.durationMonths || 36} mois</span>
                           {isPending && lease.transmittedAt && (
