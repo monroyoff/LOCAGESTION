@@ -36,6 +36,17 @@ export interface Property {
   occupiedUnits: number;
   monthlyRevenue: number;
   imageUrl: string;
+  images?: string[];
+  description?: string;
+  amenities?: string[];
+  unitsList?: {
+    unit: string;
+    type: string;
+    surface: number;
+    rent: number;
+    tenant: string;
+    status: 'occupe' | 'vacant';
+  }[];
   featured?: boolean;
 }
 
