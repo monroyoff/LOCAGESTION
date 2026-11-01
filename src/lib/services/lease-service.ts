@@ -90,12 +90,16 @@ export interface LandlordNotification {
   message: string;
   time?: string;
   timestamp?: string;
-  type: 'lease_signed' | 'lease_transmitted' | 'payment_declared';
+  type: 'lease_signed' | 'lease_transmitted' | 'payment_declared' | 'incident_reported';
   read: boolean;
   leaseId?: string;
+  incidentId?: string;
   tenantName?: string;
   unit?: string;
   property?: string;
+  urgency?: string;
+  category?: string;
+  photos?: string[];
   emailSentTo?: string;
   emailDelivered?: {
     to: string;

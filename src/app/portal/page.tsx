@@ -50,6 +50,7 @@ import { PaymentTransaction } from '@/lib/types';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
+import { IncidentService, ReportedIncident } from '@/lib/services/incident-service';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -69,16 +70,6 @@ const ISSUE_SAMPLE_PHOTOS = [
     url: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=800&auto=format&fit=crop&q=80',
   },
 ];
-
-export interface ReportedIncident {
-  id: string;
-  category: string;
-  urgency: 'normale' | 'urgente' | 'critique';
-  description: string;
-  photos: string[];
-  createdAt: string;
-  status: 'en_attente' | 'pris_en_charge' | 'resolu';
-}
 
 export default function TenantPortalPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -105,20 +96,21 @@ export default function TenantPortalPage() {
   const issueFileInputRef = useRef<HTMLInputElement | null>(null);
   const [previewIncidentPhoto, setPreviewIncidentPhoto] = useState<string | null>(null);
 
-  // Historique des incidents déclarés
-  const [reportedIncidents, setReportedIncidents] = useState<ReportedIncident[]>([
-    {
-      id: 'INC-2026-042',
-      category: 'Plomberie / Fuite d’eau',
-      urgency: 'urgente',
-      description: 'Léger suintement sous le siphon du lavabo de la salle d’eau principale.',
-      photos: [
-        'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-      ],
-      createdAt: '28/10/2026',
-      status: 'pris_en_charge',
-    },
-  ]);
+  // Historique des incidents déclarés synchronisé avec le service partagé
+  const [reportedIncidents, setReportedIncidents] = useState<ReportedIncident[]>([]);
+
+  useEffect(() => {
+    const loadIncidents = () => {
+      setReportedIncidents(IncidentService.getIncidents());
+    };
+    loadIncidents();
+    window.addEventListener('locagestion:incidents_updated', loadIncidents);
+    window.addEventListener('storage', loadIncidents);
+    return () => {
+      window.removeEventListener('locagestion:incidents_updated', loadIncidents);
+      window.removeEventListener('storage', loadIncidents);
+    };
+  }, []);
 
   const [selectedReceipt, setSelectedReceipt] = useState<PaymentTransaction | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -142,26 +134,27 @@ export default function TenantPortalPage() {
 
   const handleSubmitIssue = (e: React.FormEvent) => {
     e.preventDefault();
-    const newIncident: ReportedIncident = {
-      id: `INC-2026-${Math.floor(100 + Math.random() * 900)}`,
+    const photoCount = issuePhotos.length;
+
+    IncidentService.addIncident({
       category: issueCategory,
       urgency: issueUrgency,
       description: issueDesc,
       photos: issuePhotos,
-      createdAt: new Date().toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      }),
-      status: 'pris_en_charge',
-    };
-    setReportedIncidents((prev) => [newIncident, ...prev]);
+      tenantName: 'Koffi Mensah',
+      tenantPhone: '+229 97 00 11 22',
+      tenantEmail: 'koffi.mensah@fintech-africa.com',
+      property: tenant.property,
+      unit: tenant.unit,
+      status: 'en_attente',
+    });
+
+    setReportedIncidents(IncidentService.getIncidents());
     setReportIssueModalOpen(false);
-    const photoCount = issuePhotos.length;
     setIssuePhotos([]);
     setIssueDesc('');
     showToast(
-      `Incident (${issueCategory})${photoCount > 0 ? ` avec ${photoCount} photo(s)` : ''} signalé au bailleur ! Prise en charge sous 24h.`
+      `Incident (${issueCategory})${photoCount > 0 ? ` avec ${photoCount} photo(s)` : ''} transmis instantanément au bailleur ! Prise en charge sous 24h.`
     );
   };
 

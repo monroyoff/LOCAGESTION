@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
+import { IncidentService } from '@/lib/services/incident-service';
 
 interface NavItem {
   name: string;
@@ -69,6 +70,22 @@ export function Sidebar({
     }
   };
 
+  const [pendingIncidents, setPendingIncidents] = useState(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const active = IncidentService.getIncidents().filter((i) => i.status !== 'resolu').length;
+      setPendingIncidents(active);
+    };
+    updateCount();
+    window.addEventListener('locagestion:incidents_updated', updateCount);
+    window.addEventListener('storage', updateCount);
+    return () => {
+      window.removeEventListener('locagestion:incidents_updated', updateCount);
+      window.removeEventListener('storage', updateCount);
+    };
+  }, []);
+
   // ============================================================================
   // NAVIGATION BAILLEUR (Gestion du patrimoine, encaissements, locataires, baux)
   // ============================================================================
@@ -78,6 +95,8 @@ export function Sidebar({
       href: '/',
       icon: LayoutDashboard,
       active: pathname === '/',
+      badgeCount: pendingIncidents > 0 ? pendingIncidents : undefined,
+      badgeColor: 'bg-amber-500',
     },
     {
       name: 'Biens & Lots',

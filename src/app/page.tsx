@@ -9,6 +9,7 @@ import { HeroPropertyCard } from '@/components/dashboard/HeroPropertyCard';
 import { OccupancyStatusBanner } from '@/components/dashboard/OccupancyStatusBanner';
 import { RentCollectionBreakdown } from '@/components/dashboard/RentCollectionBreakdown';
 import { RecentPaymentsTable } from '@/components/dashboard/RecentPaymentsTable';
+import { LandlordIncidentsSection } from '@/components/dashboard/LandlordIncidentsSection';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
@@ -121,7 +122,10 @@ export default function DashboardPage() {
             <RentCollectionBreakdown breakdown={MOCK_KPIS.rentBreakdown} />
           </section>
 
-          {/* 6. Tableau Opérations Récentes & Suivi des Loyers */}
+          {/* 6. Pannes & Incidents Signalés par les Locataires (Temps Réel) */}
+          <LandlordIncidentsSection />
+
+          {/* 7. Tableau Opérations Récentes & Suivi des Loyers */}
           <section aria-label="Opérations récentes">
             <RecentPaymentsTable
               payments={MOCK_RECENT_PAYMENTS}

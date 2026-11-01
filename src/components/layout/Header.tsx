@@ -244,18 +244,36 @@ export function Header({
                           <div
                             key={n.id}
                             className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${
-                              !n.read ? 'bg-amber-50/70 border border-amber-200/60' : 'hover:bg-slate-50'
+                              !n.read
+                                ? n.type === 'incident_reported'
+                                  ? 'bg-rose-50/70 border border-rose-200/80'
+                                  : 'bg-amber-50/70 border border-amber-200/60'
+                                : 'hover:bg-slate-50'
                             }`}
                           >
                             <div className="flex items-center justify-between">
                               <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                                <span
+                                  className={`w-2 h-2 rounded-full shrink-0 ${
+                                    n.type === 'incident_reported' ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'
+                                  }`}
+                                />
                                 {n.title}
                               </span>
                               <span className="text-[10px] text-slate-400 font-medium">{n.timestamp}</span>
                             </div>
 
                             <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
+
+                            {/* Badge Photos si incident */}
+                            {n.photos && n.photos.length > 0 && (
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                <span className="text-[10px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  <Wrench className="w-3 h-3 text-amber-600" />
+                                  <span>{n.photos.length} photo{n.photos.length > 1 ? 's' : ''} constatée{n.photos.length > 1 ? 's' : ''}</span>
+                                </span>
+                              </div>
+                            )}
 
                             {/* Badge Email Envoyé */}
                             {n.emailSentTo && (
@@ -268,18 +286,39 @@ export function Header({
                             )}
 
                             <div className="pt-1 flex items-center justify-between">
-                              <span className="text-[10px] font-mono font-bold text-slate-400">{n.leaseId}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsNotifOpen(false);
-                                  router.push('/leases');
-                                }}
-                                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
-                              >
-                                <span>Voir le bail</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
+                              <span className="text-[10px] font-mono font-bold text-slate-400">
+                                {n.incidentId || n.leaseId}
+                              </span>
+                              {n.type === 'incident_reported' ? (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsNotifOpen(false);
+                                    if (pathname === '/') {
+                                      const section = document.getElementById('incidents-section');
+                                      if (section) section.scrollIntoView({ behavior: 'smooth' });
+                                    } else {
+                                      router.push('/#incidents-section');
+                                    }
+                                  }}
+                                  className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <span>Traiter la panne</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsNotifOpen(false);
+                                    router.push('/leases');
+                                  }}
+                                  className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
+                                >
+                                  <span>Voir le bail</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))
