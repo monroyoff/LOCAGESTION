@@ -38,6 +38,9 @@ export interface Lease {
     date: string;
     signatureDataUrl?: string;
   };
+  resiliatedAt?: string;
+  reactivatedAt?: string;
+  resiliationReason?: string;
 }
 
 export interface RegisteredTenant {
@@ -90,7 +93,13 @@ export interface LandlordNotification {
   message: string;
   time?: string;
   timestamp?: string;
-  type: 'lease_signed' | 'lease_transmitted' | 'payment_declared' | 'incident_reported';
+  type:
+    | 'lease_signed'
+    | 'lease_transmitted'
+    | 'payment_declared'
+    | 'incident_reported'
+    | 'lease_terminated'
+    | 'lease_reactivated';
   read: boolean;
   leaseId?: string;
   incidentId?: string;
@@ -357,6 +366,92 @@ export const LeaseService = {
     this.addLandlordNotification(notification);
 
     return { lease: updatedLease, notification };
+  },
+
+  // Action : Résilier définitivement le bail
+  terminateLease(leaseId: string, reason?: string): Lease | undefined {
+    const leases = this.getLeases();
+    const leaseIndex = leases.findIndex((l) => l.id === leaseId);
+    if (leaseIndex < 0) return undefined;
+
+    const nowFormatted = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const targetLease = leases[leaseIndex];
+    const updatedLease: Lease = {
+      ...targetLease,
+      status: 'resilie',
+      resiliatedAt: nowFormatted,
+      resiliationReason: reason || 'Résiliation à la demande du bailleur',
+    };
+
+    leases[leaseIndex] = updatedLease;
+    this.saveAllLeases(leases);
+
+    // Notification de résiliation
+    this.addLandlordNotification({
+      id: `notif-${Date.now()}`,
+      title: 'Bail résilié',
+      message: `Le contrat ${leaseId} (${updatedLease.unit} - ${updatedLease.tenant}) a été résilié. Le logement est désormais dissocié.`,
+      time: 'À l’instant',
+      timestamp: nowFormatted,
+      type: 'lease_terminated',
+      read: false,
+      leaseId: leaseId,
+      tenantName: updatedLease.tenant,
+      unit: updatedLease.unit,
+      property: updatedLease.property,
+    });
+
+    return updatedLease;
+  },
+
+  // Action : Réactiver le bail sans autres démarches
+  reactivateLease(leaseId: string): Lease | undefined {
+    const leases = this.getLeases();
+    const leaseIndex = leases.findIndex((l) => l.id === leaseId);
+    if (leaseIndex < 0) return undefined;
+
+    const nowFormatted = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const targetLease = leases[leaseIndex];
+    const updatedLease: Lease = {
+      ...targetLease,
+      status: 'actif',
+      reactivatedAt: nowFormatted,
+      resiliationReason: undefined,
+    };
+
+    leases[leaseIndex] = updatedLease;
+    this.saveAllLeases(leases);
+
+    // Notification de réactivation
+    this.addLandlordNotification({
+      id: `notif-${Date.now()}`,
+      title: 'Bail réactivé',
+      message: `Le contrat ${leaseId} (${updatedLease.unit} - ${updatedLease.tenant}) a été réactivé avec succès. La liaison locataire est rétablie sans autres démarches.`,
+      time: 'À l’instant',
+      timestamp: nowFormatted,
+      type: 'lease_reactivated',
+      read: false,
+      leaseId: leaseId,
+      tenantName: updatedLease.tenant,
+      unit: updatedLease.unit,
+      property: updatedLease.property,
+    });
+
+    return updatedLease;
   },
 
   // Notifications Bailleur

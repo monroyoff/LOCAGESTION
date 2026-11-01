@@ -22,6 +22,8 @@ import {
   MessageCircle,
   ExternalLink,
   AlertCircle,
+  Ban,
+  RotateCcw,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -39,10 +41,11 @@ export default function LeasesPage() {
     'new_lease' | 'new_payment' | 'new_property' | null
   >(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [lastResiliatedId, setLastResiliatedId] = useState<string | null>(null);
 
   // État des baux réactifs gérés par le LeaseService
   const [leases, setLeases] = useState<Lease[]>([]);
-  const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'active'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'active' | 'resiliated'>('all');
 
   const refreshLeases = () => {
     setLeases(LeaseService.getLeases());
@@ -69,6 +72,22 @@ export default function LeasesPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
+  // Action Bailleur : Résilier définitivement le bail
+  const handleTerminateLease = (lease: Lease) => {
+    LeaseService.terminateLease(lease.id);
+    setLastResiliatedId(lease.id);
+    refreshLeases();
+    showToast(`⚠️ Bail ${lease.id} (${lease.tenant}) résilié. Le logement est dissocié.`);
+  };
+
+  // Action Bailleur : Réactiver le bail sans autres démarches
+  const handleReactivateLease = (lease: Lease) => {
+    LeaseService.reactivateLease(lease.id);
+    setLastResiliatedId(null);
+    refreshLeases();
+    showToast(`✅ Bail ${lease.id} (${lease.tenant}) réactivé avec succès ! Liaison rétablie.`);
+  };
+
   const handleDownloadLeasePDF = (lease: Lease) => {
     const content = generateLeaseContent({
       id: lease.id,
@@ -93,10 +112,12 @@ export default function LeasesPage() {
   // Filtrage des baux
   const pendingLeases = leases.filter((l) => l.status === 'en_attente_signature');
   const activeLeases = leases.filter((l) => l.status === 'actif');
+  const resiliatedLeases = leases.filter((l) => l.status === 'resilie');
 
   const filteredLeases = leases.filter((l) => {
     if (filterTab === 'pending') return l.status === 'en_attente_signature';
     if (filterTab === 'active') return l.status === 'actif';
+    if (filterTab === 'resiliated') return l.status === 'resilie';
     return true;
   });
 
@@ -130,6 +151,12 @@ export default function LeasesPage() {
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-50 text-amber-700 border border-amber-300 flex items-center gap-1 animate-pulse">
                     <Clock className="w-3 h-3" />
                     <span>{pendingLeases.length} En attente de signature</span>
+                  </span>
+                )}
+                {resiliatedLeases.length > 0 && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
+                    <Ban className="w-3 h-3 text-rose-500" />
+                    <span>{resiliatedLeases.length} Résilié{resiliatedLeases.length > 1 ? 's' : ''}</span>
                   </span>
                 )}
               </div>
@@ -253,12 +280,26 @@ export default function LeasesPage() {
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Baux contresignés & actifs ({activeLeases.length})</span>
             </button>
+            <button
+              type="button"
+              onClick={() => setFilterTab('resiliated')}
+              className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                filterTab === 'resiliated'
+                  ? 'bg-rose-600 text-white shadow-sm'
+                  : 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200'
+              }`}
+            >
+              <Ban className="w-3.5 h-3.5" />
+              <span>Baux résiliés ({resiliatedLeases.length})</span>
+            </button>
           </div>
 
           {/* Liste des Baux */}
           <div className="space-y-4">
             {filteredLeases.map((lease) => {
               const isPending = lease.status === 'en_attente_signature';
+              const isResiliated = lease.status === 'resilie';
+              const isActive = lease.status === 'actif';
 
               return (
                 <div
@@ -266,6 +307,8 @@ export default function LeasesPage() {
                   className={`p-5 rounded-3xl border transition-all ${
                     isPending
                       ? 'bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40 border-amber-300 shadow-md ring-1 ring-amber-300/60'
+                      : isResiliated
+                      ? 'bg-gradient-to-r from-rose-50/40 via-white to-slate-50 border-rose-300/80 shadow-soft'
                       : 'bg-white border-slate-200/80 shadow-soft hover:border-slate-300'
                   }`}
                 >
@@ -276,10 +319,16 @@ export default function LeasesPage() {
                         className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
                           isPending
                             ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                            : isResiliated
+                            ? 'bg-rose-100 text-rose-700 border border-rose-200'
                             : 'bg-brand-50 text-brand-600 border border-brand-100'
                         }`}
                       >
-                        <FileText className="w-6 h-6" />
+                        {isResiliated ? (
+                          <Ban className="w-6 h-6 text-rose-600" />
+                        ) : (
+                          <FileText className="w-6 h-6" />
+                        )}
                       </div>
 
                       <div className="space-y-1">
@@ -294,6 +343,11 @@ export default function LeasesPage() {
                             <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-amber-500 text-white shadow-xs flex items-center gap-1 animate-pulse">
                               <Clock className="w-3 h-3" />
                               <span>En attente de signature</span>
+                            </span>
+                          ) : isResiliated ? (
+                            <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                              <Ban className="w-3 h-3 text-rose-600" />
+                              <span>Bail Résilié • Logement dissocié</span>
                             </span>
                           ) : (
                             <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
@@ -326,6 +380,22 @@ export default function LeasesPage() {
                               </span>
                             </>
                           )}
+                          {isResiliated && lease.resiliatedAt && (
+                            <>
+                              <span>•</span>
+                              <span className="text-rose-700 font-bold">
+                                Résilié le {lease.resiliatedAt}
+                              </span>
+                            </>
+                          )}
+                          {lease.reactivatedAt && (
+                            <>
+                              <span>•</span>
+                              <span className="text-emerald-700 font-bold">
+                                Réactivé le {lease.reactivatedAt}
+                              </span>
+                            </>
+                          )}
                         </div>
 
                         {/* Signatures status */}
@@ -335,7 +405,12 @@ export default function LeasesPage() {
                             <span>Signé par le bailleur (Mamadou Diallo)</span>
                           </span>
 
-                          {isPending ? (
+                          {isResiliated ? (
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 flex items-center gap-1">
+                              <Ban className="w-3 h-3 text-rose-600" />
+                              <span>Contrat résilié — Clôturé juridiquement</span>
+                            </span>
+                          ) : isPending ? (
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
                               <Clock className="w-3 h-3 text-amber-600" />
                               <span>En attente de signature de {lease.tenant}</span>
@@ -394,6 +469,45 @@ export default function LeasesPage() {
                           </>
                         ) : null}
 
+                        {/* Bouton RÉACTIVER LE BAIL si résilié (1 clic sans autres démarches) */}
+                        {isResiliated && (
+                          <button
+                            type="button"
+                            onClick={() => handleReactivateLease(lease)}
+                            className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                            title="Réactiver le bail sans autres démarches"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Réactiver le bail</span>
+                          </button>
+                        )}
+
+                        {/* Bouton RÉSILIER LE BAIL si actif */}
+                        {isActive && (
+                          <button
+                            type="button"
+                            onClick={() => handleTerminateLease(lease)}
+                            className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                            title="Résilier définitivement ce contrat de bail et dissocier le logement"
+                          >
+                            <Ban className="w-3.5 h-3.5 text-rose-600" />
+                            <span>Résilier le bail</span>
+                          </button>
+                        )}
+
+                        {/* Bouton Résilier si en attente */}
+                        {isPending && (
+                          <button
+                            type="button"
+                            onClick={() => handleTerminateLease(lease)}
+                            className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-xs font-bold border border-slate-200 hover:border-rose-200 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                            title="Annuler / Résilier ce bail en attente"
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                            <span>Résilier</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           onClick={() => handleDownloadLeasePDF(lease)}
@@ -420,11 +534,24 @@ export default function LeasesPage() {
         />
       )}
 
-      {/* Toast Notification */}
+      {/* Toast Notification avec option Annuler l'erreur */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4.5 py-3.5 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5 max-w-md">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
+          <span className="flex-1">{toastMessage}</span>
+          {lastResiliatedId && (
+            <button
+              type="button"
+              onClick={() => {
+                const target = leases.find((l) => l.id === lastResiliatedId);
+                if (target) handleReactivateLease(target);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-md active:scale-95"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Annuler l'erreur / Réactiver</span>
+            </button>
+          )}
         </div>
       )}
     </div>

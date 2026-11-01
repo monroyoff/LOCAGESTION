@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -32,6 +32,8 @@ import {
   Copy,
   Send,
   Download,
+  Ban,
+  RotateCcw,
 } from 'lucide-react';
 import { formatFCFA, formatDateFR } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -39,6 +41,7 @@ import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
+import { LeaseService, Lease } from '@/lib/services/lease-service';
 
 interface TenantDetail {
   id: string;
@@ -342,10 +345,39 @@ export default function TenantsPage() {
   const [inviteName, setInviteName] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [leases, setLeases] = useState<Lease[]>([]);
+  const [lastResiliatedId, setLastResiliatedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const refreshLeases = () => {
+      setLeases(LeaseService.getLeases());
+    };
+    refreshLeases();
+    window.addEventListener('locagestion:leases_updated', refreshLeases);
+    window.addEventListener('storage', refreshLeases);
+    return () => {
+      window.removeEventListener('locagestion:leases_updated', refreshLeases);
+      window.removeEventListener('storage', refreshLeases);
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+    setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  const handleTerminateTenantLease = (leaseId: string, tenantName: string) => {
+    LeaseService.terminateLease(leaseId);
+    setLastResiliatedId(leaseId);
+    setLeases(LeaseService.getLeases());
+    showToast(`⚠️ Bail ${leaseId} (${tenantName}) résilié. Le logement est dissocié.`);
+  };
+
+  const handleReactivateTenantLease = (leaseId: string, tenantName: string) => {
+    LeaseService.reactivateLease(leaseId);
+    setLastResiliatedId(null);
+    setLeases(LeaseService.getLeases());
+    showToast(`✅ Bail ${leaseId} (${tenantName}) réactivé avec succès ! Liaison rétablie sans autres démarches.`);
   };
 
   const filteredTenants = MOCK_TENANTS.filter((t) => {
@@ -783,64 +815,136 @@ export default function TenantsPage() {
                 )}
 
                 {/* 3. Onglet Bail & Documents */}
-                {activeTab === 'bail' && (
-                  <div className="space-y-4 animate-in fade-in duration-200">
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
-                          <FileText className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900">
-                            Contrat de Bail d’Habitation Scellé
-                          </h4>
-                          <span className="text-[11px] text-slate-400">
-                            Réf: {selectedTenant.lease.id} • Signé électroniquement le {selectedTenant.lease.startDate}
-                          </span>
-                        </div>
-                      </div>
+                {activeTab === 'bail' && (() => {
+                  const currentLeaseObj = leases.find((l) => l.id === selectedTenant.lease.id);
+                  const isLeaseResiliated = currentLeaseObj?.status === 'resilie';
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const content = generateLeaseContent({
-                            id: selectedTenant.lease.id,
-                            tenantName: selectedTenant.fullName,
-                            propertyName: selectedTenant.property.name,
-                            unit: selectedTenant.property.unit,
-                            rent: selectedTenant.financials.monthlyRent,
-                            startDate: selectedTenant.lease.startDate,
-                          });
-                          downloadDocument(`contrat-bail-${selectedTenant.lease.id}.txt`, content);
-                          showToast(`Contrat de bail ${selectedTenant.lease.id} téléchargé avec succès !`);
-                        }}
-                        className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-sm transition-all cursor-pointer"
+                  return (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      <div
+                        className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          isLeaseResiliated
+                            ? 'bg-rose-50/50 border-rose-200 shadow-soft'
+                            : 'bg-slate-50 border-slate-200'
+                        }`}
                       >
-                        Consulter (PDF)
-                      </button>
-                    </div>
-
-                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
-                          <UserCheck className="w-5 h-5" />
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                              isLeaseResiliated
+                                ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                : 'bg-brand-50 text-brand-600'
+                            }`}
+                          >
+                            {isLeaseResiliated ? (
+                              <Ban className="w-5 h-5 text-rose-600" />
+                            ) : (
+                              <FileText className="w-5 h-5" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-xs font-bold text-slate-900">
+                                Contrat de Bail d’Habitation Scellé
+                              </h4>
+                              {isLeaseResiliated ? (
+                                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                  <Ban className="w-3 h-3 text-rose-600" />
+                                  <span>Bail Résilié • Logement dissocié</span>
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                  <span>Bail Actif</span>
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-slate-400">
+                              Réf: {selectedTenant.lease.id} • Prise d'effet le {selectedTenant.lease.startDate}
+                              {currentLeaseObj?.resiliatedAt && ` • Résilié le ${currentLeaseObj.resiliatedAt}`}
+                              {currentLeaseObj?.reactivatedAt && ` • Réactivé le ${currentLeaseObj.reactivatedAt}`}
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-slate-900">
-                            Pièce d’Identité Certifiée & IFU
-                          </h4>
-                          <span className="text-[11px] text-slate-400">
-                            Passeport / CNI vérifié par le bailleur
-                          </span>
+
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                          {/* Bouton Réactiver le bail sans démarches */}
+                          {isLeaseResiliated ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleReactivateTenantLease(
+                                  selectedTenant.lease.id,
+                                  selectedTenant.fullName
+                                )
+                              }
+                              className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                              title="Réactiver le bail sans autres démarches"
+                            >
+                              <RotateCcw className="w-3.5 h-3.5" />
+                              <span>Réactiver le bail</span>
+                            </button>
+                          ) : (
+                            /* Bouton Résilier le bail */
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleTerminateTenantLease(
+                                  selectedTenant.lease.id,
+                                  selectedTenant.fullName
+                                )
+                              }
+                              className="py-1.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                              title="Résilier définitivement le contrat et dissocier le logement"
+                            >
+                              <Ban className="w-3.5 h-3.5 text-rose-600" />
+                              <span>Résilier le bail</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const content = generateLeaseContent({
+                                id: selectedTenant.lease.id,
+                                tenantName: selectedTenant.fullName,
+                                propertyName: selectedTenant.property.name,
+                                unit: selectedTenant.property.unit,
+                                rent: selectedTenant.financials.monthlyRent,
+                                startDate: selectedTenant.lease.startDate,
+                              });
+                              downloadDocument(`contrat-bail-${selectedTenant.lease.id}.txt`, content);
+                              showToast(`Contrat de bail ${selectedTenant.lease.id} téléchargé avec succès !`);
+                            }}
+                            className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-sm transition-all cursor-pointer"
+                          >
+                            Consulter (PDF)
+                          </button>
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        Vérifié ✓
-                      </span>
+                      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center">
+                            <UserCheck className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-slate-900">
+                              Pièce d’Identité Certifiée & IFU
+                            </h4>
+                            <span className="text-[11px] text-slate-400">
+                              Passeport / CNI vérifié par le bailleur
+                            </span>
+                          </div>
+                        </div>
+
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Vérifié ✓
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* 4. Onglet État des Lieux */}
                 {activeTab === 'edl' && (
@@ -1037,11 +1141,23 @@ export default function TenantsPage() {
         </div>
       )}
 
-      {/* Toast Notification */}
+      {/* Toast Notification avec option Annuler l'erreur */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4.5 py-3.5 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5 max-w-md">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{toastMessage}</span>
+          <span className="flex-1">{toastMessage}</span>
+          {lastResiliatedId && (
+            <button
+              type="button"
+              onClick={() => {
+                handleReactivateTenantLease(lastResiliatedId, selectedTenant.fullName);
+              }}
+              className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-md active:scale-95"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Annuler l'erreur / Réactiver</span>
+            </button>
+          )}
         </div>
       )}
 

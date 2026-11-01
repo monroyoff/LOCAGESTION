@@ -22,3 +22,4 @@ export function notifyDownloadComplete(filename: string, label?: string) {
     );
   }
 }
+

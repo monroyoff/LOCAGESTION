@@ -43,6 +43,8 @@ import {
   Trash2,
   Image as ImageIcon,
   ZoomIn,
+  Ban,
+  RotateCcw,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
@@ -197,16 +199,26 @@ export default function TenantPortalPage() {
 
   // Tenant state
   const [pendingLease, setPendingLease] = useState<Lease | null>(null);
+  const [currentLease, setCurrentLease] = useState<Lease | null>(null);
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
 
-  const checkPendingLease = () => {
+  const checkLeases = () => {
     const pl = LeaseService.getPendingLeaseForTenant('Koffi Mensah');
     setPendingLease(pl || null);
+
+    const allLeases = LeaseService.getLeases();
+    const myLease = allLeases.find(
+      (l) =>
+        l.id === 'BAIL-2025-089' ||
+        l.tenant.toLowerCase().includes('koffi') ||
+        (pl && l.id === pl.id)
+    );
+    setCurrentLease(myLease || null);
   };
 
   useEffect(() => {
-    checkPendingLease();
-    const handleUpdate = () => checkPendingLease();
+    checkLeases();
+    const handleUpdate = () => checkLeases();
     window.addEventListener('locagestion:leases_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     return () => {
@@ -448,6 +460,31 @@ export default function TenantPortalPage() {
           {/* ==================================================================== */}
           {activeTab === 'accueil' && (
             <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Bannière Bail Résilié / Logement dissocié */}
+              {currentLease?.status === 'resilie' && (
+                <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-600 via-rose-700 to-rose-800 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 border border-rose-400 ring-4 ring-rose-500/20 animate-in slide-in-from-top-4">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                      <Ban className="w-6 h-6 text-white" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-base font-black text-white">
+                          Bail résilié • Logement actuellement dissocié
+                        </h2>
+                        <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-white text-rose-900 shadow-xs font-bold">
+                          Résiliation effective
+                        </span>
+                      </div>
+                      <p className="text-xs text-rose-100 leading-relaxed max-w-2xl">
+                        Le contrat de bail <strong>{currentLease.id}</strong> ({currentLease.unit}) a été résilié par votre bailleur{currentLease.resiliatedAt ? ` le ${currentLease.resiliatedAt}` : ''}.
+                        Si votre bailleur a commis une fausse manœuvre, il dispose d'un bouton <strong>« Réactiver le bail »</strong> dans son espace pour rétablir votre contrat instantanément sans aucune démarche supplémentaire.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Bannière Bail en Attente de Signature Électronique */}
               {pendingLease && (
                 <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 border border-amber-300 ring-4 ring-amber-500/20 animate-in slide-in-from-top-4">
@@ -950,16 +987,34 @@ export default function TenantPortalPage() {
                   )}
 
                   {/* Contrat de Bail Card */}
-                  <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5">
+                  <div className={`rounded-3xl p-6 sm:p-7 border shadow-soft space-y-5 ${
+                    currentLease?.status === 'resilie'
+                      ? 'bg-rose-50/30 border-rose-200'
+                      : 'bg-white border-slate-200/80'
+                  }`}>
                     <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                       <div className="flex items-center gap-2.5">
-                        <FileText className="w-5 h-5 text-brand-600" />
+                        <FileText className={`w-5 h-5 ${currentLease?.status === 'resilie' ? 'text-rose-600' : 'text-brand-600'}`} />
                         <div>
-                          <h3 className="font-black text-base text-slate-900">
-                            Contrat de Bail d’Habitation Certifié
-                          </h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-black text-base text-slate-900">
+                              Contrat de Bail d’Habitation Certifié
+                            </h3>
+                            {currentLease?.status === 'resilie' ? (
+                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                <Ban className="w-3 h-3 text-rose-600" />
+                                <span>Bail Résilié • Dissocié</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                <span>Actif & Conforme</span>
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[11px] text-slate-400 font-mono">
-                            Réf : {tenant.leaseRef} • Signé électroniquement le {tenant.leaseStartDate}
+                            Réf : {currentLease?.id || tenant.leaseRef} • Signé électroniquement le {currentLease?.startDate || tenant.leaseStartDate}
+                            {currentLease?.resiliatedAt && ` • Résilié le ${currentLease.resiliatedAt}`}
                           </span>
                         </div>
                       </div>
@@ -1806,7 +1861,7 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
             showToast(
               `Bail ${updatedLease.id} contresigné avec succès ! Notification et email transmis au bailleur.`
             );
-            checkPendingLease();
+            checkLeases();
           }}
         />
       )}
