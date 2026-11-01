@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   User,
@@ -13,6 +13,11 @@ import {
   ShieldCheck,
   Sparkles,
   Info,
+  Camera,
+  UploadCloud,
+  Check,
+  Building2,
+  Lock,
 } from 'lucide-react';
 import { UserProfile, UserSpace } from '@/lib/types';
 import {
@@ -23,6 +28,7 @@ import {
 } from '@/lib/services/geo-service';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { notifySave } from '@/lib/notifications/action-notifier';
+import { useSpace } from '@/lib/context/space-context';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -30,24 +36,72 @@ interface UserProfileModalProps {
   activeSpace?: UserSpace;
 }
 
+const PRESET_AVATARS = [
+  {
+    label: 'Koffi (Cadre)',
+    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+  },
+  {
+    label: 'Mamadou (Bailleur)',
+    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+  },
+  {
+    label: 'Amina (Consultante)',
+    url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&auto=format&fit=crop&q=80',
+  },
+  {
+    label: 'Jean-Yves (Directeur)',
+    url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
+  },
+  {
+    label: 'Fatoumata (Gestionnaire)',
+    url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=160&auto=format&fit=crop&q=80',
+  },
+  {
+    label: 'Rodrigue (Entrepreneur)',
+    url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&auto=format&fit=crop&q=80',
+  },
+];
+
+const BENIN_DISTRICT_SUGGESTIONS = [
+  'Haie Vive',
+  'Cadjèhoun',
+  'Agla',
+  'Fidjrossè',
+  'Akpakpa',
+  'Menontin',
+  'Zogbo',
+  'Godomey',
+  'Cocotomey',
+  'Cococodji',
+  'Arconville',
+  'Porto-Novo',
+];
+
 export function UserProfileModal({
   isOpen,
   onClose,
-  activeSpace = 'locataire',
+  activeSpace: initialActiveSpace = 'locataire',
 }: UserProfileModalProps) {
-  const [profile, setProfile] = useState<UserProfile>(() => getUserProfile(activeSpace));
+  const { activeSpace, switchSpace } = useSpace();
+  const currentRole = activeSpace || initialActiveSpace;
+
+  const [profile, setProfile] = useState<UserProfile>(() => getUserProfile(currentRole));
   const [userLocation, setUserLocation] = useState<UserGeoLocation | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (isOpen) {
-      const p = getUserProfile(activeSpace);
+      const p = getUserProfile(currentRole);
       setProfile(p);
       setSavedSuccess(false);
-      detectUserGeoLocation().then((geo) => setUserLocation(geo)).catch(() => {});
+      detectUserGeoLocation()
+        .then((geo) => setUserLocation(geo))
+        .catch(() => {});
     }
-  }, [isOpen, activeSpace]);
+  }, [isOpen, currentRole]);
 
   if (!isOpen) return null;
 
@@ -66,6 +120,22 @@ export function UserProfileModal({
     }));
   };
 
+  const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setProfile((prev) => ({
+          ...prev,
+          avatarUrl: event.target!.result as string,
+        }));
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
   const handleRefreshGPS = async () => {
     setIsLocating(true);
     try {
@@ -77,45 +147,62 @@ export function UserProfileModal({
     }
   };
 
+  const handleRoleToggle = (newRole: UserSpace) => {
+    setProfile((prev) => ({ ...prev, role: newRole }));
+    switchSpace(newRole);
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     saveUserProfile(profile);
     setSavedSuccess(true);
     notifySave(
-      `Votre pays de résidence d’inscription est désormais configuré sur ${profile.residenceCountry} (${profile.residenceCity}). Les recherches de logements et créations d'annonces sont automatiquement adaptées par défaut.`,
-      'Profil & Inscription enregistrés avec succès !'
+      `Profil de ${profile.name} mis à jour avec succès ! Pays de résidence : ${profile.residenceCountry} (${profile.residenceCity}).`,
+      'Profil & Inscription enregistrés'
     );
     setTimeout(() => {
       onClose();
-    }, 1200);
+    }, 1000);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-in fade-in duration-150">
       <div
-        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-xl bg-white rounded-3xl shadow-2xl border border-slate-100 overflow-hidden flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="p-5 sm:p-6 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-brand-500 flex items-center justify-center font-black text-white shadow-md shadow-brand-500/30">
-              <User className="w-6 h-6" />
+          <div className="flex items-center gap-3.5">
+            <div className="relative">
+              <img
+                src={
+                  profile.avatarUrl ||
+                  (profile.role === 'bailleur'
+                    ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80'
+                    : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')
+                }
+                alt={profile.name}
+                className="w-14 h-14 rounded-2xl object-cover ring-2 ring-white/20 shadow-md"
+              />
+              <span className="absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-slate-900" />
             </div>
+
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-black tracking-tight text-white">
                   Profil & Informations d'Inscription
                 </h2>
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
-                  {profile.role === 'bailleur' ? 'Espace Bailleur' : 'Espace Locataire'}
+                  {profile.role === 'bailleur' ? 'Bailleur' : 'Locataire'}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
-                Définit votre pays de résidence par défaut et votre géolocalisation
+                {profile.name} • Résidence {profile.residenceCountry} {currentCountryData.flag}
               </p>
             </div>
           </div>
+
           <button
             type="button"
             onClick={onClose}
@@ -128,14 +215,96 @@ export function UserProfileModal({
 
         {/* Body */}
         <form onSubmit={handleSave} className="p-5 sm:p-6 overflow-y-auto space-y-5">
+          {/* Bascule de Rôle Interactive (Bailleur / Locataire) */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
+            <div>
+              <span className="text-xs font-black text-slate-900 block">Espace Actif</span>
+              <span className="text-[11px] text-slate-500">
+                Vous pouvez naviguer en mode Bailleur ou en mode Locataire
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
+              <button
+                type="button"
+                onClick={() => handleRoleToggle('bailleur')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  profile.role === 'bailleur'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Bailleur
+              </button>
+              <button
+                type="button"
+                onClick={() => handleRoleToggle('locataire')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  profile.role === 'locataire'
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                Locataire
+              </button>
+            </div>
+          </div>
+
+          {/* Choix d'avatar professionnel ou import photo */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-brand-500" />
+                <span>Photo de profil / Avatar</span>
+              </label>
+
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
+              >
+                <UploadCloud className="w-3.5 h-3.5" />
+                <span>Importer une photo</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarFileUpload}
+                className="hidden"
+              />
+            </div>
+
+            <div className="grid grid-cols-6 gap-2">
+              {PRESET_AVATARS.map((av) => (
+                <button
+                  key={av.url}
+                  type="button"
+                  onClick={() => setProfile({ ...profile, avatarUrl: av.url })}
+                  className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all cursor-pointer ${
+                    profile.avatarUrl === av.url
+                      ? 'border-brand-500 ring-2 ring-brand-400/40 scale-105 shadow-md'
+                      : 'border-slate-200 hover:border-slate-300 opacity-75 hover:opacity-100'
+                  }`}
+                  title={av.label}
+                >
+                  <img src={av.url} alt={av.label} className="w-full h-full object-cover" />
+                  {profile.avatarUrl === av.url && (
+                    <div className="absolute inset-0 bg-brand-500/30 flex items-center justify-center">
+                      <Check className="w-4 h-4 text-white stroke-[3]" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* Alerte Explicative Règle Métier */}
-          <div className="p-4 rounded-2xl bg-brand-50 border border-brand-200/80 text-xs text-brand-900 flex items-start gap-3">
+          <div className="p-3.5 rounded-2xl bg-brand-50 border border-brand-200/80 text-xs text-brand-900 flex items-start gap-2.5">
             <Info className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <strong>Règle d'or LOCAGESTION :</strong> Le pays de résidence renseigné lors de
-              votre inscription est appliqué <strong>par défaut et en exclusivité</strong> lors de
-              vos recherches de logements (qui vous présenteront en priorité les annonces les plus
-              proches de votre lieu actuel) ainsi que lors de la création d'annonces.
+              <strong>Pays d'inscription :</strong> Définit automatiquement votre pays par défaut
+              pour la <strong>recherche de logements</strong> (annonces de ce pays affichées en exclusivité et par proximité) et la <strong>création d'annonces</strong>.
             </div>
           </div>
 
@@ -158,7 +327,7 @@ export function UserProfileModal({
             <div>
               <label className="text-xs font-black text-slate-700 flex items-center gap-1.5 mb-1.5">
                 <Mail className="w-3.5 h-3.5 text-brand-500" />
-                <span>Email de contact</span>
+                <span>Email certifié</span>
               </label>
               <input
                 type="email"
@@ -172,7 +341,7 @@ export function UserProfileModal({
             <div className="sm:col-span-2">
               <label className="text-xs font-black text-slate-700 flex items-center gap-1.5 mb-1.5">
                 <Phone className="w-3.5 h-3.5 text-brand-500" />
-                <span>Téléphone (WhatsApp & Appels)</span>
+                <span>Téléphone WhatsApp / Appels</span>
               </label>
               <input
                 type="text"
@@ -184,7 +353,7 @@ export function UserProfileModal({
             </div>
           </div>
 
-          {/* Pays & Ville de résidence d'inscription (Obligatoire) */}
+          {/* Pays & Localité de résidence d'inscription (Obligatoire) */}
           <div className="pt-3 border-t border-slate-100 space-y-3.5">
             <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
               <Globe className="w-4 h-4 text-brand-500" />
@@ -243,11 +412,13 @@ export function UserProfileModal({
               </div>
 
               {/* Quartier / Emplacement actuel */}
-              <div className="sm:col-span-2">
-                <label className="text-xs font-black text-slate-700 flex items-center gap-1.5 mb-1.5">
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
                   <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                   <span>Quartier / Lieu de résidence actuel</span>
-                  <span className="text-[10px] text-slate-400 font-medium">(Pour le calcul de proximité)</span>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    (Pour le calcul de proximité géographique)
+                  </span>
                 </label>
                 <input
                   type="text"
@@ -256,11 +427,32 @@ export function UserProfileModal({
                   placeholder="ex: Haie Vive, Agla, Fidjrossè, Akpakpa, Menontin, Zogbo, Godomey, Cocotomey, Cococodji..."
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                 />
+
+                {/* Suggestions rapides si Bénin */}
+                {profile.residenceCountry === 'Bénin' && (
+                  <div className="flex items-center gap-1 flex-wrap pt-1">
+                    <span className="text-[10px] text-slate-400 font-bold mr-1">Suggestions :</span>
+                    {BENIN_DISTRICT_SUGGESTIONS.slice(0, 8).map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setProfile({ ...profile, residenceDistrict: d })}
+                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
+                          profile.residenceDistrict === d
+                            ? 'bg-brand-500 text-white border-brand-500 font-bold'
+                            : 'bg-white text-slate-600 border-slate-200 hover:border-brand-300'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Section Système de Géolocalisation */}
+          {/* Système de Géolocalisation */}
           <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -285,11 +477,13 @@ export function UserProfileModal({
               <div className="truncate">
                 <span className="font-semibold text-slate-700">Lieu détecté : </span>
                 <span className="font-black text-slate-900">
-                  {userLocation ? userLocation.label : `${profile.residenceDistrict || profile.residenceCity} (${profile.residenceCountry})`}
+                  {userLocation
+                    ? userLocation.label
+                    : `${profile.residenceDistrict || profile.residenceCity} (${profile.residenceCountry})`}
                 </span>
                 {userLocation && (
                   <span className="text-[10px] text-slate-400 font-mono ml-2">
-                    ({userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)} • source: {userLocation.source})
+                    ({userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)})
                   </span>
                 )}
               </div>
@@ -301,7 +495,7 @@ export function UserProfileModal({
             {savedSuccess ? (
               <div className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Enregistré avec succès !</span>
+                <span>Profil & Inscription enregistrés avec succès !</span>
               </div>
             ) : (
               <span className="text-[11px] text-slate-400">
@@ -332,4 +526,3 @@ export function UserProfileModal({
     </div>
   );
 }
-

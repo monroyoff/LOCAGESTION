@@ -358,14 +358,14 @@ export function Sidebar({
           })}
         </div>
 
-        {/* Bottom: User Profile Card (Adapts to Active Role) */}
+        {/* Bottom: User Profile Card (Adapts to Active Role & 100% Fonctionnelle) */}
         <div className="p-4 border-t border-white/5 bg-[#0a0d12]">
-          <div className="p-3 bg-[#131720] rounded-2xl border border-white/5 flex items-center justify-between group hover:border-white/20 transition-all">
+          <div className="p-3 bg-[#131720] hover:bg-[#1a202c] rounded-2xl border border-white/5 hover:border-brand-500/40 flex items-center justify-between group transition-all shadow-sm">
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-3 min-w-0 text-left cursor-pointer flex-1"
-              title="Modifier votre profil & informations d'inscription"
+              className="flex items-center gap-3 min-w-0 text-left cursor-pointer flex-1 group/btn"
+              title="Cliquer pour modifier votre profil & informations d'inscription"
             >
               <div className="relative">
                 <img
@@ -376,22 +376,22 @@ export function Sidebar({
                       : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')
                   }
                   alt={userProfile.name}
-                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 group-hover:ring-brand-400 transition-all"
+                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 group-hover/btn:ring-brand-400 group-hover/btn:scale-105 transition-all"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-[#131720]" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <h4 className="text-xs font-bold text-white truncate">
+                  <h4 className="text-xs font-bold text-white truncate group-hover/btn:text-brand-300 transition-colors">
                     {userProfile.name}
                   </h4>
                   <ShieldCheck className="w-3.5 h-3.5 text-tealAccent-400 shrink-0" />
                 </div>
-                <p className="text-[10px] text-slate-400 truncate flex items-center gap-1">
+                <p className="text-[10px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
                   <span>{COUNTRIES_CITIES[userProfile.residenceCountry]?.flag || '🇧🇯'}</span>
-                  <span>{userProfile.residenceCountry}</span>
+                  <span className="font-semibold text-slate-300">{userProfile.residenceCountry}</span>
                   <span className="text-slate-500">•</span>
-                  <span>{isLandlord ? 'Bailleur' : 'Locataire'}</span>
+                  <span className="text-brand-400 font-bold group-hover/btn:underline">Modifier</span>
                 </p>
               </div>
             </button>
@@ -399,8 +399,8 @@ export function Sidebar({
             <button
               type="button"
               onClick={() => handleSpaceChange(isLandlord ? 'locataire' : 'bailleur')}
-              title="Changer d'espace"
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors ml-2"
+              title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : 'Bailleur'}`}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors ml-1.5 shrink-0"
             >
               <ChevronDown className="w-4 h-4" />
             </button>

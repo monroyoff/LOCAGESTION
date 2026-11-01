@@ -111,6 +111,9 @@ export interface PaymentTransaction {
   method: PaymentMethod;
   status: PaymentStatus;
   proofDocumentUrl?: string;
+  proofUrl?: string;
+  transactionRef?: string;
+  notes?: string;
   isVerified: boolean;
 }
 

@@ -395,19 +395,28 @@ export default function TenantPortalPage() {
   const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>(DEFAULT_TENANT_RECEIPTS);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('locagestion:declared_payments');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setReceiptsList(parsed);
+    const loadReceipts = () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const saved = localStorage.getItem('locagestion:declared_payments');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setReceiptsList(parsed);
+            }
           }
+        } catch (err) {
+          console.error('Erreur lecture paiements déclarés:', err);
         }
-      } catch (err) {
-        console.error('Erreur lecture paiements déclarés:', err);
       }
-    }
+    };
+    loadReceipts();
+    window.addEventListener('locagestion:payments_updated', loadReceipts);
+    window.addEventListener('storage', loadReceipts);
+    return () => {
+      window.removeEventListener('locagestion:payments_updated', loadReceipts);
+      window.removeEventListener('storage', loadReceipts);
+    };
   }, []);
 
   const handleDeclarePayment = (e: React.FormEvent) => {
@@ -453,6 +462,7 @@ export default function TenantPortalPage() {
       tenantName: tenant.name,
       unit: tenant.unit,
       property: tenant.property,
+      paymentId: newTx.id,
     });
 
     setDeclarationModalOpen(false);

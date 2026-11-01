@@ -330,7 +330,8 @@ export function Header({
                                   type="button"
                                   onClick={() => {
                                     setIsNotifOpen(false);
-                                    router.push('/payments');
+                                    const targetId = n.paymentId || 'decl-initial-01';
+                                    router.push(`/payments?tab=pending&verify=${targetId}`);
                                   }}
                                   className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
                                 >

@@ -103,6 +103,7 @@ export interface LandlordNotification {
   read: boolean;
   leaseId?: string;
   incidentId?: string;
+  paymentId?: string;
   tenantName?: string;
   unit?: string;
   property?: string;
