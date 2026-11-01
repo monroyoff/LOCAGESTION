@@ -91,19 +91,34 @@ export function UserProfileModal({
   const [userLocation, setUserLocation] = useState<UserGeoLocation | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Synchronisation des données à l'ouverture de la modale
   useEffect(() => {
     if (isOpen) {
       const p = getUserProfile(currentRole);
       setProfile(p);
       setSavedSuccess(false);
+      setGpsFeedback(null);
       detectUserGeoLocation()
         .then((geo) => setUserLocation(geo))
         .catch(() => {});
     }
   }, [isOpen, currentRole]);
 
+  // Fermeture par la touche Échap (Hook inconditionnel)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+    }
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Le return null est placé APRÈS TOUS les hooks
   if (!isOpen) return null;
 
   const currentCountryData = COUNTRIES_CITIES[profile.residenceCountry] || {
@@ -137,8 +152,6 @@ export function UserProfileModal({
     e.target.value = '';
   };
 
-  const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
-
   const handleRefreshGPS = async () => {
     setIsLocating(true);
     setGpsFeedback(null);
@@ -158,17 +171,6 @@ export function UserProfileModal({
     setProfile((prev) => ({ ...prev, role: newRole }));
     switchSpace(newRole);
   };
-
-  // Fermeture par la touche Échap
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-    }
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();

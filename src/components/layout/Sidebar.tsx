@@ -361,10 +361,7 @@ export function Sidebar({
         {/* Bottom: User Profile Card (Adapts to Active Role & 100% Fonctionnelle) */}
         <div className="p-4 border-t border-white/5 bg-[#0a0d12]">
           <div
-            onClick={() => {
-              setIsProfileModalOpen(true);
-              if (onClose) onClose();
-            }}
+            onClick={() => setIsProfileModalOpen(true)}
             className="p-3 bg-[#131720] hover:bg-[#1a202c] rounded-2xl border border-white/10 hover:border-brand-500/50 hover:shadow-lg hover:shadow-brand-500/10 flex items-center justify-between group transition-all cursor-pointer ring-1 ring-transparent hover:ring-brand-500/30"
             title="Cliquer pour ouvrir votre profil utilisateur"
           >
