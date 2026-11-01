@@ -294,12 +294,7 @@ export function Header({
                                   type="button"
                                   onClick={() => {
                                     setIsNotifOpen(false);
-                                    if (pathname === '/') {
-                                      const section = document.getElementById('incidents-section');
-                                      if (section) section.scrollIntoView({ behavior: 'smooth' });
-                                    } else {
-                                      router.push('/#incidents-section');
-                                    }
+                                    router.push('/incidents');
                                   }}
                                   className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
                                 >
@@ -360,7 +355,13 @@ export function Header({
               </button>
 
               <button
-                onClick={() => onOpenTenantAction?.('report_issue')}
+                onClick={() => {
+                  if (onOpenTenantAction) {
+                    onOpenTenantAction('report_issue');
+                  } else {
+                    router.push('/incidents?action=new');
+                  }
+                }}
                 className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm active:scale-95 transition-all cursor-pointer"
               >
                 <Wrench className="w-4 h-4 text-brand-400" />

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -9,7 +10,6 @@ import { HeroPropertyCard } from '@/components/dashboard/HeroPropertyCard';
 import { OccupancyStatusBanner } from '@/components/dashboard/OccupancyStatusBanner';
 import { RentCollectionBreakdown } from '@/components/dashboard/RentCollectionBreakdown';
 import { RecentPaymentsTable } from '@/components/dashboard/RecentPaymentsTable';
-import { LandlordIncidentsSection } from '@/components/dashboard/LandlordIncidentsSection';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
@@ -20,7 +20,8 @@ import {
 } from '@/lib/data/mock-data';
 import { UserSpace, PaymentTransaction } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
-import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
+import { IncidentService } from '@/lib/services/incident-service';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -32,6 +33,21 @@ export default function DashboardPage() {
   const [reminderPayment, setReminderPayment] = useState<PaymentTransaction | null>(null);
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [pendingIncidents, setPendingIncidents] = useState(0);
+
+  useEffect(() => {
+    const updateCount = () => {
+      const active = IncidentService.getIncidents().filter((i) => i.status !== 'resolu').length;
+      setPendingIncidents(active);
+    };
+    updateCount();
+    window.addEventListener('locagestion:incidents_updated', updateCount);
+    window.addEventListener('storage', updateCount);
+    return () => {
+      window.removeEventListener('locagestion:incidents_updated', updateCount);
+      window.removeEventListener('storage', updateCount);
+    };
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -122,8 +138,38 @@ export default function DashboardPage() {
             <RentCollectionBreakdown breakdown={MOCK_KPIS.rentBreakdown} />
           </section>
 
-          {/* 6. Pannes & Incidents Signalés par les Locataires (Temps Réel) */}
-          <LandlordIncidentsSection />
+          {/* 6. Alerte Pannes & Interventions Signalées (Transférées vers /incidents) */}
+          {pendingIncidents > 0 && (
+            <section aria-label="Alerte pannes en attente">
+              <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
+                    <Wrench className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-black text-slate-900">
+                        {pendingIncidents} panne{pendingIncidents > 1 ? 's' : ''} signalée{pendingIncidents > 1 ? 's' : ''} par vos locataires
+                      </h3>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-white animate-pulse">
+                        À traiter
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Des dysfonctionnements avec photos nécessitent l’intervention d’un artisan. Retrouvez l’ensemble des dossiers dans le module Pannes & Interventions.
+                    </p>
+                  </div>
+                </div>
+                <Link
+                  href="/incidents"
+                  className="py-2.5 px-4 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                >
+                  <span>Gérer les interventions</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </section>
+          )}
 
           {/* 7. Tableau Opérations Récentes & Suivi des Loyers */}
           <section aria-label="Opérations récentes">

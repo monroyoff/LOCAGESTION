@@ -661,127 +661,44 @@ export default function TenantPortalPage() {
                 </div>
               </div>
 
-              {/* Incidents & Demandes Techniques Signalés */}
-              <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
-                      <Wrench className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-black text-base text-slate-900">
-                        Incidents & Demandes Techniques Signalés
-                      </h3>
-                      <p className="text-xs text-slate-500">
-                        Suivi en temps réel des réparations et interventions avec photos jointes.
-                      </p>
-                    </div>
+              {/* Module Pannes & Interventions (Transféré dans l'espace dédié /incidents) */}
+              <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-6 text-white shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-brand-500/20 text-brand-400 flex items-center justify-center shrink-0 border border-brand-500/30">
+                    <Wrench className="w-5 h-5" />
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setReportIssueModalOpen(true)}
-                    className="py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer self-start sm:self-auto"
-                  >
-                    <Wrench className="w-3.5 h-3.5 text-brand-400" />
-                    <span>+ Signaler une nouvelle panne</span>
-                  </button>
-                </div>
-
-                <div className="space-y-3 pt-1">
-                  {reportedIncidents.map((incident) => (
-                    <div
-                      key={incident.id}
-                      className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-3"
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-black text-slate-900">
-                            {incident.id}
-                          </span>
-                          <span className="text-slate-300">•</span>
-                          <span className="text-xs font-bold text-slate-800">
-                            {incident.category}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
-                              incident.urgency === 'critique'
-                                ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                                : incident.urgency === 'urgente'
-                                ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                                : 'bg-slate-200 text-slate-700'
-                            }`}
-                          >
-                            Urgence {incident.urgency}
-                          </span>
-
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${
-                              incident.status === 'resolu'
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                                : incident.status === 'pris_en_charge'
-                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                                : 'bg-amber-100 text-amber-800 border border-amber-200'
-                            }`}
-                          >
-                            <Clock className="w-3 h-3" />
-                            <span>
-                              {incident.status === 'resolu'
-                                ? 'Résolu'
-                                : incident.status === 'pris_en_charge'
-                                ? 'Pris en charge'
-                                : 'En attente'}
-                            </span>
-                          </span>
-
-                          <span className="text-[11px] text-slate-400 font-medium">
-                            {incident.createdAt}
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-xs text-slate-600 leading-relaxed">
-                        {incident.description}
-                      </p>
-
-                      {/* Photos attachées à l'incident */}
-                      {incident.photos && incident.photos.length > 0 && (
-                        <div className="pt-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <Camera className="w-3.5 h-3.5 text-slate-400" />
-                            <span className="text-[11px] font-bold text-slate-600">
-                              Photos constatées ({incident.photos.length}) :
-                            </span>
-                            <span className="text-[10px] text-slate-400 italic">
-                              (cliquez pour zoomer)
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-2.5">
-                            {incident.photos.map((photo, pIdx) => (
-                              <button
-                                key={pIdx}
-                                type="button"
-                                onClick={() => setPreviewIncidentPhoto(photo)}
-                                className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-200 shadow-xs hover:ring-2 hover:ring-brand-500 transition-all cursor-pointer group shrink-0"
-                              >
-                                <img
-                                  src={photo}
-                                  alt={`Constat ${incident.id} #${pIdx + 1}`}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                />
-                                <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                  <ZoomIn className="w-4 h-4 text-white drop-shadow-md" />
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black text-sm text-white">
+                        Pannes & Interventions Techniques
+                      </h3>
+                      {reportedIncidents.filter((i) => i.status !== 'resolu').length > 0 && (
+                        <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-white animate-pulse">
+                          {reportedIncidents.filter((i) => i.status !== 'resolu').length} en cours
+                        </span>
                       )}
                     </div>
-                  ))}
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      Un problème de plomberie, climatiseur ou électricité ? Déclarez la panne avec photos ou suivez vos interventions dans l’espace dédié.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 self-start sm:self-auto">
+                  <Link
+                    href="/incidents?action=new"
+                    className="py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-pink-glow flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  >
+                    <Wrench className="w-3.5 h-3.5" />
+                    <span>Signaler une panne</span>
+                  </Link>
+                  <Link
+                    href="/incidents"
+                    className="py-2.5 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all border border-white/10 flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                  >
+                    <span>Voir l’historique</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
             </div>

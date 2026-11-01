@@ -95,8 +95,6 @@ export function Sidebar({
       href: '/',
       icon: LayoutDashboard,
       active: pathname === '/',
-      badgeCount: pendingIncidents > 0 ? pendingIncidents : undefined,
-      badgeColor: 'bg-amber-500',
     },
     {
       name: 'Biens & Lots',
@@ -144,6 +142,14 @@ export function Sidebar({
       badgeCount: 3,
       badgeColor: 'bg-brand-500',
     },
+    {
+      name: 'Pannes & Interventions',
+      href: '/incidents',
+      icon: Wrench,
+      active: pathname.startsWith('/incidents'),
+      badgeCount: pendingIncidents > 0 ? pendingIncidents : undefined,
+      badgeColor: 'bg-amber-500',
+    },
   ];
 
   // ============================================================================
@@ -169,6 +175,14 @@ export function Sidebar({
       href: '/listings',
       icon: Compass,
       active: pathname.startsWith('/listings'),
+    },
+    {
+      name: 'Pannes & Interventions',
+      href: '/incidents',
+      icon: Wrench,
+      active: pathname.startsWith('/incidents'),
+      badgeCount: pendingIncidents > 0 ? pendingIncidents : undefined,
+      badgeColor: 'bg-amber-500',
     },
   ];
 
