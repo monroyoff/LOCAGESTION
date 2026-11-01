@@ -140,6 +140,36 @@ export const MOCK_PROPERTIES: Property[] = [
       { unit: 'Logement 3', type: '3 Pièces • 80 m²', surface: 80, rent: 220000, tenant: 'Adjoa Amouzou', status: 'occupe' },
     ],
   },
+  {
+    id: 'prop-05',
+    name: 'Concession Fidjrossè Plage',
+    type: 'Chambre salon sanitaire',
+    address: 'Lot 12, Calvaire Fidjrossè',
+    city: 'Cotonou',
+    district: 'Fidjrossè',
+    country: 'Bénin',
+    totalUnits: 4,
+    occupiedUnits: 4,
+    monthlyRevenue: 300000,
+    imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80',
+    ],
+    description: 'Ensemble de 4 chambres salon sanitaires modernes, carrelées avec sanitaires privatifs intérieurs et compteurs individuels Cash Power à Fidjrossè.',
+    amenities: [
+      'Compteurs Cash Power SBEE individuels',
+      'Robinet d’eau SONEB dans la cour',
+      'Sanitaires intérieurs privatifs',
+      'Cour propre clôturée avec portail sécurisé',
+    ],
+    unitsList: [
+      { unit: 'Porte 1', type: 'Chambre Salon Sanitaire • 40 m²', surface: 40, rent: 75000, tenant: 'Koffi Dossou', status: 'occupe' },
+      { unit: 'Porte 2', type: 'Chambre Salon Sanitaire • 40 m²', surface: 40, rent: 75000, tenant: 'Gildas Hounnou', status: 'occupe' },
+      { unit: 'Porte 3', type: 'Chambre Salon Sanitaire • 40 m²', surface: 40, rent: 75000, tenant: 'Mariam Bio', status: 'occupe' },
+      { unit: 'Porte 4', type: 'Chambre Salon Sanitaire • 40 m²', surface: 40, rent: 75000, tenant: 'Sébastien Alao', status: 'occupe' },
+    ],
+  },
 ];
 
 export const MOCK_KPIS: DashboardKPIs = {

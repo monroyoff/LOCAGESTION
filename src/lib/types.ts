@@ -24,10 +24,21 @@ export type UnitType =
   | 'bureau'
   | 'boutique';
 
+export type PropertyType =
+  | 'Chambre salon sanitaire'
+  | 'Appartement'
+  | 'Meublé'
+  | 'Studio'
+  | 'Villa'
+  | 'Bureau'
+  | 'Boutique'
+  | 'Immeuble'
+  | 'Résidence';
+
 export interface Property {
   id: string;
   name: string;
-  type: 'immeuble' | 'residence' | 'villa' | 'commercial';
+  type: PropertyType | string;
   address: string;
   city: string;
   district: string; // Quartier (ex: Haie Vive, Cocody, Almadies, Akpakpa)

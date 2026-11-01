@@ -30,13 +30,25 @@ const PRESET_PROPERTY_PHOTOS = [
   'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=1200&auto=format&fit=crop&q=80',
 ];
 
+const PROPERTY_TYPES = [
+  'Chambre salon sanitaire',
+  'Appartement',
+  'Meublé',
+  'Studio',
+  'Villa',
+  'Bureau',
+  'Boutique',
+  'Immeuble',
+  'Résidence',
+] as const;
+
 export function NewPropertyModal({
   isOpen,
   onClose,
   onAddProperty,
 }: NewPropertyModalProps) {
   const [name, setName] = useState('');
-  const [type, setType] = useState<Property['type']>('residence');
+  const [type, setType] = useState<string>('Chambre salon sanitaire');
   const [country, setCountry] = useState('Bénin');
   const [city, setCity] = useState('Cotonou');
   const [district, setDistrict] = useState('');
@@ -162,30 +174,35 @@ export function NewPropertyModal({
           {/* Nom du bien */}
           <div>
             <label className="font-bold text-slate-700 block mb-1">
-              Nom de la résidence / immeuble *
+              Nom du bien / résidence *
             </label>
             <input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Résidence Les Palmiers, Immeuble Horizon..."
+              placeholder="Ex: Chambre Salon Sanitaire Fidjrossè, Appartement 3 Pièces Haie Vive..."
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
           </div>
 
-          {/* Type de bien */}
+          {/* Type de bien (Identique à l'espace locataire & annonces) */}
           <div>
             <label className="font-bold text-slate-700 block mb-1">
-              Type de propriété *
+              Type de bien *
             </label>
-            <div className="grid grid-cols-4 gap-2">
-              {(['residence', 'immeuble', 'villa', 'commercial'] as const).map((t) => (
+            <div className="flex flex-wrap gap-1.5">
+              {PROPERTY_TYPES.map((t) => (
                 <button
                   key={t}
                   type="button"
-                  onClick={() => setType(t)}
-                  className={`py-2 px-2 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
+                  onClick={() => {
+                    setType(t);
+                    if (t === 'Chambre salon sanitaire' || t === 'Studio') {
+                      if (totalUnits > 4) setTotalUnits(1);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                     type === t
                       ? 'bg-slate-900 text-white shadow-sm'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
@@ -360,3 +377,4 @@ export function NewPropertyModal({
     </div>
   );
 }
+
