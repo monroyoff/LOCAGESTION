@@ -52,6 +52,8 @@ export function NewPropertyModal({
   const [type, setType] = useState<string>('Chambre salon sanitaire');
   const [country, setCountry] = useState('Bénin');
   const [city, setCity] = useState('Cotonou');
+  const [isCustomCity, setIsCustomCity] = useState(false);
+  const [customCity, setCustomCity] = useState('');
   const [district, setDistrict] = useState('');
   const [address, setAddress] = useState('');
   const [totalUnits, setTotalUnits] = useState(6);
@@ -67,9 +69,20 @@ export function NewPropertyModal({
 
   const handleCountryChange = (c: string) => {
     setCountry(c);
+    setIsCustomCity(false);
+    setCustomCity('');
     const cities = COUNTRIES_CITIES[c]?.cities || [];
     if (cities.length > 0) {
       setCity(cities[0]);
+    }
+  };
+
+  const handleCitySelect = (val: string) => {
+    if (val === '__custom__') {
+      setIsCustomCity(true);
+    } else {
+      setIsCustomCity(false);
+      setCity(val);
     }
   };
 
@@ -110,12 +123,14 @@ export function NewPropertyModal({
       status: (idx < Math.ceil(unitsCount * 0.7) ? 'occupe' : 'vacant') as 'occupe' | 'vacant',
     }));
 
+    const finalCity = isCustomCity && customCity.trim() ? customCity.trim() : city;
+
     const newProperty: Property = {
       id: `prop-${Date.now()}`,
-      name: name || `Résidence ${district || city}`,
+      name: name || `Résidence ${district || finalCity}`,
       type,
-      address: address || `Rue Principale, ${district || city}`,
-      city,
+      address: address || `Rue Principale, ${district || finalCity}`,
+      city: finalCity,
       district: district || 'Centre-ville',
       country,
       totalUnits: unitsCount,
@@ -123,7 +138,7 @@ export function NewPropertyModal({
       monthlyRevenue: rev,
       imageUrl: finalImages[0],
       images: finalImages,
-      description: description || `Résidence moderne située à ${district || city} (${country}). Gestion locative centralisée et sécurisée.`,
+      description: description || `Résidence moderne située à ${district || finalCity} (${country}). Gestion locative centralisée et sécurisée.`,
       amenities: [
         'Compteurs d’électricité individuels',
         'Réserve d’eau et surpresseur',
@@ -235,12 +250,17 @@ export function NewPropertyModal({
             </div>
 
             <div>
-              <label className="font-bold text-slate-700 block mb-1">
-                Ville *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-bold text-slate-700">
+                  Ville *
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {cities.length} villes
+                </span>
+              </div>
               <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
+                value={isCustomCity ? '__custom__' : city}
+                onChange={(e) => handleCitySelect(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900"
               >
                 {cities.map((ci) => (
@@ -248,7 +268,21 @@ export function NewPropertyModal({
                     {ci}
                   </option>
                 ))}
+                <option value="__custom__">✨ Autre ville (saisir manuellement)...</option>
               </select>
+
+              {isCustomCity && (
+                <div className="mt-2 animate-in fade-in duration-150">
+                  <input
+                    type="text"
+                    required
+                    value={customCity}
+                    onChange={(e) => setCustomCity(e.target.value)}
+                    placeholder="Préciser le nom de la ville ou commune..."
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-brand-400 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  />
+                </div>
+              )}
             </div>
           </div>
 

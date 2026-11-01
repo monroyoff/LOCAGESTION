@@ -63,6 +63,8 @@ export function PublishListingModal({
   const [propertyType, setPropertyType] = useState<RentalListing['propertyType']>('Chambre salon sanitaire');
   const [country, setCountry] = useState('Bénin');
   const [city, setCity] = useState('Cotonou');
+  const [isCustomCity, setIsCustomCity] = useState(false);
+  const [customCity, setCustomCity] = useState('');
   const [district, setDistrict] = useState('');
   const [landmark, setLandmark] = useState('');
   const [monthlyRent, setMonthlyRent] = useState('250000');
@@ -91,9 +93,20 @@ export function PublishListingModal({
 
   const handleCountryChange = (c: string) => {
     setCountry(c);
+    setIsCustomCity(false);
+    setCustomCity('');
     const cities = COUNTRIES_CITIES[c]?.cities || [];
     if (cities.length > 0) {
       setCity(cities[0]);
+    }
+  };
+
+  const handleCitySelect = (val: string) => {
+    if (val === '__custom__') {
+      setIsCustomCity(true);
+    } else {
+      setIsCustomCity(false);
+      setCity(val);
     }
   };
 
@@ -164,14 +177,16 @@ export function PublishListingModal({
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
+    const finalCity = isCustomCity && customCity.trim() ? customCity.trim() : city;
+
     const newListing: RentalListing = {
       id: `list-${Date.now()}`,
-      title: title || `${propertyType} Moderne à ${district || city}`,
+      title: title || `${propertyType} Moderne à ${district || finalCity}`,
       propertyType,
       country,
       countryCode: countryCodeMap[country] || 'BJ',
       flag: COUNTRIES_CITIES[country]?.flag || '🌍',
-      city,
+      city: finalCity,
       district: district || 'Centre-ville',
       landmark: landmark || 'Accès bitumé et sécurisé',
       monthlyRent: parseInt(monthlyRent, 10) || 200000,
@@ -318,12 +333,17 @@ export function PublishListingModal({
             </div>
 
             <div>
-              <label className="font-bold text-slate-700 block mb-1">
-                Ville *
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-bold text-slate-700">
+                  Ville *
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {cities.length} villes
+                </span>
+              </div>
               <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
+                value={isCustomCity ? '__custom__' : city}
+                onChange={(e) => handleCitySelect(e.target.value)}
                 className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900"
               >
                 {cities.map((ci) => (
@@ -331,7 +351,21 @@ export function PublishListingModal({
                     {ci}
                   </option>
                 ))}
+                <option value="__custom__">✨ Autre ville (saisir manuellement)...</option>
               </select>
+
+              {isCustomCity && (
+                <div className="mt-2 animate-in fade-in duration-150">
+                  <input
+                    type="text"
+                    required
+                    value={customCity}
+                    onChange={(e) => setCustomCity(e.target.value)}
+                    placeholder="Préciser le nom de la ville ou commune..."
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-brand-400 text-xs font-bold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
