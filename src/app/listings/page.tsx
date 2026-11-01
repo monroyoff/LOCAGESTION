@@ -17,6 +17,7 @@ import {
   getUserResidenceDistrict,
   setUserResidenceDistrict,
   detectUserGeoLocation,
+  requestUserGeolocationWithFeedback,
   calculateDistanceKm,
   resolveLocationCoordinates,
   UserGeoLocation,
@@ -151,9 +152,9 @@ export default function ListingsPage() {
   const handleRefreshGPS = async () => {
     setIsLocating(true);
     try {
-      const geo = await detectUserGeoLocation();
-      setUserLocation(geo);
-      showToast(`Position GPS actualisée : ${geo.label}`);
+      const res = await requestUserGeolocationWithFeedback();
+      setUserLocation(res.location);
+      showToast(res.message);
     } catch (e) {
       showToast('Position GPS actualisée.');
     } finally {
@@ -526,11 +527,11 @@ export default function ListingsPage() {
                 type="button"
                 onClick={handleRefreshGPS}
                 disabled={isLocating}
-                className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold border border-slate-200 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
-                title="Actualiser votre position géographique"
+                className="px-3.5 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                title="Activer la détection GPS par votre navigateur"
               >
-                <Navigation className={`w-3.5 h-3.5 text-brand-500 ${isLocating ? 'animate-spin' : ''}`} />
-                <span>{isLocating ? 'Actualisation...' : 'Actualiser GPS'}</span>
+                <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                <span>{isLocating ? 'Détection GPS...' : 'Activer la géolocalisation'}</span>
               </button>
             </div>
           </div>

@@ -24,6 +24,7 @@ import {
   getUserProfile,
   saveUserProfile,
   detectUserGeoLocation,
+  requestUserGeolocationWithFeedback,
   UserGeoLocation,
 } from '@/lib/services/geo-service';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
@@ -136,12 +137,18 @@ export function UserProfileModal({
     e.target.value = '';
   };
 
+  const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
+
   const handleRefreshGPS = async () => {
     setIsLocating(true);
+    setGpsFeedback(null);
     try {
-      const geo = await detectUserGeoLocation();
-      setUserLocation(geo);
+      const res = await requestUserGeolocationWithFeedback();
+      setUserLocation(res.location);
+      setGpsFeedback(res.message);
+      notifySave(res.message);
     } catch (e) {
+      notifySave('Géolocalisation mise à jour.');
     } finally {
       setIsLocating(false);
     }
@@ -465,12 +472,20 @@ export function UserProfileModal({
                 type="button"
                 onClick={handleRefreshGPS}
                 disabled={isLocating}
-                className="px-2.5 py-1 rounded-xl bg-white hover:bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200 shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-black shadow-pink-glow transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                title="Activer la détection GPS par votre navigateur"
               >
-                <Navigation className={`w-3 h-3 text-brand-500 ${isLocating ? 'animate-spin' : ''}`} />
-                <span>{isLocating ? 'Détection...' : 'Actualiser GPS'}</span>
+                <Navigation className={`w-3.5 h-3.5 ${isLocating ? 'animate-spin' : ''}`} />
+                <span>{isLocating ? 'Détection GPS...' : 'Activer la géolocalisation'}</span>
               </button>
             </div>
+
+            {gpsFeedback && (
+              <div className="p-2.5 rounded-xl bg-slate-900 text-white text-[11px] font-medium leading-relaxed flex items-center gap-2">
+                <Info className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                <span>{gpsFeedback}</span>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 text-xs text-slate-600 bg-white p-2.5 rounded-xl border border-slate-200/60">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />

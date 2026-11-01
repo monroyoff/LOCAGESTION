@@ -24,6 +24,9 @@ import {
   AlertCircle,
   Ban,
   RotateCcw,
+  Search,
+  Filter,
+  ArrowUpDown,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -128,12 +131,82 @@ export default function LeasesPage() {
   const activeLeases = leases.filter((l) => l.status === 'actif');
   const resiliatedLeases = leases.filter((l) => l.status === 'resilie');
 
-  const filteredLeases = leases.filter((l) => {
-    if (filterTab === 'pending') return l.status === 'en_attente_signature';
-    if (filterTab === 'active') return l.status === 'actif';
-    if (filterTab === 'resiliated') return l.status === 'resilie';
-    return true;
-  });
+  // Filtres de date & tri pour Baux & Contrats
+  const [leaseSearchTerm, setLeaseSearchTerm] = useState<string>('');
+  const [leaseDateFilter, setLeaseDateFilter] = useState<'all' | 'year_2026' | 'year_2025' | 'recent_3m' | 'expiring_soon'>('all');
+  const [leaseSelectedYear, setLeaseSelectedYear] = useState<'all' | '2026' | '2025' | '2024'>('all');
+  const [leaseSortOrder, setLeaseSortOrder] = useState<'startDate_desc' | 'startDate_asc' | 'rent_desc' | 'rent_asc' | 'tenant_asc'>('startDate_desc');
+
+  const parseFrDate = (dateStr?: string) => {
+    if (!dateStr) return 0;
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+    }
+    const d = new Date(dateStr).getTime();
+    return isNaN(d) ? 0 : d;
+  };
+
+  const filteredLeases = leases
+    .filter((l) => {
+      // 1. Onglet statut
+      if (filterTab === 'pending' && l.status !== 'en_attente_signature') return false;
+      if (filterTab === 'active' && l.status !== 'actif') return false;
+      if (filterTab === 'resiliated' && l.status !== 'resilie') return false;
+
+      // 2. Recherche textuelle
+      if (leaseSearchTerm.trim()) {
+        const q = leaseSearchTerm.toLowerCase();
+        const match =
+          l.tenant.toLowerCase().includes(q) ||
+          l.property.toLowerCase().includes(q) ||
+          l.unit.toLowerCase().includes(q) ||
+          l.id.toLowerCase().includes(q) ||
+          l.rent.toString().includes(q);
+        if (!match) return false;
+      }
+
+      // 3. Année spécifique
+      if (leaseSelectedYear !== 'all') {
+        if (!l.startDate.includes(leaseSelectedYear) && !(l.endDate && l.endDate.includes(leaseSelectedYear))) {
+          return false;
+        }
+      }
+
+      // 4. Presets de date
+      if (leaseDateFilter === 'year_2026') {
+        return l.startDate.includes('2026') || (l.endDate && l.endDate.includes('2026'));
+      }
+      if (leaseDateFilter === 'year_2025') {
+        return l.startDate.includes('2025');
+      }
+      if (leaseDateFilter === 'recent_3m') {
+        return l.startDate.includes('2026') || l.startDate.includes('/11/2025') || l.startDate.includes('/10/2025');
+      }
+      if (leaseDateFilter === 'expiring_soon') {
+        return l.endDate ? (l.endDate.includes('2026') || l.endDate.includes('2025')) : false;
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      if (leaseSortOrder === 'startDate_desc') {
+        return parseFrDate(b.startDate) - parseFrDate(a.startDate);
+      }
+      if (leaseSortOrder === 'startDate_asc') {
+        return parseFrDate(a.startDate) - parseFrDate(b.startDate);
+      }
+      if (leaseSortOrder === 'rent_desc') {
+        return b.rent - a.rent;
+      }
+      if (leaseSortOrder === 'rent_asc') {
+        return a.rent - b.rent;
+      }
+      if (leaseSortOrder === 'tenant_asc') {
+        return a.tenant.localeCompare(b.tenant, 'fr');
+      }
+      return 0;
+    });
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-900 flex">
@@ -308,9 +381,144 @@ export default function LeasesPage() {
             </button>
           </div>
 
+          {/* Barre de Recherche, Filtres de Date & Tri Facile des Baux */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/80 shadow-soft space-y-3.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              {/* Recherche textuelle */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={leaseSearchTerm}
+                  onChange={(e) => setLeaseSearchTerm(e.target.value)}
+                  placeholder="Rechercher par locataire, résidence, lot, référence BAIL..."
+                  className="w-full pl-10 pr-4 py-2 bg-slate-50 rounded-xl border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-xs"
+                />
+                {leaseSearchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setLeaseSearchTerm('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              {/* Filtre Année + Tri */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <select
+                    value={leaseSelectedYear}
+                    onChange={(e) => {
+                      setLeaseSelectedYear(e.target.value as any);
+                      setLeaseDateFilter('all');
+                    }}
+                    className="py-2 pl-3 pr-7 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
+                  >
+                    <option value="all">Toutes années</option>
+                    <option value="2026">Exercice 2026</option>
+                    <option value="2025">Exercice 2025</option>
+                    <option value="2024">Exercice 2024</option>
+                  </select>
+                </div>
+
+                <div className="relative">
+                  <select
+                    value={leaseSortOrder}
+                    onChange={(e) => setLeaseSortOrder(e.target.value as any)}
+                    className="py-2 pl-3 pr-7 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
+                  >
+                    <option value="startDate_desc">📅 Début (Plus récent ↓)</option>
+                    <option value="startDate_asc">📅 Début (Plus ancien ↑)</option>
+                    <option value="rent_desc">💰 Loyer le plus élevé</option>
+                    <option value="rent_asc">💰 Loyer le plus accessible</option>
+                    <option value="tenant_asc">👤 Locataire (A à Z)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Presets rapides de date */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-2 border-t border-slate-100">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-brand-500" />
+                <span>Période du bail :</span>
+              </span>
+
+              {[
+                { key: 'all', label: 'Tous les baux' },
+                { key: 'year_2026', label: 'En cours (2026)' },
+                { key: 'recent_3m', label: 'Signés récemment' },
+                { key: 'year_2025', label: 'Baux 2025' },
+                { key: 'expiring_soon', label: 'Échéance proche' },
+              ].map((preset) => (
+                <button
+                  key={preset.key}
+                  type="button"
+                  onClick={() => {
+                    setLeaseDateFilter(preset.key as any);
+                    setLeaseSelectedYear('all');
+                  }}
+                  className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                    leaseDateFilter === preset.key && leaseSelectedYear === 'all'
+                      ? 'bg-brand-500 text-white shadow-xs'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              ))}
+
+              <span className="text-[11px] text-slate-400 font-medium ml-2">
+                ({filteredLeases.length} affiché{filteredLeases.length > 1 ? 's' : ''})
+              </span>
+
+              {(leaseSearchTerm || leaseDateFilter !== 'all' || leaseSelectedYear !== 'all') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLeaseSearchTerm('');
+                    setLeaseDateFilter('all');
+                    setLeaseSelectedYear('all');
+                  }}
+                  className="ml-auto text-[10px] font-bold text-slate-400 hover:text-rose-600 flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Réinitialiser</span>
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Liste des Baux */}
           <div className="space-y-4">
-            {filteredLeases.map((lease) => {
+            {filteredLeases.length === 0 ? (
+              <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                  <FileText className="w-7 h-7" />
+                </div>
+                <h3 className="text-base font-black text-slate-900">
+                  Aucun contrat de bail trouvé
+                </h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  Aucun bail ne correspond aux critères de date ou de recherche sélectionnés. Modifiez vos filtres ou réinitialisez la sélection.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilterTab('all');
+                    setLeaseDateFilter('all');
+                    setLeaseSelectedYear('all');
+                    setLeaseSearchTerm('');
+                  }}
+                  className="mt-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+                >
+                  Voir tous les baux
+                </button>
+              </div>
+            ) : (
+            filteredLeases.map((lease) => {
               const isPending = lease.status === 'en_attente_signature';
               const isResiliated = lease.status === 'resilie';
               const isActive = lease.status === 'actif';
@@ -535,7 +743,7 @@ export default function LeasesPage() {
                   </div>
                 </div>
               );
-            })}
+            }))}
           </div>
         </main>
       </div>

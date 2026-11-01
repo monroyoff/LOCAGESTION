@@ -326,33 +326,81 @@ export function resolveLocationCoordinates(
   return { lat: 6.3703, lng: 2.4222 };
 }
 
+export interface GeoRequestResult {
+  success: boolean;
+  location: UserGeoLocation;
+  message: string;
+  errorType?: 'permission_denied' | 'timeout' | 'unavailable' | 'unknown';
+}
+
 /**
  * Détecte la position géographique actuelle de l'utilisateur via :
- * 1. L'API Géolocalisation native du navigateur (GPS)
- * 2. Le profil de résidence enregistré (Inscription)
- * 3. Le fuseau horaire du système (Heuristique UEMOA)
+ * 1. L'API Géolocalisation native du navigateur (GPS / Wi-Fi réseau)
+ * 2. Fallback IP géolocalisation
+ * 3. Le profil de résidence enregistré (Inscription)
  */
 export async function detectUserGeoLocation(): Promise<UserGeoLocation> {
+  const res = await requestUserGeolocationWithFeedback();
+  return res.location;
+}
+
+/**
+ * Demande explicite d'activation de la géolocalisation avec retour d'état détaillé
+ */
+export async function requestUserGeolocationWithFeedback(): Promise<GeoRequestResult> {
   // Profil de base de l'utilisateur (renseigné lors de l'inscription)
   const profileCountry = getUserResidenceCountry();
   const profileCity = getUserResidenceCity();
   const profileDistrict = getUserResidenceDistrict();
   const defaultCoords = resolveLocationCoordinates(profileCountry, profileCity, profileDistrict);
 
-  // 1. Essai de l'API de Géolocalisation native du navigateur (GPS)
-  if (typeof window !== 'undefined' && 'geolocation' in navigator) {
+  const fallbackLocation: UserGeoLocation = {
+    country: profileCountry,
+    city: profileCity,
+    district: profileDistrict,
+    latitude: defaultCoords.lat,
+    longitude: defaultCoords.lng,
+    source: 'profile',
+    label: `${profileDistrict ? `${profileDistrict}, ` : ''}${profileCity} (${profileCountry})`,
+  };
+
+  if (typeof window === 'undefined') {
+    return {
+      success: false,
+      location: fallbackLocation,
+      message: 'Environnement serveur, utilisation du profil d’inscription.',
+    };
+  }
+
+  // 1. Essai de l'API de Géolocalisation native du navigateur (GPS / Wi-Fi / Cellulaire)
+  if ('geolocation' in navigator) {
     try {
       const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(resolve, reject, {
-          enableHighAccuracy: true,
-          timeout: 4000,
-          maximumAge: 10 * 60 * 1000, // 10 minutes cache
-        });
+        navigator.geolocation.getCurrentPosition(
+          resolve,
+          (err) => {
+            // Si timeout ou highAccuracy échoue, on tente une deuxième fois sans highAccuracy
+            if (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE) {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: false,
+                timeout: 6000,
+                maximumAge: 15 * 60 * 1000,
+              });
+            } else {
+              reject(err);
+            }
+          },
+          {
+            enableHighAccuracy: false, // Résolution instantanée sur Mac/PC/Wifi
+            timeout: 9000, // 9 secondes pour laisser le temps à l'utilisateur de cliquer "Autoriser"
+            maximumAge: 10 * 60 * 1000, // Cache 10 minutes
+          }
+        );
       });
 
       const { latitude, longitude, accuracy } = position.coords;
 
-      // Sauvegarde des coordonnées
+      // Sauvegarde des coordonnées GPS réelles
       try {
         localStorage.setItem(
           STORAGE_KEY_GPS,
@@ -369,9 +417,11 @@ export async function detectUserGeoLocation(): Promise<UserGeoLocation> {
         }
       }
 
+      let detectedLocation: UserGeoLocation;
+
       // Si le GPS correspond à une zone connue dans un rayon de 150 km
       if (closestZone && closestZone.distance < 150) {
-        return {
+        detectedLocation = {
           country: closestZone.data.country,
           city: closestZone.data.city,
           district: closestZone.data.district || closestZone.name,
@@ -381,25 +431,93 @@ export async function detectUserGeoLocation(): Promise<UserGeoLocation> {
           accuracy: Math.round(accuracy),
           label: `${closestZone.data.district ? `${closestZone.data.district}, ` : ''}${closestZone.data.city} (${closestZone.data.country})`,
         };
+      } else {
+        // Position GPS valide (même en dehors de la zone pré-enregistrée)
+        detectedLocation = {
+          country: closestZone ? closestZone.data.country : profileCountry,
+          city: closestZone ? closestZone.data.city : profileCity,
+          district: closestZone?.data.district || 'Position GPS active',
+          latitude,
+          longitude,
+          source: 'gps',
+          accuracy: Math.round(accuracy),
+          label: `GPS (${latitude.toFixed(3)}, ${longitude.toFixed(3)}) • ${profileCountry}`,
+        };
       }
 
-      // Si le GPS est valide mais en dehors des zones UEMOA enregistrées (ex: développement ou voyage),
-      // et que l'utilisateur est enregistré dans un pays UEMOA (ex: Bénin),
-      // on privilégie les coordonnées de son lieu de résidence d'inscription pour un classement pertinent.
-    } catch (err) {
-      // Géolocalisation refusée ou indisponible
+      // Notifier l'ensemble de l'application
+      window.dispatchEvent(
+        new CustomEvent('locagestion:location_updated', {
+          detail: detectedLocation,
+        })
+      );
+
+      return {
+        success: true,
+        location: detectedLocation,
+        message: `Position GPS détectée avec succès : ${detectedLocation.label}`,
+      };
+    } catch (err: any) {
+      if (err && err.code === 1) {
+        // PERMISSION_DENIED
+        return {
+          success: false,
+          location: fallbackLocation,
+          errorType: 'permission_denied',
+          message:
+            'Accès GPS refusé par le navigateur. Veuillez autoriser la localisation dans la barre d’adresse ou choisir votre quartier ci-dessous.',
+        };
+      } else if (err && err.code === 3) {
+        // TIMEOUT
+        // Tenter le fallback IP avant de renoncer
+      }
     }
   }
 
-  // 2. Détection par défaut basée sur le profil d'inscription
+  // 2. Fallback rapide via géolocalisation IP si GPS non disponible
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const ipRes = await fetch('https://ipapi.co/json/', {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (ipRes.ok) {
+      const data = await ipRes.json();
+      if (data && data.latitude && data.longitude) {
+        const ipLocation: UserGeoLocation = {
+          country: data.country_name || profileCountry,
+          city: data.city || profileCity,
+          district: profileDistrict,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          source: 'gps',
+          label: `${data.city || profileCity} (${data.country_name || profileCountry}) [IP]`,
+        };
+
+        window.dispatchEvent(
+          new CustomEvent('locagestion:location_updated', {
+            detail: ipLocation,
+          })
+        );
+
+        return {
+          success: true,
+          location: ipLocation,
+          message: `Position estimée via réseau : ${ipLocation.label}`,
+        };
+      }
+    }
+  } catch (e) {
+    // Ignorer si échec réseau
+  }
+
+  // 3. Fallback standard sur le profil d'inscription
   return {
-    country: profileCountry,
-    city: profileCity,
-    district: profileDistrict,
-    latitude: defaultCoords.lat,
-    longitude: defaultCoords.lng,
-    source: 'profile',
-    label: `${profileDistrict ? `${profileDistrict}, ` : ''}${profileCity} (${profileCountry})`,
+    success: true,
+    location: fallbackLocation,
+    message: `Position basée sur votre pays de résidence d'inscription : ${fallbackLocation.label}`,
   };
 }
 

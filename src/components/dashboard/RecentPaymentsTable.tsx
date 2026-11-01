@@ -16,9 +16,13 @@ import {
   Building,
   Smartphone,
   ExternalLink,
+  Calendar,
+  ArrowUpDown,
+  RotateCcw,
 } from 'lucide-react';
 import { PaymentTransaction, PaymentStatus } from '@/lib/types';
 import { formatFCFA, getPaymentMethodLabel } from '@/lib/money/format';
+import { MONTHS_OF_YEAR } from '@/lib/services/payment-service';
 
 interface RecentPaymentsTableProps {
   payments: PaymentTransaction[];
@@ -33,17 +37,61 @@ export function RecentPaymentsTable({
 }: RecentPaymentsTableProps) {
   const [activeTab, setActiveTab] = useState<'all' | 'paye' | 'en_retard' | 'partiel'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [dateFilter, setDateFilter] = useState<'all' | 'this_month' | 'last_month' | 'last_3_months' | 'year_2026'>('all');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
-  // Filtering
-  const filteredPayments = payments.filter((p) => {
-    const matchesTab = activeTab === 'all' || p.status === activeTab;
-    const matchesSearch =
-      p.tenantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.unitNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
+  const parseFrDate = (dateStr?: string) => {
+    if (!dateStr) return 0;
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+    }
+    const d = new Date(dateStr).getTime();
+    return isNaN(d) ? 0 : d;
+  };
+
+  // Filtering & Chronological Sorting
+  const filteredPayments = payments
+    .filter((p) => {
+      const matchesTab = activeTab === 'all' || p.status === activeTab;
+      const matchesSearch =
+        p.tenantName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.propertyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.unitNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.period.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.paymentDate.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.receiptNumber.toLowerCase().includes(searchTerm.toLowerCase());
+
+      if (!matchesTab || !matchesSearch) return false;
+
+      // Filtre mois précis sélectionné
+      if (selectedPeriod !== 'all' && p.period !== selectedPeriod) {
+        return false;
+      }
+
+      // Filtres presets de date
+      if (dateFilter === 'this_month') {
+        return p.period.toLowerCase().includes('novembre') || p.paymentDate.includes('/11/');
+      }
+      if (dateFilter === 'last_month') {
+        return p.period.toLowerCase().includes('octobre') || p.paymentDate.includes('/10/');
+      }
+      if (dateFilter === 'last_3_months') {
+        const m = p.period.toLowerCase();
+        return m.includes('novembre') || m.includes('octobre') || m.includes('septembre');
+      }
+      if (dateFilter === 'year_2026') {
+        return p.period.includes('2026') || p.paymentDate.includes('2026');
+      }
+
+      return true;
+    })
+    .sort((a, b) => {
+      const tA = parseFrDate(a.paymentDate);
+      const tB = parseFrDate(b.paymentDate);
+      return sortOrder === 'desc' ? tB - tA : tA - tB;
+    });
 
   const getStatusBadge = (status: PaymentStatus) => {
     switch (status) {
@@ -197,6 +245,85 @@ export function RecentPaymentsTable({
             </div>
           </div>
         </div>
+
+        {/* Date Filter & Sort Bar */}
+        <div className="mt-4 pt-3 border-t border-slate-100 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          {/* Presets */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-1 flex items-center gap-1">
+              <Calendar className="w-3 h-3 text-brand-500" />
+              <span>Période :</span>
+            </span>
+
+            {[
+              { key: 'all', label: 'Toutes les dates' },
+              { key: 'this_month', label: 'Ce mois-ci (Novembre)' },
+              { key: 'last_month', label: 'Mois dernier (Octobre)' },
+              { key: 'last_3_months', label: '3 derniers mois' },
+              { key: 'year_2026', label: 'Année 2026' },
+            ].map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => {
+                  setDateFilter(p.key as any);
+                  setSelectedPeriod('all');
+                }}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
+                  dateFilter === p.key && selectedPeriod === 'all'
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Mois spécifique + Bouton de tri */}
+          <div className="flex items-center gap-2">
+            <select
+              value={selectedPeriod}
+              onChange={(e) => {
+                setSelectedPeriod(e.target.value);
+                setDateFilter('all');
+              }}
+              className="py-1.5 pl-3 pr-7 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
+            >
+              <option value="all">Tous les mois</option>
+              {MONTHS_OF_YEAR.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+              title="Inverser l'ordre de tri par date"
+            >
+              <ArrowUpDown className="w-3.5 h-3.5 text-brand-500" />
+              <span>{sortOrder === 'desc' ? 'Plus récent ↓' : 'Plus ancien ↑'}</span>
+            </button>
+
+            {(dateFilter !== 'all' || selectedPeriod !== 'all' || searchTerm) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setDateFilter('all');
+                  setSelectedPeriod('all');
+                  setSearchTerm('');
+                }}
+                className="text-[10px] font-bold text-slate-400 hover:text-rose-600 flex items-center gap-1 cursor-pointer transition-colors p-1"
+                title="Réinitialiser les filtres"
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Desktop Table View */}
@@ -300,11 +427,52 @@ export function RecentPaymentsTable({
             ))}
           </tbody>
         </table>
+
+        {filteredPayments.length === 0 && (
+          <div className="py-12 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+              <Receipt className="w-6 h-6" />
+            </div>
+            <h4 className="text-sm font-bold text-slate-700">Aucun paiement trouvé pour ces critères</h4>
+            <p className="text-xs text-slate-400 max-w-sm mx-auto">
+              Ajustez vos filtres de statut, de période ou de recherche pour afficher les transactions.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('all');
+                setDateFilter('all');
+                setSelectedPeriod('all');
+                setSearchTerm('');
+              }}
+              className="px-3.5 py-1.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
+            >
+              Afficher toutes les transactions
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Mobile Card List View (< 768px) */}
       <div className="md:hidden divide-y divide-slate-100">
-        {filteredPayments.map((item) => (
+        {filteredPayments.length === 0 ? (
+          <div className="py-10 px-4 text-center space-y-2">
+            <p className="text-xs text-slate-500 font-medium">Aucun paiement trouvé pour cette période.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('all');
+                setDateFilter('all');
+                setSelectedPeriod('all');
+                setSearchTerm('');
+              }}
+              className="px-3 py-1 rounded-xl bg-slate-900 text-white text-xs font-bold"
+            >
+              Réinitialiser
+            </button>
+          </div>
+        ) : (
+          filteredPayments.map((item) => (
           <div
             key={item.id}
             onClick={() => onSelectPayment(item)}
@@ -343,7 +511,7 @@ export function RecentPaymentsTable({
               </div>
             </div>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );
