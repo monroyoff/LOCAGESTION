@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
@@ -40,6 +40,9 @@ import {
   Wrench,
   PenTool,
   Send,
+  Trash2,
+  Image as ImageIcon,
+  ZoomIn,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
@@ -47,6 +50,35 @@ import { PaymentTransaction } from '@/lib/types';
 import { downloadDocument, generateLeaseContent } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
+
+const ISSUE_SAMPLE_PHOTOS = [
+  {
+    label: 'Fuite robinet / lavabo',
+    url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    label: 'Climatiseur / Split',
+    url: 'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    label: 'Disjoncteur / Électricité',
+    url: 'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80',
+  },
+  {
+    label: 'Serrure / Poignée',
+    url: 'https://images.unsplash.com/photo-1558002038-1055907df827?w=800&auto=format&fit=crop&q=80',
+  },
+];
+
+export interface ReportedIncident {
+  id: string;
+  category: string;
+  urgency: 'normale' | 'urgente' | 'critique';
+  description: string;
+  photos: string[];
+  createdAt: string;
+  status: 'en_attente' | 'pris_en_charge' | 'resolu';
+}
 
 export default function TenantPortalPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -63,8 +95,75 @@ export default function TenantPortalPage() {
   const [issueCategory, setIssueCategory] = useState('Plomberie / Fuite d’eau');
   const [issueDesc, setIssueDesc] = useState('');
   const [issueUrgency, setIssueUrgency] = useState<'normale' | 'urgente' | 'critique'>('normale');
+
+  // Photos de la panne / incident
+  const [issuePhotos, setIssuePhotos] = useState<string[]>([
+    'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
+  ]);
+  const [issueUrlInput, setIssueUrlInput] = useState('');
+  const [showIssueUrlInput, setShowIssueUrlInput] = useState(false);
+  const issueFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [previewIncidentPhoto, setPreviewIncidentPhoto] = useState<string | null>(null);
+
+  // Historique des incidents déclarés
+  const [reportedIncidents, setReportedIncidents] = useState<ReportedIncident[]>([
+    {
+      id: 'INC-2026-042',
+      category: 'Plomberie / Fuite d’eau',
+      urgency: 'urgente',
+      description: 'Léger suintement sous le siphon du lavabo de la salle d’eau principale.',
+      photos: [
+        'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
+      ],
+      createdAt: '28/10/2026',
+      status: 'pris_en_charge',
+    },
+  ]);
+
   const [selectedReceipt, setSelectedReceipt] = useState<PaymentTransaction | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleIssueFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        if (uploadEvent.target?.result) {
+          setIssuePhotos((prev) => [...prev, uploadEvent.target!.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    e.target.value = '';
+  };
+
+  const handleSubmitIssue = (e: React.FormEvent) => {
+    e.preventDefault();
+    const newIncident: ReportedIncident = {
+      id: `INC-2026-${Math.floor(100 + Math.random() * 900)}`,
+      category: issueCategory,
+      urgency: issueUrgency,
+      description: issueDesc,
+      photos: issuePhotos,
+      createdAt: new Date().toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      }),
+      status: 'pris_en_charge',
+    };
+    setReportedIncidents((prev) => [newIncident, ...prev]);
+    setReportIssueModalOpen(false);
+    const photoCount = issuePhotos.length;
+    setIssuePhotos([]);
+    setIssueDesc('');
+    showToast(
+      `Incident (${issueCategory})${photoCount > 0 ? ` avec ${photoCount} photo(s)` : ''} signalé au bailleur ! Prise en charge sous 24h.`
+    );
+  };
 
   // Sync search param & hash with active tab
   useEffect(() => {
@@ -425,6 +524,14 @@ export default function TenantPortalPage() {
                       <Smartphone className="w-4 h-4" />
                       <span>Déclarer un paiement de loyer</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setReportIssueModalOpen(true)}
+                      className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Wrench className="w-4 h-4 text-brand-300" />
+                      <span>Signaler une panne</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -558,6 +665,130 @@ export default function TenantPortalPage() {
                     <span className="text-base font-black text-emerald-700 mt-0.5 block">5 du mois</span>
                     <span className="text-[10px] text-slate-500">Au plus tard</span>
                   </div>
+                </div>
+              </div>
+
+              {/* Incidents & Demandes Techniques Signalés */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black">
+                      <Wrench className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-base text-slate-900">
+                        Incidents & Demandes Techniques Signalés
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Suivi en temps réel des réparations et interventions avec photos jointes.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setReportIssueModalOpen(true)}
+                    className="py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer self-start sm:self-auto"
+                  >
+                    <Wrench className="w-3.5 h-3.5 text-brand-400" />
+                    <span>+ Signaler une nouvelle panne</span>
+                  </button>
+                </div>
+
+                <div className="space-y-3 pt-1">
+                  {reportedIncidents.map((incident) => (
+                    <div
+                      key={incident.id}
+                      className="p-4 sm:p-5 rounded-2xl bg-slate-50/70 border border-slate-200/90 space-y-3"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs font-black text-slate-900">
+                            {incident.id}
+                          </span>
+                          <span className="text-slate-300">•</span>
+                          <span className="text-xs font-bold text-slate-800">
+                            {incident.category}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                              incident.urgency === 'critique'
+                                ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                : incident.urgency === 'urgente'
+                                ? 'bg-amber-100 text-amber-700 border border-amber-200'
+                                : 'bg-slate-200 text-slate-700'
+                            }`}
+                          >
+                            Urgence {incident.urgency}
+                          </span>
+
+                          <span
+                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase flex items-center gap-1 ${
+                              incident.status === 'resolu'
+                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                : incident.status === 'pris_en_charge'
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                                : 'bg-amber-100 text-amber-800 border border-amber-200'
+                            }`}
+                          >
+                            <Clock className="w-3 h-3" />
+                            <span>
+                              {incident.status === 'resolu'
+                                ? 'Résolu'
+                                : incident.status === 'pris_en_charge'
+                                ? 'Pris en charge'
+                                : 'En attente'}
+                            </span>
+                          </span>
+
+                          <span className="text-[11px] text-slate-400 font-medium">
+                            {incident.createdAt}
+                          </span>
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-slate-600 leading-relaxed">
+                        {incident.description}
+                      </p>
+
+                      {/* Photos attachées à l'incident */}
+                      {incident.photos && incident.photos.length > 0 && (
+                        <div className="pt-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Camera className="w-3.5 h-3.5 text-slate-400" />
+                            <span className="text-[11px] font-bold text-slate-600">
+                              Photos constatées ({incident.photos.length}) :
+                            </span>
+                            <span className="text-[10px] text-slate-400 italic">
+                              (cliquez pour zoomer)
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2.5">
+                            {incident.photos.map((photo, pIdx) => (
+                              <button
+                                key={pIdx}
+                                type="button"
+                                onClick={() => setPreviewIncidentPhoto(photo)}
+                                className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-200 shadow-xs hover:ring-2 hover:ring-brand-500 transition-all cursor-pointer group shrink-0"
+                              >
+                                <img
+                                  src={photo}
+                                  alt={`Constat ${incident.id} #${pIdx + 1}`}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                />
+                                <div className="absolute inset-0 bg-slate-900/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                  <ZoomIn className="w-4 h-4 text-white drop-shadow-md" />
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -1349,31 +1580,34 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
       {reportIssueModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
           <div
-            className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
+            className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between sticky top-0 z-10">
               <div className="flex items-center gap-2">
-                <Wrench className="w-5 h-5 text-brand-400" />
-                <h3 className="font-extrabold text-sm">
-                  Signaler un Incident / Panne
-                </h3>
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400">
+                  <Wrench className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm">
+                    Signaler un Incident / Panne
+                  </h3>
+                  <span className="text-[10px] text-slate-400">
+                    Assistance technique & constat avec photos
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setReportIssueModalOpen(false)}
-                className="p-1 rounded-xl text-slate-400 hover:text-white"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setReportIssueModalOpen(false);
-                showToast(`Incident (${issueCategory}) signalé au bailleur ! Prise en charge sous 24h.`);
-              }}
+              onSubmit={handleSubmitIssue}
               className="p-6 space-y-4 text-xs"
             >
               <div>
@@ -1402,10 +1636,10 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
                   <button
                     type="button"
                     onClick={() => setIssueUrgency('normale')}
-                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer ${
+                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer transition-all ${
                       issueUrgency === 'normale'
                         ? 'border-brand-500 bg-brand-50 text-brand-700 font-extrabold ring-1 ring-brand-500'
-                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     Normale
@@ -1413,10 +1647,10 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
                   <button
                     type="button"
                     onClick={() => setIssueUrgency('urgente')}
-                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer ${
+                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer transition-all ${
                       issueUrgency === 'urgente'
                         ? 'border-amber-500 bg-amber-50 text-amber-700 font-extrabold ring-1 ring-amber-500'
-                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     Urgente
@@ -1424,10 +1658,10 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
                   <button
                     type="button"
                     onClick={() => setIssueUrgency('critique')}
-                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer ${
+                    className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center cursor-pointer transition-all ${
                       issueUrgency === 'critique'
                         ? 'border-rose-500 bg-rose-50 text-rose-700 font-extrabold ring-1 ring-rose-500'
-                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                        : 'border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100'
                     }`}
                   >
                     Critique
@@ -1444,12 +1678,155 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
                   required
                   value={issueDesc}
                   onChange={(e) => setIssueDesc(e.target.value)}
-                  placeholder="Ex: Le split du salon ne refroidit plus depuis hier soir..."
+                  placeholder="Ex: Le split du salon ne refroidit plus depuis hier soir, odeur d'humidité au démarrage..."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2">
+              {/* Photos de la Panne / Incident */}
+              <div className="space-y-2.5 pt-1 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-slate-700 flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-brand-500" />
+                    <span>Photos constatées</span>
+                    <span className="text-[11px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
+                      {issuePhotos.length} photo{issuePhotos.length > 1 ? 's' : ''}
+                    </span>
+                  </label>
+                  <span className="text-[10px] text-slate-400 font-medium">Recommandé</span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Ajoutez une ou plusieurs photos pour accélérer l’intervention du bailleur ou de l'artisan.
+                </p>
+
+                {/* Upload Buttons */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="file"
+                    ref={issueFileInputRef}
+                    onChange={handleIssueFileUpload}
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => issueFileInputRef.current?.click()}
+                    className="py-2 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer active:scale-95"
+                  >
+                    <Camera className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Prendre / Choisir des photos</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowIssueUrlInput(!showIssueUrlInput)}
+                    className="py-2 px-3 rounded-xl border border-slate-200 hover:border-slate-300 bg-white text-slate-700 text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
+                    <span>{showIssueUrlInput ? 'Masquer URL' : '+ Ajouter par lien URL'}</span>
+                  </button>
+                </div>
+
+                {/* Champ URL optionnel */}
+                {showIssueUrlInput && (
+                  <div className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 border border-slate-200">
+                    <input
+                      type="url"
+                      value={issueUrlInput}
+                      onChange={(e) => setIssueUrlInput(e.target.value)}
+                      placeholder="https://... (URL de l'image)"
+                      className="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (issueUrlInput.trim()) {
+                          setIssuePhotos((prev) => [...prev, issueUrlInput.trim()]);
+                          setIssueUrlInput('');
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-brand-500 text-white font-bold text-xs hover:bg-brand-600 transition-colors cursor-pointer shrink-0"
+                    >
+                      Ajouter
+                    </button>
+                  </div>
+                )}
+
+                {/* Exemples rapides de panne UEMOA */}
+                <div className="pt-1">
+                  <span className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase tracking-wide">
+                    Exemples rapides (1 clic) :
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ISSUE_SAMPLE_PHOTOS.map((sample, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          if (!issuePhotos.includes(sample.url)) {
+                            setIssuePhotos((prev) => [...prev, sample.url]);
+                          }
+                        }}
+                        className="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-700 hover:border-brand-200 border border-slate-200 text-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Ajouter cette photo d'illustration"
+                      >
+                        <span>+ {sample.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Galerie des miniatures attachées */}
+                {issuePhotos.length > 0 ? (
+                  <div className="pt-2">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+                      {issuePhotos.map((photoUrl, idx) => (
+                        <div
+                          key={idx}
+                          className="relative aspect-square rounded-2xl overflow-hidden border-2 border-slate-200 group bg-slate-100 shadow-xs"
+                        >
+                          <img
+                            src={photoUrl}
+                            alt={`Photo panne ${idx + 1}`}
+                            className="w-full h-full object-cover transition-transform group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setPreviewIncidentPhoto(photoUrl)}
+                              className="p-1.5 rounded-lg bg-white/90 text-slate-900 hover:bg-white shadow-md transition-all cursor-pointer"
+                              title="Agrandir la photo"
+                            >
+                              <ZoomIn className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setIssuePhotos((prev) => prev.filter((_, i) => i !== idx))}
+                              className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-700 shadow-md transition-all cursor-pointer"
+                              title="Supprimer cette photo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                          <span className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md bg-slate-900/80 text-[9px] font-bold text-white group-hover:hidden">
+                            #{idx + 1}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 text-center">
+                    <ImageIcon className="w-6 h-6 text-slate-300 mx-auto mb-1" />
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      Aucune photo ajoutée pour l'instant (facultatif mais fortement recommandé)
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setReportIssueModalOpen(false)}
@@ -1462,10 +1839,40 @@ Cabinet DIALLO Patrimoine                    ${tenant.name}
                   className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-pink-glow flex items-center gap-1.5 cursor-pointer"
                 >
                   <Wrench className="w-3.5 h-3.5" />
-                  <span>Transmettre au bailleur</span>
+                  <span>Transmettre au bailleur ({issuePhotos.length} photo{issuePhotos.length > 1 ? 's' : ''})</span>
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal de Prévisualisation Grand Format Photo Panne */}
+      {previewIncidentPhoto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/90 backdrop-blur-md animate-in fade-in duration-150"
+          onClick={() => setPreviewIncidentPhoto(null)}
+        >
+          <div
+            className="relative max-w-3xl w-full max-h-[85vh] flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPreviewIncidentPhoto(null)}
+              className="absolute -top-12 right-0 p-2 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              aria-label="Fermer la prévisualisation"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={previewIncidentPhoto}
+              alt="Photo de la panne en grand format"
+              className="w-full max-h-[80vh] object-contain rounded-2xl shadow-2xl border border-white/20 bg-black/40"
+            />
+            <p className="text-white/80 text-xs mt-3 font-medium text-center">
+              Constat technique de l'incident • Photo transmise au bailleur
+            </p>
           </div>
         </div>
       )}
