@@ -509,13 +509,13 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Mention discrète Créée au Bénin (en bas à gauche) */}
+          {/* Mention discrète Créée au Bénin pour l'Afrique (en bas à gauche) */}
           <div className="mt-1.5 px-1 flex items-center justify-between text-[8px] text-slate-500 font-normal">
-            <span className="flex items-center gap-1 text-slate-400">
+            <span className="flex items-center gap-1 text-slate-400 truncate">
               <span className="text-[9px] leading-none">🇧🇯</span>
-              <span>Créée au Bénin</span>
+              <span>Créée au Bénin pour l'Afrique</span>
             </span>
-            <span className="text-slate-600">UEMOA</span>
+            <span className="text-slate-600 shrink-0 ml-1">UEMOA</span>
           </div>
         </div>
       </aside>
