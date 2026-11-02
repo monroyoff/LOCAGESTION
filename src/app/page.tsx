@@ -20,7 +20,7 @@ import {
 } from '@/lib/data/mock-data';
 import { UserSpace, PaymentTransaction } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
-import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight, Home } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
 import { IncidentService } from '@/lib/services/incident-service';
 import { notifyAction } from '@/lib/notifications/action-notifier';
 
@@ -78,18 +78,6 @@ export default function DashboardPage() {
 
         {/* Dashboard Body */}
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
-          {/* Bouton Accueil sur Mobile (juste en haut de la hero section) */}
-          <div className="lg:hidden flex items-center justify-between gap-2">
-            <button
-              type="button"
-              onClick={() => router.push('/')}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-black text-white text-xs font-black shadow-md active:scale-95 transition-all cursor-pointer"
-            >
-              <Home className="w-4 h-4 text-white" />
-              <span>Accueil</span>
-            </button>
-          </div>
-
           {/* Welcome & Context Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-gradient-to-r from-slate-900 via-[#131722] to-slate-900 rounded-3xl text-white shadow-xl relative overflow-hidden">
             {/* Background glowing sphere */}

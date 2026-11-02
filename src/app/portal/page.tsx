@@ -718,8 +718,8 @@ function TenantPortalContent() {
                 </div>
               )}
 
-              {/* Bouton Accueil sur Mobile (juste en haut de la hero section) */}
-              <div className="lg:hidden flex items-center justify-between gap-2">
+              {/* Bouton Accueil sur Mobile (juste en haut de la hero section - STRICTEMENT MOBILE < 640px) */}
+              <div className="sm:hidden flex items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => handleTabChange('accueil')}
@@ -1026,8 +1026,8 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'quittances' && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile */}
-              <div className="lg:hidden flex items-center gap-2">
+              {/* Bouton Retour Accueil sur Mobile (STRICTEMENT MOBILE < 640px) */}
+              <div className="sm:hidden flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleTabChange('accueil')}
@@ -1276,8 +1276,8 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'bail' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile */}
-              <div className="lg:hidden flex items-center gap-2">
+              {/* Bouton Retour Accueil sur Mobile (STRICTEMENT MOBILE < 640px) */}
+              <div className="sm:hidden flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleTabChange('accueil')}
@@ -1749,8 +1749,8 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'solvabilite' && (
             <div className="space-y-4 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile */}
-              <div className="lg:hidden flex items-center gap-2">
+              {/* Bouton Retour Accueil sur Mobile (STRICTEMENT MOBILE < 640px) */}
+              <div className="sm:hidden flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => handleTabChange('accueil')}
