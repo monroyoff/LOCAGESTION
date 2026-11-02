@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { useSpace } from '@/lib/context/space-context';
@@ -78,7 +79,7 @@ const ISSUE_SAMPLE_PHOTOS = [
   },
 ];
 
-export default function TenantPortalPage() {
+function TenantPortalContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { switchSpace } = useSpace();
 
@@ -165,7 +166,26 @@ export default function TenantPortalPage() {
     notifySave(issueMsg, 'Panne signalée avec succès !');
   };
 
+  const searchParams = useSearchParams();
+
   // Sync search param & hash with active tab & actions
+  useEffect(() => {
+    if (searchParams) {
+      const queryTab = searchParams.get('tab');
+      const action = searchParams.get('action');
+      if (queryTab === 'quittances' || queryTab === 'bail' || queryTab === 'solvabilite' || queryTab === 'accueil') {
+        setActiveTab(queryTab as any);
+      } else if (!queryTab && typeof window !== 'undefined' && !window.location.hash) {
+        setActiveTab('accueil');
+      }
+      if (action === 'declare_payment' || action === 'declare') {
+        setDeclarationModalOpen(true);
+      } else if (action === 'report_issue' || action === 'incident') {
+        setReportIssueModalOpen(true);
+      }
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const updateFromUrl = () => {
@@ -562,6 +582,8 @@ export default function TenantPortalPage() {
         {/* Main Tenant Container */}
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-5xl mx-auto w-full">
           {/* Top Segmented Navigation Tabs */}
+          {/* Sur Desktop (lg+) : affichage des 4 onglets complets */}
+          {/* Sur Mobile (<lg) : les 3 onglets "Mes Quittances & Reçus", "Mon Bail & Contrat" et "Passeport Solvabilité" sont déplacés dans le Menu Résident (Sidebar) */}
           <div className="flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
             <button
               type="button"
@@ -579,7 +601,7 @@ export default function TenantPortalPage() {
             <button
               type="button"
               onClick={() => handleTabChange('quittances')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'quittances'
                   ? 'bg-emerald-600 text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -599,7 +621,7 @@ export default function TenantPortalPage() {
             <button
               type="button"
               onClick={() => handleTabChange('bail')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'bail'
                   ? 'bg-brand-500 text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -612,7 +634,7 @@ export default function TenantPortalPage() {
             <button
               type="button"
               onClick={() => handleTabChange('solvabilite')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'solvabilite'
                   ? 'bg-blue-600 text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -629,6 +651,46 @@ export default function TenantPortalPage() {
               </span>
             </button>
           </div>
+
+          {/* Bandeau d'indication sur Mobile lorsque l'une des rubriques du Menu Résident est affichée */}
+          {activeTab !== 'accueil' && (
+            <div className="lg:hidden flex items-center justify-between p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm animate-in fade-in duration-150">
+              <div className="flex items-center gap-3 min-w-0">
+                <span
+                  className={`p-2 rounded-xl text-white shrink-0 shadow-sm ${
+                    activeTab === 'quittances'
+                      ? 'bg-emerald-600 shadow-emerald-500/20'
+                      : activeTab === 'bail'
+                      ? 'bg-brand-500 shadow-pink-glow'
+                      : 'bg-blue-600 shadow-blue-500/20'
+                  }`}
+                >
+                  {activeTab === 'quittances' && <Receipt className="w-4 h-4" />}
+                  {activeTab === 'bail' && <FileText className="w-4 h-4" />}
+                  {activeTab === 'solvabilite' && <ShieldCheck className="w-4 h-4" />}
+                </span>
+                <div className="min-w-0">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                    Menu Résident • Section Active
+                  </span>
+                  <span className="text-xs font-black text-slate-900 block truncate">
+                    {activeTab === 'quittances' && 'Mes Quittances & Reçus'}
+                    {activeTab === 'bail' && 'Mon Bail & Contrat'}
+                    {activeTab === 'solvabilite' && 'Passeport Solvabilité'}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('accueil')}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <Home className="w-3.5 h-3.5" />
+                <span>Mon Logement</span>
+              </button>
+            </div>
+          )}
 
           {/* ==================================================================== */}
           {/* ONGLET 1 : ACCUEIL / MON LOGEMENT & LOYER                             */}
@@ -2332,5 +2394,19 @@ export default function TenantPortalPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function TenantPortalPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+        </div>
+      }
+    >
+      <TenantPortalContent />
+    </Suspense>
   );
 }

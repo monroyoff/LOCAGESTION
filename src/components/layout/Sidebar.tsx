@@ -43,6 +43,7 @@ interface NavItem {
   badge?: string;
   badgeCount?: number;
   badgeColor?: string;
+  mobileOnly?: boolean;
 }
 
 interface SidebarProps {
@@ -107,6 +108,25 @@ export function Sidebar({
       window.removeEventListener('storage', updateCount);
     };
   }, []);
+
+  // Détection de l'onglet actif du portail pour le menu résident
+  const [currentPortalTab, setCurrentPortalTab] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const readTab = () => {
+        const params = new URLSearchParams(window.location.search);
+        setCurrentPortalTab(params.get('tab'));
+      };
+      readTab();
+      window.addEventListener('popstate', readTab);
+      window.addEventListener('hashchange', readTab);
+      return () => {
+        window.removeEventListener('popstate', readTab);
+        window.removeEventListener('hashchange', readTab);
+      };
+    }
+  }, [pathname]);
 
   // ============================================================================
   // NAVIGATION BAILLEUR (Gestion du patrimoine, encaissements, locataires, baux)
@@ -182,7 +202,31 @@ export function Sidebar({
       name: 'Mon Logement & Loyer',
       href: '/portal',
       icon: Home,
-      active: pathname === '/portal',
+      active: pathname === '/portal' && (!currentPortalTab || currentPortalTab === 'accueil'),
+    },
+    // Déplacés dans le Menu Résident UNIQUEMENT SUR MOBILE :
+    {
+      name: 'Mes Quittances & Reçus',
+      href: '/portal?tab=quittances',
+      icon: Receipt,
+      active: pathname === '/portal' && currentPortalTab === 'quittances',
+      count: '6',
+      mobileOnly: true,
+    },
+    {
+      name: 'Mon Bail & Contrat',
+      href: '/portal?tab=bail',
+      icon: FileText,
+      active: pathname === '/portal' && currentPortalTab === 'bail',
+      mobileOnly: true,
+    },
+    {
+      name: 'Passeport Solvabilité',
+      href: '/portal?tab=solvabilite',
+      icon: ShieldCheck,
+      active: pathname === '/portal' && currentPortalTab === 'solvabilite',
+      badge: '96/100',
+      mobileOnly: true,
     },
     {
       name: 'Messages avec le Bailleur',
@@ -320,7 +364,10 @@ export function Sidebar({
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-semibold transition-all group ${
+                onClick={onClose}
+                className={`${
+                  item.mobileOnly ? 'lg:hidden ' : ''
+                }flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-semibold transition-all group ${
                   item.active
                     ? isLandlord
                       ? 'bg-white/[0.08] text-white shadow-sm font-bold'

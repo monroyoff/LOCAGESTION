@@ -165,11 +165,10 @@ export default function PropertiesPage() {
                       setSelectedProperty(prop);
                       setDetailModalProperty(prop);
                     }}
-                    className={`bg-white rounded-3xl border overflow-hidden transition-all cursor-pointer group hover:shadow-card-hover relative flex flex-col justify-between ${
-                      isSelected
-                        ? 'border-brand-500 ring-2 ring-brand-500/20 shadow-md'
-                        : 'border-slate-200/80 shadow-soft'
-                    }`}
+                    className={`bg-white rounded-3xl border overflow-hidden transition-all cursor-pointer group hover:shadow-card-hover relative flex flex-col justify-between ${isSelected
+                      ? 'border-brand-500 ring-2 ring-brand-500/20 shadow-md'
+                      : 'border-slate-200/80 shadow-soft'
+                      }`}
                   >
                     {/* Image Header with Corbeille & Photos Badges */}
                     <div>
@@ -357,11 +356,10 @@ export default function PropertiesPage() {
                         <div className="flex items-center gap-2">
                           <span className="font-black text-xs text-slate-900 group-hover:text-brand-600 transition-colors">{l.unit}</span>
                           <span
-                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                              l.status === 'occupe'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
+                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${l.status === 'occupe'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                              }`}
                           >
                             {l.status === 'occupe' ? 'Occupé' : 'Vacant'}
                           </span>
