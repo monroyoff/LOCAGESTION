@@ -182,7 +182,7 @@ export function Sidebar({
       badge: 'Nouveau',
     },
     {
-      name: 'Centre de relances',
+      name: 'Relances & Préavis',
       href: '/reminders',
       icon: BellRing,
       active: pathname.startsWith('/reminders'),

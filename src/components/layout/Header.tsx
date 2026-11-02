@@ -229,7 +229,7 @@ export function Header({
     if (pathname === '/leases') return 'Contrats de Bail';
     if (pathname === '/leases/new') return 'Création de Bail';
     if (pathname === '/listings') return 'Annonces & Visites';
-    if (pathname === '/reminders') return 'Relances & Impayés';
+    if (pathname === '/reminders') return 'Relances & Préavis';
     if (pathname === '/messages') return 'Messagerie Directe';
     return 'Tableau de bord';
   };

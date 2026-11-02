@@ -273,3 +273,4 @@ Tél : +229 97 12 34 56 • Email : gestion@locagestion.bj`;
     </div>
   );
 }
+
