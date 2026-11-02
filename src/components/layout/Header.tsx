@@ -213,13 +213,13 @@ export function Header({
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="min-w-0 flex-1">
+          <div className="hidden sm:block min-w-0 flex-1">
             <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-xs sm:text-base md:text-xl lg:text-2xl font-black text-slate-900 tracking-tight truncate">
+              <h1 className="text-base md:text-xl lg:text-2xl font-black text-slate-900 tracking-tight truncate">
                 {isLandlord ? 'Tableau de bord' : 'Mon Espace Locataire'}
               </h1>
               <span
-                className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${
                   isLandlord
                     ? 'bg-brand-50 text-brand-600 border-brand-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -230,7 +230,7 @@ export function Header({
               </span>
             </div>
 
-            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 font-medium">
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span className="truncate">Aujourd’hui : {todayFormatted}</span>
             </div>

@@ -1211,17 +1211,17 @@ function TenantPortalContent() {
                   <div
                     key={rec.id}
                     onClick={() => setSelectedReceipt(rec)}
-                    className="py-4.5 flex items-center justify-between gap-4 hover:bg-slate-50 px-3.5 rounded-2xl transition-colors cursor-pointer group"
+                    className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-slate-50 px-3.5 rounded-2xl transition-colors cursor-pointer group"
                   >
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black group-hover:scale-105 transition-transform">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black group-hover:scale-105 transition-transform shrink-0">
                         <Receipt className="w-5 h-5" />
                       </div>
-                      <div>
-                        <h4 className="text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                      <div className="min-w-0">
+                        <h4 className="text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
                           Quittance de Loyer — {rec.period}
                         </h4>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5 font-medium">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400 mt-0.5 font-medium">
                           <span className="font-mono text-slate-600 font-bold">{rec.receiptNumber}</span>
                           <span>•</span>
                           <span>Payé le {rec.paymentDate} via {rec.method ? rec.method.toUpperCase() : 'WAVE'}</span>
@@ -1234,8 +1234,8 @@ function TenantPortalContent() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
-                      <div className="text-right">
+                    <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                      <div className="text-left sm:text-right">
                         <span className="text-sm font-black text-slate-900 block">
                           {formatFCFA(rec.amount)}
                         </span>
@@ -1256,7 +1256,7 @@ function TenantPortalContent() {
                           e.stopPropagation();
                           setSelectedReceipt(rec);
                         }}
-                        className="py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm"
+                        className="py-2 px-3.5 rounded-xl bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm shrink-0"
                       >
                         <Download className="w-3.5 h-3.5" />
                         <span>PDF</span>
@@ -1304,7 +1304,7 @@ function TenantPortalContent() {
                   </div>
 
                   {/* Sub-Tabs Selector */}
-                  <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-2xl self-start sm:self-auto border border-slate-200/60">
+                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 p-1 bg-slate-100 rounded-2xl self-start sm:self-auto border border-slate-200/60 max-w-full">
                     <button
                       type="button"
                       onClick={() => setBailSubTab('tout')}
@@ -1830,7 +1830,7 @@ function TenantPortalContent() {
                   </button>
                 </div>
 
-                <div className="text-xs text-slate-500 pt-3 border-t border-slate-200 flex items-center justify-between">
+                <div className="text-xs text-slate-500 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <span>
                     Statut actuel :{' '}
                     <strong className={consentGranted ? 'text-emerald-600 font-bold' : 'text-slate-600'}>
