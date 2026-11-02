@@ -1277,18 +1277,6 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'bail' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil (visible sur mobile et desktop) */}
-              <div className="flex items-center gap-2 pb-1">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('accueil')}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <Home className="w-4 h-4 text-slate-600" />
-                  <span>← Retour à l’Accueil</span>
-                </button>
-              </div>
-
               {/* Header Box with Sub-Selector */}
               <div className="bg-white rounded-3xl p-4 sm:p-7 border border-slate-200/80 shadow-soft">
                 {/* Bouton Retour Accueil en haut de la carte (visible sur mobile et desktop) */}

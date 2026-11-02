@@ -67,20 +67,6 @@ const PRESET_AVATARS = [
   },
 ];
 
-const BENIN_DISTRICT_SUGGESTIONS = [
-  'Haie Vive',
-  'Cadjèhoun',
-  'Agla',
-  'Fidjrossè',
-  'Akpakpa',
-  'Menontin',
-  'Zogbo',
-  'Godomey',
-  'Cocotomey',
-  'Cococodji',
-  'Arconville',
-  'Porto-Novo',
-];
 
 export function UserProfileModal({
   isOpen,
@@ -477,27 +463,6 @@ export function UserProfileModal({
                   placeholder="ex: Haie Vive, Agla, Fidjrossè, Akpakpa, Menontin, Zogbo, Godomey, Cocotomey, Cococodji..."
                   className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                 />
-
-                {/* Suggestions rapides si Bénin */}
-                {profile.residenceCountry === 'Bénin' && (
-                  <div className="flex items-center gap-1 flex-wrap pt-1">
-                    <span className="text-[10px] text-slate-400 font-bold mr-1">Suggestions :</span>
-                    {BENIN_DISTRICT_SUGGESTIONS.slice(0, 8).map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        onClick={() => setProfile({ ...profile, residenceDistrict: d })}
-                        className={`text-[10px] px-2 py-0.5 rounded-full border transition-all cursor-pointer ${
-                          profile.residenceDistrict === d
-                            ? 'bg-brand-500 text-white border-brand-500 font-bold'
-                            : 'bg-white text-slate-600 border-slate-200 hover:border-brand-300'
-                        }`}
-                      >
-                        {d}
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
           </div>
