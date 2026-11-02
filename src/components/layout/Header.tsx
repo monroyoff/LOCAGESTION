@@ -415,7 +415,10 @@ export function Header({
       {/* BOUTON SÉLECTIONNÉ : NOIR INTENSE (bg-black text-white)            */}
       {/* ==================================================================== */}
       {isTenant && (
-        <div className="lg:hidden border-t border-slate-200/80 bg-white/95 backdrop-blur-md px-3 py-2 overflow-x-auto scrollbar-none shadow-xs">
+        <div
+          className="lg:hidden border-t border-slate-200/80 bg-white/95 backdrop-blur-md px-3 py-2 overflow-x-auto scrollbar-none shadow-xs"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
           <div className="flex items-center gap-2 px-1 min-w-max">
             {/* 1. Mon Logement & Loyer */}
             <button
