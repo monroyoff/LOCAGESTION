@@ -58,6 +58,28 @@ export interface InspectionPDFData {
   generalState?: string;
 }
 
+export interface NoticePDFData {
+  id: string;
+  tenantName: string;
+  tenantPhone?: string;
+  tenantEmail?: string;
+  propertyName: string;
+  unitNumber: string;
+  monthlyRent: number;
+  reasonType: string;
+  reasonTitle: string;
+  reasonDetails: string;
+  noticeMonths: number;
+  noticeDate: string;
+  effectiveDate: string;
+  deliveryMethod: string;
+  beneficiaryName?: string;
+  salePrice?: number;
+  legalBasis?: string;
+  departureInspectionDate?: string;
+  notes?: string;
+}
+
 // ============================================================================
 // 1. GÉNÉRATION CONTRAT DE BAIL OFFICIEL (PDF)
 // ============================================================================
@@ -679,6 +701,276 @@ export function generateInspectionPDF(data: InspectionPDFData, customFilename?: 
 }
 
 // ============================================================================
+// 3bis. GÉNÉRATION NOTIFICATION OFFICIELLE DE PRÉAVIS / CONGÉ (PDF)
+// ============================================================================
+
+export function generateNoticePDF(data: NoticePDFData, customFilename?: string): void {
+  if (typeof window === 'undefined') return;
+
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 16;
+  const contentWidth = pageWidth - margin * 2; // 178 mm
+  let y = 14;
+
+  // 1. En-tête Institutionnel
+  doc.setFillColor(15, 23, 42); // slate-900
+  doc.rect(margin, y, contentWidth, 18, 'F');
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('RÉPUBLIQUE DU BÉNIN • ESPACE UEMOA & DROIT OHADA', margin + contentWidth / 2, y + 6, {
+    align: 'center',
+  });
+
+  doc.setFontSize(10.5);
+  doc.text('NOTIFICATION OFFICIELLE DE PRÉAVIS DE CONGÉ DU BAIL', margin + contentWidth / 2, y + 13, {
+    align: 'center',
+  });
+
+  y += 23;
+
+  // 2. Bandeau Références & Délais Légaux
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(margin, y, contentWidth, 15, 2, 2, 'FD');
+
+  doc.setTextColor(30, 41, 59);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.text(`RÉFÉRENCE : ${data.id}`, margin + 4, y + 6);
+  doc.text(`DATE D’ÉMISSION : ${data.noticeDate}`, margin + 4, y + 11);
+
+  doc.text(`PRÉAVIS LÉGAL : ${data.noticeMonths} MOIS`, margin + 65, y + 6);
+  doc.text(`MODE : ${data.deliveryMethod.toUpperCase()}`, margin + 65, y + 11);
+
+  doc.setTextColor(190, 18, 60); // rose-700
+  doc.text(`LIBÉRATION EXIGIBLE LE : ${data.effectiveDate}`, margin + contentWidth - 4, y + 8.5, {
+    align: 'right',
+  });
+
+  y += 20;
+
+  // 3. Identification des Parties (Bailleur & Locataire)
+  const colWidth = (contentWidth - 6) / 2;
+
+  // Cadre Bailleur
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(margin, y, colWidth, 34, 2, 2, 'FD');
+
+  doc.setFillColor(241, 245, 249);
+  doc.roundedRect(margin + 2, y + 2, colWidth - 4, 6.5, 1, 1, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 41, 59);
+  doc.text('LE BAILLEUR / GESTIONNAIRE', margin + 4, y + 6.5);
+
+  doc.setFontSize(8);
+  doc.setTextColor(51, 65, 85);
+  doc.text('Cabinet DIALLO Patrimoine Immobilier', margin + 4, y + 13);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('Représenté par Mamadou DIALLO', margin + 4, y + 17.5);
+  doc.text('Rue 340, Haie Vive, Cotonou (Bénin)', margin + 4, y + 22);
+  doc.text('Tél : +229 97 12 34 56 • Email : gestion@locagestion.bj', margin + 4, y + 26.5);
+  doc.text('Réf. Mandat de Gestion : MANDAT-2026-COTI', margin + 4, y + 31);
+
+  // Cadre Locataire & Logement
+  const col2X = margin + colWidth + 6;
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(col2X, y, colWidth, 34, 2, 2, 'FD');
+
+  doc.setFillColor(241, 245, 249);
+  doc.roundedRect(col2X + 2, y + 2, colWidth - 4, 6.5, 1, 1, 'F');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 41, 59);
+  doc.text('LE PRENEUR / LOCATAIRE DÉSIGNÉ', col2X + 4, y + 6.5);
+
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  doc.text(`M./Mme ${data.tenantName}`, col2X + 4, y + 13);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text(`Contact : ${data.tenantPhone || '+229 -- -- -- --'}`, col2X + 4, y + 17.5);
+  doc.text(`Immeuble : ${data.propertyName}`, col2X + 4, y + 22);
+  doc.text(`Lot d'habitation : ${data.unitNumber}`, col2X + 4, y + 26.5);
+  doc.text(`Loyer contractuel : ${formatFCFA(data.monthlyRent)} / mois`, col2X + 4, y + 31);
+
+  y += 39;
+
+  // 4. Cadre Exposé des Motifs Légaux du Préavis
+  doc.setFillColor(254, 242, 242); // rose-50
+  doc.setDrawColor(254, 205, 211); // rose-200
+  doc.roundedRect(margin, y, contentWidth, 38, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(159, 18, 57); // rose-800
+  doc.text(`MOTIF OFFICIEL DU CONGÉ : ${data.reasonTitle.toUpperCase()}`, margin + 4, y + 6.5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.5);
+  doc.setTextColor(51, 65, 85);
+  const splitDetails = doc.splitTextToSize(data.reasonDetails, contentWidth - 8);
+  doc.text(splitDetails, margin + 4, y + 12.5);
+
+  let subY = y + 22;
+  if (data.beneficiaryName) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Bénéficiaire désigné de la reprise : ${data.beneficiaryName}`, margin + 4, subY);
+    subY += 4.5;
+  }
+  if (data.salePrice) {
+    doc.setFont('helvetica', 'bold');
+    doc.text(
+      `Prix de vente notifié (Droit légal de préemption) : ${formatFCFA(data.salePrice)}`,
+      margin + 4,
+      subY
+    );
+    subY += 4.5;
+  }
+
+  doc.setFont('helvetica', 'italic');
+  doc.setFontSize(6.8);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    `Fondement juridique : ${data.legalBasis || 'Code Foncier et Domanial & Réglementation UEMOA des baux d’habitation'}`,
+    margin + 4,
+    y + 34
+  );
+
+  y += 43;
+
+  // 5. Clause Exigibilité et Délai de Libération
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(margin, y, contentWidth, 22, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  doc.text('DÉLAI DE PRÉAVIS & DATE IMPÉRATIVE DE LIBÉRATION DES LIEUX', margin + 4, y + 6);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.2);
+  doc.setTextColor(51, 65, 85);
+  doc.text(
+    `Conformément aux stipulations contractuelles et à la législation en vigueur, un délai de préavis de ${data.noticeMonths} mois entiers`,
+    margin + 4,
+    y + 11
+  );
+  doc.text(
+    `commence à courir à compter de la réception de la présente notification. En conséquence, les lieux devront être intégralement`,
+    margin + 4,
+    y + 15
+  );
+  doc.text(
+    `libérés, vides de tout bien meuble et de tout occupant, au plus tard le ${data.effectiveDate} à 18h00.`,
+    margin + 4,
+    y + 19
+  );
+
+  y += 27;
+
+  // 6. Rappel des Obligations Contractuelles
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(226, 232, 240);
+  doc.roundedRect(margin, y, contentWidth, 34, 2, 2, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 41, 59);
+  doc.text('PRESCRIPTIONS JURIDIQUES & OBLIGATIONS JUSQU’AU DÉPART DÉFINITIF', margin + 4, y + 5.5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.setTextColor(71, 85, 105);
+  doc.text(
+    '1. Paiement du Loyer : Le preneur reste tenu au paiement régulier des loyers et des charges jusqu’à restitution des clés.',
+    margin + 4,
+    y + 11
+  );
+  doc.text(
+    '2. Dépôt de Garantie : La caution ne peut en aucun cas se substituer au paiement des derniers termes de loyer exigibles.',
+    margin + 4,
+    y + 16
+  );
+  doc.text(
+    `3. État des Lieux de Sortie : Fixé contradictoirement au ${data.departureInspectionDate || data.effectiveDate} avec relevé des compteurs eau/électricité.`,
+    margin + 4,
+    y + 21
+  );
+  doc.text(
+    '4. Restitution des Clés : La restitution de toutes les clés opérera le transfert effectif de la garde juridique du bien au bailleur.',
+    margin + 4,
+    y + 26
+  );
+  doc.text(
+    '5. Remboursement de Caution : Restituée sous 30 jours déduction faite des éventuelles réparations locatives justifiées.',
+    margin + 4,
+    y + 31
+  );
+
+  y += 39;
+
+  // 7. Signatures et Accusé de Réception
+  const sigBoxWidth = (contentWidth - 6) / 2;
+  doc.setFillColor(248, 250, 252);
+  doc.setDrawColor(203, 213, 225);
+
+  // Signature Bailleur
+  doc.roundedRect(margin, y, sigBoxWidth, 26, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 41, 59);
+  doc.text('Pour le Bailleur / Gestionnaire', margin + 4, y + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+  doc.setTextColor(100, 116, 139);
+  doc.text('Mamadou DIALLO • Signé numériquement ✓', margin + 4, y + 10);
+  doc.text(`Fait à Cotonou, le ${data.noticeDate}`, margin + 4, y + 15);
+  doc.text('Cachet certifié LOCAGESTION UEMOA', margin + 4, y + 20);
+
+  // Accusé de réception Preneur
+  doc.roundedRect(col2X, y, sigBoxWidth, 26, 2, 2, 'FD');
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(7.5);
+  doc.setTextColor(30, 41, 59);
+  doc.text('Accusé de Réception par le Preneur', col2X + 4, y + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.8);
+  doc.setTextColor(100, 116, 139);
+  doc.text(`M./Mme ${data.tenantName}`, col2X + 4, y + 10);
+  doc.text(`Mode : ${data.deliveryMethod.toUpperCase()}`, col2X + 4, y + 15);
+  doc.text('Mention : "Pris connaissance le ........./........./2026"', col2X + 4, y + 20);
+
+  // Bas de page
+  y = pageHeight - 12;
+  doc.setDrawColor(226, 232, 240);
+  doc.line(margin, y - 2, margin + contentWidth, y - 2);
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text(
+    `LOCAGESTION UEMOA & CEMAC • Notification formelle de congé avec préavis • Réf: ${data.id}`,
+    margin,
+    y + 2
+  );
+
+  const filename = customFilename || `preavis-${data.id}.pdf`;
+  doc.save(filename);
+  notifyDownloadComplete(filename);
+}
+
+// ============================================================================
 // 4. RETRO-COMPATIBILITÉ downloadDocument & generateLeaseContent
 // ============================================================================
 
@@ -726,6 +1018,26 @@ export function downloadDocument(filename: string, content: string, mimeType: st
       tenantName: 'Koffi Mensah',
       propertyName: 'Résidence Les Cocotiers',
       unit: 'Appt A3 (3 pièces)',
+    }, filename.replace('.txt', '.pdf'));
+    return;
+  }
+
+  if (filename.includes('preavis-')) {
+    const idMatch = filename.match(/preavis-(.+?)\./);
+    const noticeId = idMatch ? idMatch[1] : 'PREAV-2026-001';
+    generateNoticePDF({
+      id: noticeId,
+      tenantName: 'Jean-Marc Kouassi',
+      propertyName: 'Immeuble Palmier Royal',
+      unitNumber: 'Lot 101',
+      monthlyRent: 120000,
+      reasonType: 'reprise_personnelle',
+      reasonTitle: 'Reprise pour Habitation Personnelle',
+      reasonDetails: 'Le propriétaire reprend possession des lieux pour son habitation personnelle.',
+      noticeMonths: 3,
+      noticeDate: '01/10/2026',
+      effectiveDate: '31/12/2026',
+      deliveryMethod: 'huissier',
     }, filename.replace('.txt', '.pdf'));
     return;
   }
