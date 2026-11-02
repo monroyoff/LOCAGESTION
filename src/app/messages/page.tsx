@@ -695,7 +695,7 @@ export default function MessagesPage() {
                 <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0" />
                 Sécurité LOCAGESTION : Ne versez jamais de caution avant d’avoir visité les lieux en personne.
               </span>
-              <span className="font-bold text-amber-700 hidden sm:inline">UEMOA Protection</span>
+              <span className="font-bold text-amber-700 hidden sm:inline">UEMOA & CEMAC Protection</span>
             </div>
 
             {/* Message Input Box (Bottom) */}

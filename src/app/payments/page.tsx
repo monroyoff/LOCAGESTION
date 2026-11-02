@@ -141,7 +141,7 @@ export default function PaymentsPage() {
       p.amount,
       p.expectedAmount,
       p.status === 'paye' ? 'SOLDÉ' : p.status === 'en_retard' ? 'EN RETARD' : 'PARTIEL',
-      p.isVerified ? 'CERTIFIÉ UEMOA' : 'EN ATTENTE',
+      p.isVerified ? 'CERTIFIÉ UEMOA & CEMAC' : 'EN ATTENTE',
     ]);
 
     downloadCSV('grand-livre-encaissements-locagestion-2026', headers, rows);

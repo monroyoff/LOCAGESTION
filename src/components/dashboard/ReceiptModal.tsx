@@ -58,7 +58,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
                 Quittance de Loyer Officielle Certifiée
               </span>
               <span className="text-[10px] text-slate-400 block">
-                Réf : {payment.receiptNumber} • Conforme UEMOA & OHADA
+                Réf : {payment.receiptNumber} • Conforme UEMOA, CEMAC & OHADA
               </span>
             </div>
           </div>
@@ -196,7 +196,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               <div className="w-16 h-16 rounded-2xl border-2 border-brand-500/40 border-dashed flex flex-col items-center justify-center p-2 text-center text-brand-600">
                 <span className="text-[8px] font-black uppercase">Cachet Électronique</span>
                 <span className="text-[9px] font-bold">LOCAGESTION</span>
-                <span className="text-[7px]">Certifié UEMOA</span>
+                <span className="text-[7px]">Certifié UEMOA & CEMAC</span>
               </div>
               <div className="text-xs text-slate-500">
                 <span className="font-bold text-slate-800 block">Signé numériquement</span>

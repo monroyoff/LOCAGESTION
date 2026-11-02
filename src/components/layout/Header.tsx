@@ -54,7 +54,7 @@ const SEED_TENANT_NOTIFS: TenantNotification[] = [
   {
     id: 't-notif-1',
     title: 'Quittance officielle certifiée',
-    message: 'Votre loyer de Novembre 2026 (220 000 FCFA) a été validé. La quittance officielle UEMOA avec QR Code est disponible.',
+    message: 'Votre loyer de Novembre 2026 (220 000 FCFA) a été validé. La quittance officielle UEMOA & CEMAC avec QR Code est disponible.',
     time: 'Aujourd’hui',
     timestamp: 'À l’instant',
     type: 'receipt_issued',
@@ -226,7 +226,7 @@ export function Header({
                 }`}
               >
                 {isLandlord ? <Sparkles className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
-                {isLandlord ? 'Espace Bailleur • UEMOA' : 'Locataire Titulaire'}
+                {isLandlord ? 'Espace Bailleur • UEMOA & CEMAC' : 'Locataire Titulaire'}
               </span>
             </div>
 

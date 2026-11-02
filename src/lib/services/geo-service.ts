@@ -26,7 +26,7 @@ export const DEFAULT_RESIDENCE_DISTRICT = 'Haie Vive';
 
 /**
  * Coordonnées GPS des principales communes, villes et quartiers
- * de la zone UEMOA (avec focus haute précision sur le Bénin).
+ * des zones UEMOA & CEMAC (avec focus haute précision sur le Bénin).
  */
 export const KNOWN_ZONE_COORDINATES: Record<
   string,

@@ -2,7 +2,7 @@
 
 /**
  * Moteur universel de génération de PDF officiels haute fidélité
- * Génère de véritables fichiers .pdf (A4 vectoriel) conformes aux normes UEMOA/OHADA
+ * Génère de véritables fichiers .pdf (A4 vectoriel) conformes aux normes UEMOA/CEMAC/OHADA
  */
 
 import jsPDF from 'jspdf';
@@ -84,7 +84,7 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
-  doc.text('RÉPUBLIQUE DU BÉNIN • ESPACE UEMOA & OHADA', margin + contentWidth / 2, y + 6, {
+  doc.text('RÉPUBLIQUE DU BÉNIN • ESPACE UEMOA, CEMAC & OHADA', margin + contentWidth / 2, y + 6, {
     align: 'center',
   });
 
@@ -215,7 +215,7 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
 
   y += 32;
 
-  // 6. Clauses et Engagements Juridiques UEMOA / OHADA
+  // 6. Clauses et Engagements Juridiques UEMOA / CEMAC / OHADA
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin, y, contentWidth, 48, 2, 2, 'FD');
@@ -292,7 +292,7 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   doc.setTextColor(148, 163, 184);
   const hash = data.hashSha256 || '9f83a84f3e8b0129cd8a77f2409849204820194820183029482019482019a84f';
   doc.text(
-    `LOCAGESTION UEMOA • Piste d'audit SHA-256 : ${hash.substring(0, 48)}... • Document officiel opposable de plein droit`,
+    `LOCAGESTION UEMOA & CEMAC • Piste d'audit SHA-256 : ${hash.substring(0, 48)}... • Document officiel opposable de plein droit`,
     margin,
     y + 2
   );
@@ -515,7 +515,7 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
   doc.text(`Code de vérification : /verify/${payment.id || payment.receiptNumber}`, margin + 4, y + 22);
-  doc.text('Document probant conforme SYSCOHADA et législation fiscale UEMOA', margin + 4, y + 27);
+  doc.text('Document probant conforme SYSCOHADA et législation fiscale UEMOA & CEMAC', margin + 4, y + 27);
 
   // Bas de page
   y = pageHeight - 12;
@@ -525,7 +525,7 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    `LOCAGESTION UEMOA • Quittance certifiée conforme • Réf: ${payment.receiptNumber} • Tous droits réservés`,
+    `LOCAGESTION UEMOA & CEMAC • Quittance certifiée conforme • Réf: ${payment.receiptNumber} • Tous droits réservés`,
     margin,
     y + 2
   );
@@ -668,7 +668,7 @@ export function generateInspectionPDF(data: InspectionPDFData, customFilename?: 
   doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
   doc.text(
-    `LOCAGESTION UEMOA • Procès-verbal contradictoire d'état des lieux • Réf: ${data.id}`,
+    `LOCAGESTION UEMOA & CEMAC • Procès-verbal contradictoire d'état des lieux • Réf: ${data.id}`,
     margin,
     y + 2
   );

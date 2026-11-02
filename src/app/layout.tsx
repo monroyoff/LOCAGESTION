@@ -5,7 +5,7 @@ import { GlobalDownloadToast } from '@/components/ui/GlobalDownloadToast';
 import { GlobalCenterToast } from '@/components/ui/GlobalCenterToast';
 
 export const metadata: Metadata = {
-  title: 'LOCAGESTION — Plateforme de Gestion Locative & Immobilière UEMOA',
+  title: 'LOCAGESTION — Plateforme de Gestion Locative & Immobilière UEMOA & CEMAC',
   description:
     'SaaS moderne de gestion locative, baux, encaissement de loyers, solvabilité et quittances certifiées en Afrique de l’Ouest et Centrale.',
 };

@@ -114,7 +114,7 @@ export default function RemindersCenterPage() {
                   Centre de Relances Automatiques & Suivi
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand-50 text-brand-600 border border-brand-200">
-                  UEMOA Workflow
+                  UEMOA & CEMAC Workflow
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">

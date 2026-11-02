@@ -89,7 +89,7 @@ export default function LoginPage() {
               LOCA<span className="text-brand-400">GESTION</span>
             </span>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-              SaaS Gestion Locative UEMOA
+              SaaS Gestion Locative UEMOA & CEMAC
             </span>
           </div>
         </div>
@@ -259,7 +259,7 @@ export default function LoginPage() {
         <div className="mt-6 flex items-center justify-center gap-4 text-[11px] text-slate-500 font-medium">
           <span className="flex items-center gap-1.5">
             <ShieldCheck className="w-3.5 h-3.5 text-tealAccent-400" />
-            <span>Conformité OHADA & UEMOA</span>
+            <span>Conformité OHADA, UEMOA & CEMAC</span>
           </span>
           <span>•</span>
           <span>Données Chiffrées</span>

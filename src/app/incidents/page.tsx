@@ -923,7 +923,7 @@ function IncidentsPageContent() {
                 )}
               </div>
 
-              {/* Guide Pratique & Numéros d'Urgence UEMOA */}
+              {/* Guide Pratique & Numéros d'Urgence UEMOA & CEMAC */}
               <div className="p-6 rounded-3xl bg-slate-900 text-white shadow-soft space-y-4">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center">
@@ -931,7 +931,7 @@ function IncidentsPageContent() {
                   </div>
                   <div>
                     <h4 className="text-xs font-black uppercase tracking-wider text-rose-400">
-                      Urgences & Numéros Utiles (Zone UEMOA)
+                      Urgences & Numéros Utiles (Zone UEMOA & CEMAC)
                     </h4>
                     <p className="text-[11px] text-slate-400">
                       En cas de fuite majeure menaçant l'immeuble ou de coupure générale d'eau / électricité :

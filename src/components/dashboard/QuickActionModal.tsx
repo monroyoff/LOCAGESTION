@@ -78,7 +78,7 @@ export function QuickActionModal({
                   : 'Ajouter un Bien / Immeuble'}
               </h3>
               <p className="text-[10px] text-slate-400">
-                Opération rapide • Zone UEMOA
+                Opération rapide • Zone UEMOA & CEMAC
               </p>
             </div>
           </div>

@@ -248,7 +248,7 @@ export function PropertyDetailModal({
           )}
 
           {/* ==================================================================== */}
-          {/* 3. ÉQUIPEMENTS CLÉS & INFRASTRUCTURES UEMOA                          */}
+          {/* 3. ÉQUIPEMENTS CLÉS & INFRASTRUCTURES UEMOA & CEMAC                  */}
           {/* ==================================================================== */}
           <div className="space-y-2.5">
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">

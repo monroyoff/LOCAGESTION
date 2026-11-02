@@ -764,7 +764,7 @@ export default function TenantsPage() {
                       <Lock className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                       <div>
                         <h4 className="font-extrabold text-blue-950 mb-0.5">
-                          Protection des Données & Consentement RGPD / UEMOA
+                          Protection des Données & Consentement RGPD / UEMOA & CEMAC
                         </h4>
                         <p className="leading-relaxed text-[11px] text-blue-800">
                           {selectedTenant.scoring.historyConsentGranted ? (

@@ -1,5 +1,5 @@
 /**
- * Formatage monétaire strict pour la zone UEMOA / FCFA (XOF / XAF)
+ * Formatage monétaire strict pour les zones UEMOA & CEMAC / FCFA (XOF / XAF)
  * Le FCFA n'a pas de centimes et utilise l'espace insécable comme séparateur de milliers.
  * Ex: 250000 -> "250 000 FCFA"
  */

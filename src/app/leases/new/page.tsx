@@ -209,7 +209,7 @@ export default function NewLeasePage() {
                   <ArrowLeft className="w-4 h-4" />
                 </Link>
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  Assistant de Création de Bail Conforme UEMOA
+                  Assistant de Création de Bail Conforme UEMOA & CEMAC
                 </h1>
               </div>
               <p className="text-xs text-slate-500 mt-1 pl-8">
@@ -428,7 +428,7 @@ export default function NewLeasePage() {
             {currentStep === 3 && (
               <div className="space-y-4 animate-in fade-in duration-200">
                 <h2 className="text-base font-black text-slate-900">
-                  Étape 3 : Conditions Financières & Modalités UEMOA
+                  Étape 3 : Conditions Financières & Modalités UEMOA & CEMAC
                 </h2>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -651,7 +651,7 @@ export default function NewLeasePage() {
 
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                Scellement Électronique Conforme UEMOA
+                Scellement Électronique Conforme UEMOA & CEMAC
               </span>
               <h3 className="text-lg font-black text-slate-900 mt-2">
                 Bail Émis avec Succès !

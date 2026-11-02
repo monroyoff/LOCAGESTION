@@ -339,7 +339,7 @@ export function LandlordIncidentModal({
                   Mandater un Artisan / Technicien (WhatsApp Express)
                 </h4>
               </div>
-              <span className="text-[10px] text-slate-400 font-medium">UEMOA</span>
+              <span className="text-[10px] text-slate-400 font-medium">UEMOA & CEMAC</span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">

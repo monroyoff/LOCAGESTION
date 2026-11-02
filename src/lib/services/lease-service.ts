@@ -360,7 +360,7 @@ export const LeaseService = {
         from: 'baux-notification@locagestion.app',
         subject: `[Bail Contresigné] ${leaseId} — ${tenantName} (${updatedLease.unit})`,
         date: nowFormatted,
-        preview: `Le contrat de bail ${leaseId} a été contresigné électroniquement par ${tenantName} avec horodatage légal conforme UEMOA.`,
+        preview: `Le contrat de bail ${leaseId} a été contresigné électroniquement par ${tenantName} avec horodatage légal conforme UEMOA & CEMAC.`,
       },
     };
 

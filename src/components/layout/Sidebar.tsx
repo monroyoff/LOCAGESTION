@@ -515,7 +515,7 @@ export function Sidebar({
               <span className="text-[9px] leading-none">🇧🇯</span>
               <span>Créée au Bénin pour l'Afrique</span>
             </span>
-            <span className="text-slate-600 shrink-0 ml-1">UEMOA</span>
+            <span className="text-slate-600 shrink-0 ml-1">UEMOA & CEMAC</span>
           </div>
         </div>
       </aside>

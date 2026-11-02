@@ -37,7 +37,7 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
           </span>
         </Link>
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mt-1">
-          Guichet Public de Vérification Numérique UEMOA
+          Guichet Public de Vérification Numérique UEMOA & CEMAC
         </span>
       </div>
 

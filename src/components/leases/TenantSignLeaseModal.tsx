@@ -153,7 +153,7 @@ export function TenantSignLeaseModal({
                   Contresignature Électronique du Bail
                 </h3>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  UEMOA Conforme
+                  UEMOA & CEMAC Conforme
                 </span>
               </div>
               <p className="text-xs text-slate-300">
@@ -311,7 +311,7 @@ export function TenantSignLeaseModal({
                   )}
 
                   <div className="absolute bottom-2 right-3 text-[10px] font-mono text-slate-400">
-                    Sceau Sécurisé LOCAGESTION • UEMOA
+                    Sceau Sécurisé LOCAGESTION • UEMOA & CEMAC
                   </div>
                 </div>
               </div>

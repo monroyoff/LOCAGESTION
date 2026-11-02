@@ -414,7 +414,7 @@ export function GlobalSearchModal({
                 </span>
               </div>
               <span className="text-[11px] font-bold text-slate-400">
-                Zone UEMOA • FCFA
+                Zone UEMOA & CEMAC • FCFA
               </span>
             </div>
 

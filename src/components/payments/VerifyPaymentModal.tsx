@@ -235,7 +235,7 @@ export function VerifyPaymentModal({
               </div>
             </div>
             <p className="text-[11px] text-slate-500 leading-snug">
-              Ce mois sera certifié sur la <strong>quittance officielle UEMOA</strong> et le <strong>reçu de caisse</strong> générés automatiquement pour vous et pour le locataire.
+              Ce mois sera certifié sur la <strong>quittance officielle UEMOA & CEMAC</strong> et le <strong>reçu de caisse</strong> générés automatiquement pour vous et pour le locataire.
             </p>
           </div>
 

@@ -134,7 +134,7 @@ export default function RegisterPage() {
               LOCA<span className="text-brand-400">GESTION</span>
             </span>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-              SaaS Gestion Locative UEMOA
+              SaaS Gestion Locative UEMOA & CEMAC
             </span>
           </div>
         </div>
@@ -300,7 +300,7 @@ export default function RegisterPage() {
               <div className="flex items-center gap-2 mb-3">
                 <Globe className="w-4 h-4 text-brand-400" />
                 <label className="text-xs font-black uppercase tracking-wider text-slate-300">
-                  3. Pays de résidence (Zone UEMOA / Afrique) :
+                  3. Pays de résidence (Zone UEMOA & CEMAC / Afrique) :
                 </label>
               </div>
 

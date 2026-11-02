@@ -286,7 +286,7 @@ export default function LeasesPage() {
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Génération conforme OHADA/UEMOA, transmission directe aux comptes locataires et
+                Génération conforme OHADA / UEMOA & CEMAC, transmission directe aux comptes locataires et
                 contresignature électronique tactile.
               </p>
             </div>
@@ -341,7 +341,7 @@ export default function LeasesPage() {
           <div className="p-5 sm:p-6 bg-white rounded-3xl border border-slate-200/80 shadow-soft">
             <div className="flex items-center justify-between mb-3">
               <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider block">
-                Workflow Sécurisé de Rédaction & Signature UEMOA
+                Workflow Sécurisé de Rédaction & Signature UEMOA & CEMAC
               </span>
               <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
                 Valeur légale certifiée conforme droit OHADA
@@ -352,7 +352,7 @@ export default function LeasesPage() {
                 { step: '1', title: 'Sélection du Lot', desc: 'Résidence, type, loyer' },
                 { step: '2', title: 'Compte Locataire', desc: 'Compte existant ou nouveau' },
                 { step: '3', title: 'Conditions FCFA', desc: 'Caution, avance, charges' },
-                { step: '4', title: 'Clauses UEMOA', desc: 'Clauses d’habitation' },
+                { step: '4', title: 'Clauses UEMOA & CEMAC', desc: 'Clauses d’habitation' },
                 { step: '5', title: 'Transmission & Sceau', desc: 'Signature bailleur & locataire' },
               ].map((s) => (
                 <div key={s.step} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/60">

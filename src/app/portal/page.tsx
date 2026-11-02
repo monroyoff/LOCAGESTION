@@ -1523,7 +1523,7 @@ function TenantPortalContent() {
                       <div className="flex items-center gap-2.5">
                         <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
                         <span className="text-[11px] text-slate-300">
-                          Scellé numérique conforme aux lois sur les transactions électroniques UEMOA.
+                          Scellé numérique conforme aux lois sur les transactions électroniques UEMOA & CEMAC.
                         </span>
                       </div>
                       <span className="text-[10px] font-mono text-emerald-400 font-bold hidden sm:inline">
@@ -1841,7 +1841,7 @@ function TenantPortalContent() {
                     </strong>
                   </span>
                   <span className="text-[10px] text-slate-400">
-                    Conforme aux réglementations régionales de protection des données UEMOA
+                    Conforme aux réglementations régionales de protection des données UEMOA & CEMAC
                   </span>
                 </div>
               </div>
@@ -2252,7 +2252,7 @@ function TenantPortalContent() {
                   </div>
                 )}
 
-                {/* Exemples rapides de panne UEMOA */}
+                {/* Exemples rapides de panne UEMOA & CEMAC */}
                 <div className="pt-1">
                   <span className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase tracking-wide">
                     Exemples rapides (1 clic) :

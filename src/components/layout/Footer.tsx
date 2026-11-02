@@ -10,13 +10,13 @@ export function Footer() {
           <span>Créée au Bénin pour l'Afrique</span>
         </span>
         <span className="text-[9px] text-slate-400 font-normal hidden sm:inline">
-          • Plateforme Immobilière & Gestion Locative UEMOA
+          • Plateforme Immobilière & Gestion Locative UEMOA & CEMAC
         </span>
       </div>
 
       {/* Droite : Copyright & Certification */}
       <div className="text-[9px] text-slate-400">
-        <span>© 2026 LOCAGESTION • Système certifié OHADA / UEMOA</span>
+        <span>© 2026 LOCAGESTION • Système certifié OHADA / UEMOA / CEMAC</span>
       </div>
     </footer>
   );
