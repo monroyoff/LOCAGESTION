@@ -564,6 +564,8 @@ function TenantPortalContent() {
         onClose={() => setSidebarOpen(false)}
         activeSpace="locataire"
         onSpaceChange={switchSpace}
+        activePortalTab={activeTab}
+        onPortalTabChange={handleTabChange}
       />
 
       {/* 2. Main Tenant Space Layout */}
@@ -1025,7 +1027,7 @@ function TenantPortalContent() {
           {/* ONGLET 2 : MES QUITTANCES & REÇUS                                   */}
           {/* ==================================================================== */}
           {activeTab === 'quittances' && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-4 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
               {/* Bouton Retour Accueil sur Mobile (uniquement sur mobile < 640px) */}
               <div className="sm:hidden flex items-center gap-2 pb-2">
                 <button
@@ -1056,7 +1058,7 @@ function TenantPortalContent() {
                 <button
                   type="button"
                   onClick={() => setDeclarationModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all w-full sm:w-auto cursor-pointer"
                 >
                   <Smartphone className="w-4 h-4" />
                   <span>Déclarer un paiement</span>
@@ -1105,13 +1107,13 @@ function TenantPortalContent() {
                     )}
                   </div>
 
-                  {/* Sélecteur de mois spécifique */}
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
+                  {/* Sélecteur de mois spécifique & Tri chronologique (Adapté Mobile & Desktop) */}
+                  <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-auto">
                       <select
                         value={receiptSelectedMonth}
                         onChange={(e) => setReceiptSelectedMonth(e.target.value)}
-                        className="py-2 pl-3 pr-8 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xs cursor-pointer"
+                        className="w-full sm:w-auto py-2 pl-3 pr-8 bg-white rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 shadow-xs cursor-pointer truncate"
                       >
                         <option value="all">Tous les mois</option>
                         {MONTHS_OF_YEAR.map((m) => (
@@ -1126,11 +1128,11 @@ function TenantPortalContent() {
                     <button
                       type="button"
                       onClick={() => setReceiptSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-                      className="px-3 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+                      className="w-full sm:w-auto justify-center px-3 py-2 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer truncate"
                       title="Changer l'ordre de tri"
                     >
-                      <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>{receiptSortOrder === 'desc' ? 'Plus récent ↓' : 'Plus ancien ↑'}</span>
+                      <ArrowUpDown className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span className="truncate">{receiptSortOrder === 'desc' ? 'Plus récent ↓' : 'Plus ancien ↑'}</span>
                     </button>
                   </div>
                 </div>
@@ -1287,7 +1289,7 @@ function TenantPortalContent() {
               </div>
 
               {/* Header Box with Sub-Selector */}
-              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft">
+              <div className="bg-white rounded-3xl p-4 sm:p-7 border border-slate-200/80 shadow-soft">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
@@ -1746,7 +1748,7 @@ function TenantPortalContent() {
           {/* ONGLET 4 : PASSEPORT SOLVABILITÉ                                    */}
           {/* ==================================================================== */}
           {activeTab === 'solvabilite' && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-4 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
               {/* Bouton Retour Accueil sur Mobile (uniquement sur mobile < 640px) */}
               <div className="sm:hidden flex items-center gap-2 pb-2">
                 <button

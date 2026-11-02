@@ -45,6 +45,7 @@ interface NavItem {
   badgeCount?: number;
   badgeColor?: string;
   mobileOnly?: boolean;
+  portalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite';
 }
 
 interface SidebarProps {
@@ -52,6 +53,8 @@ interface SidebarProps {
   onClose: () => void;
   activeSpace?: UserSpace;
   onSpaceChange?: (space: UserSpace) => void;
+  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite';
+  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite') => void;
 }
 
 export function Sidebar({
@@ -59,6 +62,8 @@ export function Sidebar({
   onClose,
   activeSpace: propSpace,
   onSpaceChange: propOnSpaceChange,
+  activePortalTab,
+  onPortalTabChange,
 }: SidebarProps) {
   const pathname = usePathname();
   const context = useSpace();
@@ -117,7 +122,9 @@ export function Sidebar({
     if (typeof window !== 'undefined') {
       const readTab = () => {
         const params = new URLSearchParams(window.location.search);
-        setCurrentPortalTab(params.get('tab'));
+        const hash = window.location.hash.replace('#', '');
+        const tab = params.get('tab') || hash || 'accueil';
+        setCurrentPortalTab(tab);
       };
       readTab();
       window.addEventListener('popstate', readTab);
@@ -128,6 +135,8 @@ export function Sidebar({
       };
     }
   }, [pathname]);
+
+  const effectivePortalTab = activePortalTab || currentPortalTab || 'accueil';
 
   // ============================================================================
   // NAVIGATION BAILLEUR (Gestion du patrimoine, encaissements, locataires, baux)
@@ -203,14 +212,16 @@ export function Sidebar({
       name: 'Mon Logement & Loyer',
       href: '/portal',
       icon: Home,
-      active: pathname === '/portal' && (!currentPortalTab || currentPortalTab === 'accueil'),
+      portalTab: 'accueil',
+      active: pathname === '/portal' && effectivePortalTab === 'accueil',
     },
     // Déplacés dans le Menu Résident UNIQUEMENT SUR MOBILE :
     {
       name: 'Mes Quittances & Reçus',
       href: '/portal?tab=quittances',
       icon: Receipt,
-      active: pathname === '/portal' && currentPortalTab === 'quittances',
+      portalTab: 'quittances',
+      active: pathname === '/portal' && effectivePortalTab === 'quittances',
       count: '6',
       mobileOnly: true,
     },
@@ -218,14 +229,16 @@ export function Sidebar({
       name: 'Mon Bail & Contrat',
       href: '/portal?tab=bail',
       icon: FileText,
-      active: pathname === '/portal' && currentPortalTab === 'bail',
+      portalTab: 'bail',
+      active: pathname === '/portal' && effectivePortalTab === 'bail',
       mobileOnly: true,
     },
     {
       name: 'Passeport Solvabilité',
       href: '/portal?tab=solvabilite',
       icon: ShieldCheck,
-      active: pathname === '/portal' && currentPortalTab === 'solvabilite',
+      portalTab: 'solvabilite',
+      active: pathname === '/portal' && effectivePortalTab === 'solvabilite',
       badge: '96/100',
       mobileOnly: true,
     },
@@ -356,7 +369,16 @@ export function Sidebar({
               <Link
                 key={item.name}
                 href={item.href}
-                onClick={onClose}
+                onClick={(e) => {
+                  if (item.portalTab) {
+                    setCurrentPortalTab(item.portalTab);
+                    if (pathname === '/portal' && onPortalTabChange) {
+                      e.preventDefault();
+                      onPortalTabChange(item.portalTab);
+                    }
+                  }
+                  onClose();
+                }}
                 className={`${
                   item.mobileOnly ? 'lg:hidden ' : ''
                 }flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-semibold transition-all group ${
