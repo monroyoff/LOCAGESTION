@@ -718,6 +718,18 @@ function TenantPortalContent() {
                 </div>
               )}
 
+              {/* Bouton Accueil sur Mobile (juste en haut de la hero section - uniquement sur mobile < 640px) */}
+              <div className="sm:hidden flex items-center justify-between gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('accueil')}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-black text-white text-xs font-black shadow-md active:scale-95 transition-all cursor-pointer"
+                >
+                  <Home className="w-4 h-4 text-white" />
+                  <span>Accueil</span>
+                </button>
+              </div>
+
               {/* Hero Banner: Rent Due & Quick Payment */}
               <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -1014,6 +1026,18 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'quittances' && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
+              {/* Bouton Retour Accueil sur Mobile (uniquement sur mobile < 640px) */}
+              <div className="sm:hidden flex items-center gap-2 pb-2">
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('accueil')}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                >
+                  <Home className="w-4 h-4 text-slate-600" />
+                  <span>← Retour à l’Accueil</span>
+                </button>
+              </div>
+
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                   <div className="flex items-center gap-2">
@@ -1250,6 +1274,18 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'bail' && (
             <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Bouton Retour Accueil sur Mobile (uniquement sur mobile < 640px) */}
+              <div className="sm:hidden flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('accueil')}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
+                >
+                  <Home className="w-4 h-4 text-slate-600" />
+                  <span>← Retour à l’Accueil</span>
+                </button>
+              </div>
+
               {/* Header Box with Sub-Selector */}
               <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1711,6 +1747,18 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'solvabilite' && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
+              {/* Bouton Retour Accueil sur Mobile (uniquement sur mobile < 640px) */}
+              <div className="sm:hidden flex items-center gap-2 pb-2">
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('accueil')}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                >
+                  <Home className="w-4 h-4 text-slate-600" />
+                  <span>← Retour à l’Accueil</span>
+                </button>
+              </div>
+
               <div>
                 <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider block mb-1">
                   Mon Profil Locatif Certifié
