@@ -710,7 +710,7 @@ function TenantPortalContent() {
                   <button
                     type="button"
                     onClick={() => setIsSignModalOpen(true)}
-                    className="py-3 px-6 rounded-2xl bg-white hover:bg-amber-50 text-amber-950 font-black text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer active:scale-95"
+                    className="py-3 px-6 rounded-2xl bg-white hover:bg-amber-50 text-amber-950 font-black text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer active:scale-95 w-full sm:w-auto"
                   >
                     <PenTool className="w-4 h-4 text-amber-600" />
                     <span>Examiner & Contresigner</span>
@@ -876,14 +876,14 @@ function TenantPortalContent() {
 
               {/* Fiche Logement Détaillée */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2.5">
-                    <Building2 className="w-5 h-5 text-slate-700" />
+                    <Building2 className="w-5 h-5 text-slate-700 shrink-0" />
                     <h3 className="font-black text-base text-slate-900">
                       Caractéristiques de Votre Logement Actuel
                     </h3>
                   </div>
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto shrink-0">
                     Bail en cours d'exécution
                   </span>
                 </div>
@@ -1304,11 +1304,11 @@ function TenantPortalContent() {
                   </div>
 
                   {/* Sub-Tabs Selector */}
-                  <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 p-1 bg-slate-100 rounded-2xl self-start sm:self-auto border border-slate-200/60 max-w-full">
+                  <div className="grid grid-cols-3 sm:flex items-center gap-1 p-1 bg-slate-100 rounded-2xl border border-slate-200/60 w-full sm:w-auto shrink-0">
                     <button
                       type="button"
                       onClick={() => setBailSubTab('tout')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                         bailSubTab === 'tout'
                           ? 'bg-white text-slate-900 shadow-sm font-black'
                           : 'text-slate-500 hover:text-slate-900'
@@ -1319,18 +1319,18 @@ function TenantPortalContent() {
                     <button
                       type="button"
                       onClick={() => setBailSubTab('bail_etat')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                         bailSubTab === 'bail_etat'
                           ? 'bg-brand-500 text-white shadow-sm font-black'
                           : 'text-slate-500 hover:text-slate-900'
                       }`}
                     >
-                      Bail & État des Lieux
+                      Bail & État
                     </button>
                     <button
                       type="button"
                       onClick={() => setBailSubTab('bailleur')}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
                         bailSubTab === 'bailleur'
                           ? 'bg-slate-900 text-white shadow-sm font-black'
                           : 'text-slate-500 hover:text-slate-900'
@@ -1371,7 +1371,7 @@ function TenantPortalContent() {
                         <button
                           type="button"
                           onClick={() => setIsSignModalOpen(true)}
-                          className="py-2.5 px-5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                          className="w-full sm:w-auto py-2.5 px-5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
                         >
                           <PenTool className="w-4 h-4" />
                           <span>Contresigner ce Bail</span>
@@ -1426,27 +1426,27 @@ function TenantPortalContent() {
                       ? 'bg-rose-50/30 border-rose-200'
                       : 'bg-white border-slate-200/80'
                   }`}>
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                      <div className="flex items-center gap-2.5">
-                        <FileText className={`w-5 h-5 ${currentLease?.status === 'resilie' ? 'text-rose-600' : 'text-brand-600'}`} />
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-black text-base text-slate-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                      <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                        <FileText className={`w-5 h-5 mt-0.5 sm:mt-0 shrink-0 ${currentLease?.status === 'resilie' ? 'text-rose-600' : 'text-brand-600'}`} />
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-black text-base text-slate-900 leading-tight">
                               Contrat de Bail d’Habitation Certifié
                             </h3>
                             {currentLease?.status === 'resilie' ? (
-                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 shrink-0">
                                 <Ban className="w-3 h-3 text-rose-600" />
                                 <span>Bail Résilié • Dissocié</span>
                               </span>
                             ) : (
-                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1 shrink-0">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
                                 <span>Actif & Conforme</span>
                               </span>
                             )}
                           </div>
-                          <span className="text-[11px] text-slate-400 font-mono">
+                          <span className="text-[11px] text-slate-400 font-mono block mt-1 break-words">
                             Réf : {currentLease?.id || tenant.leaseRef} • Signé électroniquement le {currentLease?.startDate || tenant.leaseStartDate}
                             {currentLease?.resiliatedAt && ` • Résilié le ${currentLease.resiliatedAt}`}
                           </span>
@@ -1469,7 +1469,7 @@ function TenantPortalContent() {
                           });
                           showToast(`Contrat de bail officiel téléchargé en PDF !`);
                         }}
-                        className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold flex items-center gap-2 shadow-pink-glow transition-all cursor-pointer"
+                        className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-pink-glow transition-all cursor-pointer shrink-0"
                       >
                         <Download className="w-4 h-4" />
                         <span>Télécharger le Bail (PDF)</span>
@@ -1531,14 +1531,14 @@ function TenantPortalContent() {
 
                   {/* État des Lieux d'Entrée Card */}
                   <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5">
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                      <div className="flex items-center gap-2.5">
-                        <Camera className="w-5 h-5 text-emerald-600" />
-                        <div>
-                          <h3 className="font-black text-base text-slate-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
+                      <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                        <Camera className="w-5 h-5 mt-0.5 sm:mt-0 text-emerald-600 shrink-0" />
+                        <div className="min-w-0">
+                          <h3 className="font-black text-base text-slate-900 leading-tight">
                             Procès-Verbal d’État des Lieux d'Entrée
                           </h3>
-                          <span className="text-[11px] text-slate-400">
+                          <span className="text-[11px] text-slate-400 block mt-1 break-words">
                             Contradictoire et approuvé le {tenant.inventoryDate} avec relevé des compteurs
                           </span>
                         </div>
@@ -1559,7 +1559,7 @@ function TenantPortalContent() {
                           });
                           showToast(`Procès-verbal d'état des lieux téléchargé en PDF officiel !`);
                         }}
-                        className="py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-sm cursor-pointer"
+                        className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer shrink-0"
                       >
                         <Download className="w-4 h-4" />
                         <span>Télécharger le PV (PDF)</span>
