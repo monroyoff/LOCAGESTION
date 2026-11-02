@@ -223,6 +223,8 @@ export interface UserProfile {
   residenceDistrict?: string; // Quartier / Lieu actuel (ex: 'Haie Vive', 'Agla', etc.)
   avatarUrl?: string;
   registrationDate?: string;
+  companyName?: string;
+  ifuNumber?: string;
   currentLocation?: {
     latitude: number;
     longitude: number;
@@ -230,5 +232,22 @@ export interface UserProfile {
     source: 'gps' | 'profile' | 'timezone' | 'manual';
   };
 }
+
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: UserSpace; // 'bailleur' | 'locataire'
+  residenceCountry: string; // Pays de résidence (ex: 'Bénin')
+  residenceCity: string;    // Ville (ex: 'Cotonou')
+  residenceDistrict?: string; // Quartier (ex: 'Haie Vive')
+  avatarUrl?: string;
+  companyName?: string;     // Nom d'entreprise / Agence (Bailleur)
+  ifuNumber?: string;       // IFU fiscal (Bailleur)
+  registeredAt: string;
+  password?: string;
+}
+
 
 

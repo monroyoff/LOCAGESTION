@@ -18,6 +18,8 @@ import {
   Check,
   Building2,
   Lock,
+  LogOut,
+  Users,
 } from 'lucide-react';
 import { UserProfile, UserSpace } from '@/lib/types';
 import {
@@ -84,7 +86,7 @@ export function UserProfileModal({
   onClose,
   activeSpace: initialActiveSpace = 'locataire',
 }: UserProfileModalProps) {
-  const { activeSpace, switchSpace } = useSpace();
+  const { activeSpace, switchSpace, logout } = useSpace();
   const currentRole = activeSpace || initialActiveSpace;
 
   const [profile, setProfile] = useState<UserProfile>(() => getUserProfile(currentRole));
@@ -238,38 +240,50 @@ export function UserProfileModal({
 
         {/* Body */}
         <form onSubmit={handleSave} className="p-5 sm:p-6 overflow-y-auto space-y-5">
-          {/* Bascule de Rôle Interactive (Bailleur / Locataire) */}
+          {/* Statut & Rôle Certifié du Compte Connecté */}
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
-            <div>
-              <span className="text-xs font-black text-slate-900 block">Espace Actif</span>
-              <span className="text-[11px] text-slate-500">
-                Vous pouvez naviguer en mode Bailleur ou en mode Locataire
-              </span>
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 ${
+                  profile.role === 'bailleur'
+                    ? 'bg-brand-500 shadow-md shadow-brand-500/20'
+                    : 'bg-emerald-600 shadow-md shadow-emerald-600/20'
+                }`}
+              >
+                {profile.role === 'bailleur' ? (
+                  <Building2 className="w-5 h-5" />
+                ) : (
+                  <Users className="w-5 h-5" />
+                )}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black text-slate-900 block">
+                    {profile.role === 'bailleur'
+                      ? 'Compte Bailleur / Gestionnaire'
+                      : 'Compte Locataire Résident'}
+                  </span>
+                  <span
+                    className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      profile.role === 'bailleur'
+                        ? 'bg-brand-50 text-brand-600 border border-brand-200'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    }`}
+                  >
+                    {profile.role === 'bailleur' ? 'Patrimoine' : 'Résident'}
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 block mt-0.5">
+                  {profile.role === 'bailleur'
+                    ? 'Espace strictement dédié au pilotage de votre parc immobilier et baux'
+                    : 'Espace strictement dédié à vos loyers et quittances certifiées'}
+                </span>
+              </div>
             </div>
 
-            <div className="flex items-center gap-1 bg-white p-1 rounded-xl border border-slate-200">
-              <button
-                type="button"
-                onClick={() => handleRoleToggle('bailleur')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  profile.role === 'bailleur'
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Bailleur
-              </button>
-              <button
-                type="button"
-                onClick={() => handleRoleToggle('locataire')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                  profile.role === 'locataire'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Locataire
-              </button>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black shrink-0">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>Certifié</span>
             </div>
           </div>
 
@@ -521,18 +535,19 @@ export function UserProfileModal({
             </div>
           </div>
 
-          {/* Bouton de sauvegarde */}
-          <div className="pt-2 flex items-center justify-between gap-3">
-            {savedSuccess ? (
-              <div className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Profil & Inscription enregistrés avec succès !</span>
-              </div>
-            ) : (
-              <span className="text-[11px] text-slate-400">
-                La mise à jour s'appliquera immédiatement sur toute l'application.
-              </span>
-            )}
+          {/* Bouton de sauvegarde & Déconnexion */}
+          <div className="pt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                logout();
+              }}
+              className="px-3.5 py-2.5 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Se déconnecter</span>
+            </button>
 
             <div className="flex items-center gap-2">
               <button

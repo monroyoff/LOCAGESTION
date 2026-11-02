@@ -25,6 +25,7 @@ import {
   Smartphone,
   Wrench,
   Lock,
+  LogOut,
 } from 'lucide-react';
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
@@ -269,33 +270,42 @@ export function Sidebar({
             </button>
           </div>
 
-          {/* SÉLECTEUR D'ESPACE CLAIREMENT DÉLIMITÉ */}
-          <div className="p-1.5 bg-[#171b24] rounded-2xl border border-white/5 flex items-center mb-4">
-            <button
-              type="button"
-              onClick={() => handleSpaceChange('bailleur')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                isLandlord
-                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Bailleur</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSpaceChange('locataire')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                isTenant
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5" />
-              <span>Locataire</span>
-            </button>
-          </div>
+          {/* BADGE D'ESPACE AUTHENTIFIÉ ET SÉPARÉ */}
+          {isLandlord ? (
+            <div className="p-3 bg-gradient-to-r from-brand-950/60 to-slate-900 rounded-2xl border border-brand-500/30 flex items-center justify-between mb-4 shadow-sm">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-brand-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-brand-500/20">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-black text-white block truncate">
+                    Espace Bailleur Certifié
+                  </span>
+                  <span className="text-[10px] text-brand-300 font-semibold block truncate">
+                    Gestion & Patrimoine UEMOA
+                  </span>
+                </div>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ml-2" title="Session Bailleur active" />
+            </div>
+          ) : (
+            <div className="p-3 bg-gradient-to-r from-emerald-950/60 to-slate-900 rounded-2xl border border-emerald-500/30 flex items-center justify-between mb-4 shadow-sm">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-600/20">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-black text-white block truncate">
+                    Portail Locataire Résident
+                  </span>
+                  <span className="text-[10px] text-emerald-300 font-semibold block truncate">
+                    Quittances & Paiements
+                  </span>
+                </div>
+              </div>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0 ml-2" title="Session Locataire active" />
+            </div>
+          )}
         </div>
 
         {/* Middle: Space-Specific Navigation Links */}
@@ -399,12 +409,14 @@ export function Sidebar({
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                handleSpaceChange(isLandlord ? 'locataire' : 'bailleur');
+                if (context && context.logout) {
+                  context.logout();
+                }
               }}
-              title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : 'Bailleur'}`}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors ml-1.5 shrink-0"
+              title="Se déconnecter de votre session"
+              className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors ml-1.5 shrink-0 cursor-pointer"
             >
-              <ChevronDown className="w-4 h-4" />
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
         </div>

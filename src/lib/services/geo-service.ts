@@ -170,6 +170,19 @@ export function getUserResidenceCity(): string {
 }
 
 /**
+ * Met à jour la ville de résidence de l'utilisateur.
+ */
+export function setUserResidenceCity(city: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY_CITY, city);
+    window.dispatchEvent(new CustomEvent('locagestion:residence_updated', { detail: { city } }));
+  } catch (e) {
+    console.error('Erreur sauvegarde ville de résidence:', e);
+  }
+}
+
+/**
  * Récupère le quartier de résidence de l'utilisateur (défini à l'inscription ou dans le profil).
  * Par défaut : Haie Vive.
  */
