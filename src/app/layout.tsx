@@ -23,8 +23,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className="h-full">
-      <body className="h-full bg-[#F4F6F9] text-slate-900 antialiased selection:bg-brand-500 selection:text-white">
+    <html lang="fr" className="h-full" suppressHydrationWarning>
+      <body
+        className="h-full bg-[#F4F6F9] text-slate-900 antialiased selection:bg-brand-500 selection:text-white"
+        suppressHydrationWarning
+      >
         <SpaceProvider>
           {children}
           <GlobalDownloadToast />

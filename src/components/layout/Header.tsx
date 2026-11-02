@@ -110,15 +110,7 @@ export function Header({
   // Notifications Bailleur
   const [notifications, setNotifications] = useState<LandlordNotification[]>([]);
   // Notifications Locataire
-  const [tenantNotifs, setTenantNotifs] = useState<TenantNotification[]>(() => {
-    if (typeof window === 'undefined') return SEED_TENANT_NOTIFS;
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_TENANT_NOTIFS);
-      if (stored) return JSON.parse(stored);
-      localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(SEED_TENANT_NOTIFS));
-    } catch (e) {}
-    return SEED_TENANT_NOTIFS;
-  });
+  const [tenantNotifs, setTenantNotifs] = useState<TenantNotification[]>(SEED_TENANT_NOTIFS);
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
@@ -232,7 +224,9 @@ export function Header({
 
             <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="whitespace-nowrap">Aujourd’hui : {todayFormatted}</span>
+              <span className="whitespace-nowrap" suppressHydrationWarning>
+                Aujourd’hui : {todayFormatted}
+              </span>
             </div>
           </div>
         </div>

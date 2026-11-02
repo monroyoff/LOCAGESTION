@@ -83,15 +83,16 @@ export function Sidebar({
 
   const [pendingIncidents, setPendingIncidents] = useState(0);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [userProfile, setUserProfile] = useState(() => getUserProfile(activeSpace));
+  // Initialisation déterministe sans cache pour une concordance SSR/Client rigoureuse
+  const [userProfile, setUserProfile] = useState(() => getUserProfile(activeSpace, false));
 
   useEffect(() => {
-    setUserProfile(getUserProfile(activeSpace));
+    setUserProfile(getUserProfile(activeSpace, true));
   }, [activeSpace]);
 
   useEffect(() => {
     const handleProfileUpdate = () => {
-      setUserProfile(getUserProfile(activeSpace));
+      setUserProfile(getUserProfile(activeSpace, true));
     };
     window.addEventListener('locagestion:profile_updated', handleProfileUpdate);
     window.addEventListener('locagestion:residence_updated', handleProfileUpdate);
@@ -447,6 +448,7 @@ export function Sidebar({
         <div className="p-4 border-t border-white/5 bg-[#0a0d12]">
           <div
             onClick={() => setIsProfileModalOpen(true)}
+            suppressHydrationWarning
             className="p-3 bg-[#131720] hover:bg-[#1a202c] rounded-2xl border border-white/10 hover:border-brand-500/50 hover:shadow-lg hover:shadow-brand-500/10 flex items-center justify-between group transition-all cursor-pointer ring-1 ring-transparent hover:ring-brand-500/30"
             title="Cliquer pour ouvrir votre profil utilisateur"
           >

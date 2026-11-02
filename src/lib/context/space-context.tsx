@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { UserSpace, AuthUser } from '../types';
-import { AuthService } from '../services/auth-service';
+import { AuthService, DEMO_LANDLORD, DEMO_TENANT } from '../services/auth-service';
 import { notifyAction } from '../notifications/action-notifier';
 
 export interface SpaceContextType {
@@ -39,11 +39,36 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [user, setUser] = useState<AuthUser | null>(() => AuthService.getCurrentUser());
+  // Initialisation déterministe par route pour garantir une concordance 100% stricte SSR / Client
+  const isPortalRoute = pathname ? pathname.startsWith('/portal') : false;
+  const [user, setUser] = useState<AuthUser | null>(() => (isPortalRoute ? DEMO_TENANT : DEMO_LANDLORD));
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // Synchroniser avec la session réelle après le montage client
+    const current = AuthService.getCurrentUser();
+    if (pathname.startsWith('/portal')) {
+      if (!current || current.role !== 'locataire') {
+        const tenantUser = AuthService.quickLogin('locataire');
+        setUser(tenantUser);
+      } else {
+        setUser(current);
+      }
+    } else if (
+      pathname === '/' ||
+      LANDLORD_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+    ) {
+      if (!current || current.role !== 'bailleur') {
+        const landlordUser = AuthService.quickLogin('bailleur');
+        setUser(landlordUser);
+      } else {
+        setUser(current);
+      }
+    } else if (current) {
+      setUser(current);
+    }
+
     const syncUser = () => {
       setUser(AuthService.getCurrentUser());
     };
@@ -53,28 +78,7 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('locagestion:auth_changed', syncUser);
       window.removeEventListener('storage', syncUser);
     };
-  }, []);
-
-  // Détection & synchronisation fluide pendant la phase de tests
-  // Permet de naviguer librement entre les deux espaces sans blocage
-  useEffect(() => {
-    if (!mounted) return;
-
-    if (pathname.startsWith('/portal')) {
-      if (!user || user.role !== 'locataire') {
-        const tenantUser = AuthService.quickLogin('locataire');
-        setUser(tenantUser);
-      }
-    } else if (
-      pathname === '/' ||
-      LANDLORD_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
-    ) {
-      if (!user || user.role !== 'bailleur') {
-        const landlordUser = AuthService.quickLogin('bailleur');
-        setUser(landlordUser);
-      }
-    }
-  }, [pathname, mounted]);
+  }, [pathname]);
 
   const activeSpace: UserSpace = user ? user.role : 'bailleur';
   const isLandlord = activeSpace === 'bailleur';

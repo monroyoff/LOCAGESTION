@@ -214,13 +214,15 @@ export function setUserResidenceDistrict(district: string): void {
 
 /**
  * Récupère le profil complet de l'utilisateur actif (locataire ou bailleur).
+ * @param role Rôle actif ('bailleur' ou 'locataire')
+ * @param useCache Si faux, retourne le profil déterministe pour éviter les désynchronisations d'hydratation SSR/Client
  */
-export function getUserProfile(role: UserSpace = 'locataire'): UserProfile {
+export function getUserProfile(role: UserSpace = 'locataire', useCache = true): UserProfile {
   const country = getUserResidenceCountry();
   const city = getUserResidenceCity();
   const district = getUserResidenceDistrict();
 
-  if (typeof window !== 'undefined') {
+  if (useCache && typeof window !== 'undefined') {
     try {
       const saved = localStorage.getItem(`${STORAGE_KEY_PROFILE}:${role}`);
       if (saved) {
