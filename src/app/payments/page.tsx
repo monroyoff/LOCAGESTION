@@ -33,6 +33,7 @@ import { VerifyPaymentModal } from '@/components/payments/VerifyPaymentModal';
 import { PaymentService } from '@/lib/services/payment-service';
 import { downloadCSV } from '@/lib/export/csv-export';
 import { notifySave } from '@/lib/notifications/action-notifier';
+import { Footer } from '@/components/layout/Footer';
 
 export default function PaymentsPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -392,6 +393,9 @@ export default function PaymentsPage() {
               )}
             </div>
           )}
+
+          {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
+          <Footer />
         </main>
       </div>
 

@@ -23,6 +23,7 @@ import { useSpace } from '@/lib/context/space-context';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
 import { IncidentService } from '@/lib/services/incident-service';
 import { notifyAction } from '@/lib/notifications/action-notifier';
+import { Footer } from '@/components/layout/Footer';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -181,6 +182,9 @@ export default function DashboardPage() {
               onSendReminder={(p) => setReminderPayment(p)}
             />
           </section>
+
+          {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
+          <Footer />
         </main>
       </div>
 

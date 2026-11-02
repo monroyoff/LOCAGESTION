@@ -43,6 +43,7 @@ import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
+import { Footer } from '@/components/layout/Footer';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 
 interface TenantDetail {
@@ -1054,6 +1055,9 @@ export default function TenantsPage() {
               </div>
             </div>
           </div>
+
+          {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
+          <Footer />
         </main>
       </div>
 

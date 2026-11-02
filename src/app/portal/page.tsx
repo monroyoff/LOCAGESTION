@@ -59,6 +59,7 @@ import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
 import { IncidentService, ReportedIncident } from '@/lib/services/incident-service';
 import { MONTHS_OF_YEAR } from '@/lib/services/payment-service';
 import { notifyAction, notifySave } from '@/lib/notifications/action-notifier';
+import { Footer } from '@/components/layout/Footer';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -1846,6 +1847,9 @@ function TenantPortalContent() {
               </div>
             </div>
           )}
+
+          {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
+          <Footer />
         </main>
       </div>
 

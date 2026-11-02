@@ -28,6 +28,7 @@ import { Property, UserSpace } from '@/lib/types';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { PropertyDetailModal } from '@/components/properties/PropertyDetailModal';
 import { NewPropertyModal } from '@/components/properties/NewPropertyModal';
+import { Footer } from '@/components/layout/Footer';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 
 export default function PropertiesPage() {
@@ -384,6 +385,9 @@ export default function PropertiesPage() {
               </div>
             </div>
           )}
+
+          {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
+          <Footer />
         </main>
       </div>
 

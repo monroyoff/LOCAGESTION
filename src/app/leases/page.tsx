@@ -36,6 +36,7 @@ import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { useSpace } from '@/lib/context/space-context';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
+import { Footer } from '@/components/layout/Footer';
 
 export default function LeasesPage() {
   const router = useRouter();
@@ -786,6 +787,9 @@ export default function LeasesPage() {
               );
             }))}
           </div>
+
+          {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
+          <Footer />
         </main>
       </div>
 
