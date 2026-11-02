@@ -114,7 +114,7 @@ export function StatCards({ kpis, onCardClick }: StatCardsProps) {
                 handleCardClick(card);
               }
             }}
-            className={`bg-white rounded-3xl p-5 sm:p-6 border transition-all duration-200 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 cursor-pointer select-none active:scale-[0.99] ${
+            className={`bg-white rounded-3xl p-5 sm:p-6 border transition-all duration-200 relative overflow-hidden group hover:shadow-xl hover:-translate-y-1 cursor-pointer select-none active:scale-[0.98] touch-manipulation ${
               card.featured
                 ? `border-brand-500/30 shadow-card ring-1 ring-brand-500/10 ${card.hoverRing}`
                 : `border-slate-200/80 shadow-soft ${card.hoverRing}`

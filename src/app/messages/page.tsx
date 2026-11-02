@@ -27,6 +27,7 @@ import {
   CheckCircle2,
   MessageCircle,
   UserCheck,
+  Home,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -358,7 +359,20 @@ export default function MessagesPage() {
         />
 
         {/* 3-Panel Content Wrapper */}
-        <div className="flex-1 flex overflow-hidden p-4 sm:p-6 gap-5">
+        <div className="flex-1 flex flex-col overflow-hidden p-4 sm:p-6 gap-3">
+          {/* Bouton Retour Accueil sur Mobile & Desktop */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => router.push(isLandlord ? '/' : '/portal')}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
+            >
+              <Home className="w-4 h-4 text-slate-600" />
+              <span>← Retour {isLandlord ? 'au Tableau de bord' : 'à l’Accueil'}</span>
+            </button>
+          </div>
+
+          <div className="flex-1 flex overflow-hidden gap-5">
           {/* Middle Panel: Conversations List (StayWise White Card with Pink Pill) */}
           <div
             className={`w-full lg:w-96 bg-white rounded-3xl border border-slate-200/80 shadow-soft flex flex-col overflow-hidden shrink-0 ${
@@ -737,6 +751,7 @@ export default function MessagesPage() {
             </form>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Toast Notification */}

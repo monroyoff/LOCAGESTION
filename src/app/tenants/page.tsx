@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -23,6 +24,7 @@ import {
   Receipt,
   UserCheck,
   Lock,
+  Home,
   Share2,
   Sparkles,
   ExternalLink,
@@ -333,6 +335,7 @@ const MOCK_TENANTS: TenantDetail[] = [
 ];
 
 export default function TenantsPage() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
   const [selectedTenant, setSelectedTenant] = useState<TenantDetail>(MOCK_TENANTS[0]);
@@ -456,6 +459,18 @@ export default function TenantsPage() {
 
         {/* Page Content */}
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
+          {/* Bouton Retour Accueil sur Mobile & Desktop */}
+          <div className="flex items-center gap-2 pb-1">
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
+            >
+              <Home className="w-4 h-4 text-slate-600" />
+              <span>← Retour au Tableau de bord</span>
+            </button>
+          </div>
+
           {/* Top Bar: Title & Stats */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>

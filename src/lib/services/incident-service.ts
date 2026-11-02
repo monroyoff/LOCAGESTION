@@ -150,7 +150,24 @@ export const IncidentService = {
     try {
       const stored = localStorage.getItem(INCIDENTS_STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored) as ReportedIncident[];
+        // Rétrocompatibilité : fusionne les frais et statuts artisans avec les valeurs de référence si absents
+        return parsed.map((item) => {
+          const initial = INITIAL_INCIDENTS.find((i) => i.id === item.id);
+          return {
+            ...item,
+            artisanFee:
+              item.artisanFee !== undefined
+                ? item.artisanFee
+                : initial?.artisanFee ?? (item.status === 'resolu' ? 85000 : 85000),
+            artisanPaymentStatus:
+              item.artisanPaymentStatus ??
+              initial?.artisanPaymentStatus ??
+              (item.status === 'resolu' ? 'paye' : 'paye'),
+            artisanInvoiceRef: item.artisanInvoiceRef ?? initial?.artisanInvoiceRef ?? `FAC-${item.id}`,
+            assignedTechnician: item.assignedTechnician ?? initial?.assignedTechnician,
+          };
+        });
       }
     } catch (e) {
       console.error('Erreur lecture incidents:', e);

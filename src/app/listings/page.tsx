@@ -33,6 +33,7 @@ import {
   Phone,
   MessageCircle,
   Eye,
+  Home,
   ShieldCheck,
   Zap,
   Droplet,
@@ -411,6 +412,18 @@ export default function ListingsPage() {
         />
 
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
+          {/* Bouton Retour Accueil sur Mobile & Desktop */}
+          <div className="flex items-center gap-2 pb-1">
+            <button
+              type="button"
+              onClick={() => router.push(isLandlord ? '/' : '/portal')}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
+            >
+              <Home className="w-4 h-4 text-slate-600" />
+              <span>← Retour {isLandlord ? 'au Tableau de bord' : 'à l’Accueil'}</span>
+            </button>
+          </div>
+
           {/* Top Title & Publisher Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>

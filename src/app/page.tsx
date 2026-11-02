@@ -37,6 +37,26 @@ export default function DashboardPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [pendingIncidents, setPendingIncidents] = useState(0);
   const [dashboardKPIs, setDashboardKPIs] = useState<DashboardKPIs>(MOCK_KPIS);
+  const [dashboardPaymentTab, setDashboardPaymentTab] = useState<'all' | 'paye' | 'en_retard' | 'partiel'>('all');
+
+  const handleDashboardCardClick = (cardId: string) => {
+    if (cardId === 'collected') {
+      setDashboardPaymentTab('paye');
+      if (typeof document !== 'undefined') {
+        const el = document.getElementById('operations-suivi-loyers');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
+      showToast('Filtre actif : Affichage immédiat des loyers soldés');
+    } else if (cardId === 'expenses') {
+      router.push('/incidents');
+    } else if (cardId === 'average') {
+      router.push('/properties');
+    } else if (cardId === 'net_income') {
+      router.push('/payments?status=paye');
+    }
+  };
 
   useEffect(() => {
     const updateIncidentData = () => {
@@ -186,6 +206,7 @@ export default function DashboardPage() {
           <section aria-label="Opérations récentes" id="operations-suivi-loyers">
             <RecentPaymentsTable
               payments={MOCK_RECENT_PAYMENTS}
+              initialTab={dashboardPaymentTab}
               onSelectPayment={(p) => setSelectedPayment(p)}
               onSendReminder={(p) => setReminderPayment(p)}
             />
@@ -206,7 +227,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <StatCards kpis={dashboardKPIs} />
+            <StatCards kpis={dashboardKPIs} onCardClick={handleDashboardCardClick} />
           </section>
 
           {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -22,6 +23,7 @@ import {
   ExternalLink,
   AlertCircle,
   FileText,
+  Home,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { PaymentTransaction, UserSpace } from '@/lib/types';
@@ -35,14 +37,25 @@ import { downloadCSV } from '@/lib/export/csv-export';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 
-export default function PaymentsPage() {
+function PaymentsPageContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const statusParam = searchParams?.get('status') || '';
+  const tabParam = searchParams?.get('tab') || '';
+  const verifyParam = searchParams?.get('verify') || '';
+  const actionParam = searchParams?.get('action') || '';
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
 
   // Onglet principal : 'all' (Tous les encaissements) ou 'pending' (Déclarations à vérifier)
-  const [activeMainTab, setActiveMainTab] = useState<'all' | 'pending'>('all');
+  const [activeMainTab, setActiveMainTab] = useState<'all' | 'pending'>(
+    tabParam === 'pending' || verifyParam ? 'pending' : 'all'
+  );
   // Sous-filtre de statut pour le tableau des encaissements (ex: 'paye' pour Loyers Soldés)
-  const [subTabFilter, setSubTabFilter] = useState<'all' | 'paye' | 'en_retard' | 'partiel'>('all');
+  const [subTabFilter, setSubTabFilter] = useState<'all' | 'paye' | 'en_retard' | 'partiel'>(
+    statusParam === 'paye' || tabParam === 'paye' ? 'paye' : 'all'
+  );
 
   // Paiements en direct depuis PaymentService
   const [verifiedPayments, setVerifiedPayments] = useState<PaymentTransaction[]>([]);
@@ -70,38 +83,30 @@ export default function PaymentsPage() {
     };
   }, []);
 
-  // Détection des paramètres d'URL (ex: depuis la notification "Vérifier le paiement")
+  // Détection des paramètres d'URL (ex: depuis la notification "Vérifier le paiement" ou clic KPI "Loyers Encaissés")
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab');
-      const verifyParam = params.get('verify');
-      const actionParam = params.get('action');
-      const statusParam = params.get('status');
+    if (statusParam === 'paye' || tabParam === 'paye') {
+      setActiveMainTab('all');
+      setSubTabFilter('paye');
+    } else if (tabParam === 'pending' || verifyParam) {
+      setActiveMainTab('pending');
+    }
 
-      if (statusParam === 'paye' || tabParam === 'paye') {
-        setActiveMainTab('all');
-        setSubTabFilter('paye');
-      } else if (tabParam === 'pending' || verifyParam) {
-        setActiveMainTab('pending');
-      }
-
-      if (verifyParam) {
-        const declared = PaymentService.getDeclaredPayments();
-        const found =
-          declared.find((p) => p.id === verifyParam || p.receiptNumber === verifyParam) ||
-          declared.find((p) => !p.isVerified) ||
-          declared[0];
-        if (found) {
-          setVerifyingPayment(found);
-        }
-      }
-
-      if (actionParam === 'new' || actionParam === 'declare' || actionParam === 'new_payment') {
-        setQuickAction('new_payment');
+    if (verifyParam) {
+      const declared = PaymentService.getDeclaredPayments();
+      const found =
+        declared.find((p) => p.id === verifyParam || p.receiptNumber === verifyParam) ||
+        declared.find((p) => !p.isVerified) ||
+        declared[0];
+      if (found) {
+        setVerifyingPayment(found);
       }
     }
-  }, []);
+
+    if (actionParam === 'new' || actionParam === 'declare' || actionParam === 'new_payment') {
+      setQuickAction('new_payment');
+    }
+  }, [statusParam, tabParam, verifyParam, actionParam]);
 
   const pendingPayments = declaredPayments.filter((p) => !p.isVerified && p.status !== 'en_retard');
 
@@ -170,6 +175,18 @@ export default function PaymentsPage() {
         />
 
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
+          {/* Bouton Retour Accueil sur Mobile & Desktop */}
+          <div className="flex items-center gap-2 pb-1">
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
+            >
+              <Home className="w-4 h-4 text-slate-600" />
+              <span>← Retour au Tableau de bord</span>
+            </button>
+          </div>
+
           {/* Top Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -464,5 +481,19 @@ export default function PaymentsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function PaymentsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F4F6F9] flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+        </div>
+      }
+    >
+      <PaymentsPageContent />
+    </Suspense>
   );
 }

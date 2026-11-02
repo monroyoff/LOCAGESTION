@@ -1291,6 +1291,18 @@ function TenantPortalContent() {
 
               {/* Header Box with Sub-Selector */}
               <div className="bg-white rounded-3xl p-4 sm:p-7 border border-slate-200/80 shadow-soft">
+                {/* Bouton Retour Accueil en haut de la carte (visible sur mobile et desktop) */}
+                <div className="flex items-center gap-2 pb-3 mb-2 border-b border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('accueil')}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Home className="w-4 h-4 text-slate-600" />
+                    <span>← Retour à l’Accueil</span>
+                  </button>
+                </div>
+
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">

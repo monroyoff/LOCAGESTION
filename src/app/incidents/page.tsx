@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { useSpace } from '@/lib/context/space-context';
@@ -31,12 +31,14 @@ import {
   AlertCircle,
   Sparkles,
   Calendar,
+  Home,
 } from 'lucide-react';
 import {
   ReportedIncident,
   IncidentService,
   IncidentStatus,
   IncidentUrgency,
+  INITIAL_INCIDENTS,
 } from '@/lib/services/incident-service';
 import { LandlordIncidentModal } from '@/components/dashboard/LandlordIncidentModal';
 import { notifySave, notifyUpdate } from '@/lib/notifications/action-notifier';
@@ -62,12 +64,13 @@ const ISSUE_SAMPLE_PHOTOS = [
 ];
 
 function IncidentsPageContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { isLandlord, isTenant, activeSpace, switchSpace } = useSpace();
 
   // Liste des incidents synchronisée
-  const [incidents, setIncidents] = useState<ReportedIncident[]>([]);
+  const [incidents, setIncidents] = useState<ReportedIncident[]>(INITIAL_INCIDENTS);
   const [selectedIncident, setSelectedIncident] = useState<ReportedIncident | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'resolved'>('all');
   const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'critique' | 'urgente' | 'normale'>('all');
@@ -238,6 +241,18 @@ function IncidentsPageContent() {
           {/* ==================================================================== */}
           {isLandlord ? (
             <div className="space-y-6">
+              {/* Bouton Retour Accueil (visible sur mobile et desktop) */}
+              <div className="flex items-center gap-2 pb-1">
+                <button
+                  type="button"
+                  onClick={() => router.push('/')}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
+                >
+                  <Home className="w-4 h-4 text-slate-600" />
+                  <span>← Retour au Tableau de bord</span>
+                </button>
+              </div>
+
               {/* En-tête de page Bailleur */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-7 rounded-3xl bg-slate-900 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute -right-10 -bottom-10 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl pointer-events-none" />
@@ -666,6 +681,18 @@ function IncidentsPageContent() {
             /* VUE 2 : ESPACE LOCATAIRE (Signaler une panne & Suivi personnel)       */
             /* ==================================================================== */
             <div className="space-y-6">
+              {/* Bouton Retour Accueil (visible sur mobile et desktop) */}
+              <div className="flex items-center gap-2 pb-1">
+                <button
+                  type="button"
+                  onClick={() => router.push('/portal')}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
+                >
+                  <Home className="w-4 h-4 text-slate-600" />
+                  <span>← Retour à l’Accueil</span>
+                </button>
+              </div>
+
               {/* En-tête de page Locataire */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-emerald-900 via-slate-900 to-slate-900 text-white shadow-xl relative overflow-hidden">
                 <div className="relative z-10">
@@ -863,6 +890,8 @@ function IncidentsPageContent() {
                             </div>
                           )}
 
+
+
                           {/* Artisan mandaté pour le locataire */}
                           {incident.assignedTechnician && (
                             <div className="mt-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50/70 border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
@@ -912,7 +941,23 @@ function IncidentsPageContent() {
                             </div>
                           )}
 
-                          {/* Notes de suivi du bailleur pour le locataire */}
+
+
+                          {/* Montant facturé/payé à l'artisan (visible locataire & bailleur sur mobile et desktop) */}
+                          {incident.artisanFee !== undefined && incident.artisanFee > 0 && (
+                            <div className="mt-3 p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border border-amber-300/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-2 text-amber-950 font-bold">
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0" />
+                                <span>Règlement intervention artisan : <strong className="text-sm font-black text-slate-900">{formatFCFA(incident.artisanFee)}</strong></span>
+                                {incident.artisanInvoiceRef && (
+                                  <span className="text-[10px] text-slate-500 font-mono">({incident.artisanInvoiceRef})</span>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 self-start sm:self-auto">
+                                {incident.artisanPaymentStatus === 'paye' || incident.status === 'resolu' ? 'Pris en charge bailleur' : 'En cours de validation'}
+                              </span>
+                            </div>
+                          )}
                           {incident.resolutionNotes && (
                             <div className="mt-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700">
                               <span className="font-bold text-slate-900 block mb-0.5">

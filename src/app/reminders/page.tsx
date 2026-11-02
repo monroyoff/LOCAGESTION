@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -18,6 +19,7 @@ import {
   History,
   Sparkles,
   X,
+  Home,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -25,6 +27,7 @@ import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderMo
 import { notifyAction } from '@/lib/notifications/action-notifier';
 
 export default function RemindersCenterPage() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
   const [collectiveAuto, setCollectiveAuto] = useState(true);
@@ -106,6 +109,18 @@ export default function RemindersCenterPage() {
         />
 
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
+          {/* Bouton Retour Accueil sur Mobile & Desktop */}
+          <div className="flex items-center gap-2 pb-1">
+            <button
+              type="button"
+              onClick={() => router.push('/')}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
+            >
+              <Home className="w-4 h-4 text-slate-600" />
+              <span>← Retour au Tableau de bord</span>
+            </button>
+          </div>
+
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>

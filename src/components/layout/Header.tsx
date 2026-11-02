@@ -103,7 +103,11 @@ export function Header({
 }: HeaderProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const todayFormatted = formatDateFR(new Date());
+  const [todayFormatted, setTodayFormatted] = useState('02/11/2026');
+
+  useEffect(() => {
+    setTodayFormatted(formatDateFR(new Date()));
+  }, []);
   const { isLandlord, isTenant, activeSpace } = useSpace();
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
@@ -200,14 +204,14 @@ export function Header({
   const showBackButton = !isHomeDashboard;
 
   const handleBack = () => {
-    if (isTenant && activePortalTab && activePortalTab !== 'accueil' && onPortalTabChange) {
-      onPortalTabChange('accueil');
-      return;
-    }
-    if (typeof window !== 'undefined' && window.history.length > 1) {
-      router.back();
+    if (isTenant) {
+      if (activePortalTab && activePortalTab !== 'accueil' && onPortalTabChange) {
+        onPortalTabChange('accueil');
+        return;
+      }
+      router.push('/portal');
     } else {
-      router.push(isLandlord ? '/' : '/portal');
+      router.push('/');
     }
   };
 
@@ -234,7 +238,7 @@ export function Header({
     <>
       <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
         {/* Left: Universal Back Button & Mobile Menu & Space Badge / Title */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           {showBackButton && (
             <button
               type="button"
@@ -257,13 +261,13 @@ export function Header({
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="hidden sm:block min-w-0 shrink-0">
-            <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
-              <h1 className="text-base sm:text-lg lg:text-xl font-black text-slate-900 tracking-tight whitespace-nowrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
+              <h1 className="text-sm sm:text-base lg:text-xl font-black text-slate-900 tracking-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
                 {getPageTitle()}
               </h1>
               <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${
+                className={`hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${
                   isLandlord
                     ? 'bg-brand-50 text-brand-600 border-brand-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -274,7 +278,7 @@ export function Header({
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span className="whitespace-nowrap" suppressHydrationWarning>
                 Aujourd’hui : {todayFormatted}
