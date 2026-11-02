@@ -584,7 +584,7 @@ function TenantPortalContent() {
         {/* Main Tenant Container */}
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-5xl mx-auto w-full">
           {/* Top Segmented Navigation Tabs (Desktop lg+ uniquement — Sur Mobile, la barre est directement sous le Header) */}
-          <div className="hidden lg:flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
+          <div className="resident-subbar hidden lg:flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => handleTabChange('accueil')}

@@ -16,10 +16,28 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Custom modern sleek scrollbar */
+/* Custom modern sleek scrollbar (Uniquement vertical, AUCUNE scrollbar horizontale) */
 ::-webkit-scrollbar {
   width: 6px;
-  height: 6px;
+  height: 0px !important;
+}
+
+::-webkit-scrollbar:horizontal {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-thumb:horizontal {
+  display: none !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+::-webkit-scrollbar-track:horizontal {
+  display: none !important;
+  background: transparent !important;
 }
 
 ::-webkit-scrollbar-track {
@@ -44,17 +62,28 @@ body {
 }
 
 /* Utilitaires universels de masquage de barre de défilement (scrollbar-none / no-scrollbar) */
-.scrollbar-none::-webkit-scrollbar,
-.no-scrollbar::-webkit-scrollbar {
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+.scrollbar-none,
+.no-scrollbar,
+.resident-subbar {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE and Edge */
 }
 
-.scrollbar-none,
-.no-scrollbar {
-  -ms-overflow-style: none !important; /* IE and Edge */
-  scrollbar-width: none !important; /* Firefox */
+.scrollbar-none::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar,
+.resident-subbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar-thumb,
+.no-scrollbar::-webkit-scrollbar-thumb,
+.resident-subbar::-webkit-scrollbar-thumb,
+.scrollbar-none::-webkit-scrollbar-track,
+.no-scrollbar::-webkit-scrollbar-track,
+.resident-subbar::-webkit-scrollbar-track,
+*::-webkit-scrollbar:horizontal {
+  display: none !important;
+  width: 0px !important;
+  height: 0px !important;
+  background: transparent !important;
+  opacity: 0 !important;
 }
 
 /* Sur mobile et tablette tactile, masquer toutes les barres de défilement disgracieuses */
@@ -63,6 +92,10 @@ body {
     display: none !important;
     width: 0 !important;
     height: 0 !important;
+  }
+  ::-webkit-scrollbar-thumb {
+    display: none !important;
+    background: transparent !important;
   }
   * {
     -ms-overflow-style: none !important;

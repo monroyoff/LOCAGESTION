@@ -416,9 +416,24 @@ export function Header({
       {/* ==================================================================== */}
       {isTenant && (
         <div
-          className="lg:hidden border-t border-slate-200/80 bg-white/95 backdrop-blur-md px-3 py-2 overflow-x-auto scrollbar-none shadow-xs"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          className="resident-subbar lg:hidden border-t border-slate-200/80 bg-white/95 backdrop-blur-md px-3 py-2 overflow-x-auto shadow-xs"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+          }}
         >
+          <style dangerouslySetInnerHTML={{ __html: `
+            .resident-subbar::-webkit-scrollbar,
+            .resident-subbar::-webkit-scrollbar-thumb,
+            .resident-subbar::-webkit-scrollbar-track {
+              display: none !important;
+              height: 0px !important;
+              width: 0px !important;
+              background: transparent !important;
+              opacity: 0 !important;
+            }
+          `}} />
           <div className="flex items-center gap-2 px-1 min-w-max">
             {/* 1. Mon Logement & Loyer */}
             <button
