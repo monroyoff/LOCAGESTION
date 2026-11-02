@@ -225,12 +225,18 @@ export function getUserProfile(role: UserSpace = 'locataire'): UserProfile {
       const saved = localStorage.getItem(`${STORAGE_KEY_PROFILE}:${role}`);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return {
+        const profile = {
           ...parsed,
           residenceCountry: parsed.residenceCountry || country,
           residenceCity: parsed.residenceCity || city,
           residenceDistrict: parsed.residenceDistrict || district,
+          avatarUrl:
+            (role === 'bailleur' || parsed.name === 'Mamadou Diallo') &&
+            parsed.avatarUrl?.includes('photo-1534528741775-53994a69daeb')
+              ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
+              : parsed.avatarUrl,
         };
+        return profile;
       }
     } catch (e) {}
   }
@@ -245,7 +251,7 @@ export function getUserProfile(role: UserSpace = 'locataire'): UserProfile {
       residenceCountry: country,
       residenceCity: city,
       residenceDistrict: district,
-      avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+      avatarUrl: 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80',
       registrationDate: '15/01/2025',
     };
   }

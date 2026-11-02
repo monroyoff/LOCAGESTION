@@ -570,6 +570,8 @@ function TenantPortalContent() {
       <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
         <Header
           onToggleSidebar={() => setSidebarOpen(true)}
+          activePortalTab={activeTab}
+          onPortalTabChange={handleTabChange}
           onOpenTenantAction={(action) => {
             if (action === 'declare_payment') {
               setDeclarationModalOpen(true);
@@ -581,16 +583,14 @@ function TenantPortalContent() {
 
         {/* Main Tenant Container */}
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-5xl mx-auto w-full">
-          {/* Top Segmented Navigation Tabs */}
-          {/* Sur Desktop (lg+) : affichage des 4 onglets complets */}
-          {/* Sur Mobile (<lg) : les 3 onglets "Mes Quittances & Reçus", "Mon Bail & Contrat" et "Passeport Solvabilité" sont déplacés dans le Menu Résident (Sidebar) */}
-          <div className="flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
+          {/* Top Segmented Navigation Tabs (Desktop lg+ uniquement — Sur Mobile, la barre est directement sous le Header) */}
+          <div className="hidden lg:flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => handleTabChange('accueil')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'accueil'
-                  ? 'bg-slate-900 text-white shadow-sm font-black'
+                  ? 'bg-black text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -601,9 +601,9 @@ function TenantPortalContent() {
             <button
               type="button"
               onClick={() => handleTabChange('quittances')}
-              className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'quittances'
-                  ? 'bg-slate-900 text-white shadow-sm font-black'
+                  ? 'bg-black text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -621,9 +621,9 @@ function TenantPortalContent() {
             <button
               type="button"
               onClick={() => handleTabChange('bail')}
-              className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'bail'
-                  ? 'bg-slate-900 text-white shadow-sm font-black'
+                  ? 'bg-black text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -634,9 +634,9 @@ function TenantPortalContent() {
             <button
               type="button"
               onClick={() => handleTabChange('solvabilite')}
-              className={`hidden lg:flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'solvabilite'
-                  ? 'bg-slate-900 text-white shadow-sm font-black'
+                  ? 'bg-black text-white shadow-sm font-black'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
               }`}
             >
@@ -651,38 +651,6 @@ function TenantPortalContent() {
               </span>
             </button>
           </div>
-
-          {/* Bandeau d'indication sur Mobile lorsque l'une des rubriques du Menu Résident est affichée */}
-          {activeTab !== 'accueil' && (
-            <div className="lg:hidden flex items-center justify-between p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-sm animate-in fade-in duration-150">
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="p-2 rounded-xl text-white shrink-0 shadow-sm bg-slate-900">
-                  {activeTab === 'quittances' && <Receipt className="w-4 h-4" />}
-                  {activeTab === 'bail' && <FileText className="w-4 h-4" />}
-                  {activeTab === 'solvabilite' && <ShieldCheck className="w-4 h-4" />}
-                </span>
-                <div className="min-w-0">
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
-                    Menu Résident • Section Active
-                  </span>
-                  <span className="text-xs font-black text-slate-900 block truncate">
-                    {activeTab === 'quittances' && 'Mes Quittances & Reçus'}
-                    {activeTab === 'bail' && 'Mon Bail & Contrat'}
-                    {activeTab === 'solvabilite' && 'Passeport Solvabilité'}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleTabChange('accueil')}
-                className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
-              >
-                <Home className="w-3.5 h-3.5" />
-                <span>Mon Logement</span>
-              </button>
-            </div>
-          )}
 
           {/* ==================================================================== */}
           {/* ONGLET 1 : ACCUEIL / MON LOGEMENT & LOYER                             */}

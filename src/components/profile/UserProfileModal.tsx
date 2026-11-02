@@ -47,7 +47,7 @@ const PRESET_AVATARS = [
   },
   {
     label: 'Mamadou (Bailleur)',
-    url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+    url: 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80',
   },
   {
     label: 'Amina (Consultante)',
@@ -205,7 +205,7 @@ export function UserProfileModal({
                 src={
                   profile.avatarUrl ||
                   (profile.role === 'bailleur'
-                    ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80'
+                    ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
                     : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')
                 }
                 alt={profile.name}

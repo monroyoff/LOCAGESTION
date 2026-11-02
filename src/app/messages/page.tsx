@@ -679,7 +679,7 @@ export default function MessagesPage() {
                     {/* Right avatar for sent message */}
                     {isMe && (
                       <img
-                        src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80"
+                        src="https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80"
                         alt="Mamadou Diallo"
                         className="w-8 h-8 rounded-full object-cover shrink-0 mb-1 ring-1 ring-brand-500/50"
                       />

@@ -21,7 +21,7 @@ export const DEMO_LANDLORD: AuthUser = {
   residenceCity: 'Cotonou',
   residenceDistrict: 'Haie Vive',
   avatarUrl:
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80',
   companyName: 'Cabinet Diallo Patrimoine SARL',
   ifuNumber: '0202110485960',
   registeredAt: '15/01/2025',
@@ -86,7 +86,18 @@ export const AuthService = {
     try {
       const session = localStorage.getItem(STORAGE_KEY_SESSION);
       if (session) {
-        return JSON.parse(session);
+        const parsed = JSON.parse(session);
+        // Correction automatique si l'ancien avatar erroné est resté dans le cache local
+        if (
+          parsed &&
+          (parsed.role === 'bailleur' || parsed.name === 'Mamadou Diallo') &&
+          parsed.avatarUrl?.includes('photo-1534528741775-53994a69daeb')
+        ) {
+          parsed.avatarUrl =
+            'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80';
+          localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
+        }
+        return parsed;
       }
 
       // Si aucune session explicite, initialiser selon l'espace actif existant
@@ -194,7 +205,7 @@ export const AuthService = {
 
     const defaultAvatar =
       data.role === 'bailleur'
-        ? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80'
+        ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
         : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80';
 
     const nowFormatted = new Date().toLocaleDateString('fr-FR', {
