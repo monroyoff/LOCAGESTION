@@ -118,12 +118,7 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3. 4 Cartes KPI (Encaissé, Dépenses, Loyer moyen, Résultat net) */}
-          <section aria-label="Indicateurs clés">
-            <StatCards kpis={MOCK_KPIS} />
-          </section>
-
-          {/* 4. Visuel Héro Bien Phare & Bandeau d'Occupation */}
+          {/* 3. Visuel Héro Bien Phare & Bandeau d'Occupation */}
           <section className="space-y-5" aria-label="Parc et occupation">
             <HeroPropertyCard
               property={MOCK_FEATURED_PROPERTY}
@@ -174,13 +169,31 @@ export default function DashboardPage() {
             </section>
           )}
 
-          {/* 7. Tableau Opérations Récentes & Suivi des Loyers */}
-          <section aria-label="Opérations récentes">
+          {/* 6. Tableau Opérations Récentes & Suivi des Loyers */}
+          <section aria-label="Opérations récentes" id="operations-suivi-loyers">
             <RecentPaymentsTable
               payments={MOCK_RECENT_PAYMENTS}
               onSelectPayment={(p) => setSelectedPayment(p)}
               onSendReminder={(p) => setReminderPayment(p)}
             />
+          </section>
+
+          {/* 7. Indicateurs Clés & Raccourcis d'Opérations (Placés en bas après Opérations & Suivi des Loyers) */}
+          <section aria-label="Indicateurs clés et opérations">
+            <div className="flex items-center justify-between mb-3 px-1">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>Synthèse Financière & Indicateurs Clés</span>
+                  <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-full">
+                    Interactif • Cliquez pour ouvrir les opérations
+                  </span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Cliquez sur chaque carte pour accéder directement au module et aux opérations correspondantes.
+                </p>
+              </div>
+            </div>
+            <StatCards kpis={MOCK_KPIS} />
           </section>
 
           {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
