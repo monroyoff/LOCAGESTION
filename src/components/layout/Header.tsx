@@ -264,16 +264,18 @@ export function Header({
 
         {/* Right: Space-Specific Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Mobile Search Button */}
-          <button
-            type="button"
-            onClick={handleOpenSearch}
-            className="md:hidden p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 shadow-sm transition-colors cursor-pointer shrink-0"
-            aria-label="Aller à la section Annonces & Visites"
-            title="Rechercher"
-          >
-            <Search className="w-4 h-4 text-slate-600" />
-          </button>
+          {/* Mobile Search Button (Bailleur uniquement) */}
+          {isLandlord && (
+            <button
+              type="button"
+              onClick={handleOpenSearch}
+              className="md:hidden p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 shadow-sm transition-colors cursor-pointer shrink-0"
+              aria-label="Aller à la section Annonces & Visites"
+              title="Rechercher"
+            >
+              <Search className="w-4 h-4 text-slate-600" />
+            </button>
+          )}
 
           {/* Cloche de Notifications Universelle (Bailleur & Locataire) */}
           <div className="relative shrink-0" ref={notifRef}>

@@ -718,18 +718,6 @@ function TenantPortalContent() {
                 </div>
               )}
 
-              {/* Bouton Accueil sur Mobile (juste en haut de la hero section - STRICTEMENT MOBILE < 640px) */}
-              <div className="sm:hidden flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('accueil')}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-black text-white text-xs font-black shadow-md active:scale-95 transition-all cursor-pointer"
-                >
-                  <Home className="w-4 h-4 text-white" />
-                  <span>Accueil</span>
-                </button>
-              </div>
-
               {/* Hero Banner: Rent Due & Quick Payment */}
               <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -1025,20 +1013,7 @@ function TenantPortalContent() {
           {/* ONGLET 2 : MES QUITTANCES & REÇUS                                   */}
           {/* ==================================================================== */}
           {activeTab === 'quittances' && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile (STRICTEMENT MOBILE < 640px) */}
-              <div className="sm:hidden flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('accueil')}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <Home className="w-4 h-4 text-slate-500" />
-                  <span>← Retour à l’Accueil</span>
-                </button>
-              </div>
-
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                 <div>
                   <div className="flex items-center gap-2">
@@ -1267,7 +1242,6 @@ function TenantPortalContent() {
                 )))}
               </div>
             </div>
-            </div>
           )}
 
           {/* ==================================================================== */}
@@ -1276,18 +1250,6 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'bail' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile (STRICTEMENT MOBILE < 640px) */}
-              <div className="sm:hidden flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('accueil')}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <Home className="w-4 h-4 text-slate-500" />
-                  <span>← Retour à l’Accueil</span>
-                </button>
-              </div>
-
               {/* Header Box with Sub-Selector */}
               <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1748,20 +1710,7 @@ function TenantPortalContent() {
           {/* ONGLET 4 : PASSEPORT SOLVABILITÉ                                    */}
           {/* ==================================================================== */}
           {activeTab === 'solvabilite' && (
-            <div className="space-y-4 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile (STRICTEMENT MOBILE < 640px) */}
-              <div className="sm:hidden flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('accueil')}
-                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
-                >
-                  <Home className="w-4 h-4 text-slate-500" />
-                  <span>← Retour à l’Accueil</span>
-                </button>
-              </div>
-
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
               <div>
                 <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider block mb-1">
                   Mon Profil Locatif Certifié
@@ -1845,7 +1794,6 @@ function TenantPortalContent() {
                   </span>
                 </div>
               </div>
-            </div>
             </div>
           )}
         </main>
