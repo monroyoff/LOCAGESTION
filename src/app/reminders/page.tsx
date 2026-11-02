@@ -45,6 +45,7 @@ import {
 } from '@/lib/services/notice-service';
 import { IssueNoticeModal } from '@/components/reminders/IssueNoticeModal';
 import { NoticeDetailsModal } from '@/components/reminders/NoticeDetailsModal';
+import { NoticeEmailModal } from '@/components/reminders/NoticeEmailModal';
 import { generateNoticePDF } from '@/lib/export/pdf-download';
 
 export default function RemindersCenterPage() {
@@ -66,6 +67,7 @@ export default function RemindersCenterPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>('all');
   const [showIssueNoticeModal, setShowIssueNoticeModal] = useState(false);
   const [selectedNoticeForDetails, setSelectedNoticeForDetails] = useState<Notice | null>(null);
+  const [selectedNoticeForEmail, setSelectedNoticeForEmail] = useState<Notice | null>(null);
 
   useEffect(() => {
     setNotices(NoticeService.getNotices());
@@ -749,6 +751,16 @@ export default function RemindersCenterPage() {
 
                             <button
                               type="button"
+                              onClick={() => setSelectedNoticeForEmail(item)}
+                              className="py-2 px-3 rounded-xl bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                              title="Notifier formellement par Email"
+                            >
+                              <Mail className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Email</span>
+                            </button>
+
+                            <button
+                              type="button"
                               onClick={() => {
                                 const phoneClean = item.tenantPhone.replace(/[^0-9]/g, '');
                                 const msg = `*NOTIFICATION DE PRÉAVIS DE CONGÉ*\n\nBonjour M./Mme *${item.tenantName}*,\n\nNous vous informons que votre préavis de congé pour votre logement *${item.propertyName} (${item.unitNumber})* arrive à échéance le *${item.effectiveDate}*.\n\n📌 *Motif :* ${item.reasonTitle}\n\nMerci de contacter la gestion pour coordonner l'état des lieux de sortie.\n\n*Cabinet DIALLO Patrimoine*`;
@@ -793,6 +805,16 @@ export default function RemindersCenterPage() {
           onNoticeUpdated={() => {
             refreshNotices();
           }}
+          onOpenEmail={(notice) => setSelectedNoticeForEmail(notice)}
+        />
+      )}
+
+      {/* Modale d'Aperçu & Notification Email */}
+      {selectedNoticeForEmail && (
+        <NoticeEmailModal
+          isOpen={!!selectedNoticeForEmail}
+          notice={selectedNoticeForEmail}
+          onClose={() => setSelectedNoticeForEmail(null)}
         />
       )}
 

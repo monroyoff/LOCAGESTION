@@ -12,6 +12,7 @@ export type NoticeDeliveryMethod =
   | 'huissier'
   | 'main_propre'
   | 'courrier_recommande'
+  | 'email_officiel'
   | 'whatsapp_email';
 
 export type NoticeStatus = 'en_cours' | 'notifie' | 'cloture' | 'annule';
@@ -47,6 +48,7 @@ export const NOTICE_REASONS_CATALOG: {
   badgeColor: string;
   legalBasis: string;
   description: string;
+  defaultExpose: string;
   iconName: string;
 }[] = [
   {
@@ -56,6 +58,7 @@ export const NOTICE_REASONS_CATALOG: {
     badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
     legalBasis: 'Code Foncier & Domanial UEMOA - Droit de reprise du bailleur ou de ses ascendants/descendants',
     description: 'Le propriétaire bailleur reprend possession du logement pour y habiter personnellement ou y loger un ascendant ou descendant direct.',
+    defaultExpose: 'Le bailleur soussigné notifie par la présente son intention formelle de reprendre possession du logement loué pour son occupation personnelle ou celle de son proche bénéficiaire désigné, à titre de résidence principale effective, conformément au Code Foncier et Domanial et aux textes en vigueur.',
     iconName: 'Home',
   },
   {
@@ -65,6 +68,7 @@ export const NOTICE_REASONS_CATALOG: {
     badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
     legalBasis: 'Régime des Baux d’Habitation UEMOA - Droit de préemption légal du locataire en place',
     description: 'Mise en vente du bien immobilier libre de toute occupation, avec formulation préalable de l’offre d’acquisition au locataire titulaire du droit de préemption.',
+    defaultExpose: 'Le propriétaire bailleur notifie son intention de procéder à la vente du bien immobilier libre de toute occupation. En application des dispositions légales régissant les baux d’habitation, la présente notification vaut offre formelle d’acquisition préalable au profit du locataire, qui bénéficie d’un droit légal de préemption pour se porter acquéreur aux conditions financières stipulées.',
     iconName: 'Tag',
   },
   {
@@ -74,6 +78,7 @@ export const NOTICE_REASONS_CATALOG: {
     badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
     legalBasis: 'Code Civil & Droit OHADA des Contrats - Résiliation pour inexécution fautive après mise en demeure',
     description: 'Défaut récurrent de paiement des loyers, dégradations volontaires des locaux, sous-location illicite ou troubles anormaux de voisinage avérés.',
+    defaultExpose: 'Le bailleur constate l’inexécution grave et répétée des obligations locatives contractuelles par le preneur, caractérisée notamment par des retards récurrents et des arriérés persistants de paiement des loyers et charges, malgré les relances et mises en demeure préalables restées infructueuses, justifiant la résiliation unilatérale du bail avec préavis légal.',
     iconName: 'AlertTriangle',
   },
   {
@@ -83,6 +88,7 @@ export const NOTICE_REASONS_CATALOG: {
     badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
     legalBasis: 'Réglementation Urbanistique & Salubrité UEMOA - Réhabilitation et mise en conformité structurelle',
     description: 'Réfection lourde de toiture, restructuration ou travaux de consolidation incompatibles avec le maintien des occupants pour des impératifs stricts de sécurité.',
+    defaultExpose: 'Le bailleur engage un programme de travaux majeurs de réhabilitation structurelle, de réfection lourde de toiture et de mise en conformité des réseaux d’assainissement nécessitant la libération intégrale et la vacance impérative des locaux pour des motifs stricts de sécurité des personnes, incompatibles avec le maintien du preneur dans les lieux.',
     iconName: 'Hammer',
   },
   {
@@ -92,6 +98,7 @@ export const NOTICE_REASONS_CATALOG: {
     badgeColor: 'bg-slate-100 text-slate-800 border-slate-300',
     legalBasis: 'Droit Commun des Baux à Durée Déterminée - Congé signifié avant échéance contractuelle',
     description: 'Notification du non-renouvellement du contrat de location arrivé à son terme contractuel normal.',
+    defaultExpose: 'Le bailleur informe formellement le preneur de sa décision de ne pas renouveler le contrat de bail d’habitation arrivant à son échéance contractuelle convenue, signifiant ainsi congé de manière définitive dans le respect strict du préavis légal applicable avant le terme du bail.',
     iconName: 'CalendarCheck',
   },
   {
@@ -101,6 +108,7 @@ export const NOTICE_REASONS_CATALOG: {
     badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     legalBasis: 'Résiliation unilatérale à l’initiative du preneur avec respect du préavis contractuel',
     description: 'Prise d’acte officielle du congé signifié par le locataire pour convenance personnelle ou mutation professionnelle.',
+    defaultExpose: 'Le bailleur prend acte officiellement de la notification de congé signifiée par le preneur pour convenance personnelle ou mutation, confirmant la prise en compte du délai de préavis contractuel et fixant le calendrier pour l’état des lieux de sortie contradictoire et la restitution intégrale des clés.',
     iconName: 'DoorOpen',
   },
 ];
@@ -247,3 +255,4 @@ export class NoticeService {
     this.saveNotices(updated);
   }
 }
+
