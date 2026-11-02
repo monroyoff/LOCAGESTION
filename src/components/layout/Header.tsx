@@ -203,7 +203,7 @@ export function Header({
     <>
       <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
         {/* Left: Mobile Menu & Space Badge / Title */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
           <button
             onClick={onToggleSidebar}
             className="lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
@@ -213,9 +213,9 @@ export function Header({
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="hidden sm:block min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-base md:text-xl lg:text-2xl font-black text-slate-900 tracking-tight truncate">
+          <div className="hidden sm:block min-w-0 shrink-0">
+            <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
+              <h1 className="text-base sm:text-lg lg:text-xl font-black text-slate-900 tracking-tight whitespace-nowrap">
                 {isLandlord ? 'Tableau de bord' : 'Mon Espace Locataire'}
               </h1>
               <span
@@ -232,13 +232,13 @@ export function Header({
 
             <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span className="truncate">Aujourd’hui : {todayFormatted}</span>
+              <span className="whitespace-nowrap">Aujourd’hui : {todayFormatted}</span>
             </div>
           </div>
         </div>
 
-        {/* Middle: Global Search Bar - Clic renvoie directement vers Annonces & Visites */}
-        <div className="hidden md:flex items-center flex-1 max-w-md mx-2 lg:mx-4">
+        {/* Middle: Global Search Bar (Affichée sur grand écran xl+, bouton compact en dessous) */}
+        <div className="hidden xl:flex items-center flex-1 max-w-xs mx-4">
           <button
             type="button"
             onClick={handleOpenSearch}
@@ -248,7 +248,7 @@ export function Header({
             <div className="flex items-center gap-2.5 min-w-0 pr-2">
               <Search className="w-4 h-4 text-slate-400 group-hover:text-brand-500 transition-colors flex-shrink-0" />
               <span className="truncate text-slate-400 group-hover:text-slate-600 font-medium">
-                Rechercher une location (Pays, Ville, Budget...)
+                Rechercher une location...
               </span>
             </div>
             <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -264,18 +264,16 @@ export function Header({
 
         {/* Right: Space-Specific Action Buttons */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          {/* Mobile Search Button (Bailleur uniquement) */}
-          {isLandlord && (
-            <button
-              type="button"
-              onClick={handleOpenSearch}
-              className="md:hidden p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 shadow-sm transition-colors cursor-pointer shrink-0"
-              aria-label="Aller à la section Annonces & Visites"
-              title="Rechercher"
-            >
-              <Search className="w-4 h-4 text-slate-600" />
-            </button>
-          )}
+          {/* Bouton de recherche compact (Mobile, Tablettes et Laptops < xl) */}
+          <button
+            type="button"
+            onClick={handleOpenSearch}
+            className="xl:hidden p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 shadow-sm transition-colors cursor-pointer shrink-0"
+            aria-label="Aller à la section Annonces & Visites"
+            title="Rechercher"
+          >
+            <Search className="w-4 h-4 text-slate-600" />
+          </button>
 
           {/* Cloche de Notifications Universelle (Bailleur & Locataire) */}
           <div className="relative shrink-0" ref={notifRef}>
@@ -523,7 +521,7 @@ export function Header({
                     router.push('/incidents?action=new');
                   }
                 }}
-                className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm active:scale-95 transition-all cursor-pointer"
+                className="hidden xl:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm active:scale-95 transition-all cursor-pointer"
               >
                 <Wrench className="w-4 h-4 text-brand-400" />
                 <span>Signaler une panne</span>
