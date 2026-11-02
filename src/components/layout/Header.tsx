@@ -203,7 +203,7 @@ export function Header({
     <>
       <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
         {/* Left: Mobile Menu & Space Badge / Title */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 sm:flex-1">
           <button
             onClick={onToggleSidebar}
             className="lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
@@ -235,6 +235,14 @@ export function Header({
               <span className="truncate">Aujourd’hui : {todayFormatted}</span>
             </div>
           </div>
+        </div>
+
+        {/* Center on Mobile : "Créée au Bénin" */}
+        <div className="sm:hidden flex-1 flex items-center justify-center px-1">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-slate-200/90 shadow-xs text-xs font-bold text-slate-800 tracking-tight">
+            <span className="text-sm leading-none">🇧🇯</span>
+            <span>Créée au Bénin</span>
+          </span>
         </div>
 
         {/* Middle: Global Search Bar - Clic renvoie directement vers Annonces & Visites */}
