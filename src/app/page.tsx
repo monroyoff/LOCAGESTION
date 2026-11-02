@@ -111,9 +111,9 @@ export default function DashboardPage() {
         />
 
         {/* Dashboard Body */}
-        <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
-          {/* Welcome & Context Banner */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-gradient-to-r from-slate-900 via-[#131722] to-slate-900 rounded-3xl text-white shadow-xl relative overflow-hidden">
+        <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6">
+          {/* 1. Welcome & Context Banner */}
+          <div className="order-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-gradient-to-r from-slate-900 via-[#131722] to-slate-900 rounded-3xl text-white shadow-xl relative overflow-hidden">
             {/* Background glowing sphere */}
             <div className="absolute -right-10 -bottom-10 w-44 h-44 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
             <div className="relative z-10 flex items-center gap-3 self-start sm:self-auto">
               <button
                 onClick={() => setQuickAction('new_payment')}
-                className="py-2.5 px-4 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-black shadow-md transition-all active:scale-95"
+                className="py-2.5 px-4 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
               >
                 + Encaisser
               </button>
@@ -151,27 +151,55 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* 3. Visuel Héro Bien Phare & Bandeau d'Occupation */}
-          <section className="space-y-5" aria-label="Parc et occupation">
-            <HeroPropertyCard
-              property={MOCK_FEATURED_PROPERTY}
-              onViewDetails={() => router.push('/properties')}
-            />
-
-            <OccupancyStatusBanner
-              occupancy={MOCK_KPIS.occupancyRate}
-              onFilterStatus={() => router.push('/properties')}
+          {/* 2. Tableau Opérations Récentes & Suivi des Loyers */}
+          {/* SUR MOBILE : order-2 (déplacé en haut juste avant le Statut du Parc Immobilier) */}
+          {/* SUR DESKTOP (lg+) : lg:order-5 (placé après le visuel héro et les graphiques) */}
+          <section
+            aria-label="Opérations récentes"
+            id="operations-suivi-loyers"
+            className="order-2 lg:order-5"
+          >
+            <RecentPaymentsTable
+              payments={MOCK_RECENT_PAYMENTS}
+              initialTab={dashboardPaymentTab}
+              onSelectPayment={(p) => setSelectedPayment(p)}
+              onSendReminder={(p) => setReminderPayment(p)}
             />
           </section>
 
-          {/* 5. Donut Recouvrement & Encaissements Mensuels */}
-          <section aria-label="Finances et encaissements">
+          {/* 3. Statut du Parc Immobilier & Visuel Héro Bien Phare */}
+          {/* SUR MOBILE : order-3 (juste après Opérations & Suivi des Loyers) */}
+          {/* SUR DESKTOP (lg+) : lg:order-2 */}
+          <section
+            className="flex flex-col gap-5 order-3 lg:order-2"
+            aria-label="Parc et occupation"
+            id="statut-du-parc-immobilier"
+          >
+            {/* Bandeau d'Occupation & Statut du Parc */}
+            <div className="order-1 lg:order-2">
+              <OccupancyStatusBanner
+                occupancy={MOCK_KPIS.occupancyRate}
+                onFilterStatus={() => router.push('/properties')}
+              />
+            </div>
+
+            {/* Visuel Héro Bien Phare du Mois */}
+            <div className="order-2 lg:order-1">
+              <HeroPropertyCard
+                property={MOCK_FEATURED_PROPERTY}
+                onViewDetails={() => router.push('/properties')}
+              />
+            </div>
+          </section>
+
+          {/* 4. Donut Recouvrement & Encaissements Mensuels */}
+          <section aria-label="Finances et encaissements" className="order-4 lg:order-3">
             <RentCollectionBreakdown breakdown={MOCK_KPIS.rentBreakdown} />
           </section>
 
-          {/* 6. Alerte Pannes & Interventions Signalées (Transférées vers /incidents) */}
+          {/* 5. Alerte Pannes & Interventions Signalées */}
           {pendingIncidents > 0 && (
-            <section aria-label="Alerte pannes en attente">
+            <section aria-label="Alerte pannes en attente" className="order-5 lg:order-4">
               <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                 <div className="flex items-center gap-3.5">
                   <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-600 flex items-center justify-center shrink-0">
@@ -202,18 +230,8 @@ export default function DashboardPage() {
             </section>
           )}
 
-          {/* 6. Tableau Opérations Récentes & Suivi des Loyers */}
-          <section aria-label="Opérations récentes" id="operations-suivi-loyers">
-            <RecentPaymentsTable
-              payments={MOCK_RECENT_PAYMENTS}
-              initialTab={dashboardPaymentTab}
-              onSelectPayment={(p) => setSelectedPayment(p)}
-              onSendReminder={(p) => setReminderPayment(p)}
-            />
-          </section>
-
-          {/* 7. Indicateurs Clés & Raccourcis d'Opérations (Placés en bas après Opérations & Suivi des Loyers) */}
-          <section aria-label="Indicateurs clés et opérations">
+          {/* 6. Indicateurs Clés & Raccourcis d'Opérations (Placés tout en bas après Opérations & Suivi des Loyers) */}
+          <section aria-label="Indicateurs clés et opérations" className="order-6 lg:order-6">
             <div className="flex items-center justify-between mb-3 px-1">
               <div>
                 <h3 className="text-base sm:text-lg font-black text-slate-900 tracking-tight flex items-center gap-2">
@@ -230,8 +248,10 @@ export default function DashboardPage() {
             <StatCards kpis={dashboardKPIs} onCardClick={handleDashboardCardClick} />
           </section>
 
-          {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
-          <Footer />
+          {/* 7. Footer en fin de page : Créée au Bénin (en bas à gauche) */}
+          <div className="order-7 lg:order-7">
+            <Footer />
+          </div>
         </main>
       </div>
 
