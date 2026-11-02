@@ -310,7 +310,7 @@ export function Sidebar({
                 </svg>
               </div>
               <div>
-                <span className="text-xl font-black tracking-tight text-white flex items-center gap-1.5">
+                <span className="text-xl font-black tracking-tight text-white block">
                   LOCA<span className="text-brand-400">GESTION</span>
                 </span>
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
