@@ -28,14 +28,22 @@ interface RecentPaymentsTableProps {
   payments: PaymentTransaction[];
   onSelectPayment: (payment: PaymentTransaction) => void;
   onSendReminder: (payment: PaymentTransaction) => void;
+  initialTab?: 'all' | 'paye' | 'en_retard' | 'partiel';
 }
 
 export function RecentPaymentsTable({
   payments,
   onSelectPayment,
   onSendReminder,
+  initialTab = 'all',
 }: RecentPaymentsTableProps) {
-  const [activeTab, setActiveTab] = useState<'all' | 'paye' | 'en_retard' | 'partiel'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'paye' | 'en_retard' | 'partiel'>(initialTab);
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState<'all' | 'this_month' | 'last_month' | 'last_3_months' | 'year_2026'>('all');
   const [selectedPeriod, setSelectedPeriod] = useState<string>('all');

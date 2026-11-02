@@ -18,7 +18,7 @@ import {
   MOCK_FEATURED_PROPERTY,
   MOCK_RECENT_PAYMENTS,
 } from '@/lib/data/mock-data';
-import { UserSpace, PaymentTransaction } from '@/lib/types';
+import { UserSpace, PaymentTransaction, DashboardKPIs } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
 import { IncidentService } from '@/lib/services/incident-service';
@@ -36,18 +36,31 @@ export default function DashboardPage() {
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [pendingIncidents, setPendingIncidents] = useState(0);
+  const [dashboardKPIs, setDashboardKPIs] = useState<DashboardKPIs>(MOCK_KPIS);
 
   useEffect(() => {
-    const updateCount = () => {
+    const updateIncidentData = () => {
       const active = IncidentService.getIncidents().filter((i) => i.status !== 'resolu').length;
       setPendingIncidents(active);
+      const totalExpenses = IncidentService.getTotalArtisanExpenses();
+      setDashboardKPIs((prev) => ({
+        ...prev,
+        totalExpenses: {
+          ...prev.totalExpenses,
+          amount: totalExpenses,
+        },
+        netIncome: {
+          ...prev.netIncome,
+          amount: prev.collectedRent.amount - totalExpenses,
+        },
+      }));
     };
-    updateCount();
-    window.addEventListener('locagestion:incidents_updated', updateCount);
-    window.addEventListener('storage', updateCount);
+    updateIncidentData();
+    window.addEventListener('locagestion:incidents_updated', updateIncidentData);
+    window.addEventListener('storage', updateIncidentData);
     return () => {
-      window.removeEventListener('locagestion:incidents_updated', updateCount);
-      window.removeEventListener('storage', updateCount);
+      window.removeEventListener('locagestion:incidents_updated', updateIncidentData);
+      window.removeEventListener('storage', updateIncidentData);
     };
   }, []);
 
@@ -193,7 +206,7 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
-            <StatCards kpis={MOCK_KPIS} />
+            <StatCards kpis={dashboardKPIs} />
           </section>
 
           {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}

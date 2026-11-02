@@ -20,6 +20,7 @@ import {
   X,
   ExternalLink,
   MessageSquare,
+  ArrowLeft,
 } from 'lucide-react';
 import { formatDateFR } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
@@ -191,11 +192,62 @@ export function Header({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pathname]);
 
+  // Détection d'écran d'accueil ou sous-page
+  const isHomeDashboard = isLandlord
+    ? pathname === '/'
+    : pathname === '/portal' && (!activePortalTab || activePortalTab === 'accueil');
+
+  const showBackButton = !isHomeDashboard;
+
+  const handleBack = () => {
+    if (isTenant && activePortalTab && activePortalTab !== 'accueil' && onPortalTabChange) {
+      onPortalTabChange('accueil');
+      return;
+    }
+    if (typeof window !== 'undefined' && window.history.length > 1) {
+      router.back();
+    } else {
+      router.push(isLandlord ? '/' : '/portal');
+    }
+  };
+
+  const getPageTitle = () => {
+    if (isTenant) {
+      if (activePortalTab === 'quittances') return 'Mes Quittances & Reçus';
+      if (activePortalTab === 'bail') return 'Mon Bail & Contrat';
+      if (activePortalTab === 'solvabilite') return 'Mon Passeport Solvabilité';
+      return 'Mon Espace Locataire';
+    }
+    if (pathname === '/payments') return 'Paiements & Encaissements';
+    if (pathname === '/incidents') return 'Pannes & Interventions';
+    if (pathname === '/properties') return 'Parc Immobilier';
+    if (pathname === '/tenants') return 'Gestion des Locataires';
+    if (pathname === '/leases') return 'Contrats de Bail';
+    if (pathname === '/leases/new') return 'Création de Bail';
+    if (pathname === '/listings') return 'Annonces & Visites';
+    if (pathname === '/reminders') return 'Relances & Impayés';
+    if (pathname === '/messages') return 'Messagerie Directe';
+    return 'Tableau de bord';
+  };
+
   return (
     <>
       <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
-        {/* Left: Mobile Menu & Space Badge / Title */}
+        {/* Left: Universal Back Button & Mobile Menu & Space Badge / Title */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 shrink-0">
+          {showBackButton && (
+            <button
+              type="button"
+              onClick={handleBack}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-800 text-xs sm:text-sm font-black shadow-xs transition-all active:scale-95 cursor-pointer shrink-0 group"
+              title="Retour à la page précédente"
+              aria-label="Retour"
+            >
+              <ArrowLeft className="w-4 h-4 text-slate-600 group-hover:text-slate-900 group-hover:-translate-x-0.5 transition-transform" />
+              <span>Retour</span>
+            </button>
+          )}
+
           <button
             onClick={onToggleSidebar}
             className="lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
@@ -208,7 +260,7 @@ export function Header({
           <div className="hidden sm:block min-w-0 shrink-0">
             <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap">
               <h1 className="text-base sm:text-lg lg:text-xl font-black text-slate-900 tracking-tight whitespace-nowrap">
-                {isLandlord ? 'Tableau de bord' : 'Mon Espace Locataire'}
+                {getPageTitle()}
               </h1>
               <span
                 className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${

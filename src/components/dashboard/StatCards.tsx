@@ -37,8 +37,8 @@ export function StatCards({ kpis, onCardClick }: StatCardsProps) {
       accentColor: 'text-emerald-600',
       hoverRing: 'hover:border-emerald-400/80 hover:ring-2 hover:ring-emerald-500/15',
       description: 'Encaissements validés (Mois en cours)',
-      href: '/payments',
-      actionLabel: 'Voir les paiements',
+      href: '/payments?status=paye',
+      actionLabel: 'Voir les loyers soldés',
     },
     {
       id: 'expenses',

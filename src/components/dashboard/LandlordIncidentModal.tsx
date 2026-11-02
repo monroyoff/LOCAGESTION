@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { ReportedIncident, IncidentService, IncidentStatus } from '@/lib/services/incident-service';
 import { notifySave } from '@/lib/notifications/action-notifier';
+import { formatFCFA } from '@/lib/money/format';
 
 interface LandlordIncidentModalProps {
   incident: ReportedIncident | null;
@@ -49,6 +50,15 @@ export function LandlordIncidentModal({
   const [artisanTrade, setArtisanTrade] = useState(
     incident?.assignedTechnician?.trade || 'Technicien / Artisan'
   );
+  const [artisanFee, setArtisanFee] = useState<number | ''>(
+    incident?.artisanFee !== undefined ? incident.artisanFee : ''
+  );
+  const [artisanPaymentStatus, setArtisanPaymentStatus] = useState<'paye' | 'en_attente' | 'non_applicable'>(
+    incident?.artisanPaymentStatus || 'paye'
+  );
+  const [artisanInvoiceRef, setArtisanInvoiceRef] = useState<string>(
+    incident?.artisanInvoiceRef || ''
+  );
 
   useEffect(() => {
     if (incident) {
@@ -57,6 +67,9 @@ export function LandlordIncidentModal({
       setArtisanName(incident.assignedTechnician?.name || '');
       setArtisanPhone(incident.assignedTechnician?.phone || '+229 95 00 22 33');
       setArtisanTrade(incident.assignedTechnician?.trade || 'Technicien / Artisan');
+      setArtisanFee(incident.artisanFee !== undefined ? incident.artisanFee : '');
+      setArtisanPaymentStatus(incident.artisanPaymentStatus || 'paye');
+      setArtisanInvoiceRef(incident.artisanInvoiceRef || '');
     }
   }, [incident]);
 
@@ -103,18 +116,22 @@ export function LandlordIncidentModal({
       : incident.assignedTechnician;
 
     const targetStatus = currentStatus === 'en_attente' && hasArtisan ? 'pris_en_charge' : currentStatus;
+    const parsedFee = typeof artisanFee === 'number' ? artisanFee : artisanFee ? Number(artisanFee) : 0;
 
     IncidentService.updateIncidentFull(incident.id, {
       status: targetStatus,
       resolutionNotes,
       assignedTechnician: tech,
+      artisanFee: parsedFee,
+      artisanPaymentStatus,
+      artisanInvoiceRef: artisanInvoiceRef.trim(),
     });
 
     notifySave(
       hasArtisan
-        ? `Fiche mise à jour ! Artisan mandaté : ${artisanName} (${artisanPhone}). Le locataire a immédiatement accès à son numéro.`
+        ? `Fiche mise à jour ! Artisan mandaté : ${artisanName} (${artisanPhone}) • Frais : ${formatFCFA(parsedFee)} pris en compte dans Dépenses & Travaux.`
         : 'Fiche incident enregistrée avec succès.',
-      'Fiche & Artisan enregistrés'
+      'Fiche & Dépenses enregistrées'
     );
 
     if (onStatusUpdated) onStatusUpdated();
@@ -400,6 +417,81 @@ export function LandlordIncidentModal({
                 <MessageCircle className="w-4 h-4" />
                 <span>Envoyer le dossier sur WhatsApp à l'artisan</span>
               </a>
+            </div>
+          </div>
+
+          {/* Section Rémunération / Facturation Artisan (Dépenses & Travaux) */}
+          <div className="p-4.5 rounded-2xl bg-amber-500/10 border border-amber-300/80 space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-amber-200">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-amber-500 text-white flex items-center justify-center font-black text-[10px]">
+                  FCFA
+                </div>
+                <h4 className="font-extrabold text-xs text-slate-900">
+                  Règlement de l'Artisan & Dépenses de Réparation
+                </h4>
+              </div>
+              <span className="text-[10px] font-black text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                Inclus dans « Dépenses & Travaux »
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] text-slate-700 font-bold block mb-1">
+                  Montant payé à l'artisan (FCFA)
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={artisanFee}
+                    onChange={(e) => setArtisanFee(e.target.value === '' ? '' : Number(e.target.value))}
+                    placeholder="Ex: 85000"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 font-extrabold text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
+                    FCFA
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-700 font-bold block mb-1">
+                  Statut du règlement
+                </label>
+                <select
+                  value={artisanPaymentStatus}
+                  onChange={(e) => setArtisanPaymentStatus(e.target.value as 'paye' | 'en_attente')}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 font-bold text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/30 cursor-pointer"
+                >
+                  <option value="paye">✅ Payé / Soldé</option>
+                  <option value="en_attente">⏳ En attente de paiement</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] text-slate-700 font-bold block mb-1">
+                  N° Facture / Reçu Artisan
+                </label>
+                <input
+                  type="text"
+                  value={artisanInvoiceRef}
+                  onChange={(e) => setArtisanInvoiceRef(e.target.value)}
+                  placeholder="Ex: FAC-PLOMB-2026-018"
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-slate-900 font-bold text-xs placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-[11px] text-amber-900/80 font-medium">
+                💡 Renseigner ce montant met à jour le total <strong>Dépenses & Travaux</strong> sur le tableau de bord.
+              </p>
+              {typeof artisanFee === 'number' && artisanFee > 0 && (
+                <span className="text-xs font-black text-amber-950 bg-amber-200/80 px-2.5 py-1 rounded-lg">
+                  {formatFCFA(artisanFee)}
+                </span>
+              )}
             </div>
           </div>
 

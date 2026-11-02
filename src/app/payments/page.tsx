@@ -41,6 +41,8 @@ export default function PaymentsPage() {
 
   // Onglet principal : 'all' (Tous les encaissements) ou 'pending' (Déclarations à vérifier)
   const [activeMainTab, setActiveMainTab] = useState<'all' | 'pending'>('all');
+  // Sous-filtre de statut pour le tableau des encaissements (ex: 'paye' pour Loyers Soldés)
+  const [subTabFilter, setSubTabFilter] = useState<'all' | 'paye' | 'en_retard' | 'partiel'>('all');
 
   // Paiements en direct depuis PaymentService
   const [verifiedPayments, setVerifiedPayments] = useState<PaymentTransaction[]>([]);
@@ -75,8 +77,12 @@ export default function PaymentsPage() {
       const tabParam = params.get('tab');
       const verifyParam = params.get('verify');
       const actionParam = params.get('action');
+      const statusParam = params.get('status');
 
-      if (tabParam === 'pending' || verifyParam) {
+      if (statusParam === 'paye' || tabParam === 'paye') {
+        setActiveMainTab('all');
+        setSubTabFilter('paye');
+      } else if (tabParam === 'pending' || verifyParam) {
         setActiveMainTab('pending');
       }
 
@@ -245,8 +251,26 @@ export default function PaymentsPage() {
           {/* VUE 1 : TOUS LES ENCAISSEMENTS & QUITTANCES VALIDÉES */}
           {activeMainTab === 'all' && (
             <div className="space-y-4">
+              {subTabFilter === 'paye' && (
+                <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs animate-in fade-in">
+                  <div className="flex items-center gap-2.5 text-emerald-900 font-bold">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      Filtre actif : Affichage exclusif des <strong>Loyers Soldés & Quittances Validées</strong>.
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSubTabFilter('all')}
+                    className="px-3.5 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-800 font-bold hover:bg-emerald-100/60 transition-colors cursor-pointer text-xs self-start sm:self-auto shadow-xs active:scale-95"
+                  >
+                    Afficher tous les règlements
+                  </button>
+                </div>
+              )}
               <RecentPaymentsTable
                 payments={verifiedPayments}
+                initialTab={subTabFilter}
                 onSelectPayment={(p) => setSelectedPayment(p)}
                 onSendReminder={(p) => setReminderPayment(p)}
               />

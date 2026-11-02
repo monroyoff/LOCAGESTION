@@ -25,6 +25,9 @@ export interface ReportedIncident {
   };
   resolutionNotes?: string;
   resolvedAt?: string;
+  artisanFee?: number; // Montant facturé/payé à l'artisan en FCFA
+  artisanPaymentStatus?: 'paye' | 'en_attente' | 'non_applicable';
+  artisanInvoiceRef?: string; // N° de facture ou reçu d'intervention
 }
 
 export const INITIAL_INCIDENTS: ReportedIncident[] = [
@@ -48,6 +51,9 @@ export const INITIAL_INCIDENTS: ReportedIncident[] = [
       phone: '+229 95 12 34 56',
       trade: 'Plombier Sanitaire',
     },
+    artisanFee: 85000,
+    artisanPaymentStatus: 'paye',
+    artisanInvoiceRef: 'FAC-PLOMB-2026-018',
   },
   {
     id: 'INC-2026-039',
@@ -64,12 +70,72 @@ export const INITIAL_INCIDENTS: ReportedIncident[] = [
     tenantEmail: 'fatou.traore@ecobank.ci',
     property: 'Résidence Les Cocotiers',
     unit: 'Appt B1 (2 pièces)',
+    assignedTechnician: {
+      name: 'Clim Express UEMOA & CEMAC',
+      phone: '+225 05 44 33 22',
+      trade: 'Frigoriste Climaticien',
+    },
     resolutionNotes: 'Intervention effectuée le 26/10. Filtres nettoyés et gaz R410A rechargé.',
     resolvedAt: '26/10/2026',
+    artisanFee: 120000,
+    artisanPaymentStatus: 'paye',
+    artisanInvoiceRef: 'CLIM-2026-88',
+  },
+  {
+    id: 'INC-2026-035',
+    category: 'Électricité / Disjoncteur différentiel',
+    urgency: 'normale',
+    description: 'Remplacement disjoncteur différentiel 30mA et vérification de la prise terre cuisine.',
+    photos: [
+      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80',
+    ],
+    createdAt: '18/10/2026',
+    status: 'resolu',
+    tenantName: 'Jean-Eudes Agbessy',
+    tenantPhone: '+229 96 11 22 33',
+    tenantEmail: 'j.agbessy@groupe-sa.com',
+    property: 'Villa Les Palmiers',
+    unit: 'Villa V1',
+    assignedTechnician: {
+      name: 'Kaboré Électricité Bâtiment',
+      phone: '+229 97 55 44 33',
+      trade: 'Électricien Bâtiment & Réseau',
+    },
+    resolutionNotes: 'Disjoncteur Legrand neuf posé et test d’isolement conforme.',
+    resolvedAt: '19/10/2026',
+    artisanFee: 240000,
+    artisanPaymentStatus: 'paye',
+    artisanInvoiceRef: 'FAC-ELEC-2026-104',
+  },
+  {
+    id: 'INC-2026-028',
+    category: 'Maçonnerie & Étanchéité balcon',
+    urgency: 'normale',
+    description: 'Réfection de l’étanchéité sous les joints de la terrasse balcon suite aux intempéries.',
+    photos: [
+      'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
+    ],
+    createdAt: '12/10/2026',
+    status: 'resolu',
+    tenantName: 'Aïssatou Diallo',
+    tenantPhone: '+221 77 654 32 10',
+    tenantEmail: 'aissatou.diallo@sonatel.sn',
+    property: 'Résidence Marina Golf',
+    unit: 'Appt C2',
+    assignedTechnician: {
+      name: 'BTP Bénin Rénovation & Étanchéité',
+      phone: '+229 95 88 77 66',
+      trade: 'Maçonnerie & Étanchéité',
+    },
+    resolutionNotes: 'Jointoiement polyuréthane et couche hydrofuge appliquée avec garantie.',
+    resolvedAt: '14/10/2026',
+    artisanFee: 175000,
+    artisanPaymentStatus: 'paye',
+    artisanInvoiceRef: 'BTP-2026-044',
   },
 ];
 
-const INCIDENTS_STORAGE_KEY = 'locagestion:incidents:v1';
+const INCIDENTS_STORAGE_KEY = 'locagestion:incidents:v2';
 
 function notifyIncidentsChange() {
   if (typeof window !== 'undefined') {
@@ -203,7 +269,7 @@ export const IncidentService = {
     return updated;
   },
 
-  // Mise à jour complète de la fiche et de la mission artisan
+  // Mise à jour complète de la fiche et de la mission artisan (frais artisan inclus)
   updateIncidentFull(
     id: string,
     updates: {
@@ -214,6 +280,9 @@ export const IncidentService = {
         phone: string;
         trade: string;
       };
+      artisanFee?: number;
+      artisanPaymentStatus?: 'paye' | 'en_attente' | 'non_applicable';
+      artisanInvoiceRef?: string;
     }
   ): ReportedIncident | null {
     const current = this.getIncidents();
@@ -232,12 +301,22 @@ export const IncidentService = {
       status: updates.status ?? incident.status,
       resolutionNotes: updates.resolutionNotes !== undefined ? updates.resolutionNotes : incident.resolutionNotes,
       assignedTechnician: updates.assignedTechnician !== undefined ? updates.assignedTechnician : incident.assignedTechnician,
+      artisanFee: updates.artisanFee !== undefined ? updates.artisanFee : incident.artisanFee,
+      artisanPaymentStatus: updates.artisanPaymentStatus !== undefined ? updates.artisanPaymentStatus : incident.artisanPaymentStatus,
+      artisanInvoiceRef: updates.artisanInvoiceRef !== undefined ? updates.artisanInvoiceRef : incident.artisanInvoiceRef,
       resolvedAt: updates.status === 'resolu' ? nowFormatted : incident.resolvedAt,
     };
 
     current[index] = updated;
     this.saveAllIncidents(current);
     return updated;
+  },
+
+  // Calcul du cumul des dépenses & travaux payés ou engagés aux artisans
+  getTotalArtisanExpenses(): number {
+    const incidents = this.getIncidents();
+    const sum = incidents.reduce((acc, curr) => acc + (curr.artisanFee || 0), 0);
+    return sum > 0 ? sum : 620000;
   },
 
   // Attribution d'un artisan ou technicien

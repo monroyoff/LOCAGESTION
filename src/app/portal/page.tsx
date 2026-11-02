@@ -1029,8 +1029,8 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'quittances' && (
             <div className="bg-white rounded-3xl p-4 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile (uniquement sur mobile < 640px) */}
-              <div className="sm:hidden flex items-center gap-2 pb-2">
+              {/* Bouton Retour Accueil (visible sur mobile et desktop) */}
+              <div className="flex items-center gap-2 pb-2">
                 <button
                   type="button"
                   onClick={() => handleTabChange('accueil')}
@@ -1277,8 +1277,8 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'bail' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile (uniquement sur mobile < 640px) */}
-              <div className="sm:hidden flex items-center gap-2">
+              {/* Bouton Retour Accueil (visible sur mobile et desktop) */}
+              <div className="flex items-center gap-2 pb-1">
                 <button
                   type="button"
                   onClick={() => handleTabChange('accueil')}
@@ -1750,8 +1750,8 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'solvabilite' && (
             <div className="bg-white rounded-3xl p-4 sm:p-8 border border-slate-200/80 shadow-soft space-y-6 animate-in fade-in duration-200">
-              {/* Bouton Retour Accueil sur Mobile (uniquement sur mobile < 640px) */}
-              <div className="sm:hidden flex items-center gap-2 pb-2">
+              {/* Bouton Retour Accueil (visible sur mobile et desktop) */}
+              <div className="flex items-center gap-2 pb-2">
                 <button
                   type="button"
                   onClick={() => handleTabChange('accueil')}

@@ -40,6 +40,7 @@ import {
 } from '@/lib/services/incident-service';
 import { LandlordIncidentModal } from '@/components/dashboard/LandlordIncidentModal';
 import { notifySave, notifyUpdate } from '@/lib/notifications/action-notifier';
+import { formatFCFA } from '@/lib/money/format';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -187,6 +188,8 @@ function IncidentsPageContent() {
     (i) => i.status === 'pris_en_charge' || i.status === 'en_cours_reparation'
   ).length;
   const resolvedCount = incidents.filter((i) => i.status === 'resolu').length;
+  // Cumul financier total des dépenses payées ou engagées aux artisans
+  const totalArtisanExpenses = incidents.reduce((acc, curr) => acc + (curr.artisanFee || 0), 0);
 
   // Filtrage des pannes
   const filteredIncidents = incidents.filter((i) => {
@@ -267,8 +270,8 @@ function IncidentsPageContent() {
                 </div>
               </div>
 
-              {/* 4 Cartes KPI Indicateurs */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {/* 5 Cartes KPI Indicateurs dont Dépenses & Travaux */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                 <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200/90 shadow-soft">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
@@ -326,6 +329,24 @@ function IncidentsPageContent() {
                   </div>
                   <div className="text-2xl font-black text-emerald-700">{resolvedCount}</div>
                   <p className="text-[11px] text-emerald-600/80 mt-1">Interventions validées</p>
+                </div>
+
+                {/* Carte 5 : Dépenses & Travaux Artisans */}
+                <div className="col-span-2 lg:col-span-1 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-500/15 via-amber-500/10 to-transparent border border-amber-300/90 shadow-soft">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-black text-amber-900 uppercase tracking-wider">
+                      Dépenses & Travaux
+                    </span>
+                    <span className="p-2 rounded-xl bg-amber-500 text-white shadow-xs">
+                      <Wrench className="w-4 h-4" />
+                    </span>
+                  </div>
+                  <div className="text-xl sm:text-2xl font-black text-amber-950">
+                    {formatFCFA(totalArtisanExpenses)}
+                  </div>
+                  <p className="text-[11px] text-amber-900/80 mt-1 font-semibold">
+                    Cumul factures artisans
+                  </p>
                 </div>
               </div>
 
@@ -550,6 +571,24 @@ function IncidentsPageContent() {
                               <div className="flex items-center gap-2 text-xs font-bold text-blue-700 bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-100 w-fit">
                                 <Wrench className="w-3.5 h-3.5 text-blue-500" />
                                 <span>Artisan mandaté : {incident.assignedTechnician.name} ({incident.assignedTechnician.trade})</span>
+                              </div>
+                            )}
+
+                            {/* Montant payé à l'artisan & Facture */}
+                            {incident.artisanFee !== undefined && incident.artisanFee > 0 && (
+                              <div className="flex items-center gap-2 text-xs font-bold text-amber-950 bg-amber-500/10 px-3 py-1.5 rounded-xl border border-amber-300/80 w-fit flex-wrap">
+                                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                                <span>Frais artisan : <strong>{formatFCFA(incident.artisanFee)}</strong></span>
+                                <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                                  incident.artisanPaymentStatus === 'paye' || incident.status === 'resolu'
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                                    : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                }`}>
+                                  {incident.artisanPaymentStatus === 'paye' || incident.status === 'resolu' ? 'Soldé' : 'À régler'}
+                                </span>
+                                {incident.artisanInvoiceRef && (
+                                  <span className="text-[10px] text-slate-500 font-mono">Ref : {incident.artisanInvoiceRef}</span>
+                                )}
                               </div>
                             )}
                           </div>
