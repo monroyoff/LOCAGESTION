@@ -202,12 +202,12 @@ export function Header({
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-4 sm:px-8 py-3.5 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-3 sm:gap-4">
+      <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
         {/* Left: Mobile Menu & Accueil & Space Badge / Title */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <button
             onClick={onToggleSidebar}
-            className="lg:hidden p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
+            className="lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
             aria-label="Ouvrir le menu"
             title="Menu principal"
           >
@@ -218,20 +218,20 @@ export function Header({
           <button
             type="button"
             onClick={() => router.push(isLandlord ? '/' : '/portal')}
-            className={`p-2.5 rounded-2xl border shadow-sm transition-all cursor-pointer shrink-0 flex items-center justify-center ${
+            className={`p-2 sm:p-2.5 rounded-2xl border shadow-sm transition-all cursor-pointer shrink-0 flex items-center justify-center ${
               (isLandlord && pathname === '/') || (isTenant && pathname === '/portal')
-                ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                ? 'bg-white border-brand-300 text-brand-600 shadow-xs'
                 : 'bg-white border-slate-200 text-slate-700 hover:text-brand-600 hover:border-brand-300'
             }`}
             aria-label="Accueil"
             title="Retourner à l'accueil"
           >
-            <Home className="w-4 h-4" />
+            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-sm sm:text-2xl font-black text-slate-900 tracking-tight truncate">
+              <h1 className="text-xs sm:text-base md:text-xl lg:text-2xl font-black text-slate-900 tracking-tight truncate">
                 {isLandlord ? 'Tableau de bord' : 'Mon Espace Locataire'}
               </h1>
               <span
@@ -246,7 +246,7 @@ export function Header({
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-500 font-medium">
+            <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <span className="truncate">Aujourd’hui : {todayFormatted}</span>
             </div>
@@ -498,7 +498,7 @@ export function Header({
               <button
                 type="button"
                 onClick={() => router.push('/leases/new')}
-                className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer shrink-0"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
                 <span>Nouveau bail</span>
@@ -520,7 +520,7 @@ export function Header({
                     router.push('/portal?action=declare_payment');
                   }
                 }}
-                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/25 active:scale-95 transition-all cursor-pointer shrink-0"
+                className="hidden sm:inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/25 active:scale-95 transition-all cursor-pointer shrink-0"
               >
                 <Smartphone className="w-4 h-4" />
                 <span>
