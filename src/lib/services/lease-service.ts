@@ -99,7 +99,8 @@ export interface LandlordNotification {
     | 'payment_declared'
     | 'incident_reported'
     | 'lease_terminated'
-    | 'lease_reactivated';
+    | 'lease_reactivated'
+    | 'notice_received';
   read: boolean;
   leaseId?: string;
   incidentId?: string;

@@ -1,5 +1,7 @@
 'use client';
 
+import { LeaseService } from './lease-service';
+
 export type NoticeReasonType =
   | 'reprise_personnelle'
   | 'vente'
@@ -116,25 +118,25 @@ export const NOTICE_REASONS_CATALOG: {
 export const INITIAL_NOTICES: Notice[] = [
   {
     id: 'PREAV-2026-001',
-    tenantName: 'Jean-Marc Kouassi',
-    tenantPhone: '+225 07 45 12 34',
-    tenantEmail: 'jm.kouassi@groupe-sifca.ci',
-    propertyName: 'Immeuble Palmier Royal',
-    unitNumber: 'Lot 101 (Chambre Salon • 45 m²)',
-    monthlyRent: 120000,
+    tenantName: 'Koffi Mensah',
+    tenantPhone: '+229 97 00 11 22',
+    tenantEmail: 'koffi.mensah@fintech-africa.com',
+    propertyName: 'Résidence Les Cocotiers',
+    unitNumber: 'Appt A3 (3 pièces)',
+    monthlyRent: 220000,
     reasonType: 'reprise_personnelle',
     reasonTitle: 'Reprise pour Habitation Personnelle',
-    reasonDetails: 'Le propriétaire reprend possession des lieux pour y loger son fils étudiant revenant à Abidjan pour la rentrée académique.',
+    reasonDetails: 'Le propriétaire bailleur reprend possession du logement pour y loger son fils étudiant revenant à Cotonou à compter du terme du préavis légal.',
     noticeMonths: 3,
-    noticeDate: '15/09/2026',
-    effectiveDate: '15/12/2026',
-    deliveryMethod: 'huissier',
+    noticeDate: '01/10/2026',
+    effectiveDate: '31/12/2026',
+    deliveryMethod: 'email_officiel',
     status: 'en_cours',
     beneficiaryName: 'M. Rodrigue Diallo (Fils du propriétaire)',
     legalBasis: 'Code Foncier & Domanial UEMOA - Droit de reprise du bailleur pour descendant direct',
-    departureInspectionDate: '14/12/2026',
-    notes: 'Acte d’huissier signifié par Me Bamba, Commissaire de Justice. Locataire coopératif.',
-    createdAt: '2026-09-15T08:30:00Z',
+    departureInspectionDate: '30/12/2026',
+    notes: 'Notification formelle transmise par email officiel certifié et acte de Commissaire de Justice.',
+    createdAt: '2026-10-01T08:30:00Z',
   },
   {
     id: 'PREAV-2026-002',
@@ -202,7 +204,7 @@ export const INITIAL_NOTICES: Notice[] = [
   },
 ];
 
-const NOTICES_STORAGE_KEY = 'locagestion:notices:v1';
+const NOTICES_STORAGE_KEY = 'locagestion:notices:v2';
 
 export class NoticeService {
   static getNotices(): Notice[] {
@@ -219,10 +221,20 @@ export class NoticeService {
     }
   }
 
+  static getTenantNotices(tenantName: string = 'Koffi Mensah'): Notice[] {
+    const notices = this.getNotices();
+    return notices.filter(
+      (n) =>
+        n.tenantName.toLowerCase().includes(tenantName.toLowerCase()) ||
+        tenantName.toLowerCase().includes(n.tenantName.toLowerCase())
+    );
+  }
+
   static saveNotices(notices: Notice[]): void {
     if (typeof window === 'undefined') return;
     try {
       localStorage.setItem(NOTICES_STORAGE_KEY, JSON.stringify(notices));
+      window.dispatchEvent(new CustomEvent('locagestion:notices_updated'));
     } catch (e) {
       console.error('Erreur sauvegarde notices:', e);
     }
@@ -240,6 +252,73 @@ export class NoticeService {
     };
     const updated = [newNotice, ...notices];
     this.saveNotices(updated);
+
+    // Synchronisation automatique des notifications dans la cloche
+    if (typeof window !== 'undefined') {
+      try {
+        const storedNotifs = localStorage.getItem('locagestion:tenant_notifications:v1');
+        const notifs = storedNotifs ? JSON.parse(storedNotifs) : [];
+        const tenantNotif = {
+          id: `t-notif-${id}`,
+          title: `Préavis officiel de congé (${id})`,
+          message: `Votre bailleur vous a notifié un préavis pour motif : ${newNotice.reasonTitle}. Date impérative de libération des locaux : ${newNotice.effectiveDate}.`,
+          time: 'À l’instant',
+          timestamp: 'À l’instant',
+          type: 'notice_issued',
+          read: false,
+          link: '/portal?tab=preavis',
+        };
+        localStorage.setItem('locagestion:tenant_notifications:v1', JSON.stringify([tenantNotif, ...notifs]));
+        window.dispatchEvent(new CustomEvent('locagestion:tenant_notifs_updated'));
+      } catch (e) {
+        console.error('Erreur sync notif locataire:', e);
+      }
+    }
+
+    return newNotice;
+  }
+
+  static addTenantDepartureNotice(data: {
+    tenantName: string;
+    tenantPhone: string;
+    tenantEmail?: string;
+    propertyName: string;
+    unitNumber: string;
+    monthlyRent: number;
+    noticeMonths: number;
+    effectiveDate: string;
+    reasonDetails: string;
+  }): Notice {
+    const today = new Date();
+    const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const newNotice = this.addNotice({
+      ...data,
+      reasonType: 'depart_locataire',
+      reasonTitle: 'Départ Volontaire Notifié par le Locataire',
+      noticeDate: formattedToday,
+      deliveryMethod: 'email_officiel',
+      status: 'notifie',
+      legalBasis: 'Résiliation unilatérale à l’initiative du preneur avec respect du préavis contractuel',
+    });
+
+    // Notification instantanée pour le Bailleur dans sa cloche
+    try {
+      LeaseService.addLandlordNotification({
+        id: `notif-dep-${newNotice.id}`,
+        title: `Préavis de départ reçu (${newNotice.id})`,
+        message: `${data.tenantName} (${data.propertyName} - ${data.unitNumber}) vous a notifié son préavis de départ pour le ${data.effectiveDate}.`,
+        time: 'À l’instant',
+        timestamp: 'À l’instant',
+        type: 'notice_received',
+        read: false,
+        tenantName: data.tenantName,
+        property: data.propertyName,
+        unit: data.unitNumber,
+      });
+    } catch (e) {
+      console.error('Erreur notif départ bailleur:', e);
+    }
+
     return newNotice;
   }
 

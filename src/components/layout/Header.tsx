@@ -34,8 +34,8 @@ interface HeaderProps {
   onToggleSidebar: () => void;
   onOpenQuickAction?: (action: 'new_lease' | 'new_payment' | 'new_property') => void;
   onOpenTenantAction?: (action: 'declare_payment' | 'report_issue') => void;
-  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite';
-  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite') => void;
+  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis';
+  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis') => void;
 }
 
 export interface TenantNotification {
@@ -44,7 +44,7 @@ export interface TenantNotification {
   message: string;
   time?: string;
   timestamp?: string;
-  type: 'receipt_issued' | 'lease_available' | 'passport_ready' | 'incident_update';
+  type: 'receipt_issued' | 'lease_available' | 'passport_ready' | 'incident_update' | 'notice_issued' | 'reminder_received';
   read: boolean;
   link: string;
 }
@@ -52,6 +52,16 @@ export interface TenantNotification {
 const STORAGE_KEY_TENANT_NOTIFS = 'locagestion:tenant_notifications:v1';
 
 const SEED_TENANT_NOTIFS: TenantNotification[] = [
+  {
+    id: 't-notif-notice-1',
+    title: 'Préavis officiel de congé notifié',
+    message: 'Votre bailleur vous a notifié un préavis de congé (Réf: PREAV-2026-001) pour reprise personnelle. Libération fixée au 31/12/2026.',
+    time: 'Nouveau',
+    timestamp: 'À l’instant',
+    type: 'notice_issued',
+    read: false,
+    link: '/portal?tab=preavis',
+  },
   {
     id: 't-notif-1',
     title: 'Quittance officielle certifiée',
@@ -63,13 +73,23 @@ const SEED_TENANT_NOTIFS: TenantNotification[] = [
     link: '/portal?tab=quittances',
   },
   {
+    id: 't-notif-reminder-1',
+    title: 'Rappel d’échéance mensuelle',
+    message: 'Le Cabinet Diallo Patrimoine vous rappelle l’échéance de loyer de Novembre exigible le 05. Règlement disponible par Wave ou Mobile Money.',
+    time: 'Hier',
+    timestamp: 'Hier',
+    type: 'reminder_received',
+    read: false,
+    link: '/portal?tab=preavis',
+  },
+  {
     id: 't-notif-2',
     title: 'Bail d’habitation scellé & actif',
     message: 'Contrat BAIL-2026 signé par le Cabinet Diallo Patrimoine. Logement : Résidence Les Cocotiers (Appt A3).',
-    time: 'Hier',
-    timestamp: 'Hier à 14:30',
+    time: '30/10/2026',
+    timestamp: '30/10/2026',
     type: 'lease_available',
-    read: false,
+    read: true,
     link: '/portal?tab=bail',
   },
   {
@@ -81,16 +101,6 @@ const SEED_TENANT_NOTIFS: TenantNotification[] = [
     type: 'passport_ready',
     read: true,
     link: '/portal?tab=solvabilite',
-  },
-  {
-    id: 't-notif-4',
-    title: 'Artisans mandatés pour réparations',
-    message: 'Le plombier et l’électricien agréés par votre bailleur sont enregistrés. Accédez à leurs coordonnées en cas de besoin.',
-    time: '28/10/2026',
-    timestamp: '28/10/2026',
-    type: 'incident_update',
-    read: true,
-    link: '/incidents',
   },
 ];
 
@@ -134,9 +144,13 @@ export function Header({
     updateNotifications();
     const handleStorage = () => updateNotifications();
     window.addEventListener('locagestion:leases_updated', handleStorage);
+    window.addEventListener('locagestion:notices_updated', handleStorage);
+    window.addEventListener('locagestion:tenant_notifs_updated', handleStorage);
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('locagestion:leases_updated', handleStorage);
+      window.removeEventListener('locagestion:notices_updated', handleStorage);
+      window.removeEventListener('locagestion:tenant_notifs_updated', handleStorage);
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
@@ -220,6 +234,7 @@ export function Header({
       if (activePortalTab === 'quittances') return 'Mes Quittances & Reçus';
       if (activePortalTab === 'bail') return 'Mon Bail & Contrat';
       if (activePortalTab === 'solvabilite') return 'Mon Passeport Solvabilité';
+      if (activePortalTab === 'preavis') return 'Relances & Préavis';
       return 'Mon Espace Locataire';
     }
     if (pathname === '/payments') return 'Paiements & Encaissements';
@@ -440,6 +455,18 @@ export function Header({
                                 <span>Vérifier le paiement</span>
                                 <ExternalLink className="w-3 h-3" />
                               </button>
+                            ) : n.type === 'notice_received' ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsNotifOpen(false);
+                                  router.push('/reminders');
+                                }}
+                                className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
+                              >
+                                <span>Voir le préavis</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
                             ) : (
                               <button
                                 type="button"
@@ -464,44 +491,77 @@ export function Header({
                         <span>Aucune notification pour le moment</span>
                       </div>
                     ) : (
-                      tenantNotifs.map((n) => (
-                        <div
-                          key={n.id}
-                          className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${
-                            !n.read
-                              ? 'bg-emerald-50/70 border border-emerald-200/80'
-                              : 'hover:bg-slate-50'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                              <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${
-                                  !n.read ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'
-                                }`}
-                              />
-                              {n.title}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">{n.time}</span>
-                          </div>
+                      tenantNotifs.map((n) => {
+                        const isNotice = n.type === 'notice_issued';
+                        const isReminder = n.type === 'reminder_received';
+                        const cardBg = !n.read
+                          ? isNotice
+                            ? 'bg-rose-50/80 border border-rose-200/90'
+                            : isReminder
+                            ? 'bg-amber-50/80 border border-amber-200/90'
+                            : 'bg-emerald-50/70 border border-emerald-200/80'
+                          : 'hover:bg-slate-50 border border-transparent';
+                        const dotColor = !n.read
+                          ? isNotice
+                            ? 'bg-rose-500 animate-pulse ring-2 ring-rose-200'
+                            : isReminder
+                            ? 'bg-amber-500 animate-pulse ring-2 ring-amber-200'
+                            : 'bg-emerald-500 animate-pulse ring-2 ring-emerald-200'
+                          : 'bg-slate-300';
+                        const linkColor = isNotice
+                          ? 'text-rose-600 hover:text-rose-700'
+                          : isReminder
+                          ? 'text-amber-600 hover:text-amber-700'
+                          : 'text-emerald-600 hover:text-emerald-700';
 
-                          <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
+                        return (
+                          <div
+                            key={n.id}
+                            className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${cardBg}`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
+                                {n.title}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium">{n.time}</span>
+                            </div>
 
-                          <div className="pt-1 flex items-center justify-end">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsNotifOpen(false);
-                                router.push(n.link);
-                              }}
-                              className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
-                            >
-                              <span>Consulter</span>
-                              <ExternalLink className="w-3 h-3" />
-                            </button>
+                            <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
+
+                            <div className="pt-1 flex items-center justify-end">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsNotifOpen(false);
+                                  const updated = tenantNotifs.map((x) =>
+                                    x.id === n.id ? { ...x, read: true } : x
+                                  );
+                                  setTenantNotifs(updated);
+                                  if (typeof window !== 'undefined') {
+                                    localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+                                  }
+                                  if (n.link === '/portal?tab=preavis' && onPortalTabChange) {
+                                    onPortalTabChange('preavis');
+                                  } else if (n.link === '/portal?tab=quittances' && onPortalTabChange) {
+                                    onPortalTabChange('quittances');
+                                  } else if (n.link === '/portal?tab=bail' && onPortalTabChange) {
+                                    onPortalTabChange('bail');
+                                  } else if (n.link === '/portal?tab=solvabilite' && onPortalTabChange) {
+                                    onPortalTabChange('solvabilite');
+                                  } else {
+                                    router.push(n.link);
+                                  }
+                                }}
+                                className={`text-xs font-bold flex items-center gap-1 cursor-pointer ${linkColor}`}
+                              >
+                                <span>Consulter</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )
                   )}
                 </div>

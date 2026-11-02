@@ -49,13 +49,19 @@ import {
   Search,
   Filter,
   ArrowUpDown,
+  BellRing,
+  FileWarning,
+  ArrowLeft,
+  Copy,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { PaymentTransaction } from '@/lib/types';
-import { generateLeasePDF, generateInspectionPDF } from '@/lib/export/pdf-download';
+import { generateLeasePDF, generateInspectionPDF, generateNoticePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
+import { NoticeService, Notice } from '@/lib/services/notice-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
+import { TenantDepartureModal } from '@/components/portal/TenantDepartureModal';
 import { IncidentService, ReportedIncident } from '@/lib/services/incident-service';
 import { MONTHS_OF_YEAR } from '@/lib/services/payment-service';
 import { notifyAction, notifySave } from '@/lib/notifications/action-notifier';
@@ -84,14 +90,31 @@ function TenantPortalContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { switchSpace } = useSpace();
 
-  // Primary Tab state: 'accueil' (Mon Logement), 'quittances' (Mes Quittances & Reçus), 'bail' (Mon Bail & Contrat), 'solvabilite' (Passeport)
-  const [activeTab, setActiveTab] = useState<'accueil' | 'quittances' | 'bail' | 'solvabilite'>('accueil');
+  // Primary Tab state: 'accueil' (Mon Logement), 'quittances' (Mes Quittances & Reçus), 'bail' (Mon Bail & Contrat), 'solvabilite' (Passeport), 'preavis' (Relances & Préavis)
+  const [activeTab, setActiveTab] = useState<'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis'>('accueil');
 
   // Sub-tab inside "Mon Bail & Contrat" to switch between Bail & État des Lieux et Mon Bailleur
   const [bailSubTab, setBailSubTab] = useState<'tout' | 'bail_etat' | 'bailleur'>('tout');
 
   const [declarationModalOpen, setDeclarationModalOpen] = useState(false);
   const [reportIssueModalOpen, setReportIssueModalOpen] = useState(false);
+  const [departureModalOpen, setDepartureModalOpen] = useState(false);
+
+  // Préavis reçus ou émis pour le locataire
+  const [tenantNotices, setTenantNotices] = useState<Notice[]>([]);
+
+  useEffect(() => {
+    const loadNotices = () => {
+      setTenantNotices(NoticeService.getTenantNotices('Koffi Mensah'));
+    };
+    loadNotices();
+    window.addEventListener('locagestion:notices_updated', loadNotices);
+    window.addEventListener('storage', loadNotices);
+    return () => {
+      window.removeEventListener('locagestion:notices_updated', loadNotices);
+      window.removeEventListener('storage', loadNotices);
+    };
+  }, []);
   const [issueCategory, setIssueCategory] = useState('Plomberie / Fuite d’eau');
   const [issueDesc, setIssueDesc] = useState('');
   const [issueUrgency, setIssueUrgency] = useState<'normale' | 'urgente' | 'critique'>('normale');
@@ -174,7 +197,13 @@ function TenantPortalContent() {
     if (searchParams) {
       const queryTab = searchParams.get('tab');
       const action = searchParams.get('action');
-      if (queryTab === 'quittances' || queryTab === 'bail' || queryTab === 'solvabilite' || queryTab === 'accueil') {
+      if (
+        queryTab === 'quittances' ||
+        queryTab === 'bail' ||
+        queryTab === 'solvabilite' ||
+        queryTab === 'preavis' ||
+        queryTab === 'accueil'
+      ) {
         setActiveTab(queryTab as any);
       } else if (!queryTab && typeof window !== 'undefined' && !window.location.hash) {
         setActiveTab('accueil');
@@ -195,7 +224,13 @@ function TenantPortalContent() {
         const action = params.get('action');
         const hash = window.location.hash.replace('#', '');
         const target = queryTab || hash;
-        if (target === 'quittances' || target === 'bail' || target === 'solvabilite' || target === 'accueil') {
+        if (
+          target === 'quittances' ||
+          target === 'bail' ||
+          target === 'solvabilite' ||
+          target === 'preavis' ||
+          target === 'accueil'
+        ) {
           setActiveTab(target as any);
         }
         if (action === 'declare_payment' || action === 'declare') {
@@ -214,7 +249,7 @@ function TenantPortalContent() {
     }
   }, []);
 
-  const handleTabChange = (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite') => {
+  const handleTabChange = (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis') => {
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -586,8 +621,8 @@ function TenantPortalContent() {
 
         {/* Main Tenant Container */}
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-5xl mx-auto w-full">
-          {/* Top Segmented Navigation Tabs (Desktop lg+ uniquement — Sur Mobile, la barre est directement sous le Header) */}
-          <div className="resident-subbar hidden lg:flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
+          {/* Top Segmented Navigation Tabs */}
+          <div className="resident-subbar flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => handleTabChange('accueil')}
@@ -599,6 +634,28 @@ function TenantPortalContent() {
             >
               <Home className="w-4 h-4" />
               <span>Mon Logement & Loyer</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('preavis')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'preavis'
+                  ? 'bg-rose-600 text-white shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <BellRing className={`w-4 h-4 ${activeTab === 'preavis' ? 'text-white' : 'text-rose-500'}`} />
+              <span>Relances & Préavis</span>
+              {tenantNotices.length > 0 && (
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                    activeTab === 'preavis' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
+                  }`}
+                >
+                  {tenantNotices.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -1848,6 +1905,345 @@ function TenantPortalContent() {
             </div>
           )}
 
+          {/* ==================================================================== */}
+          {/* ONGLET 5 : RELANCES & PRÉAVIS                                       */}
+          {/* ==================================================================== */}
+          {activeTab === 'preavis' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Barre Supérieure d'Actions : Retour Accueil & Notifier un départ */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('accueil')}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-800 text-xs font-black shadow-xs transition-all cursor-pointer active:scale-95 self-start"
+                >
+                  <ArrowLeft className="w-4 h-4 text-slate-600" />
+                  <span>Retour à l’Accueil</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setDepartureModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md shadow-rose-600/25 transition-all cursor-pointer active:scale-95 self-start sm:self-auto"
+                >
+                  <FileWarning className="w-4 h-4" />
+                  <span>+ Notifier un Départ Volontaire</span>
+                </button>
+              </div>
+
+              {/* Bannière de Présentation */}
+              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-rose-950 via-slate-900 to-slate-950 text-white border border-rose-900/40 shadow-xl relative overflow-hidden">
+                <div className="absolute right-0 top-0 w-80 h-80 bg-rose-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                  <div className="space-y-2 max-w-2xl">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white shadow-sm flex items-center gap-1">
+                        <BellRing className="w-3 h-3" />
+                        <span>Centre de Relances & Préavis</span>
+                      </span>
+                      <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-white/10 text-rose-200 border border-white/15">
+                        Conforme Code Foncier UEMOA & CEMAC
+                      </span>
+                    </div>
+                    <h2 className="text-lg sm:text-xl font-black text-white tracking-tight">
+                      Mes Relances & Préavis Reçus
+                    </h2>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      Consultez en direct les notifications officielles émises par votre bailleur (préavis de congé, échéanciers, rappels de paiement) ou transmettez votre notification de départ volontaire avec calcul automatique des délais légaux.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-md border border-white/10 space-y-1.5 shrink-0">
+                    <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider block">
+                      Logement Titulaire
+                    </span>
+                    <span className="text-xs font-black text-white block">
+                      Résidence Les Cocotiers (Appt A3)
+                    </span>
+                    <div className="flex items-center gap-2 pt-1 text-[11px] text-emerald-300 font-bold">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      <span>Bail BAIL-2025-089 en vigueur</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 1 : PRÉAVIS DE CONGÉ OFFICIELS */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileWarning className="w-4 h-4 text-rose-600" />
+                    <h3 className="text-sm font-black text-slate-900 tracking-tight">
+                      Préavis de Congé Officiels ({tenantNotices.length})
+                    </h3>
+                  </div>
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    Notifications juridiquement opposables
+                  </span>
+                </div>
+
+                {tenantNotices.length === 0 ? (
+                  <div className="p-8 rounded-3xl bg-white border border-slate-200/80 shadow-soft text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-slate-900">
+                        Aucun préavis de congé en cours
+                      </h4>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto">
+                        Votre bail d’habitation est pleinement actif et aucun congé n’a été notifié par votre bailleur. Vous pouvez continuer à occuper les lieux en toute sérénité.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {tenantNotices.map((notice) => {
+                      const isTenantInitiated = notice.reasonType === 'depart_locataire';
+                      // Calcul des jours restants
+                      const parts = notice.effectiveDate.split('/');
+                      let daysRemaining = 0;
+                      if (parts.length === 3) {
+                        const targetDate = new Date(
+                          parseInt(parts[2]),
+                          parseInt(parts[1]) - 1,
+                          parseInt(parts[0])
+                        );
+                        const diff = targetDate.getTime() - new Date().getTime();
+                        daysRemaining = Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+                      }
+
+                      return (
+                        <div
+                          key={notice.id}
+                          className={`rounded-3xl p-5 sm:p-6 bg-white border shadow-soft space-y-4 transition-all ${
+                            isTenantInitiated
+                              ? 'border-indigo-200/90 ring-1 ring-indigo-500/10'
+                              : 'border-rose-200/90 ring-1 ring-rose-500/10'
+                          }`}
+                        >
+                          {/* Header Carte Préavis */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                            <div className="flex items-center gap-2.5 flex-wrap">
+                              <span className="font-mono text-xs font-black px-2.5 py-1 rounded-xl bg-slate-900 text-white">
+                                {notice.id}
+                              </span>
+                              <span
+                                className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border ${
+                                  isTenantInitiated
+                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                                }`}
+                              >
+                                {isTenantInitiated
+                                  ? 'Départ Notifié par le Locataire'
+                                  : 'Préavis Émis par le Bailleur'}
+                              </span>
+                              <span className="text-xs font-black text-slate-900">
+                                {notice.reasonTitle}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-1 rounded-xl bg-rose-50 text-rose-700 text-xs font-black border border-rose-200 flex items-center gap-1.5">
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>J-{daysRemaining} avant libération</span>
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Grille de Détails */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
+                            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-0.5">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Logement
+                              </span>
+                              <span className="font-bold text-slate-900 block truncate">
+                                {notice.propertyName}
+                              </span>
+                              <span className="text-slate-500 text-[11px]">{notice.unitNumber}</span>
+                            </div>
+
+                            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-0.5">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Date d’effet / Remise clés
+                              </span>
+                              <span className="font-black text-rose-600 block text-sm font-mono">
+                                {notice.effectiveDate}
+                              </span>
+                              <span className="text-slate-500 text-[11px]">
+                                Délai appliqué : {notice.noticeMonths} mois
+                              </span>
+                            </div>
+
+                            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-0.5">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Mode de Notification
+                              </span>
+                              <span className="font-bold text-slate-900 block capitalize">
+                                {notice.deliveryMethod === 'email_officiel'
+                                  ? 'Email Officiel Certifié'
+                                  : notice.deliveryMethod === 'huissier'
+                                  ? 'Commissaire de Justice'
+                                  : 'Courrier avec accusé'}
+                              </span>
+                              <span className="text-slate-500 text-[11px]">
+                                Émis le {notice.noticeDate}
+                              </span>
+                            </div>
+
+                            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-0.5">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                Loyer en vigueur
+                              </span>
+                              <span className="font-black text-slate-900 block font-mono">
+                                {formatFCFA(notice.monthlyRent)}
+                              </span>
+                              <span className="text-emerald-600 font-bold text-[11px]">
+                                Exigible jusqu’au terme
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Exposé des Motifs */}
+                          <div className="p-4 rounded-2xl bg-slate-50/80 border border-slate-200/70 space-y-1.5 text-xs">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+                              Exposé des motifs & Fondement légal
+                            </span>
+                            <p className="text-slate-700 leading-relaxed">
+                              {notice.reasonDetails}
+                            </p>
+                            {notice.beneficiaryName && (
+                              <div className="pt-1.5 text-[11px] text-slate-600 font-semibold flex items-center gap-1.5">
+                                <span className="text-slate-400">Bénéficiaire désigné :</span>
+                                <span className="font-bold text-slate-900">{notice.beneficiaryName}</span>
+                              </div>
+                            )}
+                            <div className="pt-1 text-[10px] text-slate-400 italic">
+                              Fondement légal : {notice.legalBasis}
+                            </div>
+                          </div>
+
+                          {/* Actions du Document */}
+                          <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                generateNoticePDF(notice as any);
+                                showToast(`Avis officiel ${notice.id} téléchargé en PDF.`);
+                              }}
+                              className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black shadow-md flex items-center gap-2 cursor-pointer active:scale-95 transition-all"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              <span>Télécharger l’Avis Officiel (PDF)</span>
+                            </button>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <a
+                                href={`https://wa.me/2290195444430?text=${encodeURIComponent(
+                                  `Bonjour Cabinet Diallo Patrimoine,\nJ'accuse réception du préavis ${notice.id} pour le logement ${notice.propertyName} (${notice.unitNumber}). Je vous contacte pour convenir de l'état des lieux de sortie prévu vers le ${notice.effectiveDate}.\nCordialement,\n${notice.tenantName}`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3.5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                                <span>Échanger sur WhatsApp</span>
+                              </a>
+
+                              <a
+                                href={`mailto:contact@diallopatrimoine.com?subject=${encodeURIComponent(
+                                  `Accusé de réception - Préavis ${notice.id} - ${notice.tenantName}`
+                                )}&body=${encodeURIComponent(
+                                  `Bonjour,\n\nJe fais suite à la notification du préavis ${notice.id} concernant le logement ${notice.propertyName} (${notice.unitNumber}).\n\nDate de libération : ${notice.effectiveDate}.\n\nBien cordialement,\n${notice.tenantName}`
+                                )}`}
+                                className="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200/90 flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              >
+                                <Mail className="w-3.5 h-3.5 text-slate-500" />
+                                <span>Envoyer un Email</span>
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* SECTION 2 : RAPPELS & RELANCES D’ÉCHÉANCES DE LOYER */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                    <h3 className="text-sm font-black text-slate-900 tracking-tight">
+                      Rappels d’Échéances & Relances de Loyer
+                    </h3>
+                  </div>
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    Échéance mensuelle au 05
+                  </span>
+                </div>
+
+                <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-soft space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-slate-900">
+                          Échéance Courante : Novembre 2026
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                          Rappel automatique
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500">
+                        Loyer mensuel contractuel de 220 000 FCFA. Règlement direct via Wave ou Mobile Money.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setDeclarationModalOpen(true)}
+                      className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0 self-start sm:self-auto"
+                    >
+                      <Smartphone className="w-4 h-4" />
+                      <span>Déclarer un Règlement</span>
+                    </button>
+                  </div>
+
+                  {/* Message de relance reçu */}
+                  <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                      <span className="flex items-center gap-1.5">
+                        <BellRing className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Dernier message de rappel transmis par le Cabinet Diallo Patrimoine</span>
+                      </span>
+                      <span className="text-[10px] text-amber-600 font-medium">Reçu le 01/11/2026</span>
+                    </div>
+                    <p className="text-xs text-amber-950 font-mono leading-relaxed bg-white/70 p-3 rounded-xl border border-amber-200/60">
+                      « Bonjour M. Koffi Mensah. Le Cabinet Diallo Patrimoine vous rappelle que l’échéance de loyer de Novembre 2026 (220 000 FCFA) pour l’appartement A3 de la Résidence Les Cocotiers est exigible. Merci de bien vouloir effectuer votre versement via Wave ou Mobile Money au +229 01 95 44 44 30 et de déclarer la transaction sur votre espace locataire pour émission de votre quittance. »
+                    </p>
+                    <div className="flex items-center justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (navigator.clipboard) {
+                            navigator.clipboard.writeText('+229 01 95 44 44 30');
+                            showToast('Numéro Wave/Mobile Money copié (+229 01 95 44 44 30) !');
+                          }
+                        }}
+                        className="text-xs font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3" />
+                        <span>Copier le numéro de paiement (+229 01 95 44 44 30)</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
           <Footer />
         </main>
@@ -2399,6 +2795,22 @@ function TenantPortalContent() {
           }}
         />
       )}
+
+      {/* Modal de Préavis de Départ Volontaire */}
+      <TenantDepartureModal
+        isOpen={departureModalOpen}
+        onClose={() => setDepartureModalOpen(false)}
+        onSuccess={() => {
+          setTenantNotices(NoticeService.getTenantNotices('Koffi Mensah'));
+          showToast('Préavis de départ volontaire transmis au bailleur.');
+        }}
+        tenantName={tenant.name}
+        tenantPhone={tenant.phone}
+        tenantEmail={tenant.email}
+        propertyName={tenant.property}
+        unitNumber={tenant.unit}
+        monthlyRent={tenant.monthlyRent}
+      />
 
       {/* Toast Notification */}
       {toastMessage && (

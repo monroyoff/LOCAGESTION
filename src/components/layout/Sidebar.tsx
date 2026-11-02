@@ -33,6 +33,7 @@ import { useSpace } from '@/lib/context/space-context';
 import { IncidentService } from '@/lib/services/incident-service';
 import { UserProfileModal } from '@/components/profile/UserProfileModal';
 import { getUserProfile } from '@/lib/services/geo-service';
+import { NoticeService } from '@/lib/services/notice-service';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 
 interface NavItem {
@@ -45,7 +46,7 @@ interface NavItem {
   badgeCount?: number;
   badgeColor?: string;
   mobileOnly?: boolean;
-  portalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite';
+  portalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis';
 }
 
 interface SidebarProps {
@@ -53,8 +54,8 @@ interface SidebarProps {
   onClose: () => void;
   activeSpace?: UserSpace;
   onSpaceChange?: (space: UserSpace) => void;
-  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite';
-  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite') => void;
+  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis';
+  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis') => void;
 }
 
 export function Sidebar({
@@ -118,6 +119,28 @@ export function Sidebar({
 
   // Détection de l'onglet actif du portail pour le menu résident
   const [currentPortalTab, setCurrentPortalTab] = useState<string | null>(null);
+  const [tenantNoticesCount, setTenantNoticesCount] = useState(0);
+  const [landlordNoticesCount, setLandlordNoticesCount] = useState(0);
+
+  useEffect(() => {
+    const updateNoticesCount = () => {
+      const allNotices = NoticeService.getNotices();
+      const activeLandlord = allNotices.filter((n) => n.status === 'en_cours' || n.status === 'notifie').length;
+      setLandlordNoticesCount(activeLandlord);
+
+      const tenantNotices = NoticeService.getTenantNotices('Koffi Mensah');
+      const activeTenant = tenantNotices.filter((n) => n.status === 'en_cours' || n.status === 'notifie').length;
+      setTenantNoticesCount(activeTenant);
+    };
+
+    updateNoticesCount();
+    window.addEventListener('locagestion:notices_updated', updateNoticesCount);
+    window.addEventListener('storage', updateNoticesCount);
+    return () => {
+      window.removeEventListener('locagestion:notices_updated', updateNoticesCount);
+      window.removeEventListener('storage', updateNoticesCount);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -186,6 +209,8 @@ export function Sidebar({
       href: '/reminders',
       icon: BellRing,
       active: pathname.startsWith('/reminders'),
+      badgeCount: landlordNoticesCount > 0 ? landlordNoticesCount : undefined,
+      badgeColor: 'bg-rose-500',
     },
     {
       name: 'Messages',
@@ -215,6 +240,15 @@ export function Sidebar({
       icon: Home,
       portalTab: 'accueil',
       active: pathname === '/portal' && effectivePortalTab === 'accueil',
+    },
+    {
+      name: 'Relances & Préavis',
+      href: '/portal?tab=preavis',
+      icon: BellRing,
+      portalTab: 'preavis',
+      active: pathname === '/portal' && effectivePortalTab === 'preavis',
+      badgeCount: tenantNoticesCount > 0 ? tenantNoticesCount : undefined,
+      badgeColor: 'bg-rose-500',
     },
     // Déplacés dans le Menu Résident UNIQUEMENT SUR MOBILE :
     {
@@ -432,7 +466,7 @@ export function Sidebar({
                   {item.badgeCount !== undefined && (
                     <span
                       className={`w-5 h-5 rounded-full ${
-                        isTenant ? 'bg-emerald-500' : item.badgeColor
+                        item.badgeColor || (isTenant ? 'bg-emerald-500' : 'bg-brand-500')
                       } text-white font-black text-[10px] flex items-center justify-center shadow-md`}
                     >
                       {item.badgeCount}
