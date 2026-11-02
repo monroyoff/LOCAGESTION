@@ -26,7 +26,7 @@ export interface SpaceContextType {
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
 
-// Routes strictement réservées aux Bailleurs & Gestionnaires
+// Routes réservées au Bailleur
 const LANDLORD_ONLY_PREFIXES = [
   '/properties',
   '/leases',
@@ -34,9 +34,6 @@ const LANDLORD_ONLY_PREFIXES = [
   '/payments',
   '/reminders',
 ];
-
-// Routes publiques exemptées de redirection forcée
-const PUBLIC_PREFIXES = ['/auth', '/verify'];
 
 export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -58,55 +55,31 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Détection & synchronisation fluide pendant la phase de tests
+  // Permet de naviguer librement entre les deux espaces sans blocage
+  useEffect(() => {
+    if (!mounted) return;
+
+    if (pathname.startsWith('/portal')) {
+      if (!user || user.role !== 'locataire') {
+        const tenantUser = AuthService.quickLogin('locataire');
+        setUser(tenantUser);
+      }
+    } else if (
+      pathname === '/' ||
+      LANDLORD_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
+    ) {
+      if (!user || user.role !== 'bailleur') {
+        const landlordUser = AuthService.quickLogin('bailleur');
+        setUser(landlordUser);
+      }
+    }
+  }, [pathname, mounted]);
+
   const activeSpace: UserSpace = user ? user.role : 'bailleur';
   const isLandlord = activeSpace === 'bailleur';
   const isTenant = activeSpace === 'locataire';
   const isAuthenticated = !!user;
-
-  // SÉPARATION STRICTE DES ESPACES & ROUTE GUARDING
-  useEffect(() => {
-    if (!mounted) return;
-
-    // 1. Pages publiques exemptées
-    const isPublic = PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-    if (isPublic) return;
-
-    // 2. Utilisateur non connecté -> redirection vers la page de connexion
-    if (!user) {
-      router.replace('/auth/login');
-      return;
-    }
-
-    // 3. Utilisateur Locataire tentant d'accéder à l'espace Bailleur
-    if (user.role === 'locataire') {
-      const isLandlordRoute =
-        pathname === '/' ||
-        LANDLORD_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-
-      if (isLandlordRoute) {
-        router.replace('/portal');
-        notifyAction(
-          'Accès réservé aux Bailleurs & Gestionnaires. Vous avez été redirigé vers votre Portail Locataire.',
-          'Espace Locataire Résident',
-          'info'
-        );
-      }
-    }
-
-    // 4. Utilisateur Bailleur tentant d'accéder au portail Locataire
-    if (user.role === 'bailleur') {
-      const isTenantRoute = pathname === '/portal' || pathname.startsWith('/portal');
-
-      if (isTenantRoute) {
-        router.replace('/');
-        notifyAction(
-          'Cet espace est le portail privé des locataires. Vous êtes connecté en tant que Bailleur (Gestion de patrimoine).',
-          'Espace Bailleur Certifié',
-          'info'
-        );
-      }
-    }
-  }, [pathname, user, mounted, router]);
 
   const login = (emailOrPhone: string, password?: string) => {
     const res = AuthService.login(emailOrPhone, password);
@@ -153,26 +126,17 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     } else {
       router.push('/');
     }
-    notifyAction(
-      `Connecté en tant que ${targetUser.name} (${role === 'bailleur' ? 'Bailleur Certifié' : 'Locataire Résident'})`,
-      'Connexion réussie',
-      'success'
-    );
   };
 
+  // Bascule instantanée entre Bailleur et Locataire sans obligation de se déconnecter
   const switchSpace = (targetSpace: UserSpace) => {
-    // Si l'utilisateur est déjà dans le bon rôle, rediriger simplement
-    if (user && user.role === targetSpace) {
-      if (targetSpace === 'locataire') {
-        router.push('/portal');
-      } else {
-        router.push('/');
-      }
-      return;
+    const targetUser = AuthService.quickLogin(targetSpace);
+    setUser(targetUser);
+    if (targetSpace === 'locataire') {
+      router.push('/portal');
+    } else {
+      router.push('/');
     }
-
-    // Si l'utilisateur souhaite changer d'espace, il doit changer de compte
-    quickLogin(targetSpace);
   };
 
   return (

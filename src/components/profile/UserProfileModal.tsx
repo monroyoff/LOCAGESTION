@@ -20,6 +20,7 @@ import {
   Lock,
   LogOut,
   Users,
+  Repeat,
 } from 'lucide-react';
 import { UserProfile, UserSpace } from '@/lib/types';
 import {
@@ -281,9 +282,21 @@ export function UserProfileModal({
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-black shrink-0">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Certifié</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextRole = profile.role === 'bailleur' ? 'locataire' : 'bailleur';
+                  setProfile((prev) => ({ ...prev, role: nextRole }));
+                  switchSpace(nextRole);
+                  onClose();
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
+                title={`Basculer immédiatement vers l'espace ${profile.role === 'bailleur' ? 'Locataire' : 'Bailleur'}`}
+              >
+                <Repeat className="w-3.5 h-3.5" />
+                <span>Passer en {profile.role === 'bailleur' ? 'Locataire' : 'Bailleur'}</span>
+              </button>
             </div>
           </div>
 
