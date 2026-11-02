@@ -19,7 +19,6 @@ import {
   FileText,
   X,
   ExternalLink,
-  Home,
   MessageSquare,
 } from 'lucide-react';
 import { formatDateFR } from '@/lib/money/format';
@@ -203,7 +202,7 @@ export function Header({
   return (
     <>
       <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
-        {/* Left: Mobile Menu & Accueil & Space Badge / Title */}
+        {/* Left: Mobile Menu & Space Badge / Title */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
           <button
             onClick={onToggleSidebar}
@@ -212,21 +211,6 @@ export function Header({
             title="Menu principal"
           >
             <Menu className="w-5 h-5" />
-          </button>
-
-          {/* Bouton Accueil sur Mobile */}
-          <button
-            type="button"
-            onClick={() => router.push(isLandlord ? '/' : '/portal')}
-            className={`p-2 sm:p-2.5 rounded-2xl border shadow-sm transition-all cursor-pointer shrink-0 flex items-center justify-center ${
-              (isLandlord && pathname === '/') || (isTenant && pathname === '/portal')
-                ? 'bg-white border-brand-300 text-brand-600 shadow-xs'
-                : 'bg-white border-slate-200 text-slate-700 hover:text-brand-600 hover:border-brand-300'
-            }`}
-            aria-label="Accueil"
-            title="Retourner à l'accueil"
-          >
-            <Home className="w-4 h-4 sm:w-5 sm:h-5" />
           </button>
 
           <div className="min-w-0 flex-1">
