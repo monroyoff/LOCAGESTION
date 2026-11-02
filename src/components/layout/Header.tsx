@@ -150,8 +150,6 @@ export function Header({
             <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Calendar className="w-3.5 h-3.5 text-slate-400" />
               <span>Aujourd’hui : {todayFormatted}</span>
-              <span className="text-slate-300">•</span>
-              <span className="text-slate-600 font-semibold">Zone FCFA</span>
             </div>
           </div>
         </div>
