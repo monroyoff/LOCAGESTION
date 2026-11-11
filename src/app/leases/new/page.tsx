@@ -39,6 +39,10 @@ import {
   AlertCircle,
   ChevronDown,
   ChevronUp,
+  Eye,
+  Maximize2,
+  FileCheck,
+  X,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -237,6 +241,12 @@ export default function NewLeasePage() {
   const [leaseType, setLeaseType] = useState('habitation');
   const [durationMonths, setDurationMonths] = useState('12');
 
+  // Spécificités & Conditions Particulières du Bail
+  const [specialConditions, setSpecialConditions] = useState('');
+
+  // Modal de prévisualisation du contrat complet
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+
   // Calculs financiers dissociés
   const parsedRent = parseInt(monthlyRent, 10) || 0;
   const parsedCharges = parseInt(charges, 10) || 0;
@@ -336,6 +346,7 @@ export default function NewLeasePage() {
       unit: resolvedUnitName,
       country: activeLaw.countryName,
       governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,
+      specialConditions: specialConditions.trim() || undefined,
       rent: parsedRent,
       deposit: parsedDeposit,
       charges: parsedCharges,
@@ -401,7 +412,8 @@ export default function NewLeasePage() {
           </div>
 
           {/* Top Title */}
-          <div className="flex items-center justify-between">
+          {/* Top Title & Bouton de Prévisualisation */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
                 <Link
@@ -418,6 +430,15 @@ export default function NewLeasePage() {
                 Génération en 5 étapes avec scellement numérique et piste d’audit.
               </p>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setIsPreviewModalOpen(true)}
+              className="px-4 py-2 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-black shadow-xs flex items-center gap-2 transition-all self-start sm:self-auto cursor-pointer active:scale-95"
+            >
+              <Eye className="w-4 h-4 text-brand-600" />
+              <span>Visualiser le contrat</span>
+            </button>
           </div>
 
           {/* Stepper Progress Bar */}
@@ -1640,6 +1661,35 @@ export default function NewLeasePage() {
                   </div>
                 </div>
 
+                {/* 5. Zone de Saisie Libre : Spécificités & Conditions Particulières */}
+                <div className="p-4 rounded-3xl bg-white border border-slate-200/90 shadow-xs space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black text-slate-900 flex items-center gap-2">
+                      <PenTool className="w-4 h-4 text-brand-600" />
+                      <span>Spécificités & Conditions Particulières du Bail (Zone Libre) :</span>
+                    </label>
+                    <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full border border-slate-200">
+                      Optionnel
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Précisez ici les accords particuliers conclus avec le preneur (ex : clés & badges remis, place de parking attitrée, travaux de peinture pris en charge par le bailleur avant remise des clés, relevé initial de compteur...).
+                  </p>
+                  <textarea
+                    rows={4}
+                    value={specialConditions}
+                    onChange={(e) => setSpecialConditions(e.target.value)}
+                    placeholder="Ex:&#10;• Remise de 2 jeux de clés et 1 télécommande de portail automatique.&#10;• Rafraîchissement complet des peintures du salon réalisé par le bailleur avant remise des clés.&#10;• Emplacement de stationnement privé n° 04 mis à disposition sans supplément de loyer.&#10;• Index initial relevé compteur Cash Power SBEE : 004185 kWh."
+                    className="w-full p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none leading-relaxed"
+                  />
+                  {specialConditions.trim() && (
+                    <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1.5 pt-0.5">
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Ces spécificités apparaîtront dans la feuille de contrat avant signature et dans le PDF certifié.</span>
+                    </div>
+                  )}
+                </div>
+
                 <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center gap-2 text-xs">
                   <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>
@@ -1649,57 +1699,235 @@ export default function NewLeasePage() {
               </div>
             )}
 
-            {/* Step 5: Signature Électronique Tactile */}
+            {/* Step 5: Visualisation Complète & Signature Électronique */}
             {currentStep === 5 && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between">
+              <div className="space-y-6 animate-in fade-in duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <h2 className="text-base font-black text-slate-900">
-                      Étape 5 : Signature Tactile & Scellement Numérique
+                    <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                      <FileCheck className="w-5 h-5 text-emerald-600" />
+                      <span>Étape 5 : Visualisation Complète du Contrat & Signature</span>
                     </h2>
-                    <p className="text-xs text-slate-500">
-                      Signez au doigt ou à la souris dans l’encadré ci-dessous.
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Vérifiez attentivement les conditions, les clauses et vos spécificités ci-dessous avant d'apposer votre signature tactile.
                     </p>
                   </div>
 
                   <button
                     type="button"
-                    onClick={clearSignature}
-                    className="py-1.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center gap-1"
+                    onClick={() => setIsPreviewModalOpen(true)}
+                    className="py-1.5 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors self-start sm:self-auto cursor-pointer"
                   >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Effacer</span>
+                    <Maximize2 className="w-3.5 h-3.5" />
+                    <span>Format Document A4</span>
                   </button>
                 </div>
 
-                {/* Signature Canvas Pad */}
-                <div className="border-2 border-dashed border-slate-300 rounded-2xl overflow-hidden bg-white shadow-inner relative h-48">
-                  <canvas
-                    ref={canvasRef}
-                    width={680}
-                    height={192}
-                    className="w-full h-full cursor-crosshair touch-none"
-                    onMouseDown={startDrawing}
-                    onMouseMove={draw}
-                    onMouseUp={stopDrawing}
-                    onMouseLeave={stopDrawing}
-                    onTouchStart={startDrawing}
-                    onTouchMove={draw}
-                    onTouchEnd={stopDrawing}
-                  />
+                {/* --- FEUILLE DE CONTRAT OFFICIEL AVANT SIGNATURE --- */}
+                <div className="rounded-3xl bg-white border border-slate-300 shadow-md overflow-hidden text-slate-900">
+                  {/* En-tête Institutionnel du Bail */}
+                  <div className="bg-slate-900 text-white p-4 text-center space-y-1">
+                    <span className="text-[10px] uppercase font-black tracking-widest text-emerald-400 block">
+                      {activeLaw.flag} {activeLaw.countryName.toUpperCase()} • {activeLaw.officialLawReference.toUpperCase()} • CONFORME OHADA
+                    </span>
+                    <h3 className="text-sm sm:text-base font-black tracking-tight uppercase">
+                      Projet Officiel de Contrat de Bail d'Habitation
+                    </h3>
+                    <span className="inline-block text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30 px-2.5 py-0.5 rounded-full">
+                      En attente de signature du bailleur et du locataire
+                    </span>
+                  </div>
 
-                  {!hasSignature && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs font-semibold">
-                      Apposez votre signature ici (Bailleur : Mamadou Diallo)
+                  <div className="p-4 sm:p-6 space-y-5 text-xs">
+                    {/* Identification des Deux Parties */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                        <span className="text-[10px] font-black uppercase text-brand-600 tracking-wider block">
+                          1. Le Bailleur (Propriétaire)
+                        </span>
+                        <div className="font-extrabold text-slate-900 text-xs">
+                          Cabinet DIALLO Patrimoine SARL
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          Représenté par M. Mamadou DIALLO • IFU : 0202110485960
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Rue 340, Haie Vive, Cotonou ({activeLaw.countryName})
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          Tél : +229 01 95 44 44 30 • contact@diallo-patrimoine.bj
+                        </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                        <span className="text-[10px] font-black uppercase text-brand-600 tracking-wider block">
+                          2. Le Preneur (Locataire)
+                        </span>
+                        <div className="font-extrabold text-slate-900 text-xs">
+                          {tenantName}
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          Tél : {tenantPhone} • Email : {tenantEmail}
+                        </div>
+                        <div className="text-[11px] text-slate-500">
+                          Pièce d’identité : CNI / Passeport en cours de validité
+                        </div>
+                        <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md inline-block border border-emerald-200">
+                          {tenantMode === 'new'
+                            ? `Nouveau locataire (Code inv. ${generatedInvitationCode})`
+                            : 'Locataire titulaire vérifié'}
+                        </div>
+                      </div>
                     </div>
-                  )}
+
+                    {/* Objet du Logement Loué */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+                      <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                        Objet de la Location :
+                      </span>
+                      <div className="font-extrabold text-slate-900 text-xs flex items-center justify-between">
+                        <span>{resolvedPropertyName} — Espace / Lot : {resolvedUnitName}</span>
+                        <span className="text-slate-500 font-medium">{surface} m² habitables</span>
+                      </div>
+                      <div className="text-[11px] text-slate-600">
+                        Localisation : {manualAddress || 'Haie Vive, Rue 340'}, {manualCity || 'Cotonou'} ({activeLaw.countryName})
+                      </div>
+                    </div>
+
+                    {/* Conditions Financières Dissociées */}
+                    <div className="p-4 rounded-2xl bg-rose-50/70 border border-rose-200 space-y-2">
+                      <span className="text-[10px] font-black uppercase text-rose-900 tracking-wider block">
+                        Conditions Financières Strictes & Décomposition des Dépôts :
+                      </span>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                        <div className="p-2 bg-white rounded-xl border border-rose-100">
+                          <span className="text-[10px] text-slate-400 block">Loyer Mensuel</span>
+                          <span className="font-black text-rose-950">{formatFCFA(parsedRent)}</span>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-rose-100">
+                          <span className="text-[10px] text-slate-400 block">Charges</span>
+                          <span className="font-bold text-slate-800">{formatFCFA(parsedCharges)}</span>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-rose-100">
+                          <span className="text-[10px] text-slate-400 block">Caution Loyer ({depositMonths}m)</span>
+                          <span className="font-bold text-slate-800">{formatFCFA(parsedDeposit)}</span>
+                        </div>
+                        <div className="p-2 bg-white rounded-xl border border-rose-100">
+                          <span className="text-[10px] text-slate-400 block">Caution Eau/Élec</span>
+                          <span className="font-bold text-amber-800">{formatFCFA(parsedUtilitiesDeposit)}</span>
+                        </div>
+                      </div>
+
+                      <div className="pt-2 border-t border-rose-200/80 flex items-center justify-between text-xs font-black">
+                        <span className="text-rose-900">Total net exigible à la remise des clés :</span>
+                        <span className="text-sm font-black text-emerald-700 bg-white px-3 py-1 rounded-xl border border-emerald-300">
+                          {formatFCFA(totalDueAtEntry)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-rose-800">
+                        • Règlement mensuel au plus tard le <strong>{paymentDay}</strong> de chaque mois par Mobile Money ou Virement.
+                      </div>
+                    </div>
+
+                    {/* Spécificités & Conditions Particulières du Bail */}
+                    <div className={`p-4 rounded-2xl border space-y-2 ${
+                      specialConditions.trim()
+                        ? 'bg-amber-50/80 border-amber-300'
+                        : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
+                          <PenTool className="w-3.5 h-3.5 text-brand-600" />
+                          <span>Spécificités & Conditions Particulières Convenues :</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep(4)}
+                          className="text-[10px] text-brand-600 hover:underline font-bold cursor-pointer"
+                        >
+                          {specialConditions.trim() ? 'Modifier les spécificités' : '+ Ajouter une spécificité'}
+                        </button>
+                      </div>
+
+                      {specialConditions.trim() ? (
+                        <div className="p-3 bg-white rounded-xl border border-amber-200 text-xs text-slate-800 whitespace-pre-line leading-relaxed font-sans font-medium">
+                          {specialConditions}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-slate-500 italic">
+                          Aucune condition particulière dérogatoire renseignée (Régime locatif d'ordre public standard sous {activeLaw.officialLawReference}).
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Synthèse des Clauses Légales */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                      <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider block">
+                        Clauses d'Ordre Public Intégrées ({activeLaw.officialLawReference}) :
+                      </span>
+                      <ul className="text-[11px] text-slate-600 space-y-1 list-disc list-inside">
+                        <li>Destination exclusive à usage d'habitation privée et respect de la tranquillité publique.</li>
+                        <li>Dépôt de garantie conforme au plafond d'ordre public ({activeLaw.depositCapMonths} mois max) et restitution sous {activeLaw.restitutionDeadlineDays} jours.</li>
+                        <li>Interdiction formelle de sous-location ou cession de bail sans accord écrit préalable.</li>
+                        <li>Clause résolutoire automatique après 30 jours de mise en demeure infructueuse.</li>
+                        <li>Litiges soumis à la juridiction compétente : {activeLaw.competentCourt}.</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>
-                    La signature sera scellée avec horodatage certifié, adresse IP et hash SHA-256 infalsifiable.
-                  </span>
+                {/* --- ZONE D'APPOSITION DE LA SIGNATURE TACTILE DU BAILLEUR --- */}
+                <div className="p-4 sm:p-5 rounded-3xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <PenTool className="w-3.5 h-3.5 text-brand-600" />
+                        <span>Signature Tactile du Bailleur (Mamadou Diallo) :</span>
+                      </h3>
+                      <p className="text-[11px] text-slate-500">
+                        Apposez votre signature au doigt ou à la souris pour sceller le contrat de bail visualisé ci-dessus.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={clearSignature}
+                      className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Effacer</span>
+                    </button>
+                  </div>
+
+                  {/* Signature Canvas Pad */}
+                  <div className="border-2 border-dashed border-slate-300 rounded-2xl overflow-hidden bg-white shadow-inner relative h-44">
+                    <canvas
+                      ref={canvasRef}
+                      width={680}
+                      height={176}
+                      className="w-full h-full cursor-crosshair touch-none"
+                      onMouseDown={startDrawing}
+                      onMouseMove={draw}
+                      onMouseUp={stopDrawing}
+                      onMouseLeave={stopDrawing}
+                      onTouchStart={startDrawing}
+                      onTouchMove={draw}
+                      onTouchEnd={stopDrawing}
+                    />
+
+                    {!hasSignature && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs font-semibold">
+                        Apposez votre signature ici (Bailleur : Mamadou Diallo)
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      En signant, vous attestez avoir visualisé le contrat et ses spécificités. La signature sera scellée avec horodatage certifié, adresse IP et hash SHA-256 infalsifiable.
+                    </span>
+                  </div>
                 </div>
               </div>
             )}
@@ -1845,6 +2073,7 @@ export default function NewLeasePage() {
                     unit: resolvedUnitName,
                     country: activeLaw.countryName,
                     governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,
+                    specialConditions: specialConditions.trim() || undefined,
                     rent: parsedRent,
                     deposit: parsedDeposit,
                     utilitiesDeposit: hasUtilitiesDeposit ? parsedUtilitiesDeposit : 0,
@@ -1863,6 +2092,192 @@ export default function NewLeasePage() {
                 className="flex-1 py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all cursor-pointer"
               >
                 <span>Voir les baux</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Plein Écran de Prévisualisation Complète du Contrat A4 */}
+      {isPreviewModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <div className="flex items-center gap-2">
+                <FileCheck className="w-5 h-5 text-emerald-600" />
+                <div>
+                  <h3 className="text-sm sm:text-base font-black text-slate-900">
+                    Aperçu Officiel du Contrat de Bail ({activeLaw.countryName})
+                  </h3>
+                  <span className="text-[11px] text-slate-500 block">
+                    Conforme {activeLaw.officialLawReference} • Piste d'audit SHA-256
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    generateLeasePDF({
+                      id: `PROJET-${Math.floor(100 + Math.random() * 900)}`,
+                      tenantName,
+                      propertyName: resolvedPropertyName,
+                      unit: resolvedUnitName,
+                      country: activeLaw.countryName,
+                      governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,
+                      specialConditions: specialConditions.trim() || undefined,
+                      rent: parsedRent,
+                      deposit: parsedDeposit,
+                      utilitiesDeposit: hasUtilitiesDeposit ? parsedUtilitiesDeposit : 0,
+                      startDate: '2026-11-01',
+                    });
+                  }}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Télécharger PDF</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPreviewModalOpen(false)}
+                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Scrollable Body */}
+            <div className="p-4 sm:p-8 overflow-y-auto space-y-6 text-xs text-slate-800 leading-relaxed font-sans">
+              {/* Document Banner */}
+              <div className="border-b-2 border-slate-900 pb-4 text-center space-y-1">
+                <div className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                  {activeLaw.flag} {activeLaw.countryName.toUpperCase()} • ESPACE UEMOA, CEMAC & OHADA
+                </div>
+                <h1 className="text-base sm:text-lg font-black uppercase text-slate-900 tracking-tight">
+                  Contrat Officiel de Bail d'Habitation Domestique
+                </h1>
+                <div className="text-[11px] font-bold text-brand-600 font-mono">
+                  Régime juridique : {activeLaw.officialLawReference}
+                </div>
+              </div>
+
+              {/* Les Deux Parties */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border border-slate-200 rounded-2xl p-4 bg-slate-50">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 mb-1">
+                    Entre les soussignés (Bailleur) :
+                  </h4>
+                  <p className="font-bold text-slate-900">Cabinet DIALLO Patrimoine SARL</p>
+                  <p className="text-[11px] text-slate-600">Représenté par M. Mamadou DIALLO</p>
+                  <p className="text-[11px] text-slate-600">Rue 340, Haie Vive, Cotonou ({activeLaw.countryName})</p>
+                  <p className="text-[11px] text-slate-600 font-mono">IFU : 0202110485960 • Tél : +229 01 95 44 44 30</p>
+                </div>
+
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 mb-1">
+                    Et le preneur (Locataire) :
+                  </h4>
+                  <p className="font-bold text-slate-900">{tenantName}</p>
+                  <p className="text-[11px] text-slate-600">Tél : {tenantPhone}</p>
+                  <p className="text-[11px] text-slate-600">Email : {tenantEmail}</p>
+                  <p className="text-[11px] text-slate-600">Pièce d'Identité : CNI / Passeport Certifié</p>
+                </div>
+              </div>
+
+              {/* Objet et Désignation des Lieux */}
+              <div className="border border-slate-200 rounded-2xl p-4 space-y-1">
+                <h4 className="text-[10px] font-black uppercase text-slate-400">
+                  Désignation des Lieux Loués :
+                </h4>
+                <p className="font-bold text-slate-900">
+                  {resolvedPropertyName} — Espace / Lot : {resolvedUnitName} ({surface} m² habitables)
+                </p>
+                <p className="text-[11px] text-slate-600">
+                  Adresse : {manualAddress || 'Haie Vive, Rue 340'}, {manualCity || 'Cotonou'} ({activeLaw.countryName})
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  Destination exclusive à l'habitation domestique personnelle du Preneur.
+                </p>
+              </div>
+
+              {/* Conditions Financières */}
+              <div className="border border-rose-200 bg-rose-50/50 rounded-2xl p-4 space-y-2">
+                <h4 className="text-[10px] font-black uppercase text-rose-900">
+                  Conditions Financières & Dépôts de Garantie :
+                </h4>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+                  <div className="bg-white p-2 rounded-xl border border-rose-100">
+                    <span className="text-[10px] text-slate-400 block">Loyer Mensuel</span>
+                    <span className="font-black text-rose-950">{formatFCFA(parsedRent)}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-rose-100">
+                    <span className="text-[10px] text-slate-400 block">Charges</span>
+                    <span className="font-bold text-slate-800">{formatFCFA(parsedCharges)}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-rose-100">
+                    <span className="text-[10px] text-slate-400 block">Caution Loyer</span>
+                    <span className="font-bold text-slate-800">{formatFCFA(parsedDeposit)}</span>
+                  </div>
+                  <div className="bg-white p-2 rounded-xl border border-rose-100">
+                    <span className="text-[10px] text-slate-400 block">Caution Eau/Élec</span>
+                    <span className="font-bold text-amber-800">{formatFCFA(parsedUtilitiesDeposit)}</span>
+                  </div>
+                </div>
+                <div className="pt-2 border-t border-rose-200 flex items-center justify-between text-xs font-black">
+                  <span className="text-rose-950">Montant total net exigible à la signature :</span>
+                  <span className="text-emerald-700 bg-white px-3 py-1 rounded-xl border border-emerald-300">
+                    {formatFCFA(totalDueAtEntry)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Spécificités & Conditions Particulières */}
+              {specialConditions.trim() && (
+                <div className="border border-amber-300 bg-amber-50/60 rounded-2xl p-4 space-y-1.5">
+                  <h4 className="text-[10px] font-black uppercase text-amber-900 tracking-wider flex items-center gap-1.5">
+                    <PenTool className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Conditions Particulières & Spécificités Convenues entre les Parties :</span>
+                  </h4>
+                  <div className="p-3 bg-white rounded-xl border border-amber-200 text-xs text-slate-800 whitespace-pre-line leading-relaxed font-mono">
+                    {specialConditions}
+                  </div>
+                </div>
+              )}
+
+              {/* Clauses Rédigées du Contrat */}
+              <div className="space-y-3 pt-2 border-t border-slate-200">
+                <h4 className="text-xs font-black uppercase text-slate-900">
+                  Clauses et Engagements Juridiques ({activeLaw.officialLawReference}) :
+                </h4>
+                <div className="space-y-2">
+                  {activeLaw.clauses.map((c) => (
+                    <div key={c.articleNumber} className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] space-y-1">
+                      <div className="font-bold text-slate-900 flex items-center gap-2">
+                        <span className="font-mono text-brand-600">{c.articleNumber}</span>
+                        <span>{c.title}</span>
+                      </div>
+                      <p className="text-slate-600 leading-relaxed font-serif">{c.fullText}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-slate-200 flex items-center justify-between bg-slate-50">
+              <span className="text-[11px] text-slate-500">
+                {activeLaw.flag} Document opposable de plein droit conforme OHADA
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsPreviewModalOpen(false)}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
+              >
+                Fermer l'aperçu
               </button>
             </div>
           </div>

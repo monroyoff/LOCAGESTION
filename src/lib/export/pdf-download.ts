@@ -23,6 +23,7 @@ export interface LeasePDFData {
   unit: string;
   country?: string;
   governingLaw?: string;
+  specialConditions?: string;
   rent: number;
   charges?: number;
   deposit?: number;
@@ -255,18 +256,21 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
 
   y += 32;
 
+  const hasSpecialConditions = Boolean(data.specialConditions && data.specialConditions.trim());
+  const clausesBoxHeight = hasSpecialConditions ? 52 : 46;
+
   // 6. Clauses et Engagements Juridiques Réglementaires par Pays
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(margin, y, contentWidth, 48, 2, 2, 'FD');
+  doc.roundedRect(margin, y, contentWidth, clausesBoxHeight, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(15, 23, 42);
-  doc.text(`CADRE JURIDIQUE : ${law.officialLawReference.toUpperCase()} (${law.countryName.toUpperCase()})`, margin + 4, y + 6);
+  doc.text(`CADRE JURIDIQUE : ${law.officialLawReference.toUpperCase()} (${law.countryName.toUpperCase()})`, margin + 4, y + 5.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.8);
+  doc.setFontSize(6.5);
   doc.setTextColor(71, 85, 105);
 
   const clauses = [
@@ -277,14 +281,20 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
     `5. ENREGISTREMENT & JURIDICTION : Déclaré auprès de ${law.taxAuthority}. Compétence exclusive attribuée à : ${law.competentCourt}.`,
   ];
 
-  let cy = y + 10.5;
+  if (hasSpecialConditions && data.specialConditions) {
+    clauses.push(
+      `6. CONDITIONS PARTICULIÈRES CONVENUES : ${data.specialConditions.trim().replace(/\n+/g, ' • ')}`
+    );
+  }
+
+  let cy = y + 10;
   clauses.forEach((c) => {
     const lines = doc.splitTextToSize(c, contentWidth - 8);
     doc.text(lines, margin + 4, cy);
-    cy += lines.length * 3.1 + 1.1;
+    cy += lines.length * 2.9 + 0.9;
   });
 
-  y += 54;
+  y += clausesBoxHeight + 5;
 
   // 7. Signatures Électroniques Scellées
   doc.setFillColor(248, 250, 252);

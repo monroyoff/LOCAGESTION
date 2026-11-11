@@ -16,6 +16,7 @@ export interface Lease {
   unit: string;
   country?: string;
   governingLaw?: string;
+  specialConditions?: string;
   rent: number;
   charges?: number;
   deposit?: number;

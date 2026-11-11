@@ -245,6 +245,18 @@ export function TransmitLeaseModal({
               </div>
             </div>
 
+            {/* Spécificités du contrat */}
+            {activeLease.specialConditions && activeLease.specialConditions.trim() !== '' && (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">
+                  Spécificités & Conditions Particulières :
+                </span>
+                <p className="text-[11px] text-slate-700 whitespace-pre-line leading-relaxed">
+                  {activeLease.specialConditions}
+                </p>
+              </div>
+            )}
+
             {/* Electronic Proof */}
             <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-2 text-[11px] text-emerald-800">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
