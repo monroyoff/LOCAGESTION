@@ -43,6 +43,8 @@ import {
   Maximize2,
   FileCheck,
   X,
+  CreditCard,
+  PhoneCall,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -113,6 +115,11 @@ export default function NewLeasePage() {
   });
 
   const activeLaw: CountryTenancyLaw = resolveCountryTenancyLaw(selectedCountryName);
+
+  const isBenin =
+    activeLaw.countryCode === 'BJ' ||
+    selectedCountryName.toLowerCase().includes('bénin') ||
+    selectedCountryName.toLowerCase().includes('benin');
 
   // Clauses juridiques optionnelles & interactives
   const [optionalClauses, setOptionalClauses] = useState({
@@ -195,6 +202,13 @@ export default function NewLeasePage() {
   const [tenantName, setTenantName] = useState('Koffi Mensah');
   const [tenantEmail, setTenantEmail] = useState('koffi.mensah@fintech-africa.com');
   const [tenantPhone, setTenantPhone] = useState('+229 97 00 11 22');
+  const [tenantAddress, setTenantAddress] = useState('Rue 340, Haie Vive, Cotonou');
+  const [tenantIdType, setTenantIdType] = useState('CIP / CNI (Bénin)');
+  const [tenantIdNumber, setTenantIdNumber] = useState('0120198402918');
+  const [tenantIfu, setTenantIfu] = useState('3202110485960');
+  const [emergencyContactName, setEmergencyContactName] = useState('Mireille Mensah');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('+229 97 11 22 33');
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState('Époux / Épouse');
 
   const [isTransmitModalOpen, setIsTransmitModalOpen] = useState(false);
   const [preparedLease, setPreparedLease] = useState<Lease | null>(null);
@@ -206,6 +220,13 @@ export default function NewLeasePage() {
       setTenantName(found.name);
       setTenantEmail(found.email);
       setTenantPhone(found.phone);
+      if (found.address) setTenantAddress(found.address);
+      if (found.idType) setTenantIdType(found.idType);
+      if (found.idNumber) setTenantIdNumber(found.idNumber);
+      if (found.ifu !== undefined) setTenantIfu(found.ifu);
+      if (found.emergencyContactName) setEmergencyContactName(found.emergencyContactName);
+      if (found.emergencyContactPhone) setEmergencyContactPhone(found.emergencyContactPhone);
+      if (found.emergencyContactRelation) setEmergencyContactRelation(found.emergencyContactRelation);
       if (found.unit) setUnitNumber(found.unit);
       if (found.property) {
         setSelectedProperty(found.property);
@@ -342,6 +363,13 @@ export default function NewLeasePage() {
       tenantId: tenantMode === 'existing' ? selectedRegisteredTenantId : undefined,
       tenantEmail,
       tenantPhone,
+      tenantAddress: tenantAddress.trim() || undefined,
+      tenantIdType: tenantIdType || undefined,
+      tenantIdNumber: tenantIdNumber.trim() || undefined,
+      tenantIfu: tenantIfu.trim() || undefined,
+      emergencyContactName: emergencyContactName.trim() || undefined,
+      emergencyContactPhone: emergencyContactPhone.trim() || undefined,
+      emergencyContactRelation: emergencyContactRelation || undefined,
       property: resolvedPropertyName,
       unit: resolvedUnitName,
       country: activeLaw.countryName,
@@ -908,7 +936,19 @@ export default function NewLeasePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTenantMode('new')}
+                    onClick={() => {
+                      setTenantMode('new');
+                      setTenantName('');
+                      setTenantPhone('');
+                      setTenantEmail('');
+                      setTenantAddress('');
+                      setTenantIdType(isBenin ? 'CIP / CNI (Bénin)' : 'Carte Nationale d’Identité (CNI)');
+                      setTenantIdNumber('');
+                      setTenantIfu('');
+                      setEmergencyContactName('');
+                      setEmergencyContactPhone('');
+                      setEmergencyContactRelation('Famille / Proche');
+                    }}
                     className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                       tenantMode === 'new'
                         ? 'bg-white text-slate-900 shadow-sm font-black'
@@ -979,6 +1019,177 @@ export default function NewLeasePage() {
                         onChange={(e) => setTenantEmail(e.target.value)}
                         className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold"
                       />
+                    </div>
+                  </div>
+
+                  {/* 1. Adresse de résidence actuelle du locataire */}
+                  <div>
+                    <label className="text-xs font-bold text-slate-700 block mb-1">
+                      Adresse de résidence / Domicile actuel du locataire
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ex: Rue 340, Quartier Haie Vive, Cotonou..."
+                      value={tenantAddress}
+                      onChange={(e) => setTenantAddress(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                    />
+                  </div>
+
+                  {/* 2. Pièce d'Identité Officielle (Type + Numéro) */}
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <CreditCard className="w-4 h-4 text-brand-600" />
+                        <span>Pièce d'Identité Officielle du Preneur :</span>
+                      </label>
+                      <span className="text-[10px] bg-slate-100 text-slate-600 font-bold px-2 py-0.5 rounded-full border border-slate-200">
+                        Obligatoire OHADA
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Type de pièce d'identité
+                        </label>
+                        <select
+                          value={tenantIdType}
+                          onChange={(e) => setTenantIdType(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none cursor-pointer"
+                        >
+                          <option value="CIP / CNI (Bénin)">CIP / CNI (Certificat d'Identification Personnelle - Bénin)</option>
+                          <option value="Carte Nationale d’Identité (CNI)">Carte Nationale d’Identité (CNI)</option>
+                          <option value="Passeport Biométrique">Passeport Biométrique International</option>
+                          <option value="Carte / Titre de Séjour">Carte de Séjour / Titre de Résidence</option>
+                          <option value="Permis de Conduire">Permis de Conduire Officiel</option>
+                          <option value="Autre Pièce d’Identité">Autre Pièce d’Identité Officielle</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Numéro de la pièce d'identité
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: 0120198402918 ou N01928374"
+                          value={tenantIdNumber}
+                          onChange={(e) => setTenantIdNumber(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-mono font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 3. Numéro d'Identifiant Fiscal Unique (IFU) - Requis si c'est au Bénin */}
+                  <div
+                    className={`p-4 rounded-2xl border space-y-2 transition-colors ${
+                      isBenin
+                        ? 'bg-brand-50/70 border-brand-200'
+                        : 'bg-slate-50 border-slate-200'
+                    }`}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <span>Numéro d'Identifiant Fiscal Unique (IFU du Preneur)</span>
+                        {isBenin && (
+                          <span className="text-[10px] bg-brand-600 text-white font-bold px-2 py-0.5 rounded-full shadow-xs">
+                            Requis au Bénin 🇧🇯 (13 chiffres)
+                          </span>
+                        )}
+                      </label>
+                      {!isBenin && (
+                        <span className="text-[10px] text-slate-400 font-semibold">Optionnel hors Bénin</span>
+                      )}
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 leading-relaxed">
+                      {isBenin
+                        ? 'Exigé par la Direction Générale des Impôts (DGI Bénin) et l\'ANDF pour l\'enregistrement légal et fiscal obligatoire du contrat de bail (Loi n° 2018-12).'
+                        : 'Identifiant fiscal du locataire pour déclarations administratives ou formalités fiscales.'}
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <input
+                        type="text"
+                        maxLength={13}
+                        placeholder={isBenin ? 'Ex: 3202110485960 (13 chiffres)' : 'Ex: NINEA / NCC / Numéro Fiscal'}
+                        value={tenantIfu}
+                        onChange={(e) => setTenantIfu(e.target.value.replace(/\s+/g, ''))}
+                        className="w-full sm:w-80 px-3.5 py-2 rounded-xl bg-white border border-brand-300 text-xs font-mono font-black text-slate-900 focus:ring-2 focus:ring-brand-500 outline-none"
+                      />
+                      {tenantIfu && tenantIfu.length === 13 && isBenin && (
+                        <span className="text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+                          <Check className="w-4 h-4" />
+                          <span>IFU Bénin valide (13 chiffres) ✓</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 4. Personne à Contacter en Cas d'Urgence */}
+                  <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                        <PhoneCall className="w-4 h-4 text-rose-600" />
+                        <span>Personne à Contacter en Cas d'Urgence :</span>
+                      </label>
+                      <span className="text-[10px] bg-rose-50 text-rose-700 font-bold px-2 py-0.5 rounded-full border border-rose-200">
+                        Sécurité & Secours
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-500">
+                      Personne de confiance (famille, conjoint, proche ou employeur) à joindre d'urgence en cas d'accident, sinistre ou incident dans le logement.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Nom complet de la personne
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Mireille Mensah"
+                          value={emergencyContactName}
+                          onChange={(e) => setEmergencyContactName(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Numéro de téléphone d'urgence
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: +229 97 11 22 33"
+                          value={emergencyContactPhone}
+                          onChange={(e) => setEmergencyContactPhone(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                          Lien de parenté / Relation
+                        </label>
+                        <select
+                          value={emergencyContactRelation}
+                          onChange={(e) => setEmergencyContactRelation(e.target.value)}
+                          className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none cursor-pointer"
+                        >
+                          <option value="Époux / Épouse">Époux / Épouse</option>
+                          <option value="Conjoint(e) / Partenaire">Conjoint(e) / Partenaire</option>
+                          <option value="Parent (Père / Mère)">Parent (Père / Mère)</option>
+                          <option value="Frère / Sœur">Frère / Sœur</option>
+                          <option value="Enfant majeur">Enfant majeur</option>
+                          <option value="Famille / Proche">Famille / Proche</option>
+                          <option value="Collègue / Employeur">Collègue / Employeur</option>
+                          <option value="Autre">Autre</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
 
@@ -1764,18 +1975,40 @@ export default function NewLeasePage() {
                           2. Le Preneur (Locataire)
                         </span>
                         <div className="font-extrabold text-slate-900 text-xs">
-                          {tenantName}
+                          {tenantName || 'Preneur non renseigné'}
                         </div>
                         <div className="text-[11px] text-slate-600">
-                          Tél : {tenantPhone} • Email : {tenantEmail}
+                          Tél : {tenantPhone || 'N/A'} • Email : {tenantEmail || 'N/A'}
                         </div>
-                        <div className="text-[11px] text-slate-500">
-                          Pièce d’identité : CNI / Passeport en cours de validité
+                        {tenantAddress && (
+                          <div className="text-[11px] text-slate-600">
+                            Adresse : {tenantAddress}
+                          </div>
+                        )}
+                        <div className="text-[11px] text-slate-700 font-medium">
+                          Pièce : {tenantIdType} n° <strong className="font-mono text-slate-900">{tenantIdNumber || 'Non renseigné'}</strong>
                         </div>
-                        <div className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md inline-block border border-emerald-200">
-                          {tenantMode === 'new'
-                            ? `Nouveau locataire (Code inv. ${generatedInvitationCode})`
-                            : 'Locataire titulaire vérifié'}
+                        {tenantIfu && (
+                          <div className="text-[11px] text-brand-700 font-medium">
+                            Numéro IFU : <strong className="font-mono">{tenantIfu}</strong> {isBenin ? '(Bénin 🇧🇯)' : ''}
+                          </div>
+                        )}
+                        {emergencyContactName && (
+                          <div className="text-[10.5px] text-slate-600 bg-white p-2 rounded-xl border border-slate-200 mt-1">
+                            <span className="font-bold text-slate-900 block text-[10px] uppercase">
+                              🚨 Contact d'Urgence :
+                            </span>
+                            <span>
+                              {emergencyContactName} ({emergencyContactRelation || 'Proche'}) — Tél : <strong className="font-mono text-slate-900">{emergencyContactPhone}</strong>
+                            </span>
+                          </div>
+                        )}
+                        <div className="pt-1">
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md inline-block border border-emerald-200">
+                            {tenantMode === 'new'
+                              ? `Nouveau locataire (Code inv. ${generatedInvitationCode})`
+                              : 'Locataire titulaire vérifié'}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -2069,6 +2302,14 @@ export default function NewLeasePage() {
                   generateLeasePDF({
                     id: preparedLease?.id || 'BAIL-2026-N09',
                     tenantName,
+                    tenantPhone,
+                    tenantEmail,
+                    tenantAddress,
+                    tenantIdType,
+                    tenantIdNumber,
+                    tenantIfu,
+                    emergencyContactName,
+                    emergencyContactPhone,
                     propertyName: resolvedPropertyName,
                     unit: resolvedUnitName,
                     country: activeLaw.countryName,
@@ -2123,6 +2364,14 @@ export default function NewLeasePage() {
                     generateLeasePDF({
                       id: `PROJET-${Math.floor(100 + Math.random() * 900)}`,
                       tenantName,
+                      tenantPhone,
+                      tenantEmail,
+                      tenantAddress,
+                      tenantIdType,
+                      tenantIdNumber,
+                      tenantIfu,
+                      emergencyContactName,
+                      emergencyContactPhone,
                       propertyName: resolvedPropertyName,
                       unit: resolvedUnitName,
                       country: activeLaw.countryName,
@@ -2181,10 +2430,24 @@ export default function NewLeasePage() {
                   <h4 className="text-[10px] font-black uppercase text-slate-400 mb-1">
                     Et le preneur (Locataire) :
                   </h4>
-                  <p className="font-bold text-slate-900">{tenantName}</p>
-                  <p className="text-[11px] text-slate-600">Tél : {tenantPhone}</p>
-                  <p className="text-[11px] text-slate-600">Email : {tenantEmail}</p>
-                  <p className="text-[11px] text-slate-600">Pièce d'Identité : CNI / Passeport Certifié</p>
+                  <p className="font-bold text-slate-900">{tenantName || 'Non renseigné'}</p>
+                  <p className="text-[11px] text-slate-600">Tél : {tenantPhone || 'N/A'} • Email : {tenantEmail || 'N/A'}</p>
+                  {tenantAddress && (
+                    <p className="text-[11px] text-slate-600">Adresse : {tenantAddress}</p>
+                  )}
+                  <p className="text-[11px] text-slate-700 font-medium">
+                    Pièce : {tenantIdType} n° <strong className="font-mono text-slate-900">{tenantIdNumber || 'Non renseigné'}</strong>
+                  </p>
+                  {tenantIfu && (
+                    <p className="text-[11px] text-brand-700 font-mono font-bold">
+                      Numéro IFU : {tenantIfu} {isBenin ? '(Bénin 🇧🇯)' : ''}
+                    </p>
+                  )}
+                  {emergencyContactName && (
+                    <p className="text-[11px] text-slate-600">
+                      Urgence : {emergencyContactName} ({emergencyContactRelation || 'Proche'}) — Tél : <strong className="font-mono text-slate-900">{emergencyContactPhone}</strong>
+                    </p>
+                  )}
                 </div>
               </div>
 

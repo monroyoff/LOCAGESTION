@@ -12,6 +12,13 @@ export interface Lease {
   tenant: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  tenantAddress?: string;
+  tenantIdType?: string;
+  tenantIdNumber?: string;
+  tenantIfu?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
   property: string;
   unit: string;
   country?: string;
@@ -63,6 +70,13 @@ export interface RegisteredTenant {
   phone: string;
   property?: string;
   unit?: string;
+  address?: string;
+  idType?: string;
+  idNumber?: string;
+  ifu?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
   isNewAccount?: boolean;
   invitedAt?: string;
   invitationCode?: string;
@@ -74,6 +88,13 @@ export const REGISTERED_TENANTS: RegisteredTenant[] = [
     name: 'Koffi Mensah',
     email: 'koffi.mensah@fintech-africa.com',
     phone: '+229 97 00 11 22',
+    address: 'Rue 340, Haie Vive, Cotonou',
+    idType: 'CIP / CNI (Bénin)',
+    idNumber: '0120198402918',
+    ifu: '3202110485960',
+    emergencyContactName: 'Mireille Mensah',
+    emergencyContactPhone: '+229 97 11 22 33',
+    emergencyContactRelation: 'Épouse',
     property: 'Résidence Les Cocotiers',
     unit: 'Appt A3 (3 pièces • 75 m²)',
   },
@@ -82,6 +103,13 @@ export const REGISTERED_TENANTS: RegisteredTenant[] = [
     name: 'Amina Diop',
     email: 'amina.diop@orange-sonatel.sn',
     phone: '+221 77 123 45 67',
+    address: 'Almadies, Route du Méridien, Dakar',
+    idType: 'Carte Nationale d’Identité (CNI)',
+    idNumber: '1752199201824',
+    ifu: '',
+    emergencyContactName: 'Mamadou Diop',
+    emergencyContactPhone: '+221 77 456 78 90',
+    emergencyContactRelation: 'Frère',
     property: 'Villa Émeraude',
     unit: 'Villa R+1 Ouest',
   },
@@ -90,6 +118,13 @@ export const REGISTERED_TENANTS: RegisteredTenant[] = [
     name: 'Fatoumata Traoré',
     email: 'fatou.traore@ecobank.ci',
     phone: '+225 07 89 01 23',
+    address: 'Cocody Danga, Boulevard de France, Abidjan',
+    idType: 'Passeport Biométrique',
+    idNumber: 'CI20819283',
+    ifu: '',
+    emergencyContactName: 'Sékou Traoré',
+    emergencyContactPhone: '+225 05 12 34 56',
+    emergencyContactRelation: 'Conjoint',
     property: 'Résidence Les Cocotiers',
     unit: 'Appt B1 (2 pièces)',
   },
@@ -98,6 +133,13 @@ export const REGISTERED_TENANTS: RegisteredTenant[] = [
     name: 'Jean-Yves Kouassi',
     email: 'jy.kouassi@abidjan-tech.ci',
     phone: '+225 05 44 33 22',
+    address: 'Marcory Zone 4, Rue du Canal, Abidjan',
+    idType: 'Carte Nationale d’Identité (CNI)',
+    idNumber: 'CI00392817',
+    ifu: '',
+    emergencyContactName: 'Blandine Kouassi',
+    emergencyContactPhone: '+225 07 65 43 21',
+    emergencyContactRelation: 'Sœur',
     property: 'Immeuble Palmier Royal',
     unit: 'Studio B12',
   },

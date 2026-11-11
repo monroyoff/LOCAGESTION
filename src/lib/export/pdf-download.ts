@@ -19,6 +19,12 @@ export interface LeasePDFData {
   tenantName: string;
   tenantPhone?: string;
   tenantEmail?: string;
+  tenantAddress?: string;
+  tenantIdType?: string;
+  tenantIdNumber?: string;
+  tenantIfu?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
   propertyName: string;
   unit: string;
   country?: string;
@@ -68,6 +74,12 @@ export interface NoticePDFData {
   tenantName: string;
   tenantPhone?: string;
   tenantEmail?: string;
+  tenantAddress?: string;
+  tenantIdType?: string;
+  tenantIdNumber?: string;
+  tenantIfu?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
   propertyName: string;
   unitNumber: string;
   monthlyRent: number;
@@ -189,14 +201,26 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   doc.setFontSize(8);
   doc.text('2. LE PRENEUR (LOCATAIRE)', margin + boxWidth + 9, y + 5);
 
-  doc.setFontSize(7.5);
+  doc.setFontSize(7);
   doc.setTextColor(30, 41, 59);
-  doc.text(`M./Mme ${data.tenantName}`, margin + boxWidth + 9, y + 12);
+  doc.text(`M./Mme ${data.tenantName}`, margin + boxWidth + 9, y + 11);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text(`Tél : ${data.tenantPhone || '+229 97 12 34 56'}`, margin + boxWidth + 9, y + 17);
-  doc.text(`Email : ${data.tenantEmail || 'koffi.mensah@fintech-africa.com'}`, margin + boxWidth + 9, y + 22);
-  doc.text(`Pièce d'Identité : CNI / Passeport Certifié ✓`, margin + boxWidth + 9, y + 27);
+  doc.setFontSize(6.5);
+  doc.text(`Tél : ${data.tenantPhone || '+229 97 12 34 56'} • ${data.tenantEmail || ''}`, margin + boxWidth + 9, y + 15);
+  doc.text(`Pièce : ${data.tenantIdType || 'CNI / CIP'} N° ${data.tenantIdNumber || 'Certifiée ✓'}`, margin + boxWidth + 9, y + 19);
+  if (data.tenantIfu) {
+    doc.text(`Numéro IFU : ${data.tenantIfu} (Enregistrement DGI/ANDF)`, margin + boxWidth + 9, y + 23);
+  } else if (data.tenantAddress) {
+    doc.text(`Adresse : ${data.tenantAddress}`, margin + boxWidth + 9, y + 23);
+  } else {
+    doc.text(`Destination : Usage d'habitation exclusive`, margin + boxWidth + 9, y + 23);
+  }
+  doc.text(
+    `Urgence : ${data.emergencyContactName ? `${data.emergencyContactName} (${data.emergencyContactPhone || 'Tél'})` : 'Proche déclaré'}`,
+    margin + boxWidth + 9,
+    y + 27
+  );
   doc.text(`Destination : Usage d'habitation personnelle`, margin + boxWidth + 9, y + 31);
 
   y += 40;
