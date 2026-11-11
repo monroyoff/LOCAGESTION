@@ -6,7 +6,11 @@
     "dev": "next dev -p 3001",
     "build": "next build",
     "start": "next start -p 3001",
-    "lint": "next lint"
+    "lint": "next lint",
+    "pm2:status": "pm2 status",
+    "pm2:restart": "pm2 restart locagestion",
+    "pm2:stop": "pm2 stop locagestion",
+    "pm2:logs": "pm2 logs locagestion"
   },
   "dependencies": {
     "clsx": "^2.1.1",
