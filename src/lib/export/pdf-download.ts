@@ -8,6 +8,7 @@
 import jsPDF from 'jspdf';
 import { formatFCFA } from '@/lib/money/format';
 import { notifyDownloadComplete } from './download-notifier';
+import { resolveCountryTenancyLaw } from '@/lib/legal/country-tenancy-law';
 
 // ============================================================================
 // TYPES
@@ -20,6 +21,8 @@ export interface LeasePDFData {
   tenantEmail?: string;
   propertyName: string;
   unit: string;
+  country?: string;
+  governingLaw?: string;
   rent: number;
   charges?: number;
   deposit?: number;
@@ -100,19 +103,26 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   const contentWidth = pageWidth - margin * 2; // 178 mm
   let y = 14;
 
+  const law = resolveCountryTenancyLaw(data.country || data.propertyName);
+
   // 1. En-tête Institutionnel
   doc.setFillColor(15, 23, 42); // slate-900
   doc.rect(margin, y, contentWidth, 18, 'F');
 
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.text('RÉPUBLIQUE DU BÉNIN • ESPACE UEMOA, CEMAC & OHADA', margin + contentWidth / 2, y + 6, {
-    align: 'center',
-  });
+  doc.setFontSize(8);
+  doc.text(
+    `${law.countryName.toUpperCase()} • ${law.officialLawReference.toUpperCase()} • CONFORME OHADA`,
+    margin + contentWidth / 2,
+    y + 6,
+    {
+      align: 'center',
+    }
+  );
 
   doc.setFontSize(11);
-  doc.text("CONTRAT OFFICIEL DE BAIL D'HABITATION", margin + contentWidth / 2, y + 13, {
+  doc.text("CONTRAT OFFICIEL DE BAIL D'HABITATION CONFORME", margin + contentWidth / 2, y + 13, {
     align: 'center',
   });
 
@@ -245,33 +255,33 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
 
   y += 32;
 
-  // 6. Clauses et Engagements Juridiques UEMOA / CEMAC / OHADA
+  // 6. Clauses et Engagements Juridiques Réglementaires par Pays
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin, y, contentWidth, 48, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(15, 23, 42);
-  doc.text('CONDITIONS GÉNÉRALES & CLAUSE RÉSOLUTOIRE OHADA', margin + 4, y + 6);
+  doc.text(`CADRE JURIDIQUE : ${law.officialLawReference.toUpperCase()} (${law.countryName.toUpperCase()})`, margin + 4, y + 6);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
+  doc.setFontSize(6.8);
   doc.setTextColor(71, 85, 105);
 
   const clauses = [
-    "1. DESTINATION : Les locaux sont loués à titre d'habitation exclusive. Toute sous-location totale ou partielle est formellement interdite sans accord écrit préalable du bailleur.",
-    "2. ENTRETIEN & CHARGES : Le preneur prend les lieux dans l'état où ils se trouvent lors de l'état des lieux d'entrée. Il est tenu d'assurer l'entretien courant et les menues réparations locatives.",
-    "3. SÛRETÉ & CAUTION : Le dépôt de garantie versé à la signature ne porte pas intérêt. Il sera restitué dans un délai maximum de 30 jours après la remise des clés, déduction faite des éventuelles sommes restant dues.",
-    "4. CLAUSE RÉSOLUTOIRE EXPRESSE : À défaut de paiement d'un seul terme de loyer à son échéance, le présent bail sera résilié de plein droit 30 jours après un commandement de payer demeuré infructueux, conformément aux règles du droit uniforme OHADA.",
-    "5. JURIDICTION COMPÉTENTE : Pour tout litige relatif à l'exécution du présent contrat, compétence exclusive est attribuée aux juridictions compétentes du ressort du lieu de situation de l'immeuble.",
+    `1. DESTINATION : Locaux loués à usage exclusif d'habitation. Sous-location et cession strictement prohibées sans accord écrit préalable.`,
+    `2. CAUTIONNEMENT CONFORME : Dépôt de garantie conforme au plafond d'ordre public (${law.depositCapMonths} mois max). Restitution sous ${law.restitutionDeadlineDays} jours suivant état des lieux contradictoire et apurement des factures d'eau/énergie.`,
+    `3. ENTRETIEN & CHARGES : Grosses réparations et structure à charge du bailleur ; menues réparations locatives d'usage à charge du preneur.`,
+    `4. CLAUSE RÉSOLUTOIRE EXPRESSE : Résiliation automatique et de plein droit trente (30) jours calendaires après mise en demeure ou sommation de payer infructueuse, ouvrant droit à l'expulsion immédiate.`,
+    `5. ENREGISTREMENT & JURIDICTION : Déclaré auprès de ${law.taxAuthority}. Compétence exclusive attribuée à : ${law.competentCourt}.`,
   ];
 
-  let cy = y + 11;
+  let cy = y + 10.5;
   clauses.forEach((c) => {
     const lines = doc.splitTextToSize(c, contentWidth - 8);
     doc.text(lines, margin + 4, cy);
-    cy += lines.length * 3.4 + 1.2;
+    cy += lines.length * 3.1 + 1.1;
   });
 
   y += 54;
@@ -322,7 +332,7 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   doc.setTextColor(148, 163, 184);
   const hash = data.hashSha256 || '9f83a84f3e8b0129cd8a77f2409849204820194820183029482019482019a84f';
   doc.text(
-    `LOCAGESTION UEMOA & CEMAC • Piste d'audit SHA-256 : ${hash.substring(0, 48)}... • Document officiel opposable de plein droit`,
+    `LOCAGESTION • ${law.shortReference} • Piste d'audit SHA-256 : ${hash.substring(0, 42)}... • Document officiel opposable de plein droit`,
     margin,
     y + 2
   );

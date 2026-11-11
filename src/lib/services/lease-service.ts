@@ -14,6 +14,8 @@ export interface Lease {
   tenantPhone?: string;
   property: string;
   unit: string;
+  country?: string;
+  governingLaw?: string;
   rent: number;
   charges?: number;
   deposit?: number;

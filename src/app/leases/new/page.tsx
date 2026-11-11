@@ -33,6 +33,12 @@ import {
   Smartphone,
   Copy,
   Check,
+  Scale,
+  BookOpen,
+  Info,
+  AlertCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -45,6 +51,13 @@ import {
 } from '@/lib/services/lease-service';
 import { TransmitLeaseModal } from '@/components/leases/TransmitLeaseModal';
 import { notifySave } from '@/lib/notifications/action-notifier';
+import { getUserResidenceCountry } from '@/lib/services/geo-service';
+import {
+  CountryTenancyLaw,
+  COUNTRIES_TENANCY_LAWS,
+  SUPPORTED_TENANCY_COUNTRIES,
+  resolveCountryTenancyLaw,
+} from '@/lib/legal/country-tenancy-law';
 
 const LEASE_PROPERTY_TYPES = [
   { id: 'chambre_individuelle', label: 'Chambre individuelle', sub: 'Entrée coucher', icon: Bed },
@@ -87,6 +100,42 @@ export default function NewLeasePage() {
   const currentProperty =
     MOCK_PROPERTIES.find((p) => p.id === selectedPropertyId) || MOCK_PROPERTIES[0];
 
+  // Pays de juridiction & droit applicable
+  const [selectedCountryName, setSelectedCountryName] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return getUserResidenceCountry() || 'Bénin';
+    }
+    return 'Bénin';
+  });
+
+  const activeLaw: CountryTenancyLaw = resolveCountryTenancyLaw(selectedCountryName);
+
+  // Clauses juridiques optionnelles & interactives
+  const [optionalClauses, setOptionalClauses] = useState({
+    indexation: true,
+    animals: false,
+    worksApproval: true,
+    lateFee: true,
+    sublettingProhibition: true,
+  });
+  const [expandedArticle, setExpandedArticle] = useState<string | null>(null);
+  const [isCopiedAllClauses, setIsCopiedAllClauses] = useState(false);
+
+  const handleCopyAllClauses = () => {
+    const text = activeLaw.clauses
+      .map((c) => `${c.articleNumber} : ${c.title}\n${c.fullText}\n`)
+      .join('\n');
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(
+        `CONTRAT OFFICIEL DE BAIL D'HABITATION CONFORME - ${activeLaw.countryName.toUpperCase()}\n` +
+          `Référence Légale : ${activeLaw.officialLawReference} (${activeLaw.officialLawTitle})\n\n` +
+          text
+      );
+      setIsCopiedAllClauses(true);
+      setTimeout(() => setIsCopiedAllClauses(false), 3000);
+    }
+  };
+
   // Propriété et unité résolues pour l'ensemble du bail
   const resolvedPropertyName =
     propertyMode === 'portfolio'
@@ -106,6 +155,9 @@ export default function NewLeasePage() {
     const p = MOCK_PROPERTIES.find((item) => item.id === propId);
     if (p) {
       setSelectedProperty(p.name);
+      if (p.country) {
+        setSelectedCountryName(p.country);
+      }
       // Sélectionner par défaut le premier lot vacant ou le premier lot
       const defaultUnit = p.unitsList?.find((u) => u.status === 'vacant') || p.unitsList?.[0];
       if (defaultUnit) {
@@ -154,7 +206,12 @@ export default function NewLeasePage() {
       if (found.property) {
         setSelectedProperty(found.property);
         const match = MOCK_PROPERTIES.find((p) => p.name === found.property);
-        if (match) setSelectedPropertyId(match.id);
+        if (match) {
+          setSelectedPropertyId(match.id);
+          if (match.country) {
+            setSelectedCountryName(match.country);
+          }
+        }
       }
     }
   };
@@ -277,6 +334,8 @@ export default function NewLeasePage() {
       tenantPhone,
       property: resolvedPropertyName,
       unit: resolvedUnitName,
+      country: activeLaw.countryName,
+      governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,
       rent: parsedRent,
       deposit: parsedDeposit,
       charges: parsedCharges,
@@ -737,7 +796,14 @@ export default function NewLeasePage() {
                         </label>
                         <select
                           value={manualCity}
-                          onChange={(e) => setManualCity(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setManualCity(val);
+                            const detected = resolveCountryTenancyLaw(val);
+                            if (detected) {
+                              setSelectedCountryName(detected.countryName);
+                            }
+                          }}
                           className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none cursor-pointer"
                         >
                           <option value="Cotonou">Cotonou (Bénin)</option>
@@ -1046,12 +1112,40 @@ export default function NewLeasePage() {
                   </span>
                 </div>
 
-                {/* 2. Caution Loyer avec plus d'options + Standard 3 mois */}
+                {/* Information légale de conformité pour le pays de juridiction */}
+                <div className="p-3.5 rounded-2xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-2xl">{activeLaw.flag}</span>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          Réglementation {activeLaw.countryName}
+                        </span>
+                        <span className="text-[10px] bg-brand-500/20 text-brand-300 border border-brand-500/30 px-2 py-0.2 rounded-full font-bold">
+                          {activeLaw.shortReference}
+                        </span>
+                      </div>
+                      <p className="text-slate-200 text-[11px] font-medium mt-0.5">
+                        {activeLaw.depositAdviceText}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(4)}
+                    className="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 font-bold flex items-center gap-1 self-start sm:self-auto cursor-pointer"
+                  >
+                    <Scale className="w-3.5 h-3.5 text-brand-400" />
+                    <span>Consulter les clauses</span>
+                  </button>
+                </div>
+
+                {/* 2. Caution Loyer avec plus d'options + Standard adapté au pays */}
                 <div className="space-y-2">
                   <label className="text-xs font-black text-slate-800 block flex items-center justify-between">
                     <span>Caution / Dépôt de garantie Loyer :</span>
                     <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
-                      Standard réglementaire : 3 mois (Loi bail UEMOA)
+                      Standard légal : {activeLaw.depositCapMonths} mois ({activeLaw.shortReference})
                     </span>
                   </label>
                   <select
@@ -1061,13 +1155,27 @@ export default function NewLeasePage() {
                   >
                     <option value="0">0 mois — Aucune caution loyer (0 FCFA)</option>
                     <option value="1">1 mois de caution ({formatFCFA(parsedRent * 1)})</option>
-                    <option value="2">2 mois de caution ({formatFCFA(parsedRent * 2)})</option>
-                    <option value="3">3 mois de caution ({formatFCFA(parsedRent * 3)}) — ★ Standard UEMOA / Bénin</option>
+                    <option value="2">
+                      2 mois de caution ({formatFCFA(parsedRent * 2)}) {activeLaw.depositCapMonths === 2 ? '— ★ Plafond légal d’ordre public' : ''}
+                    </option>
+                    <option value="3">
+                      3 mois de caution ({formatFCFA(parsedRent * 3)}) {activeLaw.depositCapMonths === 3 ? `— ★ Standard ${activeLaw.countryName} / UEMOA` : ''}
+                    </option>
                     <option value="4">4 mois de caution ({formatFCFA(parsedRent * 4)})</option>
                     <option value="5">5 mois de caution ({formatFCFA(parsedRent * 5)})</option>
                     <option value="6">6 mois de caution ({formatFCFA(parsedRent * 6)})</option>
                     <option value="custom">Montant libre personnalisé en FCFA...</option>
                   </select>
+
+                  {/* Avertissement de dépassement du plafond légal du pays */}
+                  {parseInt(depositMonths, 10) > activeLaw.depositCapMonths && (
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2 text-[11px] text-amber-900">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                      <span>
+                        <strong>Attention réglementation :</strong> En {activeLaw.countryName}, {activeLaw.depositAdviceText} Exiger plus expose à la requalification ou contestation devant {activeLaw.competentCourt}.
+                      </span>
+                    </div>
+                  )}
 
                   {depositMonths === 'custom' && (
                     <div className="pt-1">
@@ -1251,23 +1359,292 @@ export default function NewLeasePage() {
               </div>
             )}
 
-            {/* Step 4: Clauses Juridiques */}
+            {/* Step 4: Clauses Juridiques & Droit National Applicable */}
             {currentStep === 4 && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                <h2 className="text-base font-black text-slate-900">
-                  Étape 4 : Modèle Juridique & Clauses Conformes OHADA
-                </h2>
-
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
-                  <div className="font-extrabold text-slate-900">
-                    Clauses types incluses dans ce contrat :
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                      <Scale className="w-5 h-5 text-brand-600" />
+                      <span>Étape 4 : Cadre Légal & Clauses Spécifiques au Pays de Résidence</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Clauses juridiques formulées selon la législation en vigueur dans le pays de situation du logement.
+                    </p>
                   </div>
-                  <ul className="list-disc list-inside space-y-1 text-slate-600 text-[11px]">
-                    <li>Destination exclusive à usage d'habitation bourgeoise</li>
-                    <li>Clause résolutoire automatique en cas d'impayé supérieur à 30 jours</li>
-                    <li>Interdiction stricte de sous-location sans accord écrit du bailleur</li>
-                    <li>Règlement privilégié par Mobile Money (Wave, MTN, Orange, Moov)</li>
-                  </ul>
+                  <span className="text-xs text-slate-600 font-bold bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60 flex items-center gap-1 self-start sm:self-auto">
+                    <span>Étape 4 sur 5</span>
+                  </span>
+                </div>
+
+                {/* 1. Bandeau Sélecteur de Pays & Juridiction */}
+                <div className="p-4 rounded-3xl bg-slate-900 text-white shadow-lg space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl p-1 bg-slate-800 rounded-2xl border border-slate-700">
+                        {activeLaw.flag}
+                      </span>
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block">
+                          Juridiction & Réglementation Nationale Applicable :
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-sm sm:text-base font-black text-white">
+                            {activeLaw.countryName}
+                          </span>
+                          <span className="text-[10px] bg-brand-500/20 text-brand-300 border border-brand-500/30 px-2.5 py-0.5 rounded-full font-bold">
+                            {activeLaw.shortReference}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs text-slate-300 font-medium hidden sm:inline">
+                        Adapter à un autre pays :
+                      </label>
+                      <select
+                        value={selectedCountryName}
+                        onChange={(e) => setSelectedCountryName(e.target.value)}
+                        className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
+                      >
+                        {SUPPORTED_TENANCY_COUNTRIES.map((c) => (
+                          <option key={c.countryName} value={c.countryName}>
+                            {c.flag} {c.countryName} — {c.shortReference}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center gap-y-2 gap-x-4 text-[11px] text-slate-300">
+                    <div className="flex items-center gap-1.5">
+                      <BookOpen className="w-3.5 h-3.5 text-brand-400 shrink-0" />
+                      <span><strong>Texte officiel :</strong> {activeLaw.officialLawReference}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      <span><strong>Plafond caution :</strong> {activeLaw.depositCapMonths} mois max</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Scale className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                      <span><strong>Délai restitution :</strong> {activeLaw.restitutionDeadlineDays} jours max</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Synthèse Institutionnelle des Règles d'Ordre Public */}
+                <div className="p-4 rounded-2xl bg-white border border-slate-200/80 space-y-2 text-xs shadow-xs">
+                  <div className="font-black text-slate-900 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Info className="w-4 h-4 text-brand-600" />
+                      <span>Prescriptions Légales en Vigueur ({activeLaw.countryName})</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyAllClauses}
+                      className="text-[11px] text-brand-600 hover:text-brand-700 font-bold flex items-center gap-1 cursor-pointer bg-brand-50 hover:bg-brand-100/70 px-2.5 py-1 rounded-xl transition-colors"
+                    >
+                      {isCopiedAllClauses ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span className="text-emerald-700">Texte copié !</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copier le texte des clauses</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 text-[11px]">
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                      <span className="text-slate-400 block font-bold uppercase tracking-wider text-[10px]">
+                        Formalité Fiscale & Déclaration :
+                      </span>
+                      <p className="text-slate-700 leading-relaxed">
+                        {activeLaw.fiscalRegistrationRequirement}
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
+                      <span className="text-slate-400 block font-bold uppercase tracking-wider text-[10px]">
+                        Juridiction Territoriale Compétente :
+                      </span>
+                      <p className="text-slate-700 leading-relaxed font-semibold">
+                        {activeLaw.competentCourt}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Liste des Articles Rédigés Spécifiques au Pays */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-brand-600" />
+                      <span>Articles et Clauses Types Intégrés au Contrat ({activeLaw.clauses.length} articles) :</span>
+                    </h3>
+                    <span className="text-[10px] text-slate-500 font-medium">
+                      Conforme droit OHADA & Code locatif national
+                    </span>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {activeLaw.clauses.map((clause) => {
+                      const isExpanded = expandedArticle === clause.articleNumber;
+                      return (
+                        <div
+                          key={clause.articleNumber}
+                          className="p-3.5 rounded-2xl bg-white border border-slate-200/90 hover:border-brand-200 hover:shadow-xs transition-all space-y-2"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-900 text-white font-mono">
+                                  {clause.articleNumber}
+                                </span>
+                                <span className="text-xs font-extrabold text-slate-900">
+                                  {clause.title}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-500 pl-1">
+                                {clause.summary}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedArticle(isExpanded ? null : clause.articleNumber)
+                              }
+                              className="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
+                              title={isExpanded ? 'Réduire' : 'Lire le texte intégral'}
+                            >
+                              {isExpanded ? (
+                                <ChevronUp className="w-4 h-4" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+
+                          {/* Texte Notarié Déplié */}
+                          {isExpanded ? (
+                            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-700 leading-relaxed animate-in fade-in duration-150">
+                              <p className="font-serif italic">{clause.fullText}</p>
+                            </div>
+                          ) : (
+                            <div
+                              onClick={() => setExpandedArticle(clause.articleNumber)}
+                              className="text-[10px] text-brand-600 font-bold hover:underline cursor-pointer flex items-center gap-1 pl-1"
+                            >
+                              <span>Voir la formulation juridique complète</span>
+                              <ChevronDown className="w-3 h-3" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Clauses Personnalisées & Options Additionnelles */}
+                <div className="p-4 rounded-3xl bg-slate-50 border border-slate-200 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-brand-600" />
+                      <span>Clauses Additionnelles Personnalisables :</span>
+                    </span>
+                    <span className="text-[10px] text-slate-500 font-semibold">Activées par défaut</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-white/80 cursor-pointer transition-colors text-xs">
+                      <input
+                        type="checkbox"
+                        checked={optionalClauses.indexation}
+                        onChange={(e) =>
+                          setOptionalClauses({ ...optionalClauses, indexation: e.target.checked })
+                        }
+                        className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 mt-0.5"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">
+                          Clause d’Indexation & Révision Annuelle du Loyer
+                        </span>
+                        <span className="text-[11px] text-slate-500 block">
+                          Le loyer pourra être réajusté à la date anniversaire selon la variation de l'indice officiel des prix à la consommation.
+                        </span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-white/80 cursor-pointer transition-colors text-xs">
+                      <input
+                        type="checkbox"
+                        checked={optionalClauses.lateFee}
+                        onChange={(e) =>
+                          setOptionalClauses({ ...optionalClauses, lateFee: e.target.checked })
+                        }
+                        className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 mt-0.5"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">
+                          Clause Pénale de Retard Forfaitaire (10%)
+                        </span>
+                        <span className="text-[11px] text-slate-500 block">
+                          Application d’une indemnité forfaitaire de 10% sur tout loyer non acquitté après le 10 de chaque mois civil.
+                        </span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-white/80 cursor-pointer transition-colors text-xs">
+                      <input
+                        type="checkbox"
+                        checked={optionalClauses.worksApproval}
+                        onChange={(e) =>
+                          setOptionalClauses({ ...optionalClauses, worksApproval: e.target.checked })
+                        }
+                        className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 mt-0.5"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">
+                          Agrément Écrit Préalable pour Tous Travaux
+                        </span>
+                        <span className="text-[11px] text-slate-500 block">
+                          Interdiction d'effectuer des percements majeurs ou modifications sans autorisation écrite préalable du propriétaire.
+                        </span>
+                      </div>
+                    </label>
+
+                    <label className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-white/80 cursor-pointer transition-colors text-xs">
+                      <input
+                        type="checkbox"
+                        checked={optionalClauses.animals}
+                        onChange={(e) =>
+                          setOptionalClauses({ ...optionalClauses, animals: e.target.checked })
+                        }
+                        className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 mt-0.5"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">
+                          Interdiction Stricte des Animaux Nuisibles ou Dangereux
+                        </span>
+                        <span className="text-[11px] text-slate-500 block">
+                          Les animaux susceptibles de causer des détériorations ou de troubler le calme des voisins sont proscrits.
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center gap-2 text-xs">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>
+                    Ces clauses juridiques certifiées seront automatiquement insérées et scellées dans le contrat PDF officiel lors de la signature à l'étape suivante.
+                  </span>
                 </div>
               </div>
             )}
@@ -1433,6 +1810,12 @@ export default function NewLeasePage() {
                   <span className="font-bold font-mono">+{formatFCFA(parsedUtilitiesDeposit)}</span>
                 </div>
               )}
+              <div className="flex justify-between text-slate-500">
+                <span>Cadre Légal :</span>
+                <span className="font-bold text-slate-800">
+                  {activeLaw.flag} {activeLaw.shortReference}
+                </span>
+              </div>
               <div className="flex justify-between pt-1.5 border-t border-slate-200 font-black text-slate-900">
                 <span>Total exigible à l'entrée :</span>
                 <span className="text-emerald-600">{formatFCFA(totalDueAtEntry)}</span>
@@ -1460,6 +1843,8 @@ export default function NewLeasePage() {
                     tenantName,
                     propertyName: resolvedPropertyName,
                     unit: resolvedUnitName,
+                    country: activeLaw.countryName,
+                    governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,
                     rent: parsedRent,
                     deposit: parsedDeposit,
                     utilitiesDeposit: hasUtilitiesDeposit ? parsedUtilitiesDeposit : 0,

@@ -249,7 +249,9 @@ export function TransmitLeaseModal({
             <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-2 text-[11px] text-emerald-800">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <span>
-                Signature du bailleur vérifiée • Piste d'audit SHA-256 scellée.
+                {activeLease.governingLaw
+                  ? `Bail scellé conforme à : ${activeLease.governingLaw} • Piste d'audit SHA-256 certifiée.`
+                  : `Signature du bailleur vérifiée • Piste d'audit SHA-256 scellée conforme OHADA.`}
               </span>
             </div>
 
