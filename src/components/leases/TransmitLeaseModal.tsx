@@ -77,6 +77,7 @@ export function TransmitLeaseModal({
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
+  const [autoOpenWhatsApp, setAutoOpenWhatsApp] = useState(true);
 
   // Stocke les résultats du dispatch serveur et les liens directs
   const [dispatchResult, setDispatchResult] = useState<{
@@ -193,6 +194,14 @@ export function TransmitLeaseModal({
         gmailUrl: data?.deepLinks?.gmailUrl || fallbackGmailUrl,
         textMessage: data?.textMessage || textMessage,
       });
+
+      // Si l'option WhatsApp automatique est activée, ouvrir l'onglet WhatsApp
+      if (autoOpenWhatsApp) {
+        const waTarget = data?.deepLinks?.whatsappUrl || fallbackWhatsappUrl;
+        if (typeof window !== 'undefined' && waTarget) {
+          window.open(waTarget, '_blank');
+        }
+      }
     } catch (err) {
       console.error('Erreur API notification:', err);
       // Fallback gracieux avec les liens directs
@@ -367,6 +376,25 @@ export function TransmitLeaseModal({
               </span>
             </div>
 
+            {/* Auto WhatsApp trigger checkbox */}
+            <label className="flex items-center gap-2.5 p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl cursor-pointer hover:bg-emerald-50 transition-colors">
+              <input
+                type="checkbox"
+                checked={autoOpenWhatsApp}
+                onChange={(e) => setAutoOpenWhatsApp(e.target.checked)}
+                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer"
+              />
+              <div className="text-xs text-emerald-950">
+                <span className="font-bold flex items-center gap-1.5">
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  Ouvrir WhatsApp automatiquement pour délivrance immédiate
+                </span>
+                <span className="text-[10px] text-emerald-800 block">
+                  Pré-remplit le message officiel avec le lien sécurisé du bail et le code d'activation
+                </span>
+              </div>
+            </label>
+
             {/* Actions */}
             <div className="pt-2 flex items-center justify-end gap-2.5">
               <button
@@ -430,8 +458,8 @@ export function TransmitLeaseModal({
                     <span>Email ({activeLease.tenantEmail})</span>
                   </span>
                   {dispatchResult?.emailSent ? (
-                    <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Envoyé (SMTP)
+                    <span className="text-emerald-400 font-bold text-[11px] flex items-center gap-1 bg-emerald-950/60 px-2 py-0.5 rounded-lg border border-emerald-800">
+                      <Check className="w-3.5 h-3.5" /> Envoyé avec succès (SMTP Gmail) ✓
                     </span>
                   ) : (
                     <span className="text-amber-300 font-bold text-[10px]">
@@ -446,12 +474,12 @@ export function TransmitLeaseModal({
                     <span>Téléphone ({activeLease.tenantPhone})</span>
                   </span>
                   {dispatchResult?.smsSent ? (
-                    <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
-                      <Check className="w-3 h-3" /> Envoyé (SMS API)
+                    <span className="text-emerald-400 font-bold text-[11px] flex items-center gap-1 bg-emerald-950/60 px-2 py-0.5 rounded-lg border border-emerald-800">
+                      <Check className="w-3.5 h-3.5" /> Envoyé ({dispatchResult.smsProvider}) ✓
                     </span>
                   ) : (
                     <span className="text-emerald-400 font-bold text-[10px]">
-                      WhatsApp / SMS Prêt
+                      WhatsApp & SMS Prêt
                     </span>
                   )}
                 </div>

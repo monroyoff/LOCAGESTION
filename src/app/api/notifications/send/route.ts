@@ -178,6 +178,35 @@ export async function POST(req: NextRequest) {
       } catch (err: any) {
         smsError = err?.message || 'Erreur Termii';
       }
+    } else if (process.platform === 'darwin' && cleanRecipientPhone) {
+      try {
+        // Envoi direct via le service Messages macOS natif
+        const { spawnSync } = require('child_process');
+        const appleScript = `
+tell application "Messages"
+  try
+    set targetService to (first account whose service type is iMessage or service type is SMS)
+    set targetBuddy to participant "+${cleanRecipientPhone}" of targetService
+    send ${JSON.stringify(textMessage)} to targetBuddy
+    return "SENT_SUCCESS"
+  on error m
+    return "ERR: " & m
+  end try
+end tell
+`;
+        const macRes = spawnSync('osascript', [], { input: appleScript, encoding: 'utf-8', timeout: 5000 });
+        const out = macRes.stdout ? macRes.stdout.trim() : '';
+        if (out === 'SENT_SUCCESS') {
+          smsSent = true;
+          smsProvider = 'macos_messages';
+        } else {
+          smsProvider = 'macos_messages_ready';
+          smsError = out || 'Disponible via bouton direct';
+        }
+      } catch (err: any) {
+        smsProvider = 'unconfigured';
+        smsError = err?.message || 'Erreur macOS Messages';
+      }
     } else {
       smsProvider = 'unconfigured';
       smsError = 'Passerelle SMS automatique non configurée (WhatsApp / SMS direct 1-clic disponible)';
