@@ -8,6 +8,13 @@ import { Header } from '@/components/layout/Header';
 import {
   FileText,
   Building,
+  Building2,
+  Home,
+  Bed,
+  DoorOpen,
+  Layers,
+  MapPin,
+  Plus,
   User,
   DollarSign,
   ShieldCheck,
@@ -34,6 +41,15 @@ import {
 import { TransmitLeaseModal } from '@/components/leases/TransmitLeaseModal';
 import { notifySave } from '@/lib/notifications/action-notifier';
 
+const LEASE_PROPERTY_TYPES = [
+  { id: 'chambre_individuelle', label: 'Chambre individuelle', sub: 'Entrée coucher', icon: Bed },
+  { id: 'chambre_salon', label: 'Chambre salon sanitaire', sub: 'Sanitaires privés', icon: DoorOpen },
+  { id: 'studio', label: 'Studio meublé / américain', sub: 'Kitchenette intégrée', icon: Building2 },
+  { id: 'appartement', label: 'Appartement (2 à 4 pièces)', sub: 'Standing résidentiel', icon: Home },
+  { id: 'villa', label: 'Maison / Villa complète', sub: 'Cour ou jardin privé', icon: Building },
+  { id: 'commercial', label: 'Boutique / Local commercial', sub: 'Usage professionnel', icon: Layers },
+];
+
 export default function NewLeasePage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -42,10 +58,76 @@ export default function NewLeasePage() {
   // Stepper state (1 to 5)
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Form state
+  // Form state - Bien & Lot / Chambre
+  const [propertyMode, setPropertyMode] = useState<'portfolio' | 'manual'>('portfolio');
+
+  // Mode Patrimoine
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(MOCK_PROPERTIES[0].id);
   const [selectedProperty, setSelectedProperty] = useState(MOCK_PROPERTIES[0].name);
+  const [selectedUnitMode, setSelectedUnitMode] = useState<'catalog' | 'custom'>('catalog');
+  const [customUnitNumber, setCustomUnitNumber] = useState('');
+
+  // Mode Saisie Directe
+  const [manualPropertyName, setManualPropertyName] = useState('');
+  const [manualPropertyType, setManualPropertyType] = useState('chambre_salon');
+  const [manualUnitName, setManualUnitName] = useState('');
+  const [manualCity, setManualCity] = useState('Cotonou');
+  const [manualAddress, setManualAddress] = useState('');
+
+  // Données communes
   const [unitNumber, setUnitNumber] = useState('Appt B2 (3 pièces)');
   const [surface, setSurface] = useState('78');
+
+  // Bien sélectionné dans le patrimoine
+  const currentProperty =
+    MOCK_PROPERTIES.find((p) => p.id === selectedPropertyId) || MOCK_PROPERTIES[0];
+
+  // Propriété et unité résolues pour l'ensemble du bail
+  const resolvedPropertyName =
+    propertyMode === 'portfolio'
+      ? selectedProperty
+      : manualPropertyName.trim() || 'Bien en saisie directe';
+
+  const resolvedUnitName =
+    propertyMode === 'portfolio'
+      ? selectedUnitMode === 'custom'
+        ? customUnitNumber.trim() || 'Lot personnalisé'
+        : unitNumber
+      : manualUnitName.trim() ||
+        `${LEASE_PROPERTY_TYPES.find((o) => o.id === manualPropertyType)?.label || 'Logement'} • ${surface || 0} m²`;
+
+  const handleSelectProperty = (propId: string) => {
+    setSelectedPropertyId(propId);
+    const p = MOCK_PROPERTIES.find((item) => item.id === propId);
+    if (p) {
+      setSelectedProperty(p.name);
+      // Sélectionner par défaut le premier lot vacant ou le premier lot
+      const defaultUnit = p.unitsList?.find((u) => u.status === 'vacant') || p.unitsList?.[0];
+      if (defaultUnit) {
+        setSelectedUnitMode('catalog');
+        setUnitNumber(`${defaultUnit.unit} (${defaultUnit.type})`);
+        setSurface(String(defaultUnit.surface || ''));
+        if (defaultUnit.rent) {
+          setMonthlyRent(String(defaultUnit.rent));
+        }
+      }
+    }
+  };
+
+  const handleSelectUnitFromCatalog = (unitObj: {
+    unit: string;
+    type: string;
+    surface: number;
+    rent: number;
+    status: string;
+  }) => {
+    setSelectedUnitMode('catalog');
+    setUnitNumber(`${unitObj.unit} (${unitObj.type})`);
+    setSurface(String(unitObj.surface || ''));
+    if (unitObj.rent) {
+      setMonthlyRent(String(unitObj.rent));
+    }
+  };
 
   const [tenantMode, setTenantMode] = useState<'existing' | 'new'>('existing');
   const [selectedRegisteredTenantId, setSelectedRegisteredTenantId] = useState<string>('ten-01');
@@ -64,7 +146,11 @@ export default function NewLeasePage() {
       setTenantEmail(found.email);
       setTenantPhone(found.phone);
       if (found.unit) setUnitNumber(found.unit);
-      if (found.property) setSelectedProperty(found.property);
+      if (found.property) {
+        setSelectedProperty(found.property);
+        const match = MOCK_PROPERTIES.find((p) => p.name === found.property);
+        if (match) setSelectedPropertyId(match.id);
+      }
     }
   };
 
@@ -153,8 +239,8 @@ export default function NewLeasePage() {
       tenantId: tenantMode === 'existing' ? selectedRegisteredTenantId : undefined,
       tenantEmail,
       tenantPhone,
-      property: selectedProperty,
-      unit: unitNumber,
+      property: resolvedPropertyName,
+      unit: resolvedUnitName,
       rent: parseInt(monthlyRent, 10) || 220000,
       deposit: (parseInt(monthlyRent, 10) || 220000) * (parseInt(depositMonths, 10) || 3),
       charges: parseInt(charges, 10) || 30000,
@@ -273,54 +359,385 @@ export default function NewLeasePage() {
 
           {/* Step Body Card */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft min-h-[420px] flex flex-col justify-between">
-            {/* Step 1: Bien & Lot */}
+            {/* Step 1: Bien & Lot / Chambre */}
             {currentStep === 1 && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <h2 className="text-base font-black text-slate-900">
-                  Étape 1 : Désignation de l’Immeuble & du Lot Loué
-                </h2>
-
-                <div className="space-y-3">
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                   <div>
-                    <label className="text-xs font-bold text-slate-700 block mb-1">
-                      Résidence / Bien
-                    </label>
-                    <select
-                      value={selectedProperty}
-                      onChange={(e) => setSelectedProperty(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800"
-                    >
-                      {MOCK_PROPERTIES.map((p) => (
-                        <option key={p.id} value={p.name}>
-                          {p.name} ({p.address}, {p.city})
-                        </option>
-                      ))}
-                    </select>
+                    <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                      <Building className="w-5 h-5 text-brand-500" />
+                      <span>Étape 1 : Désignation de l’Immeuble, Lot ou Chambre à Louer</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Sélectionnez une unité de votre patrimoine existant ou saisissez directement un bien ou une chambre libre.
+                    </p>
                   </div>
+                  <span className="text-xs text-slate-600 font-bold bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60 flex items-center gap-1 self-start sm:self-auto">
+                    <span>Étape 1 sur 5</span>
+                  </span>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                {/* Sélecteur de mode : Patrimoine existant vs Saisie directe */}
+                <div className="p-1.5 bg-slate-100 rounded-2xl flex flex-col sm:flex-row items-stretch gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPropertyMode('portfolio')}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      propertyMode === 'portfolio'
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    <Building className="w-3.5 h-3.5 text-brand-500" />
+                    <span>Sélectionner dans mon patrimoine (Biens & Lots)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPropertyMode('manual')}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                      propertyMode === 'manual'
+                        ? 'bg-white text-slate-900 shadow-sm font-black'
+                        : 'text-slate-500 hover:text-slate-900'
+                    }`}
+                  >
+                    <Home className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Saisie directe (Bien ou Chambre à louer)</span>
+                  </button>
+                </div>
+
+                {/* MODE 1 : Sélection dans le patrimoine existant */}
+                {propertyMode === 'portfolio' && (
+                  <div className="space-y-4">
+                    {/* Choix du Bien / Immeuble dans le patrimoine */}
+                    <div>
+                      <label className="text-xs font-black text-slate-800 block mb-1.5 flex items-center justify-between">
+                        <span className="flex items-center gap-1.5">
+                          <Building className="w-3.5 h-3.5 text-brand-500" />
+                          <span>Sélectionner le bien immobilier ou l’immeuble :</span>
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-medium">
+                          {MOCK_PROPERTIES.length} biens répertoriés
+                        </span>
+                      </label>
+                      <select
+                        value={selectedPropertyId}
+                        onChange={(e) => handleSelectProperty(e.target.value)}
+                        className="w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-none cursor-pointer"
+                      >
+                        {MOCK_PROPERTIES.map((p) => {
+                          const vacantCount =
+                            p.unitsList?.filter((u) => u.status === 'vacant').length || 0;
+                          return (
+                            <option key={p.id} value={p.id}>
+                              {p.name} — {p.district ? `${p.district}, ` : ''}{p.city} ({p.totalUnits} lots{vacantCount > 0 ? ` • ${vacantCount} disponible(s)` : ''})
+                            </option>
+                          );
+                        })}
+                      </select>
+                    </div>
+
+                    {/* Carte récapitulative du bien sélectionné */}
+                    {currentProperty && (
+                      <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-black shrink-0">
+                            <Building2 className="w-5 h-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-extrabold text-slate-900 truncate">
+                              {currentProperty.name}
+                            </div>
+                            <div className="text-[11px] text-slate-500 flex items-center gap-1 truncate">
+                              <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span>
+                                {currentProperty.address}, {currentProperty.city}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {currentProperty.unitsList?.filter((u) => u.status === 'vacant').length || 0} vacant(s) / {currentProperty.totalUnits} lots
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Sélection du Lot ou de la Chambre dans ce bien */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                          <DoorOpen className="w-3.5 h-3.5 text-brand-500" />
+                          <span>Sélectionner le lot, appartement ou chambre à louer :</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedUnitMode(
+                              selectedUnitMode === 'catalog' ? 'custom' : 'catalog'
+                            )
+                          }
+                          className="text-[11px] text-brand-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                        >
+                          {selectedUnitMode === 'catalog' ? (
+                            <>
+                              <Plus className="w-3 h-3" />
+                              <span>Saisir un lot non listé</span>
+                            </>
+                          ) : (
+                            <>
+                              <Layers className="w-3 h-3" />
+                              <span>Revenir aux lots du catalogue</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {selectedUnitMode === 'catalog' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1">
+                          {currentProperty?.unitsList?.map((u) => {
+                            const isSelected = unitNumber.includes(u.unit);
+                            const isVacant = u.status === 'vacant';
+                            return (
+                              <div
+                                key={u.unit}
+                                onClick={() => handleSelectUnitFromCatalog(u)}
+                                className={`p-3 rounded-2xl border text-left cursor-pointer transition-all ${
+                                  isSelected
+                                    ? 'bg-brand-50/70 border-brand-500 ring-2 ring-brand-500/20 shadow-xs'
+                                    : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="font-extrabold text-xs text-slate-900 flex items-center gap-1.5">
+                                    {u.type?.toLowerCase().includes('chambre') ? (
+                                      <Bed className="w-3.5 h-3.5 text-brand-500" />
+                                    ) : (
+                                      <DoorOpen className="w-3.5 h-3.5 text-brand-500" />
+                                    )}
+                                    <span>{u.unit}</span>
+                                  </span>
+                                  <span
+                                    className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                      isVacant
+                                        ? 'bg-emerald-100 text-emerald-800'
+                                        : 'bg-slate-100 text-slate-600'
+                                    }`}
+                                  >
+                                    {isVacant ? 'Disponible' : 'Occupé'}
+                                  </span>
+                                </div>
+                                <div className="text-[11px] text-slate-600 truncate">{u.type}</div>
+                                <div className="flex items-center justify-between mt-1 text-[11px]">
+                                  <span className="text-slate-500">{u.surface} m²</span>
+                                  <span className="font-bold text-brand-600">
+                                    {formatFCFA(u.rent)}/mois
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="p-4 rounded-2xl bg-brand-50/50 border border-brand-200/60 space-y-3">
+                          <div className="text-xs font-bold text-brand-900 flex items-center gap-1.5">
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>
+                              Saisie d'un nouveau lot ou chambre dans {currentProperty?.name} :
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                Désignation du lot / chambre
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Ex: Chambre 3, Lot 104..."
+                                value={customUnitNumber}
+                                onChange={(e) => setCustomUnitNumber(e.target.value)}
+                                className="w-full px-3.5 py-2 rounded-xl bg-white border border-brand-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                                Surface habitable (m²)
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="Ex: 40"
+                                value={surface}
+                                onChange={(e) => setSurface(e.target.value)}
+                                className="w-full px-3.5 py-2 rounded-xl bg-white border border-brand-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* MODE 2 : Saisie Directe (Bien ou Chambre à louer) */}
+                {propertyMode === 'manual' && (
+                  <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl text-xs text-emerald-900 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>
+                        <strong>Saisie libre & directe :</strong> Renseignez directement le bien, la maison, l'appartement ou la chambre indépendante à mettre en location sans avoir à le créer préalablement dans le catalogue.
+                      </span>
+                    </div>
+
+                    {/* Type d'espace loué */}
+                    <div>
+                      <label className="text-xs font-black text-slate-800 block mb-1.5">
+                        Type d’espace ou hébergement à louer :
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {LEASE_PROPERTY_TYPES.map((opt) => {
+                          const Icon = opt.icon;
+                          const isSelected = manualPropertyType === opt.id;
+                          return (
+                            <button
+                              key={opt.id}
+                              type="button"
+                              onClick={() => {
+                                setManualPropertyType(opt.id);
+                                if (!manualUnitName) {
+                                  setManualUnitName(opt.label);
+                                }
+                              }}
+                              className={`p-2.5 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-2 ${
+                                isSelected
+                                  ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20 shadow-xs'
+                                  : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/60'
+                              }`}
+                            >
+                              <div
+                                className={`p-1.5 rounded-xl shrink-0 ${
+                                  isSelected
+                                    ? 'bg-emerald-500 text-white'
+                                    : 'bg-slate-100 text-slate-600'
+                                }`}
+                              >
+                                <Icon className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="min-w-0">
+                                <div
+                                  className={`text-xs font-bold truncate ${
+                                    isSelected
+                                      ? 'text-emerald-950 font-black'
+                                      : 'text-slate-800'
+                                  }`}
+                                >
+                                  {opt.label}
+                                </div>
+                                <div className="text-[10px] text-slate-500 truncate">{opt.sub}</div>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Nom du bien / Concession / Villa */}
                     <div>
                       <label className="text-xs font-bold text-slate-700 block mb-1">
-                        Numéro de porte / Lot
+                        Nom du bien, concession, villa ou immeuble
                       </label>
                       <input
                         type="text"
-                        value={unitNumber}
-                        onChange={(e) => setUnitNumber(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold"
+                        placeholder="Ex: Villa Les Hibiscus, Concession Akpakpa, Maison Familiale Soglo..."
+                        value={manualPropertyName}
+                        onChange={(e) => setManualPropertyName(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
                       />
                     </div>
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">
-                        Surface habitable (m²)
-                      </label>
-                      <input
-                        type="number"
-                        value={surface}
-                        onChange={(e) => setSurface(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold"
-                      />
+
+                    {/* Désignation précise de la chambre ou du lot */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 block mb-1">
+                          Désignation précise de la chambre ou du lot
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Chambre n°2 avec sanitaire, Studio RDC gauche, Porte A..."
+                          value={manualUnitName}
+                          onChange={(e) => setManualUnitName(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 block mb-1">
+                          Surface habitable estimée (m²)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="Ex: 35"
+                          value={surface}
+                          onChange={(e) => setSurface(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
                     </div>
+
+                    {/* Localisation : Ville & Adresse */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 block mb-1">
+                          Ville
+                        </label>
+                        <select
+                          value={manualCity}
+                          onChange={(e) => setManualCity(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none cursor-pointer"
+                        >
+                          <option value="Cotonou">Cotonou (Bénin)</option>
+                          <option value="Abidjan">Abidjan (Côte d'Ivoire)</option>
+                          <option value="Dakar">Dakar (Sénégal)</option>
+                          <option value="Lomé">Lomé (Togo)</option>
+                          <option value="Ouagadougou">Ouagadougou (Burkina Faso)</option>
+                          <option value="Douala">Douala (Cameroun)</option>
+                          <option value="Yaoundé">Yaoundé (Cameroun)</option>
+                          <option value="Bamako">Bamako (Mali)</option>
+                          <option value="Niamey">Niamey (Niger)</option>
+                          <option value="Autre">Autre ville</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-xs font-bold text-slate-700 block mb-1">
+                          Quartier / Rue / Repère
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Haie Vive, Rue 340 / Cocody Angré 8e Tranche..."
+                          value={manualAddress}
+                          onChange={(e) => setManualAddress(e.target.value)}
+                          className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Récapitulatif dynamique du lot retenu pour le bail */}
+                <div className="p-3.5 rounded-2xl bg-slate-100/90 border border-slate-200 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-slate-600">Désignation retenue :</span>
+                    <strong className="text-slate-900 font-extrabold">
+                      {resolvedPropertyName} — {resolvedUnitName}
+                    </strong>
+                  </div>
+                  <div className="flex items-center gap-2 text-slate-500 text-[11px] self-start sm:self-auto">
+                    {surface && <span>{surface} m²</span>}
+                    <span>•</span>
+                    <span className="font-semibold text-brand-600">
+                      {propertyMode === 'portfolio' ? 'Patrimoine' : 'Saisie directe'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -668,14 +1085,20 @@ export default function NewLeasePage() {
                 Bail Émis avec Succès !
               </h3>
               <p className="text-xs text-slate-500 mt-1">
-                Le contrat de bail pour <strong>{tenantName}</strong> sur le lot <strong>{unitNumber}</strong> a été horodaté et archivé avec sa piste d'audit numérique.
+                Le contrat de bail pour <strong>{tenantName}</strong> sur le lot <strong>{resolvedUnitName}</strong> ({resolvedPropertyName}) a été horodaté et archivé avec sa piste d'audit numérique.
               </p>
             </div>
 
             <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs space-y-1">
               <div className="flex justify-between">
                 <span className="text-slate-400">Réf. Contrat :</span>
-                <span className="font-mono font-bold text-slate-800">BAIL-2026-N09</span>
+                <span className="font-mono font-bold text-slate-800">{preparedLease?.id || 'BAIL-2026-N09'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-400">Bien & Lot :</span>
+                <span className="font-bold text-slate-800 truncate max-w-[220px]">
+                  {resolvedPropertyName} • {resolvedUnitName}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Loyer Mensuel :</span>
@@ -692,10 +1115,10 @@ export default function NewLeasePage() {
                 type="button"
                 onClick={() => {
                   generateLeasePDF({
-                    id: 'BAIL-2026-N09',
+                    id: preparedLease?.id || 'BAIL-2026-N09',
                     tenantName,
-                    propertyName: selectedProperty,
-                    unit: unitNumber,
+                    propertyName: resolvedPropertyName,
+                    unit: resolvedUnitName,
                     rent: parseInt(monthlyRent, 10) || 220000,
                     deposit: (parseInt(monthlyRent, 10) || 220000) * (parseInt(depositMonths, 10) || 3),
                     startDate: '2026-11-01',
