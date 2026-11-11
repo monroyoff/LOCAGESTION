@@ -18,10 +18,23 @@ import {
   Check,
   Zap,
   Sparkles,
+  MessageCircle,
+  AlertCircle,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { formatFCFA } from '@/lib/money/format';
-import { notifySave } from '@/lib/notifications/action-notifier';
+import { notifySave, notifyAction } from '@/lib/notifications/action-notifier';
+import {
+  buildWhatsAppUrl,
+  buildSmsUri,
+  buildMailtoUrl,
+  buildGmailComposeUrl,
+  buildLeaseInvitationTextMessage,
+  sanitizePhoneNumber,
+} from '@/lib/services/notification-dispatch-service';
 
 interface TransmitLeaseModalProps {
   isOpen: boolean;
@@ -38,9 +51,14 @@ interface TransmitLeaseModalProps {
     rent: number;
     charges?: number;
     deposit?: number;
+    utilitiesDeposit?: number;
+    totalDueAtEntry?: number;
     startDate?: string;
     endDate?: string;
     hashSha256?: string;
+    governingLaw?: string;
+    specialConditions?: string;
+    invitationCode?: string;
   };
   onTransmitted?: (transmittedLease: Lease) => void;
   onTransmittedSuccess?: (transmittedLease: Lease) => void;
@@ -58,6 +76,22 @@ export function TransmitLeaseModal({
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
+  const [showConfigHelp, setShowConfigHelp] = useState(false);
+
+  // Stocke les résultats du dispatch serveur et les liens directs
+  const [dispatchResult, setDispatchResult] = useState<{
+    emailSent: boolean;
+    emailProvider: string;
+    emailError?: string | null;
+    smsSent: boolean;
+    smsProvider: string;
+    smsError?: string | null;
+    whatsappUrl: string;
+    smsUri: string;
+    mailtoUrl: string;
+    gmailUrl: string;
+    textMessage: string;
+  } | null>(null);
 
   if (!isOpen) return null;
 
@@ -73,9 +107,14 @@ export function TransmitLeaseModal({
     rent: leaseData?.rent || 220000,
     charges: leaseData?.charges || 30000,
     deposit: leaseData?.deposit || 440000,
+    utilitiesDeposit: leaseData?.utilitiesDeposit || 0,
+    totalDueAtEntry: leaseData?.totalDueAtEntry || (leaseData?.rent || 220000) * 3,
     startDate: leaseData?.startDate || '2026-11-01',
     endDate: leaseData?.endDate || '2029-10-31',
     status: 'en_attente_signature',
+    governingLaw: leaseData?.governingLaw,
+    specialConditions: leaseData?.specialConditions,
+    invitationCode: leaseData?.invitationCode || 'LOCA-INV-7842',
     landlordSignature: {
       signedBy: 'Mamadou Diallo',
       date: new Date().toLocaleDateString('fr-FR'),
@@ -84,46 +123,116 @@ export function TransmitLeaseModal({
     transmittedAt: new Date().toLocaleDateString('fr-FR'),
   };
 
+  const portalUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/portal?tab=bail&leaseId=${activeLease.id}&code=${activeLease.invitationCode || 'LOCA-INV-7842'}&tenant=${encodeURIComponent(
+          activeLease.tenant
+        )}`
+      : `http://localhost:3001/portal?tab=bail&leaseId=${activeLease.id}&code=${activeLease.invitationCode || 'LOCA-INV-7842'}`;
+
+  const invitationData = {
+    recipientName: activeLease.tenant,
+    recipientEmail: activeLease.tenantEmail || '',
+    recipientPhone: activeLease.tenantPhone || '',
+    leaseId: activeLease.id,
+    propertyName: activeLease.property,
+    unitNumber: activeLease.unit,
+    rent: activeLease.rent,
+    deposit: activeLease.deposit,
+    utilitiesDeposit: activeLease.utilitiesDeposit,
+    totalDueAtEntry: activeLease.totalDueAtEntry,
+    portalUrl,
+    appDownloadUrl: 'https://locagestion.app/download',
+    invitationCode: activeLease.invitationCode || 'LOCA-INV-7842',
+    landlordName: activeLease.landlordSignature?.signedBy || 'Mamadou Diallo',
+    governingLaw: activeLease.governingLaw,
+  };
+
+  const textMessage = buildLeaseInvitationTextMessage(invitationData);
+  const fallbackWhatsappUrl = buildWhatsAppUrl(invitationData.recipientPhone, textMessage);
+  const fallbackSmsUri = buildSmsUri(invitationData.recipientPhone, textMessage);
+  const fallbackMailtoUrl = buildMailtoUrl(invitationData);
+  const fallbackGmailUrl = buildGmailComposeUrl(invitationData);
+
   const handleCopyInviteMessage = () => {
-    const portalUrl =
-      typeof window !== 'undefined'
-        ? `${window.location.origin}/portal?tab=bail`
-        : 'http://localhost:3001/portal?tab=bail';
-    const downloadUrl = 'https://locagestion.app/download';
-    const code = activeLease.invitationCode || 'LOCA-INV-7842';
-
-    const text = `Bonjour ${activeLease.tenant},\nVotre contrat de bail pour le logement ${activeLease.unit} (${activeLease.property}) a été établi par votre bailleur Mamadou Diallo.\n\n👉 Accédez directement à votre espace sécurisé pour le contresigner :\n${portalUrl}\n\n📲 Téléchargez l'application mobile LOCAGESTION (Android & iOS) :\n${downloadUrl}\n\nVotre code d'activation : ${code}`;
-
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text);
+      navigator.clipboard.writeText(dispatchResult?.textMessage || textMessage);
       setIsCopied(true);
+      notifyAction(
+        'Message d’invitation copié avec le lien sécurisé et le code d’activation.',
+        'Message copié !',
+        'success'
+      );
       setTimeout(() => setIsCopied(false), 3000);
     }
   };
 
-  const handleTransmit = () => {
+  const handleTransmit = async () => {
     setIsTransmitting(true);
-    setTimeout(() => {
-      const transmitted = LeaseService.transmitLeaseToTenant(activeLease);
-      setIsTransmitting(false);
-      setIsSuccess(true);
-      notifySave(
-        `Le contrat ${activeLease.id} a été déposé avec succès sur le portail résidentiel de ${activeLease.tenant} pour contresignature.`,
-        'Bail transmis au locataire !'
-      );
-      if (onTransmitted) onTransmitted(transmitted);
-      if (onTransmittedSuccess) onTransmittedSuccess(transmitted);
-    }, 600);
+
+    try {
+      // 1. Appel vers l'API de dispatch de notification
+      const res = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invitationData),
+      });
+
+      const data = await res.json();
+
+      setDispatchResult({
+        emailSent: Boolean(data?.emailStatus?.sent),
+        emailProvider: data?.emailStatus?.provider || 'none',
+        emailError: data?.emailStatus?.error || null,
+        smsSent: Boolean(data?.smsStatus?.sent),
+        smsProvider: data?.smsStatus?.provider || 'none',
+        smsError: data?.smsStatus?.error || null,
+        whatsappUrl: data?.deepLinks?.whatsappUrl || fallbackWhatsappUrl,
+        smsUri: data?.deepLinks?.smsUri || fallbackSmsUri,
+        mailtoUrl: data?.deepLinks?.mailtoUrl || fallbackMailtoUrl,
+        gmailUrl: data?.deepLinks?.gmailUrl || fallbackGmailUrl,
+        textMessage: data?.textMessage || textMessage,
+      });
+    } catch (err) {
+      console.error('Erreur API notification:', err);
+      // Fallback gracieux avec les liens directs
+      setDispatchResult({
+        emailSent: false,
+        emailProvider: 'client_fallback',
+        emailError: 'Erreur réseau vers le serveur',
+        smsSent: false,
+        smsProvider: 'client_fallback',
+        smsError: null,
+        whatsappUrl: fallbackWhatsappUrl,
+        smsUri: fallbackSmsUri,
+        mailtoUrl: fallbackMailtoUrl,
+        gmailUrl: fallbackGmailUrl,
+        textMessage,
+      });
+    }
+
+    // 2. Enregistrement local du bail
+    const transmitted = LeaseService.transmitLeaseToTenant(activeLease);
+    setIsTransmitting(false);
+    setIsSuccess(true);
+
+    notifySave(
+      `Le contrat ${activeLease.id} est scellé. Les notifications sont prêtes pour ${activeLease.tenant}.`,
+      'Bail transmis au locataire !'
+    );
+
+    if (onTransmitted) onTransmitted(transmitted);
+    if (onTransmittedSuccess) onTransmittedSuccess(transmitted);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
+        className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
               <Send className="w-4 h-4" />
@@ -133,7 +242,7 @@ export function TransmitLeaseModal({
                 Transmission du Bail au Locataire
               </h3>
               <p className="text-[11px] text-slate-400">
-                Portail Sécurisé LOCAGESTION • Contresignature Électronique
+                Portail Sécurisé LOCAGESTION • Contresignature & Notification Réelle
               </p>
             </div>
           </div>
@@ -149,7 +258,7 @@ export function TransmitLeaseModal({
 
         {/* Content */}
         {!isSuccess ? (
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 overflow-y-auto">
             <div className="p-3.5 bg-amber-50 rounded-2xl border border-amber-200 flex items-start gap-3">
               <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="text-xs text-amber-900 space-y-1">
@@ -157,8 +266,8 @@ export function TransmitLeaseModal({
                   Le bail sera placé en statut « En attente de signature »
                 </span>
                 <p className="text-amber-800 text-[11px] leading-relaxed">
-                  Votre signature en tant que bailleur (Mamadou Diallo) a été apposée. Le contrat sera
-                  déposé instantanément sur le compte locataire certifié pour qu'il puisse contresigner.
+                  Votre signature en tant que bailleur ({activeLease.landlordSignature?.signedBy || 'Mamadou Diallo'})
+                  a été apposée. Le contrat sera mis à disposition sur le portail sécurisé et le locataire sera notifié.
                 </p>
               </div>
             </div>
@@ -168,13 +277,13 @@ export function TransmitLeaseModal({
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                   {activeLease.isNewTenant
-                    ? 'Nouveau Locataire (Création de compte & Invitation)'
-                    : 'Locataire Destinataire (Compte plateforme créé en amont)'}
+                    ? 'Nouveau Locataire (Invitation & Accès)'
+                    : 'Locataire Destinataire'}
                 </span>
                 {activeLease.isNewTenant ? (
                   <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200 flex items-center gap-1">
                     <Sparkles className="w-3 h-3 text-brand-600" />
-                    <span>Accès automatique</span>
+                    <span>Nouveau compte</span>
                   </span>
                 ) : (
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
@@ -196,27 +305,18 @@ export function TransmitLeaseModal({
                 </div>
               </div>
 
-              {activeLease.isNewTenant && (
-                <div className="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-[11px] text-emerald-900 space-y-1">
-                  <div className="font-bold flex items-center gap-1.5 text-emerald-950">
-                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Envois automatiques programmés :</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-[11px]">
-                    <Smartphone className="w-3 h-3 text-emerald-600" />
-                    <span>SMS au <strong>{activeLease.tenantPhone}</strong> avec lien de contresignature et de téléchargement</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-[11px]">
-                    <Mail className="w-3 h-3 text-emerald-600" />
-                    <span>Email au <strong>{activeLease.tenantEmail}</strong> avec copie PDF scellée et accès portail</span>
-                  </div>
+              <div className="p-2.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 space-y-1.5">
+                <div className="font-bold flex items-center gap-1.5 text-blue-950">
+                  <Zap className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Canaux de notification directe prévus :</span>
                 </div>
-              )}
-
-              <div className="pt-2 border-t border-slate-200/70 flex items-center gap-3 text-[11px] text-slate-600">
-                <div className="flex items-center gap-1">
-                  <Smartphone className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                  <span>{activeLease.tenantPhone}</span>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <MessageCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span><strong>WhatsApp & SMS :</strong> {activeLease.tenantPhone}</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px]">
+                  <Mail className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                  <span><strong>Email :</strong> {activeLease.tenantEmail}</span>
                 </div>
               </div>
             </div>
@@ -285,96 +385,172 @@ export function TransmitLeaseModal({
               >
                 <Send className="w-4 h-4" />
                 <span>
-                  {isTransmitting ? 'Transmission en cours...' : 'Transmettre au Locataire'}
+                  {isTransmitting ? 'Transmission & Préparation des envois...' : 'Transmettre au Locataire'}
                 </span>
               </button>
             </div>
           </div>
         ) : (
-          /* Success Screen */
-          <div className="p-6 text-center space-y-4 animate-in fade-in duration-150">
-            <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto shadow-inner">
-              <Clock className="w-7 h-7" />
+          /* Success Screen with REAL DISPATCH ACTIONS */
+          <div className="p-6 text-center space-y-4 overflow-y-auto animate-in fade-in duration-150">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+              <CheckCircle2 className="w-7 h-7" />
             </div>
 
             <div>
-              <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">
-                Bail Envoyé pour Signature
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                Bail Transmis & Prêt à Signer
               </span>
               <h3 className="text-lg font-black text-slate-900 mt-2">
-                Contrat Transmis avec Succès !
+                Contrat Déposé avec Succès !
               </h3>
               <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-                Le bail <strong>{activeLease.id}</strong> a été déposé sur le compte de{' '}
-                <strong>{activeLease.tenant}</strong>. Il est désormais affiché dans la section Baux
-                avec la mention <strong>« En attente de signature »</strong>.
+                Le bail <strong>{activeLease.id}</strong> est actif en statut{' '}
+                <strong>« En attente de signature »</strong>. Utilisez les boutons ci-dessous pour délivrer instantanément la notification sur le téléphone et l'email du locataire.
               </p>
             </div>
 
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs space-y-1">
-              <div className="flex justify-between">
-                <span className="text-slate-400">Statut actuel :</span>
-                <span className="font-extrabold text-amber-600 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5" />
-                  En attente de signature
+            {/* REAL DISPATCH BOX */}
+            <div className="p-4 bg-slate-900 text-white rounded-2xl text-left space-y-3 shadow-lg">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                  <Zap className="w-4 h-4 text-amber-400" />
+                  Expédition Immédiate au Locataire
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Code : {activeLease.invitationCode || 'LOCA-INV-7842'}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Signature Bailleur :</span>
-                <span className="font-bold text-emerald-600">Signé et scellé ✓</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Signature Locataire :</span>
-                <span className="font-bold text-amber-600">En attente de contresignature...</span>
-              </div>
-              {activeLease.utilitiesDeposit && activeLease.utilitiesDeposit > 0 ? (
-                <div className="flex justify-between pt-1 border-t border-slate-200">
-                  <span className="text-slate-400">Caution Eau & Électricité :</span>
-                  <span className="font-bold text-amber-700">{formatFCFA(activeLease.utilitiesDeposit)}</span>
+
+              {/* Server delivery status */}
+              <div className="text-[11px] space-y-1.5">
+                <div className="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl">
+                  <span className="text-slate-300 flex items-center gap-1.5">
+                    <Mail className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Email ({activeLease.tenantEmail})</span>
+                  </span>
+                  {dispatchResult?.emailSent ? (
+                    <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Envoyé (SMTP)
+                    </span>
+                  ) : (
+                    <span className="text-amber-300 font-bold text-[10px]">
+                      1-Clic Disponible
+                    </span>
+                  )}
                 </div>
-              ) : null}
+
+                <div className="flex items-center justify-between bg-slate-800/60 p-2 rounded-xl">
+                  <span className="text-slate-300 flex items-center gap-1.5">
+                    <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Téléphone ({activeLease.tenantPhone})</span>
+                  </span>
+                  {dispatchResult?.smsSent ? (
+                    <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                      <Check className="w-3 h-3" /> Envoyé (SMS API)
+                    </span>
+                  ) : (
+                    <span className="text-emerald-400 font-bold text-[10px]">
+                      WhatsApp / SMS Prêt
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* ACTION BUTTON 1: WHATSAPP DIRECT (Preferred for West & Central Africa) */}
+              <div className="space-y-2 pt-1">
+                <a
+                  href={dispatchResult?.whatsappUrl || fallbackWhatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-lg hover:shadow-emerald-600/30 transition-all cursor-pointer"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>Envoyer l'invitation par WhatsApp (+229...)</span>
+                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                </a>
+
+                {/* ACTION BUTTON 2: NATIVE SMS DIRECT */}
+                <a
+                  href={dispatchResult?.smsUri || fallbackSmsUri}
+                  className="w-full py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 hover:border-slate-600 transition-all cursor-pointer"
+                >
+                  <Smartphone className="w-4 h-4 text-emerald-400" />
+                  <span>Ouvrir l'application SMS (Messages)</span>
+                </a>
+
+                {/* ACTION BUTTON 3: EMAIL CLIENT & GMAIL */}
+                <div className="grid grid-cols-2 gap-2">
+                  <a
+                    href={dispatchResult?.mailtoUrl || fallbackMailtoUrl}
+                    className="py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer text-center"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Ouvrir Mail</span>
+                  </a>
+
+                  <a
+                    href={dispatchResult?.gmailUrl || fallbackGmailUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 border border-slate-700 transition-all cursor-pointer text-center"
+                  >
+                    <span>Ouvrir Gmail Web</span>
+                    <ExternalLink className="w-3 h-3 opacity-60" />
+                  </a>
+                </div>
+              </div>
             </div>
 
-            {/* Notification confirmation for new tenant */}
-            {activeLease.isNewTenant && (
-              <div className="p-3.5 bg-emerald-50 rounded-2xl border border-emerald-200 text-left text-xs space-y-2">
-                <div className="font-black text-emerald-950 flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>Compte créé & Notifications délivrées avec succès :</span>
-                </div>
-                <div className="space-y-1 text-[11px] text-emerald-900">
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>SMS envoyé à {activeLease.tenantPhone}</span>
-                    </span>
-                    <span className="font-bold text-emerald-700">Délivré ✓</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-1">
-                      <Mail className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>Email sécurisé envoyé à {activeLease.tenantEmail}</span>
-                    </span>
-                    <span className="font-bold text-emerald-700">Délivré ✓</span>
-                  </div>
-                  <div className="flex items-center justify-between text-slate-600 pt-1 border-t border-emerald-200/60">
-                    <span>Code d'invitation locataire :</span>
-                    <strong className="font-mono text-slate-900 font-bold">{activeLease.invitationCode || 'LOCA-INV-7842'}</strong>
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Copy Button */}
+            <button
+              type="button"
+              onClick={handleCopyInviteMessage}
+              className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+            >
+              {isCopied ? (
+                <Check className="w-4 h-4 text-emerald-600" />
+              ) : (
+                <Copy className="w-4 h-4 text-slate-600" />
+              )}
+              <span>
+                {isCopied
+                  ? 'Message d’invitation copié dans le presse-papier !'
+                  : 'Copier le message complet (avec lien de signature et code)'}
+              </span>
+            </button>
 
-            {activeLease.isNewTenant && (
+            {/* Collapsible Config Info */}
+            <div className="text-left">
               <button
                 type="button"
-                onClick={handleCopyInviteMessage}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors"
+                onClick={() => setShowConfigHelp(!showConfigHelp)}
+                className="text-[11px] text-slate-500 hover:text-slate-800 font-semibold flex items-center gap-1 mx-auto cursor-pointer"
               >
-                {isCopied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4 text-slate-600" />}
-                <span>{isCopied ? 'Message d’invitation copié !' : 'Copier le message d’invitation (SMS / WhatsApp)'}</span>
+                <HelpCircle className="w-3 h-3 text-slate-400" />
+                <span>Comment activer l'envoi 100% automatique en tâche de fond (SMTP / Twilio) ?</span>
+                {showConfigHelp ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
               </button>
-            )}
+
+              {showConfigHelp && (
+                <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-200 text-[11px] text-slate-600 space-y-1.5 animate-in fade-in">
+                  <p>
+                    Pour que le serveur expédie les emails et SMS sans ouvrir votre messagerie ni WhatsApp :
+                  </p>
+                  <ol className="list-decimal pl-4 space-y-1 text-slate-700 font-medium">
+                    <li>
+                      Renseignez votre serveur <strong>SMTP</strong> dans le fichier <code className="bg-slate-200 px-1 py-0.5 rounded text-[10px]">.env.local</code> (supporte Gmail avec mot de passe d'application, Brevo gratuit, etc.).
+                    </li>
+                    <li>
+                      (Optionnel) Renseignez vos identifiants <strong>Twilio</strong> ou <strong>Termii</strong> pour les SMS automatiques par opérateur télécom.
+                    </li>
+                    <li>
+                      En l'absence de ces clés, les boutons <strong>WhatsApp</strong>, <strong>SMS Direct</strong> et <strong>Mail</strong> ci-dessus assurent une distribution immédiate et garantie à 100%.
+                    </li>
+                  </ol>
+                </div>
+              )}
+            </div>
 
             <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
               <button
@@ -387,7 +563,7 @@ export function TransmitLeaseModal({
 
               <button
                 type="button"
-                onClick={() => router.push('/portal?tab=bail')}
+                onClick={() => router.push(`/portal?tab=bail&leaseId=${activeLease.id}&tenant=${encodeURIComponent(activeLease.tenant)}`)}
                 className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-black shadow-pink-glow flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 <span>Tester la signature locataire</span>

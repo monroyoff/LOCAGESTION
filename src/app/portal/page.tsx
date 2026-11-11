@@ -270,15 +270,46 @@ function TenantPortalContent() {
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
 
   const checkLeases = () => {
-    const pl = LeaseService.getPendingLeaseForTenant('Koffi Mensah');
+    const allLeases = LeaseService.getLeases();
+
+    // Recherche dynamique par paramètre d'URL (leaseId, tenant, code)
+    let queryLeaseId: string | null = null;
+    let queryTenant: string | null = null;
+    let queryCode: string | null = null;
+    if (typeof window !== 'undefined') {
+      const p = new URLSearchParams(window.location.search);
+      queryLeaseId = p.get('leaseId');
+      queryTenant = p.get('tenant');
+      queryCode = p.get('code');
+    }
+
+    let pl: Lease | undefined = undefined;
+    if (queryLeaseId) {
+      pl = allLeases.find((l) => l.id === queryLeaseId && l.status === 'en_attente_signature');
+    }
+    if (!pl && queryCode) {
+      pl = allLeases.find((l) => l.invitationCode === queryCode && l.status === 'en_attente_signature');
+    }
+    if (!pl && queryTenant) {
+      pl = LeaseService.getPendingLeaseForTenant(queryTenant);
+    }
+    // Si aucun paramètre explicite, chercher le bail en attente le plus récent
+    if (!pl) {
+      pl = allLeases.find((l) => l.status === 'en_attente_signature');
+    }
+    // Dernier recours : Koffi Mensah
+    if (!pl) {
+      pl = LeaseService.getPendingLeaseForTenant('Koffi Mensah');
+    }
+
     setPendingLease(pl || null);
 
-    const allLeases = LeaseService.getLeases();
     const myLease = allLeases.find(
       (l) =>
+        (pl && l.id === pl.id) ||
+        (queryLeaseId && l.id === queryLeaseId) ||
         l.id === 'BAIL-2025-089' ||
-        l.tenant.toLowerCase().includes('koffi') ||
-        (pl && l.id === pl.id)
+        l.tenant.toLowerCase().includes('koffi')
     );
     setCurrentLease(myLease || null);
   };

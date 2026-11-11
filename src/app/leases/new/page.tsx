@@ -45,7 +45,14 @@ import {
   X,
   CreditCard,
   PhoneCall,
+  MessageCircle,
 } from 'lucide-react';
+import {
+  buildWhatsAppUrl,
+  buildSmsUri,
+  buildMailtoUrl,
+  buildLeaseInvitationTextMessage,
+} from '@/lib/services/notification-dispatch-service';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
@@ -357,8 +364,10 @@ export default function NewLeasePage() {
       canvasRef.current?.toDataURL('image/png') ||
       'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><text x="10" y="35" font-family="cursive" font-size="22" fill="%23ec4899">Mamadou Diallo</text></svg>';
 
+    const generatedLeaseId = `BAIL-2026-${Math.floor(100 + Math.random() * 900)}`;
+
     const lease: Lease = {
-      id: `BAIL-2026-${Math.floor(100 + Math.random() * 900)}`,
+      id: generatedLeaseId,
       tenant: tenantName,
       tenantId: tenantMode === 'existing' ? selectedRegisteredTenantId : undefined,
       tenantEmail,
@@ -387,7 +396,10 @@ export default function NewLeasePage() {
       invitationSentBySms: tenantMode === 'new' ? notifyBySms : true,
       invitationSentByEmail: tenantMode === 'new' ? notifyByEmail : true,
       appDownloadLink: 'https://locagestion.app/download',
-      portalAccessLink: 'http://localhost:3001/portal?tab=bail',
+      portalAccessLink:
+        typeof window !== 'undefined'
+          ? `${window.location.origin}/portal?tab=bail&leaseId=${generatedLeaseId}&code=${tenantMode === 'new' ? generatedInvitationCode : ''}&tenant=${encodeURIComponent(tenantName)}`
+          : `http://localhost:3001/portal?tab=bail&leaseId=${generatedLeaseId}`,
       startDate: '2026-11-01',
       endDate: '2029-10-31',
       durationMonths: parseInt(durationMonths, 10) || 36,
@@ -2283,17 +2295,76 @@ export default function NewLeasePage() {
               </div>
             </div>
 
-            {tenantMode === 'new' && (
-              <div className="p-3 bg-brand-50 border border-brand-200 rounded-2xl text-left text-xs space-y-1">
-                <div className="font-bold text-brand-900 flex items-center gap-1.5">
-                  <Smartphone className="w-3.5 h-3.5 text-brand-600" />
-                  <span>Invitation envoyée par SMS & E-mail</span>
+            {tenantMode === 'new' && (() => {
+              const invData = {
+                recipientName: tenantName,
+                recipientEmail: tenantEmail,
+                recipientPhone: tenantPhone,
+                leaseId: preparedLease?.id || 'BAIL-2026-N09',
+                propertyName: resolvedPropertyName,
+                unitNumber: resolvedUnitName,
+                rent: parsedRent,
+                deposit: parsedDeposit,
+                utilitiesDeposit: hasUtilitiesDeposit ? parsedUtilitiesDeposit : 0,
+                totalDueAtEntry,
+                portalUrl: typeof window !== 'undefined'
+                  ? `${window.location.origin}/portal?tab=bail&leaseId=${preparedLease?.id || 'BAIL-2026-N09'}&code=${generatedInvitationCode}&tenant=${encodeURIComponent(tenantName)}`
+                  : `http://localhost:3001/portal?tab=bail&leaseId=${preparedLease?.id || 'BAIL-2026-N09'}`,
+                invitationCode: generatedInvitationCode,
+                landlordName: 'Mamadou Diallo',
+                governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,
+              };
+              const msg = buildLeaseInvitationTextMessage(invData);
+              const waUrl = buildWhatsAppUrl(tenantPhone, msg);
+              const smsUrl = buildSmsUri(tenantPhone, msg);
+              const mailUrl = buildMailtoUrl(invData);
+
+              return (
+                <div className="p-3.5 bg-brand-50 border border-brand-200 rounded-2xl text-left text-xs space-y-2.5">
+                  <div className="font-bold text-brand-900 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Smartphone className="w-3.5 h-3.5 text-brand-600" />
+                      <span>Expédition Immédiate au Locataire</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-brand-700 bg-white px-2 py-0.5 rounded-full border border-brand-200">
+                      Code : {generatedInvitationCode}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-brand-700 leading-relaxed">
+                    Délivrez directement la notification sur le mobile ({tenantPhone}) et l'email ({tenantEmail}) de <strong>{tenantName}</strong> :
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                    <a
+                      href={waUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition-all text-center shadow-sm hover:shadow-emerald-600/30"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </a>
+
+                    <a
+                      href={smsUrl}
+                      className="py-2.5 px-3 bg-slate-800 hover:bg-slate-700 text-white font-bold text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition-all text-center"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>SMS Direct</span>
+                    </a>
+
+                    <a
+                      href={mailUrl}
+                      className="py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold text-[11px] rounded-xl flex items-center justify-center gap-1.5 transition-all text-center"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Email</span>
+                    </a>
+                  </div>
                 </div>
-                <p className="text-[11px] text-brand-700 leading-relaxed">
-                  Le locataire a reçu son lien de téléchargement d'application et son accès portail avec le code d'activation <strong className="font-mono text-brand-900">{generatedInvitationCode}</strong>.
-                </p>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
               <button

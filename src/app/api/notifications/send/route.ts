@@ -1,0 +1,241 @@
+import { NextRequest, NextResponse } from 'next/server';
+import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
+import {
+  LeaseInvitationData,
+  buildLeaseInvitationTextMessage,
+  buildLeaseEmailSubject,
+  buildLeaseEmailPlainText,
+  buildLeaseEmailHtml,
+  buildWhatsAppUrl,
+  buildSmsUri,
+  buildMailtoUrl,
+  buildGmailComposeUrl,
+  sanitizePhoneNumber,
+} from '@/lib/services/notification-dispatch-service';
+
+// Journalisation locale des notifications pour audit et traçabilité
+function appendNotificationLog(entry: {
+  timestamp: string;
+  type: string;
+  recipientName: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  leaseId: string;
+  emailSent: boolean;
+  emailProvider: string;
+  smsSent: boolean;
+  smsProvider: string;
+  notes?: string;
+}) {
+  try {
+    const logsDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logsDir)) {
+      fs.mkdirSync(logsDir, { recursive: true });
+    }
+    const logFilePath = path.join(logsDir, 'notifications.log');
+    const line = `[${entry.timestamp}] TYPE=${entry.type} LEASE=${entry.leaseId} TO="${entry.recipientName}" EMAIL=${entry.recipientEmail} (${entry.emailSent ? 'SENT:' + entry.emailProvider : 'SKIPPED/NOT_CONFIGURED'}) PHONE=${entry.recipientPhone} (${entry.smsSent ? 'SENT:' + entry.smsProvider : 'READY_VIA_DEEP_LINK'}) NOTES=${entry.notes || 'OK'}\n`;
+    fs.appendFileSync(logFilePath, line, 'utf-8');
+  } catch (err) {
+    console.error('[NotificationLog] Erreur lors de l’écriture du journal:', err);
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+
+    const invitationData: LeaseInvitationData = {
+      recipientName: body.recipientName || 'Locataire',
+      recipientEmail: body.recipientEmail || '',
+      recipientPhone: body.recipientPhone || '',
+      leaseId: body.leaseId || 'BAIL-2026',
+      propertyName: body.propertyName || 'Logement',
+      unitNumber: body.unitNumber || 'Lot',
+      rent: Number(body.rent) || 0,
+      deposit: body.deposit ? Number(body.deposit) : undefined,
+      utilitiesDeposit: body.utilitiesDeposit ? Number(body.utilitiesDeposit) : undefined,
+      totalDueAtEntry: body.totalDueAtEntry ? Number(body.totalDueAtEntry) : undefined,
+      portalUrl: body.portalUrl || 'http://localhost:3001/portal?tab=bail',
+      appDownloadUrl: body.appDownloadUrl || 'https://locagestion.app/download',
+      invitationCode: body.invitationCode || 'LOCA-INV-7842',
+      landlordName: body.landlordName || 'Mamadou Diallo',
+      countryName: body.countryName,
+      governingLaw: body.governingLaw,
+    };
+
+    const textMessage = buildLeaseInvitationTextMessage(invitationData);
+    const emailSubject = buildLeaseEmailSubject(invitationData);
+    const emailPlainText = buildLeaseEmailPlainText(invitationData);
+    const emailHtml = buildLeaseEmailHtml(invitationData);
+
+    const whatsappUrl = buildWhatsAppUrl(invitationData.recipientPhone, textMessage);
+    const smsUri = buildSmsUri(invitationData.recipientPhone, textMessage);
+    const mailtoUrl = buildMailtoUrl(invitationData);
+    const gmailUrl = buildGmailComposeUrl(invitationData);
+
+    let emailSent = false;
+    let emailProvider = 'none';
+    let emailError: string | null = null;
+
+    // 1. TENTATIVE D'EXPÉDITION EMAIL VIA SMTP / SERVICE CONFIGURÉ
+    const smtpHost = process.env.SMTP_HOST || process.env.EMAIL_SERVER_HOST;
+    const smtpPort = Number(process.env.SMTP_PORT || process.env.EMAIL_SERVER_PORT) || 587;
+    const smtpUser = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER;
+    const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_SERVER_PASSWORD;
+    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || '"LOCAGESTION" <notifications@locagestion.bj>';
+
+    if (smtpHost && smtpUser && smtpPass && invitationData.recipientEmail) {
+      try {
+        const transporter = nodemailer.createTransport({
+          host: smtpHost,
+          port: smtpPort,
+          secure: smtpPort === 465,
+          auth: {
+            user: smtpUser,
+            pass: smtpPass,
+          },
+        });
+
+        await transporter.sendMail({
+          from: smtpFrom,
+          to: invitationData.recipientEmail,
+          subject: emailSubject,
+          text: emailPlainText,
+          html: emailHtml,
+        });
+
+        emailSent = true;
+        emailProvider = `smtp://${smtpHost}`;
+      } catch (err: any) {
+        emailError = err?.message || 'Erreur inconnue lors de l’envoi SMTP';
+        console.error('[NotificationAPI] Erreur SMTP:', err);
+      }
+    } else {
+      emailProvider = 'unconfigured';
+      emailError = 'Serveur SMTP non configuré dans .env.local (fallback 1-clic direct disponible)';
+    }
+
+    // 2. TENTATIVE D'EXPÉDITION SMS VIA PASSERELLE
+    let smsSent = false;
+    let smsProvider = 'none';
+    let smsError: string | null = null;
+
+    const twilioSid = process.env.TWILIO_ACCOUNT_SID;
+    const twilioToken = process.env.TWILIO_AUTH_TOKEN;
+    const twilioFrom = process.env.TWILIO_PHONE_NUMBER;
+    const termiiApiKey = process.env.TERMII_API_KEY;
+    const termiiSenderId = process.env.TERMII_SENDER_ID || 'LOCAGESTION';
+
+    const cleanRecipientPhone = sanitizePhoneNumber(invitationData.recipientPhone);
+
+    if (twilioSid && twilioToken && twilioFrom && cleanRecipientPhone) {
+      try {
+        const auth = Buffer.from(`${twilioSid}:${twilioToken}`).toString('base64');
+        const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: new URLSearchParams({
+            To: `+${cleanRecipientPhone}`,
+            From: twilioFrom,
+            Body: textMessage,
+          }).toString(),
+        });
+        if (res.ok) {
+          smsSent = true;
+          smsProvider = 'twilio';
+        } else {
+          const twilioErr = await res.text();
+          smsError = `Twilio HTTP ${res.status}: ${twilioErr}`;
+        }
+      } catch (err: any) {
+        smsError = err?.message || 'Erreur Twilio';
+      }
+    } else if (termiiApiKey && cleanRecipientPhone) {
+      try {
+        const res = await fetch('https://api.ng.termii.com/api/sms/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: cleanRecipientPhone,
+            from: termiiSenderId,
+            sms: textMessage,
+            type: 'plain',
+            channel: 'generic',
+            api_key: termiiApiKey,
+          }),
+        });
+        if (res.ok) {
+          smsSent = true;
+          smsProvider = 'termii';
+        } else {
+          smsError = `Termii HTTP ${res.status}`;
+        }
+      } catch (err: any) {
+        smsError = err?.message || 'Erreur Termii';
+      }
+    } else {
+      smsProvider = 'unconfigured';
+      smsError = 'Passerelle SMS automatique non configurée (WhatsApp / SMS direct 1-clic disponible)';
+    }
+
+    // 3. ENREGISTREMENT AU JOURNAL
+    appendNotificationLog({
+      timestamp: new Date().toISOString(),
+      type: 'LEASE_INVITATION',
+      recipientName: invitationData.recipientName,
+      recipientEmail: invitationData.recipientEmail,
+      recipientPhone: invitationData.recipientPhone,
+      leaseId: invitationData.leaseId,
+      emailSent,
+      emailProvider,
+      smsSent,
+      smsProvider,
+      notes: `Email: ${emailSent ? 'OK' : emailError} | SMS: ${smsSent ? 'OK' : smsError}`,
+    });
+
+    return NextResponse.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      leaseId: invitationData.leaseId,
+      recipient: {
+        name: invitationData.recipientName,
+        email: invitationData.recipientEmail,
+        phone: invitationData.recipientPhone,
+        cleanPhone: cleanRecipientPhone,
+      },
+      emailStatus: {
+        sent: emailSent,
+        provider: emailProvider,
+        error: emailError,
+      },
+      smsStatus: {
+        sent: smsSent,
+        provider: smsProvider,
+        error: smsError,
+      },
+      deepLinks: {
+        whatsappUrl,
+        smsUri,
+        mailtoUrl,
+        gmailUrl,
+      },
+      textMessage,
+      emailSubject,
+    });
+  } catch (error: any) {
+    console.error('[NotificationAPI] Erreur globale:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || 'Erreur interne du serveur lors du dispatch de notification',
+      },
+      { status: 500 }
+    );
+  }
+}
+
