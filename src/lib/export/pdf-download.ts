@@ -23,6 +23,7 @@ export interface LeasePDFData {
   rent: number;
   charges?: number;
   deposit?: number;
+  utilitiesDeposit?: number;
   startDate: string;
   endDate?: string;
   durationMonths?: number;
@@ -230,6 +231,13 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   doc.text(`• Dépôt de garantie (Caution) :`, margin + 4, y + 17);
   doc.setFont('helvetica', 'bold');
   doc.text(`${formatFCFA(data.deposit || data.rent * 2)}`, margin + 50, y + 17);
+
+  if (data.utilitiesDeposit) {
+    doc.setFont('helvetica', 'normal');
+    doc.text(`• Caution Compteurs Eau/Élec :`, margin + 95, y + 17);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${formatFCFA(data.utilitiesDeposit)}`, margin + 148, y + 17);
+  }
 
   doc.setFont('helvetica', 'normal');
   doc.text(`• Exigibilité : Payable au plus tard le 05 de chaque mois civil`, margin + 4, y + 22);

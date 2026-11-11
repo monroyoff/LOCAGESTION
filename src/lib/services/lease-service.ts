@@ -17,6 +17,16 @@ export interface Lease {
   rent: number;
   charges?: number;
   deposit?: number;
+  utilitiesDeposit?: number;
+  includeFirstRent?: boolean;
+  advanceMonths?: number;
+  totalDueAtEntry?: number;
+  isNewTenant?: boolean;
+  invitationCode?: string;
+  invitationSentBySms?: boolean;
+  invitationSentByEmail?: boolean;
+  appDownloadLink?: string;
+  portalAccessLink?: string;
   startDate: string;
   endDate?: string;
   durationMonths?: number;
@@ -50,6 +60,9 @@ export interface RegisteredTenant {
   phone: string;
   property?: string;
   unit?: string;
+  isNewAccount?: boolean;
+  invitedAt?: string;
+  invitationCode?: string;
 }
 
 export const REGISTERED_TENANTS: RegisteredTenant[] = [
@@ -272,6 +285,62 @@ export const LeaseService = {
     }
   },
 
+  // Récupérer la liste des locataires certifiés (avec persistance)
+  getRegisteredTenants(): RegisteredTenant[] {
+    if (typeof window === 'undefined') return REGISTERED_TENANTS;
+    try {
+      const stored = localStorage.getItem('locagestion:registered_tenants');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch (e) {
+      console.error('Erreur lecture locataires enregistrés:', e);
+    }
+    return REGISTERED_TENANTS;
+  },
+
+  // Enregistrer dynamiquement un nouveau locataire et lui générer un code d'accès
+  registerNewTenant(data: {
+    name: string;
+    email: string;
+    phone: string;
+    property?: string;
+    unit?: string;
+  }): RegisteredTenant {
+    const list = this.getRegisteredTenants();
+    const existing = list.find(
+      (t) => t.email.toLowerCase() === data.email.toLowerCase()
+    );
+    if (existing) return existing;
+
+    const newId = `ten-${String(list.length + 1).padStart(2, '0')}`;
+    const invitationCode = `LOCA-INV-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newTenant: RegisteredTenant = {
+      id: newId,
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+      property: data.property,
+      unit: data.unit,
+      isNewAccount: true,
+      invitedAt: new Date().toLocaleDateString('fr-FR'),
+      invitationCode,
+    };
+
+    const updated = [newTenant, ...list];
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(
+          'locagestion:registered_tenants',
+          JSON.stringify(updated)
+        );
+      } catch (e) {
+        console.error('Erreur enregistrement locataire:', e);
+      }
+    }
+    return newTenant;
+  },
+
   // Action : Transmettre le bail au locataire pour signature
   transmitLeaseToTenant(lease: Lease): Lease {
     const nowFormatted = new Date().toLocaleDateString('fr-FR', {
@@ -289,6 +358,17 @@ export const LeaseService = {
       transmittedAt: lease.transmittedAt || nowFormatted,
       sentForSignatureAt: nowFormatted,
     };
+
+    // Si c'est un nouveau locataire sans compte existant, l'enregistrer automatiquement
+    if (lease.isNewTenant && lease.tenant && lease.tenantEmail) {
+      this.registerNewTenant({
+        name: lease.tenant,
+        email: lease.tenantEmail,
+        phone: lease.tenantPhone || '',
+        property: lease.property,
+        unit: lease.unit,
+      });
+    }
 
     this.saveLease(updated);
     return updated;

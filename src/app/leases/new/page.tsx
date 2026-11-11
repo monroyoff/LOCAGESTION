@@ -28,6 +28,11 @@ import {
   Download,
   Send,
   UserCheck,
+  Zap,
+  Mail,
+  Smartphone,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -154,14 +159,45 @@ export default function NewLeasePage() {
     }
   };
 
+  // Step 2 nouveau locataire - invitations SMS & Email
+  const [notifyBySms, setNotifyBySms] = useState(true);
+  const [notifyByEmail, setNotifyByEmail] = useState(true);
+  const [generatedInvitationCode] = useState(
+    () => `LOCA-INV-${Math.floor(1000 + Math.random() * 9000)}`
+  );
+
+  // Step 3 conditions financières
   const [monthlyRent, setMonthlyRent] = useState('220000');
   const [charges, setCharges] = useState('30000');
+  const [includeFirstRent, setIncludeFirstRent] = useState(true);
   const [depositMonths, setDepositMonths] = useState('3');
-  const [advanceMonths, setAdvanceMonths] = useState('2');
+  const [customDepositAmount, setCustomDepositAmount] = useState('');
+  const [hasUtilitiesDeposit, setHasUtilitiesDeposit] = useState(true);
+  const [utilitiesDepositAmount, setUtilitiesDepositAmount] = useState('50000');
+  const [advanceMonths, setAdvanceMonths] = useState('0');
   const [paymentDay, setPaymentDay] = useState('5');
 
   const [leaseType, setLeaseType] = useState('habitation');
   const [durationMonths, setDurationMonths] = useState('12');
+
+  // Calculs financiers dissociés
+  const parsedRent = parseInt(monthlyRent, 10) || 0;
+  const parsedCharges = parseInt(charges, 10) || 0;
+  const parsedUtilitiesDeposit = hasUtilitiesDeposit
+    ? parseInt(utilitiesDepositAmount, 10) || 0
+    : 0;
+  const parsedAdvanceRent = parsedRent * (parseInt(advanceMonths, 10) || 0);
+
+  const parsedDeposit =
+    depositMonths === 'custom'
+      ? parseInt(customDepositAmount, 10) || 0
+      : parsedRent * (parseInt(depositMonths, 10) || 0);
+
+  const totalDueAtEntry =
+    (includeFirstRent ? parsedRent + parsedCharges : 0) +
+    parsedDeposit +
+    parsedUtilitiesDeposit +
+    parsedAdvanceRent;
 
   // Signature canvas
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -241,9 +277,19 @@ export default function NewLeasePage() {
       tenantPhone,
       property: resolvedPropertyName,
       unit: resolvedUnitName,
-      rent: parseInt(monthlyRent, 10) || 220000,
-      deposit: (parseInt(monthlyRent, 10) || 220000) * (parseInt(depositMonths, 10) || 3),
-      charges: parseInt(charges, 10) || 30000,
+      rent: parsedRent,
+      deposit: parsedDeposit,
+      charges: parsedCharges,
+      utilitiesDeposit: parsedUtilitiesDeposit,
+      includeFirstRent,
+      advanceMonths: parseInt(advanceMonths, 10) || 0,
+      totalDueAtEntry,
+      isNewTenant: tenantMode === 'new',
+      invitationCode: tenantMode === 'new' ? generatedInvitationCode : undefined,
+      invitationSentBySms: tenantMode === 'new' ? notifyBySms : true,
+      invitationSentByEmail: tenantMode === 'new' ? notifyByEmail : true,
+      appDownloadLink: 'https://locagestion.app/download',
+      portalAccessLink: 'http://localhost:3001/portal?tab=bail',
       startDate: '2026-11-01',
       endDate: '2029-10-31',
       durationMonths: parseInt(durationMonths, 10) || 36,
@@ -848,18 +894,109 @@ export default function NewLeasePage() {
                       />
                     </div>
                   </div>
+
+                  {/* Nouveau locataire : Création de compte & Notification SMS / Email automatique */}
+                  {tenantMode === 'new' && (
+                    <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200/80 space-y-3 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                          <span className="text-xs font-black text-emerald-950">
+                            Création automatique du compte & Invitation multicanale
+                          </span>
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full">
+                          Nouveau Locataire
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-emerald-900 leading-relaxed">
+                        Ce locataire n'a pas encore de compte sur la plateforme. Dès que vous validerez le contrat de bail, son espace locataire sera automatiquement créé et activé. Il recevra immédiatement une notification avec son lien d'accès et le lien de téléchargement de l'application mobile.
+                      </p>
+
+                      {/* Canaux de notification cochables */}
+                      <div className="space-y-2 pt-1 border-t border-emerald-200/60">
+                        <label className="flex items-start gap-2.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notifyBySms}
+                            onChange={(e) => setNotifyBySms(e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                          />
+                          <div className="text-xs">
+                            <span className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                              <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Notification par SMS & WhatsApp (au {tenantPhone || 'numéro mobile'})</span>
+                            </span>
+                            <span className="text-[11px] text-emerald-800 block">
+                              Contient le lien direct pour contresigner le bail et le lien de téléchargement de l'application mobile LOCAGESTION.
+                            </span>
+                          </div>
+                        </label>
+
+                        <label className="flex items-start gap-2.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={notifyByEmail}
+                            onChange={(e) => setNotifyByEmail(e.target.checked)}
+                            className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                          />
+                          <div className="text-xs">
+                            <span className="font-extrabold text-emerald-950 flex items-center gap-1.5">
+                              <Mail className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Notification par Email officiel (à {tenantEmail || 'l’adresse email'})</span>
+                            </span>
+                            <span className="text-[11px] text-emerald-800 block">
+                              Contient la copie numérique scellée du contrat en PDF, le code d’activation et les identifiants d’accès.
+                            </span>
+                          </div>
+                        </label>
+                      </div>
+
+                      {/* Aperçu du message d'invitation */}
+                      <div className="p-3 bg-white/90 rounded-xl border border-emerald-200 text-[11px] text-slate-700 space-y-1">
+                        <div className="font-bold text-slate-900 flex items-center justify-between">
+                          <span className="flex items-center gap-1 text-[11px]">
+                            <span>💬 Aperçu du SMS & Email d'invitation envoyé au locataire :</span>
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono">Code : {generatedInvitationCode}</span>
+                        </div>
+                        <p className="text-slate-600 italic bg-slate-50 p-2 rounded-lg border border-slate-200/60 text-[10.5px]">
+                          « Bonjour <strong>{tenantName || 'Locataire'}</strong>, M. Mamadou Diallo a établi votre contrat de bail pour <strong>{resolvedUnitName}</strong> ({resolvedPropertyName}).
+                          <br />
+                          👉 <strong>Accédez à votre espace sécurisé pour contresigner :</strong> http://localhost:3001/portal?tab=bail
+                          <br />
+                          📲 <strong>Téléchargez l'application mobile LOCAGESTION :</strong> https://locagestion.app/download
+                          <br />
+                          Code d’activation : <strong>{generatedInvitationCode}</strong> »
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Step 3: Conditions Financières */}
             {currentStep === 3 && (
-              <div className="space-y-4 animate-in fade-in duration-200">
-                <h2 className="text-base font-black text-slate-900">
-                  Étape 3 : Conditions Financières & Modalités UEMOA & CEMAC
-                </h2>
+              <div className="space-y-5 animate-in fade-in duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h2 className="text-base font-black text-slate-900 flex items-center gap-2">
+                      <DollarSign className="w-5 h-5 text-emerald-600" />
+                      <span>Étape 3 : Conditions Financières & Modalités UEMOA & CEMAC</span>
+                    </h2>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Définissez le loyer, les cautions dissociées (loyer et compteurs) et le total exigible à la signature.
+                    </p>
+                  </div>
+                  <span className="text-xs text-slate-600 font-bold bg-slate-100 px-3 py-1 rounded-full border border-slate-200/60 flex items-center gap-1 self-start sm:self-auto">
+                    <span>Étape 3 sur 5</span>
+                  </span>
+                </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                {/* Grille des montants de base : Loyer et Charges */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
                       Loyer mensuel principal (FCFA)
@@ -868,40 +1005,146 @@ export default function NewLeasePage() {
                       type="number"
                       value={monthlyRent}
                       onChange={(e) => setMonthlyRent(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-black text-slate-900"
+                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-black text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      Charges forfaitaires (FCFA)
+                      Charges forfaitaires mensuelles (FCFA)
                     </label>
                     <input
                       type="number"
                       value={charges}
                       onChange={(e) => setCharges(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold"
+                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
                     />
                   </div>
+                </div>
 
+                {/* 1. Case à cocher : 1er loyer exigible à l'entrée */}
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3 transition-colors hover:bg-slate-100/60">
+                  <input
+                    type="checkbox"
+                    id="includeFirstRent"
+                    checked={includeFirstRent}
+                    onChange={(e) => setIncludeFirstRent(e.target.checked)}
+                    className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                  />
+                  <label htmlFor="includeFirstRent" className="text-xs cursor-pointer flex-1">
+                    <span className="font-extrabold text-slate-900 block">
+                      Exiger le 1er loyer à l’entrée dans les lieux
+                    </span>
+                    <span className="text-[11px] text-slate-500 block">
+                      {includeFirstRent
+                        ? `Le premier mois de loyer (${formatFCFA(parsedRent)}${parsedCharges > 0 ? ` + charges de ${formatFCFA(parsedCharges)}` : ''}) est comptabilisé dans le montant exigible à la remise des clés.`
+                        : 'Le premier loyer n’est pas exigé le jour de la signature (ex: paiement à terme échu ou différé).'}
+                    </span>
+                  </label>
+                  <span className={`text-xs font-bold shrink-0 ${includeFirstRent ? 'text-slate-900' : 'text-slate-400 line-through'}`}>
+                    {includeFirstRent ? formatFCFA(parsedRent + parsedCharges) : '0 FCFA'}
+                  </span>
+                </div>
+
+                {/* 2. Caution Loyer avec plus d'options + Standard 3 mois */}
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-800 block flex items-center justify-between">
+                    <span>Caution / Dépôt de garantie Loyer :</span>
+                    <span className="text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 font-bold">
+                      Standard réglementaire : 3 mois (Loi bail UEMOA)
+                    </span>
+                  </label>
+                  <select
+                    value={depositMonths}
+                    onChange={(e) => setDepositMonths(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-none cursor-pointer"
+                  >
+                    <option value="0">0 mois — Aucune caution loyer (0 FCFA)</option>
+                    <option value="1">1 mois de caution ({formatFCFA(parsedRent * 1)})</option>
+                    <option value="2">2 mois de caution ({formatFCFA(parsedRent * 2)})</option>
+                    <option value="3">3 mois de caution ({formatFCFA(parsedRent * 3)}) — ★ Standard UEMOA / Bénin</option>
+                    <option value="4">4 mois de caution ({formatFCFA(parsedRent * 4)})</option>
+                    <option value="5">5 mois de caution ({formatFCFA(parsedRent * 5)})</option>
+                    <option value="6">6 mois de caution ({formatFCFA(parsedRent * 6)})</option>
+                    <option value="custom">Montant libre personnalisé en FCFA...</option>
+                  </select>
+
+                  {depositMonths === 'custom' && (
+                    <div className="pt-1">
+                      <input
+                        type="number"
+                        placeholder="Saisissez le montant exact de caution convenu en FCFA..."
+                        value={customDepositAmount}
+                        onChange={(e) => setCustomDepositAmount(e.target.value)}
+                        className="w-full px-4 py-2 rounded-xl bg-white border border-brand-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Bouton / Case à cocher : Caution Eau et Électricité avec montant à entrer */}
+                <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2.5">
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      id="hasUtilitiesDeposit"
+                      checked={hasUtilitiesDeposit}
+                      onChange={(e) => setHasUtilitiesDeposit(e.target.checked)}
+                      className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 mt-0.5 cursor-pointer"
+                    />
+                    <label htmlFor="hasUtilitiesDeposit" className="text-xs cursor-pointer flex-1">
+                      <span className="font-extrabold text-amber-950 block flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-amber-600" />
+                        <span>Caution Compteurs Eau & Électricité (SBEE / SONEB / CIE / SODECI)</span>
+                      </span>
+                      <span className="text-[11px] text-amber-800 block mt-0.5">
+                        Garantie spécifique pour couvrir les consommations d'eau et d'énergie résiduelles et l'entretien des compteurs.
+                      </span>
+                    </label>
+                    {hasUtilitiesDeposit && (
+                      <span className="text-xs font-black text-amber-900 shrink-0">
+                        + {formatFCFA(parsedUtilitiesDeposit)}
+                      </span>
+                    )}
+                  </div>
+
+                  {hasUtilitiesDeposit && (
+                    <div className="pt-2 border-t border-amber-200/60 pl-7 flex flex-col sm:flex-row sm:items-center gap-2">
+                      <label className="text-[11px] font-bold text-amber-900 shrink-0">
+                        Montant de la caution Eau & Électricité (FCFA) :
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Ex: 50000"
+                        value={utilitiesDepositAmount}
+                        onChange={(e) => setUtilitiesDepositAmount(e.target.value)}
+                        className="w-full sm:w-48 px-3.5 py-1.5 rounded-xl bg-white border border-amber-300 text-xs font-black text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* 4. Échéance et Mois d'avance */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      Caution / Dépôt de garantie
+                      Mois de loyer d'avance (Optionnel)
                     </label>
                     <select
-                      value={depositMonths}
-                      onChange={(e) => setDepositMonths(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold"
+                      value={advanceMonths}
+                      onChange={(e) => setAdvanceMonths(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900"
                     >
-                      <option value="1">1 mois ({formatFCFA(Number(monthlyRent) * 1)})</option>
-                      <option value="2">2 mois ({formatFCFA(Number(monthlyRent) * 2)})</option>
-                      <option value="3">3 mois ({formatFCFA(Number(monthlyRent) * 3)}) — Standard</option>
+                      <option value="0">0 mois d'avance</option>
+                      <option value="1">1 mois d'avance ({formatFCFA(parsedRent * 1)})</option>
+                      <option value="2">2 mois d'avance ({formatFCFA(parsedRent * 2)})</option>
+                      <option value="3">3 mois d'avance ({formatFCFA(parsedRent * 3)})</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="text-xs font-bold text-slate-700 block mb-1">
-                      Jour d’échéance du loyer
+                      Jour d’échéance mensuelle du loyer
                     </label>
                     <input
                       type="number"
@@ -914,20 +1157,96 @@ export default function NewLeasePage() {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs">
-                  <span className="font-extrabold text-emerald-900 block mb-0.5">
-                    Total exigible à l’entrée dans les lieux :
-                  </span>
-                  <div className="text-xl font-black text-emerald-800">
-                    {formatFCFA(
-                      Number(monthlyRent) +
-                        Number(charges) +
-                        Number(monthlyRent) * Number(depositMonths)
+                {/* 5. DISSOCIATION DU TOTAL EXIGIBLE EN DÉTAIL */}
+                <div className="p-4 sm:p-5 rounded-3xl bg-slate-900 text-white shadow-lg space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                      <DollarSign className="w-4 h-4 text-emerald-400" />
+                      <span>Décomposition du Total Exigible à l’Entrée :</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                      À verser à la signature
+                    </span>
+                  </div>
+
+                  {/* Lignes dissociées */}
+                  <div className="space-y-1.5 text-xs">
+                    {/* 1er loyer */}
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${includeFirstRent ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                        <span>1er mois de loyer principal {includeFirstRent ? '' : '(différé)'}</span>
+                      </span>
+                      <span className={`font-mono font-bold ${includeFirstRent ? 'text-white' : 'text-slate-500 line-through'}`}>
+                        {includeFirstRent ? formatFCFA(parsedRent) : '0 FCFA'}
+                      </span>
+                    </div>
+
+                    {/* Charges */}
+                    {parsedCharges > 0 && (
+                      <div className="flex items-center justify-between text-slate-300">
+                        <span className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${includeFirstRent ? 'bg-emerald-400' : 'bg-slate-600'}`} />
+                          <span>Charges locatives initiales</span>
+                        </span>
+                        <span className={`font-mono font-bold ${includeFirstRent ? 'text-white' : 'text-slate-500 line-through'}`}>
+                          {includeFirstRent ? formatFCFA(parsedCharges) : '0 FCFA'}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Caution loyer */}
+                    <div className="flex items-center justify-between text-slate-300">
+                      <span className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-brand-400" />
+                        <span>Caution Loyer ({depositMonths === 'custom' ? 'Montant libre' : `${depositMonths} mois`})</span>
+                      </span>
+                      <span className="font-mono font-bold text-white">
+                        {formatFCFA(parsedDeposit)}
+                      </span>
+                    </div>
+
+                    {/* Caution eau et électricité */}
+                    {hasUtilitiesDeposit && (
+                      <div className="flex items-center justify-between text-amber-300">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-400" />
+                          <span>Caution compteurs Eau & Électricité</span>
+                        </span>
+                        <span className="font-mono font-bold text-amber-200">
+                          + {formatFCFA(parsedUtilitiesDeposit)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Loyer d'avance */}
+                    {parsedAdvanceRent > 0 && (
+                      <div className="flex items-center justify-between text-blue-300">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-blue-400" />
+                          <span>Loyer(s) d'avance ({advanceMonths} mois)</span>
+                        </span>
+                        <span className="font-mono font-bold text-blue-200">
+                          + {formatFCFA(parsedAdvanceRent)}
+                        </span>
+                      </div>
                     )}
                   </div>
-                  <span className="text-[10px] text-emerald-700">
-                    (1er mois de loyer + {depositMonths} mois de caution)
-                  </span>
+
+                  {/* Grand Total */}
+                  <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">
+                        Montant global net exigible :
+                      </span>
+                      <span className="text-xl sm:text-2xl font-black text-emerald-400">
+                        {formatFCFA(totalDueAtEntry)}
+                      </span>
+                    </div>
+                    <div className="text-right text-[10px] text-slate-400">
+                      <span>Règlement : Mobile Money ou Virement</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -1089,7 +1408,7 @@ export default function NewLeasePage() {
               </p>
             </div>
 
-            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs space-y-1">
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left text-xs space-y-1.5">
               <div className="flex justify-between">
                 <span className="text-slate-400">Réf. Contrat :</span>
                 <span className="font-mono font-bold text-slate-800">{preparedLease?.id || 'BAIL-2026-N09'}</span>
@@ -1102,13 +1421,35 @@ export default function NewLeasePage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-400">Loyer Mensuel :</span>
-                <span className="font-extrabold text-brand-600">{formatFCFA(parseInt(monthlyRent, 10) || 220000)}</span>
+                <span className="font-extrabold text-brand-600">{formatFCFA(parsedRent)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Caution Déposée :</span>
-                <span className="font-bold text-slate-700">{formatFCFA((parseInt(monthlyRent, 10) || 220000) * (parseInt(depositMonths, 10) || 3))}</span>
+                <span className="text-slate-400">Caution Loyer :</span>
+                <span className="font-bold text-slate-700">{formatFCFA(parsedDeposit)}</span>
+              </div>
+              {hasUtilitiesDeposit && (
+                <div className="flex justify-between text-amber-700">
+                  <span>Caution Eau & Électricité :</span>
+                  <span className="font-bold font-mono">+{formatFCFA(parsedUtilitiesDeposit)}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-1.5 border-t border-slate-200 font-black text-slate-900">
+                <span>Total exigible à l'entrée :</span>
+                <span className="text-emerald-600">{formatFCFA(totalDueAtEntry)}</span>
               </div>
             </div>
+
+            {tenantMode === 'new' && (
+              <div className="p-3 bg-brand-50 border border-brand-200 rounded-2xl text-left text-xs space-y-1">
+                <div className="font-bold text-brand-900 flex items-center gap-1.5">
+                  <Smartphone className="w-3.5 h-3.5 text-brand-600" />
+                  <span>Invitation envoyée par SMS & E-mail</span>
+                </div>
+                <p className="text-[11px] text-brand-700 leading-relaxed">
+                  Le locataire a reçu son lien de téléchargement d'application et son accès portail avec le code d'activation <strong className="font-mono text-brand-900">{generatedInvitationCode}</strong>.
+                </p>
+              </div>
+            )}
 
             <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
               <button
@@ -1119,8 +1460,9 @@ export default function NewLeasePage() {
                     tenantName,
                     propertyName: resolvedPropertyName,
                     unit: resolvedUnitName,
-                    rent: parseInt(monthlyRent, 10) || 220000,
-                    deposit: (parseInt(monthlyRent, 10) || 220000) * (parseInt(depositMonths, 10) || 3),
+                    rent: parsedRent,
+                    deposit: parsedDeposit,
+                    utilitiesDeposit: hasUtilitiesDeposit ? parsedUtilitiesDeposit : 0,
                     startDate: '2026-11-01',
                   });
                 }}
