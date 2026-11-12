@@ -269,7 +269,7 @@ export function Sidebar({
       mobileOnly: true,
     },
     {
-      name: 'Messages avec le Bailleur',
+      name: 'Messages',
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
