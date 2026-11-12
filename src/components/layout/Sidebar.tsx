@@ -241,15 +241,6 @@ export function Sidebar({
       portalTab: 'accueil',
       active: pathname === '/portal' && effectivePortalTab === 'accueil',
     },
-    {
-      name: 'Relances & Préavis',
-      href: '/portal?tab=preavis',
-      icon: BellRing,
-      portalTab: 'preavis',
-      active: pathname === '/portal' && effectivePortalTab === 'preavis',
-      badgeCount: tenantNoticesCount > 0 ? tenantNoticesCount : undefined,
-      badgeColor: 'bg-rose-500',
-    },
     // Déplacés dans le Menu Résident UNIQUEMENT SUR MOBILE :
     {
       name: 'Mes Quittances & Reçus',
@@ -286,10 +277,20 @@ export function Sidebar({
       badgeColor: 'bg-emerald-500',
     },
     {
-      name: 'Explorer les Logements',
+      name: 'Annonces & Visites',
       href: '/listings',
       icon: Compass,
       active: pathname.startsWith('/listings'),
+      badge: 'Nouveau',
+    },
+    {
+      name: 'Relances & Préavis',
+      href: '/portal?tab=preavis',
+      icon: BellRing,
+      portalTab: 'preavis',
+      active: pathname === '/portal' && effectivePortalTab === 'preavis',
+      badgeCount: tenantNoticesCount > 0 ? tenantNoticesCount : undefined,
+      badgeColor: 'bg-rose-500',
     },
     {
       name: 'Pannes & Interventions',

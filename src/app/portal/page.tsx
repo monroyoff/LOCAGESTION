@@ -55,6 +55,8 @@ import {
   Copy,
   Bell,
   CalendarDays,
+  Compass,
+  Plus,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
@@ -811,28 +813,6 @@ function TenantPortalContent() {
 
             <button
               type="button"
-              onClick={() => handleTabChange('preavis')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'preavis'
-                  ? 'bg-rose-600 text-white shadow-sm font-black'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <BellRing className={`w-4 h-4 ${activeTab === 'preavis' ? 'text-white' : 'text-rose-500'}`} />
-              <span>Relances & Préavis</span>
-              {tenantNotices.length > 0 && (
-                <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-                    activeTab === 'preavis' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
-                  }`}
-                >
-                  {tenantNotices.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
               onClick={() => handleTabChange('quittances')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'quittances'
@@ -882,6 +862,28 @@ function TenantPortalContent() {
               >
                 96/100
               </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('preavis')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'preavis'
+                  ? 'bg-rose-600 text-white shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <BellRing className={`w-4 h-4 ${activeTab === 'preavis' ? 'text-white' : 'text-rose-500'}`} />
+              <span>Relances & Préavis</span>
+              {tenantNotices.length > 0 && (
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                    activeTab === 'preavis' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
+                  }`}
+                >
+                  {tenantNotices.length}
+                </span>
+              )}
             </button>
           </div>
 
@@ -1289,6 +1291,45 @@ function TenantPortalContent() {
                   >
                     <span>Voir l’historique</span>
                     <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Module Annonces & Visites pour Locataires */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center shrink-0 border border-brand-100">
+                    <Compass className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-black text-sm text-slate-900">
+                        Annonces & Visites de Logements
+                      </h3>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 border border-brand-200">
+                        Ouvert aux résidents
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Explorez les biens disponibles dans votre ville, planifiez des visites ou publiez votre propre annonce (location, colocation ou cession de bail).
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+                  <Link
+                    href="/listings"
+                    className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  >
+                    <Compass className="w-3.5 h-3.5 text-slate-600" />
+                    <span>Explorer les annonces</span>
+                  </Link>
+                  <Link
+                    href="/listings?action=publish"
+                    className="py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-pink-glow flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Publier une annonce</span>
                   </Link>
                 </div>
               </div>

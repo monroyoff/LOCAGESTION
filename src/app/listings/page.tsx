@@ -173,6 +173,33 @@ export default function ListingsPage() {
   const [visitTimeSlot, setVisitTimeSlot] = useState('15:00 - 17:00');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Charger les annonces publiées par les utilisateurs (bailleurs ou locataires)
+  useEffect(() => {
+    const loadCustomListings = () => {
+      try {
+        const saved = localStorage.getItem('locagestion:custom_listings');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setListings([...parsed, ...MOCK_RENTAL_LISTINGS.filter(m => !parsed.some((p: RentalListing) => p.id === m.id))]);
+            return;
+          }
+        }
+      } catch (e) {
+        console.error('Erreur chargement annonces personnalisées:', e);
+      }
+      setListings(MOCK_RENTAL_LISTINGS);
+    };
+
+    loadCustomListings();
+    window.addEventListener('locagestion:listings_updated', loadCustomListings);
+    window.addEventListener('storage', loadCustomListings);
+    return () => {
+      window.removeEventListener('locagestion:listings_updated', loadCustomListings);
+      window.removeEventListener('storage', loadCustomListings);
+    };
+  }, []);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -180,16 +207,29 @@ export default function ListingsPage() {
 
   const handlePublishListing = (newListing: RentalListing) => {
     setListings((prev) => [newListing, ...prev]);
+    try {
+      const saved = localStorage.getItem('locagestion:custom_listings');
+      const parsed: RentalListing[] = saved ? JSON.parse(saved) : [];
+      const updated = [newListing, ...parsed.filter((p) => p.id !== newListing.id)];
+      localStorage.setItem('locagestion:custom_listings', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
+    } catch (e) {
+      console.error('Erreur sauvegarde annonce:', e);
+    }
     showToast(`Annonce « ${newListing.title} » publiée avec succès !`);
     notifyPublish(
       `Votre annonce « ${newListing.title} » est désormais en ligne et diffusée avec succès sur toute la plateforme !`
     );
   };
 
-  // Sync with URL Query Parameters (ex: from Global Header Search)
+  // Sync with URL Query Parameters (ex: from Global Header Search or ?action=publish)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+      const action = params.get('action');
+      if (action === 'publish' || action === 'new' || params.get('publish') === 'true') {
+        setPublishModalOpen(true);
+      }
       const q = params.get('q');
       const country = params.get('country');
       const city = params.get('city');
@@ -429,36 +469,34 @@ export default function ListingsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  Recherche de Locations & Biens Disponibles
+                  Annonces & Visites de Logements
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand-50 text-brand-600 border border-brand-200">
                   Zone UEMOA & CEMAC
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Explorez les logements vérifiés avec filtres stricts par pays, ville, budget en FCFA et décomposition transparente du coût d'entrée.
+                Explorez les logements vérifiés, planifiez vos visites ou publiez votre propre annonce (location, colocation, sous-location ou reprise de bail).
               </p>
             </div>
 
-            {/* SEULEMENT LE BAILLEUR PEUT PUBLIER UNE ANNONCE */}
-            {isLandlord && (
+            {/* Bouton Publier une annonce accessible à la fois aux bailleurs et aux locataires */}
+            <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+              {isTenant && (
+                <div className="hidden md:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
+                  <Compass className="w-4 h-4 text-emerald-600" />
+                  <span>Espace Résident & Annonces</span>
+                </div>
+              )}
               <button
                 type="button"
                 onClick={() => setPublishModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Publier une annonce</span>
               </button>
-            )}
-
-            {/* LE LOCATAIRE EXPLORE ET TROUVE UN LOGEMENT SANS BOUTON BAILLEUR */}
-            {isTenant && (
-              <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold self-start sm:self-auto">
-                <Compass className="w-4 h-4 text-emerald-600" />
-                <span>Recherche de logement certifiée</span>
-              </div>
-            )}
+            </div>
           </div>
 
           {/* ==================================================================== */}
