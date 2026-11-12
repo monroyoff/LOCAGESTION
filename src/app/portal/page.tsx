@@ -863,28 +863,6 @@ function TenantPortalContent() {
                 96/100
               </span>
             </button>
-
-            <button
-              type="button"
-              onClick={() => handleTabChange('preavis')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'preavis'
-                  ? 'bg-rose-600 text-white shadow-sm font-black'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <BellRing className={`w-4 h-4 ${activeTab === 'preavis' ? 'text-white' : 'text-rose-500'}`} />
-              <span>Relances & Préavis</span>
-              {tenantNotices.length > 0 && (
-                <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-                    activeTab === 'preavis' ? 'bg-white/20 text-white' : 'bg-rose-100 text-rose-700'
-                  }`}
-                >
-                  {tenantNotices.length}
-                </span>
-              )}
-            </button>
           </div>
 
           {/* ==================================================================== */}
