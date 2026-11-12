@@ -140,6 +140,25 @@ export function VerifyPaymentModal({
         <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
           {/* Fiche récapitulative du versement */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3.5">
+            {payment.isAdvance && (
+              <div className="p-3 rounded-2xl bg-purple-50 border border-purple-200 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-600 shrink-0" />
+                  <div>
+                    <div className="text-xs font-black text-purple-950">
+                      Loyer d'avance déclaré ({payment.advanceMonthsCount || 1} mois)
+                    </div>
+                    <div className="text-[11px] text-purple-800">
+                      Période demandée : <strong>{payment.period}</strong>
+                    </div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-200 text-purple-900 uppercase tracking-wider">
+                  Avance multi-mois
+                </span>
+              </div>
+            )}
+
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3">
                 <img
@@ -224,6 +243,11 @@ export function VerifyPaymentModal({
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="w-full px-4 py-3 rounded-2xl bg-white border border-brand-300 text-xs font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer shadow-xs"
               >
+                {payment.period && !MONTHS_OF_YEAR.includes(payment.period) && (
+                  <option value={payment.period}>
+                    ⭐ {payment.period} (Période déclarée par le locataire)
+                  </option>
+                )}
                 {MONTHS_OF_YEAR.map((month) => (
                   <option key={month} value={month}>
                     🗓️ Loyer de {month}

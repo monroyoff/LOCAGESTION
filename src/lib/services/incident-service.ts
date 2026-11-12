@@ -1,6 +1,7 @@
 'use client';
 
 import { LeaseService, LandlordNotification } from './lease-service';
+import { TenantNotificationService } from './tenant-notification-service';
 
 export type IncidentUrgency = 'normale' | 'urgente' | 'critique';
 export type IncidentStatus = 'en_attente' | 'pris_en_charge' | 'en_cours_reparation' | 'resolu';
@@ -283,6 +284,14 @@ export const IncidentService = {
 
     current[index] = updated;
     this.saveAllIncidents(current);
+
+    // Alerter le locataire du suivi de son signalement
+    TenantNotificationService.notifyIncidentUpdated({
+      incidentTitle: updated.category || 'Panne signalée',
+      status: updated.status === 'resolu' ? 'resolu' : updated.status === 'pris_en_charge' ? 'en_cours' : 'en_cours',
+      tenantName: updated.tenantName,
+    });
+
     return updated;
   },
 
@@ -326,6 +335,14 @@ export const IncidentService = {
 
     current[index] = updated;
     this.saveAllIncidents(current);
+
+    // Alerter le locataire du suivi de son signalement
+    TenantNotificationService.notifyIncidentUpdated({
+      incidentTitle: updated.category || 'Panne signalée',
+      status: updated.status === 'resolu' ? 'resolu' : updated.status === 'pris_en_charge' ? 'en_cours' : 'en_cours',
+      tenantName: updated.tenantName,
+    });
+
     return updated;
   },
 
@@ -353,6 +370,14 @@ export const IncidentService = {
 
     current[index] = updated;
     this.saveAllIncidents(current);
+
+    // Alerter le locataire du suivi de son signalement
+    TenantNotificationService.notifyIncidentUpdated({
+      incidentTitle: updated.category || 'Panne signalée',
+      status: updated.status === 'resolu' ? 'resolu' : updated.status === 'pris_en_charge' ? 'en_cours' : 'en_cours',
+      tenantName: updated.tenantName,
+    });
+
     return updated;
   },
 

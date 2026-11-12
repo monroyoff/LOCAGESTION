@@ -38,6 +38,9 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
       paymentDate: payment.paymentDate || new Date().toLocaleDateString('fr-FR'),
       method: payment.method || 'wave',
       isVerified: payment.isVerified,
+      isAdvance: payment.isAdvance,
+      advanceMonthsCount: payment.advanceMonthsCount,
+      advanceMonthsList: payment.advanceMonthsList,
     });
   };
 
@@ -82,6 +85,25 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
 
         {/* Receipt Body (Printable Paper Style) */}
         <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800 bg-[#FAFBFD]">
+          {payment.isAdvance && (
+            <div className="p-3.5 bg-purple-50 rounded-2xl border border-purple-200 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <Sparkles className="w-5 h-5 text-purple-600 shrink-0" />
+                <div>
+                  <h5 className="text-xs font-black text-purple-950">
+                    Paiement de loyer d'avance réglé par anticipation ({payment.advanceMonthsCount || 1} mois)
+                  </h5>
+                  <p className="text-[11px] text-purple-800">
+                    Période couverte : <strong>{payment.period}</strong>
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-200 text-purple-900 uppercase tracking-wider shrink-0">
+                Loyer d'avance
+              </span>
+            </div>
+          )}
+
           {/* Paper Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-slate-200">
             <div>
@@ -147,7 +169,9 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               <tbody className="divide-y divide-slate-100">
                 <tr>
                   <td className="py-3 px-4 font-semibold text-slate-800">
-                    Loyer principal d’habitation
+                    {payment.isAdvance
+                      ? `Loyer principal d’habitation — Paiement d'avance (${payment.advanceMonthsCount || 1} mois)`
+                      : 'Loyer principal d’habitation'}
                   </td>
                   <td className="py-3 px-4 text-slate-500">{payment.period}</td>
                   <td className="py-3 px-4 text-right font-bold text-slate-900">

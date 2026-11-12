@@ -55,6 +55,9 @@ export interface ReceiptPDFData {
   paymentDate: string;
   method: string;
   isVerified?: boolean;
+  isAdvance?: boolean;
+  advanceMonthsCount?: number;
+  advanceMonthsList?: string[];
 }
 
 export interface InspectionPDFData {
@@ -407,7 +410,10 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   });
 
   doc.setFontSize(12);
-  doc.text('QUITTANCE DE LOYER OFFICIELLE & CERTIFIÉE', margin + contentWidth / 2, y + 14, {
+  const receiptTitle = payment.isAdvance
+    ? `QUITTANCE DE LOYER — PAIEMENT D'AVANCE (${payment.advanceMonthsCount || 1} MOIS)`
+    : 'QUITTANCE DE LOYER OFFICIELLE & CERTIFIÉE';
+  doc.text(receiptTitle, margin + contentWidth / 2, y + 14, {
     align: 'center',
   });
 
@@ -507,7 +513,10 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   doc.line(margin, y + rowH, margin + contentWidth, y + rowH);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text(`Loyer d'habitation (${payment.period})`, margin + 4, y + 5);
+  const rentLabel = payment.isAdvance
+    ? `Loyer d'habitation payé par anticipation (${payment.period})`
+    : `Loyer d'habitation (${payment.period})`;
+  doc.text(rentLabel, margin + 4, y + 5);
   doc.text(`${formatFCFA(payment.amount)}`, margin + contentWidth - 4, y + 5, { align: 'right' });
   y += rowH;
 

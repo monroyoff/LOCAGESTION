@@ -53,6 +53,8 @@ import {
   FileWarning,
   ArrowLeft,
   Copy,
+  Bell,
+  CalendarDays,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
@@ -60,10 +62,11 @@ import { PaymentTransaction } from '@/lib/types';
 import { generateLeasePDF, generateInspectionPDF, generateNoticePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { NoticeService, Notice } from '@/lib/services/notice-service';
+import { TenantNotificationService, TenantNotification } from '@/lib/services/tenant-notification-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
 import { TenantDepartureModal } from '@/components/portal/TenantDepartureModal';
 import { IncidentService, ReportedIncident } from '@/lib/services/incident-service';
-import { MONTHS_OF_YEAR } from '@/lib/services/payment-service';
+import { MONTHS_OF_YEAR, PaymentService } from '@/lib/services/payment-service';
 import { notifyAction, notifySave } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 
@@ -326,10 +329,94 @@ function TenantPortalContent() {
   }, []);
 
   const [consentGranted, setConsentGranted] = useState(true);
+
+  // Configuration des mois futurs éligibles au paiement de loyers d'avance
+  const AVAILABLE_FUTURE_MONTHS = [
+    'Décembre 2026',
+    'Janvier 2027',
+    'Février 2027',
+    'Mars 2027',
+    'Avril 2027',
+    'Mai 2027',
+    'Juin 2027',
+    'Juillet 2027',
+    'Août 2027',
+    'Septembre 2027',
+    'Octobre 2027',
+    'Novembre 2027',
+    'Décembre 2027',
+  ];
+
+  // Mode de déclaration de loyer (Mois en cours, Loyers d'avance seuls, ou Groupé en cours + avance)
+  const [paymentType, setPaymentType] = useState<'current' | 'advance' | 'both'>('current');
+  const [selectedAdvanceMonths, setSelectedAdvanceMonths] = useState<string[]>(['Décembre 2026']);
   const [declaredPeriod, setDeclaredPeriod] = useState('Novembre 2026');
   const [declaredAmount, setDeclaredAmount] = useState('220000');
   const [declaredMethod, setDeclaredMethod] = useState('wave');
   const [declaredRef, setDeclaredRef] = useState('WAVE-TX-984210');
+
+  // Notifications en temps réel dans l'espace locataire
+  const [portalNotifs, setPortalNotifs] = useState<TenantNotification[]>([]);
+  const [isNotifBannerDismissed, setIsNotifBannerDismissed] = useState(false);
+
+  useEffect(() => {
+    const loadNotifs = () => {
+      setPortalNotifs(TenantNotificationService.getNotifications());
+    };
+    loadNotifs();
+    window.addEventListener('locagestion:tenant_notifs_updated', loadNotifs);
+    window.addEventListener('storage', loadNotifs);
+    return () => {
+      window.removeEventListener('locagestion:tenant_notifs_updated', loadNotifs);
+      window.removeEventListener('storage', loadNotifs);
+    };
+  }, []);
+
+  // Calcul dynamique des mois et libellé de période
+  const resolvedMonthsCount =
+    paymentType === 'current'
+      ? 1
+      : paymentType === 'advance'
+      ? selectedAdvanceMonths.length || 1
+      : 1 + selectedAdvanceMonths.length;
+
+  const resolvedPeriodLabel =
+    paymentType === 'current'
+      ? declaredPeriod || 'Novembre 2026 (Mois en cours)'
+      : paymentType === 'advance'
+      ? selectedAdvanceMonths.length === 1
+        ? `Loyer d'avance : ${selectedAdvanceMonths[0]}`
+        : `${selectedAdvanceMonths.length} mois d'avance (${selectedAdvanceMonths.join(', ')})`
+      : `Novembre 2026 + ${selectedAdvanceMonths.length} mois d'avance (${selectedAdvanceMonths.join(', ')})`;
+
+  const handleSelectPaymentType = (type: 'current' | 'advance' | 'both') => {
+    setPaymentType(type);
+    const months =
+      type === 'current' ? 1 : type === 'advance' ? selectedAdvanceMonths.length || 1 : 1 + selectedAdvanceMonths.length;
+    setDeclaredAmount(String(months * tenant.monthlyRent));
+  };
+
+  const handleToggleAdvanceMonth = (month: string) => {
+    let next: string[];
+    if (selectedAdvanceMonths.includes(month)) {
+      if (selectedAdvanceMonths.length === 1 && paymentType === 'advance') {
+        return; // Conserver au moins un mois en mode avance
+      }
+      next = selectedAdvanceMonths.filter((m) => m !== month);
+    } else {
+      next = [...selectedAdvanceMonths, month];
+    }
+    setSelectedAdvanceMonths(next);
+    const months = paymentType === 'current' ? 1 : paymentType === 'advance' ? next.length : 1 + next.length;
+    setDeclaredAmount(String(months * tenant.monthlyRent));
+  };
+
+  const handleApplyAdvancePreset = (count: number) => {
+    const presetMonths = AVAILABLE_FUTURE_MONTHS.slice(0, count);
+    setSelectedAdvanceMonths(presetMonths);
+    const months = paymentType === 'both' ? 1 + presetMonths.length : presetMonths.length;
+    setDeclaredAmount(String(months * tenant.monthlyRent));
+  };
 
   const [proofFile, setProofFile] = useState<{ name: string; size: string; preview?: string } | null>(null);
   const proofFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -485,6 +572,34 @@ function TenantPortalContent() {
 
   const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>(DEFAULT_TENANT_RECEIPTS);
 
+  useEffect(() => {
+    const syncReceipts = () => {
+      try {
+        const declared = PaymentService.getDeclaredPayments();
+        const tenantDeclared = declared.filter(
+          (p) => !p.tenantName || p.tenantName.toLowerCase().includes('koffi')
+        );
+        const combined = [...tenantDeclared];
+        for (const def of DEFAULT_TENANT_RECEIPTS) {
+          if (!combined.some((p) => p.id === def.id || p.receiptNumber === def.receiptNumber)) {
+            combined.push(def);
+          }
+        }
+        setReceiptsList(combined);
+      } catch (err) {
+        console.error('Erreur synchronisation quittances:', err);
+      }
+    };
+
+    syncReceipts();
+    window.addEventListener('locagestion:payments_updated', syncReceipts);
+    window.addEventListener('storage', syncReceipts);
+    return () => {
+      window.removeEventListener('locagestion:payments_updated', syncReceipts);
+      window.removeEventListener('storage', syncReceipts);
+    };
+  }, []);
+
   // Filtres de date & tri pour "Mes Quittances & Reçus de Loyer"
   const [receiptDatePreset, setReceiptDatePreset] = useState<'all' | '2026' | 'this_month' | 'last_month' | 'last_3_months'>('all');
   const [receiptSelectedMonth, setReceiptSelectedMonth] = useState<string>('all');
@@ -570,7 +685,8 @@ function TenantPortalContent() {
 
   const handleDeclarePayment = (e: React.FormEvent) => {
     e.preventDefault();
-    const numAmount = parseInt(declaredAmount) || tenant.monthlyRent;
+    const isAdvance = paymentType === 'advance' || paymentType === 'both';
+    const numAmount = parseInt(declaredAmount) || resolvedMonthsCount * tenant.monthlyRent;
     const dateStr = new Date().toLocaleDateString('fr-FR');
     const newTx: PaymentTransaction = {
       id: `decl-${Date.now()}`,
@@ -579,32 +695,37 @@ function TenantPortalContent() {
       tenantName: tenant.name,
       tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
       tenantPhone: tenant.phone,
+      tenantEmail: tenant.email,
       propertyName: tenant.property,
       unitNumber: tenant.unit,
       amount: numAmount,
       expectedAmount: tenant.monthlyRent,
-      period: declaredPeriod,
+      period: resolvedPeriodLabel,
       paymentDate: dateStr,
       method: declaredMethod as any,
       status: 'paye',
       isVerified: false,
+      isAdvance,
+      advanceMonthsCount: resolvedMonthsCount,
+      advanceMonthsList: isAdvance
+        ? paymentType === 'both'
+          ? ['Novembre 2026', ...selectedAdvanceMonths]
+          : selectedAdvanceMonths
+        : undefined,
     };
 
-    const updated = [newTx, ...receiptsList];
-    setReceiptsList(updated);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('locagestion:declared_payments', JSON.stringify(updated));
-      } catch (err) {
-        console.error('Erreur sauvegarde paiement:', err);
-      }
-    }
+    const declared = PaymentService.getDeclaredPayments();
+    const updated = [newTx, ...declared.filter((p) => p.id !== newTx.id)];
+    PaymentService.saveDeclaredPayments(updated);
+    setReceiptsList([newTx, ...receiptsList.filter((p) => p.id !== newTx.id)]);
 
     // Alerter le bailleur via le service partagé
     LeaseService.addLandlordNotification({
       id: `notif-pay-${Date.now()}`,
-      title: `Paiement déclaré par ${tenant.name}`,
-      message: `Déclaration de loyer de ${formatFCFA(numAmount)} pour la période ${declaredPeriod} via ${declaredMethod.toUpperCase()} (Réf: ${declaredRef || 'Non spécifiée'}).`,
+      title: isAdvance
+        ? `Loyer d'avance déclaré par ${tenant.name} (${resolvedMonthsCount} mois)`
+        : `Paiement déclaré par ${tenant.name}`,
+      message: `Déclaration de loyer de ${formatFCFA(numAmount)} pour la période ${resolvedPeriodLabel} via ${declaredMethod.toUpperCase()} (Réf: ${declaredRef || 'Non spécifiée'}).`,
       type: 'payment_declared',
       read: false,
       timestamp: `À l'instant`,
@@ -614,9 +735,30 @@ function TenantPortalContent() {
       paymentId: newTx.id,
     });
 
+    // Enregistrer instantanément dans les notifications du locataire
+    if (isAdvance) {
+      TenantNotificationService.notifyAdvancePaymentDeclared({
+        amount: numAmount,
+        period: resolvedPeriodLabel,
+        advanceMonthsCount: resolvedMonthsCount,
+        tenantName: tenant.name,
+      });
+    } else {
+      TenantNotificationService.addNotification({
+        title: 'Paiement de Loyer Déclaré',
+        message: `Votre déclaration de ${formatFCFA(numAmount)} pour ${resolvedPeriodLabel} est enregistrée. Quittance certifiée dès validation du bailleur.`,
+        type: 'receipt_issued',
+        link: '/portal?tab=quittances',
+        tenantName: tenant.name,
+        actor: 'Système LOCAGESTION',
+      });
+    }
+
     setDeclarationModalOpen(false);
     setProofFile(null);
-    const payMsg = `Déclaration de ${formatFCFA(numAmount)} (${declaredPeriod}) transmise avec succès au bailleur ! Quittance émise dès validation.`;
+    const payMsg = isAdvance
+      ? `Déclaration de ${resolvedMonthsCount} mois d'avance (${formatFCFA(numAmount)}) transmise avec succès au bailleur !`
+      : `Déclaration de ${formatFCFA(numAmount)} (${resolvedPeriodLabel}) transmise avec succès au bailleur ! Quittance émise dès validation.`;
     showToast(payMsg);
     notifySave(payMsg, 'Paiement déclaré avec succès !');
 
@@ -748,6 +890,106 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'accueil' && (
             <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Fil d'Action & Notifications Récentes du Bailleur */}
+              {portalNotifs.length > 0 && !isNotifBannerDismissed && (
+                <div className="p-4 sm:p-5 rounded-3xl bg-slate-900 text-white shadow-xl border border-slate-800 space-y-3 animate-in slide-in-from-top-2">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                        <Bell className="w-4 h-4 animate-pulse" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-xs sm:text-sm font-black tracking-tight text-white">
+                            Notifications & Communications du Bailleur
+                          </h3>
+                          {portalNotifs.filter((n) => !n.read).length > 0 && (
+                            <span className="text-[10px] bg-amber-500 text-slate-950 px-2 py-0.5 rounded-full font-black">
+                              {portalNotifs.filter((n) => !n.read).length} nouvelle{portalNotifs.filter((n) => !n.read).length > 1 ? 's' : ''}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-400">
+                          Toutes les actions de votre bailleur (quittances, bail, relances, interventions) vous informent en direct.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      {portalNotifs.some((n) => !n.read) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            TenantNotificationService.markAllAsRead();
+                            setPortalNotifs(TenantNotificationService.getNotifications());
+                          }}
+                          className="text-[11px] text-slate-400 hover:text-white font-bold transition-colors cursor-pointer"
+                        >
+                          Tout marquer lu
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setIsNotifBannerDismissed(true)}
+                        className="p-1 text-slate-500 hover:text-white rounded-lg transition-colors cursor-pointer"
+                        title="Masquer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                    {portalNotifs.slice(0, 4).map((n) => {
+                      const isUnread = !n.read;
+                      return (
+                        <div
+                          key={n.id}
+                          className={`p-3 rounded-2xl border transition-all flex flex-col justify-between gap-2 ${
+                            isUnread
+                              ? 'bg-slate-800/90 border-amber-500/40 shadow-sm'
+                              : 'bg-slate-800/40 border-slate-700/60 opacity-80 hover:opacity-100'
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-black text-white flex items-center gap-1.5 truncate">
+                                {isUnread && <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shrink-0" />}
+                                {n.title}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono shrink-0">{n.time || n.timestamp}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-300 leading-snug line-clamp-2">
+                              {n.message}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-1 border-t border-slate-700/50 text-[10px]">
+                            <span className="text-slate-400 italic">De : {n.actor || 'Bailleur'}</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                TenantNotificationService.markAsRead(n.id);
+                                setPortalNotifs(TenantNotificationService.getNotifications());
+                                if (n.link.includes('tab=quittances')) handleTabChange('quittances');
+                                else if (n.link.includes('tab=bail')) handleTabChange('bail');
+                                else if (n.link.includes('tab=preavis')) handleTabChange('preavis');
+                                else if (n.link.includes('tab=solvabilite')) handleTabChange('solvabilite');
+                                else if (n.link.includes('action=declare_payment')) setDeclarationModalOpen(true);
+                                else if (n.link.includes('action=incident')) setReportIssueModalOpen(true);
+                              }}
+                              className="text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>{n.actionLabel || 'Consulter'}</span>
+                              <ArrowRight className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               {/* Bannière Bail Résilié / Logement dissocié */}
               {currentLease?.status === 'resilie' && (
                 <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-600 via-rose-700 to-rose-800 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 border border-rose-400 ring-4 ring-rose-500/20 animate-in slide-in-from-top-4">
@@ -878,7 +1120,14 @@ function TenantPortalContent() {
                           <Receipt className="w-5 h-5" />
                         </div>
                         <div>
-                          <h4 className="text-xs font-black text-slate-900">Dernière Quittance Émise</h4>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h4 className="text-xs font-black text-slate-900">Dernière Quittance Émise</h4>
+                            {receiptsList[0]?.isAdvance && (
+                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                                Loyer d'avance ({receiptsList[0]?.advanceMonthsCount || 1} m)
+                              </span>
+                            )}
+                          </div>
                           <span className="text-[10px] text-slate-400">Réf : {receiptsList[0]?.receiptNumber || 'QUITT-2026-1048'}</span>
                         </div>
                       </div>
@@ -1309,9 +1558,16 @@ function TenantPortalContent() {
                         <Receipt className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
-                          Quittance de Loyer — {rec.period}
-                        </h4>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="text-sm font-black text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                            Quittance de Loyer — {rec.period}
+                          </h4>
+                          {rec.isAdvance && (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-200">
+                              Loyer d'avance ({rec.advanceMonthsCount || 1} mois)
+                            </span>
+                          )}
+                        </div>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400 mt-0.5 font-medium">
                           <span className="font-mono text-slate-600 font-bold">{rec.receiptNumber}</span>
                           <span>•</span>
@@ -1999,6 +2255,88 @@ function TenantPortalContent() {
                 </div>
               </div>
 
+              {/* SECTION 0 : FIL DE TOUTES LES NOTIFICATIONS & COMMUNICATIONS DU BAILLEUR */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="w-4 h-4 text-brand-600" />
+                    <h3 className="text-sm font-black text-slate-900 tracking-tight">
+                      Communications & Actions Émises par le Bailleur ({portalNotifs.length})
+                    </h3>
+                  </div>
+                  {portalNotifs.some((n) => !n.read) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        TenantNotificationService.markAllAsRead();
+                        setPortalNotifs(TenantNotificationService.getNotifications());
+                      }}
+                      className="text-xs font-bold text-brand-600 hover:text-brand-700 cursor-pointer"
+                    >
+                      Tout marquer lu
+                    </button>
+                  )}
+                </div>
+
+                {portalNotifs.length === 0 ? (
+                  <div className="p-8 rounded-3xl bg-white border border-slate-200/80 shadow-soft text-center space-y-2">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                    <h4 className="text-sm font-black text-slate-900">Aucune notification pour le moment</h4>
+                    <p className="text-xs text-slate-500">Toutes les actions du bailleur apparaîtront automatiquement ici en temps réel.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    {portalNotifs.map((n) => {
+                      const isUnread = !n.read;
+                      return (
+                        <div
+                          key={n.id}
+                          className={`p-4 rounded-3xl bg-white border shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                            isUnread ? 'border-amber-400 bg-amber-50/20 ring-2 ring-amber-400/20' : 'border-slate-200/80'
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              {isUnread && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500 text-slate-950">
+                                  Nouveau
+                                </span>
+                              )}
+                              <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                                {n.title}
+                              </h4>
+                              <span className="text-[10px] text-slate-400 font-mono">• {n.time || n.timestamp}</span>
+                            </div>
+                            <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+                              {n.message}
+                            </p>
+                            <span className="text-[10px] text-slate-400 block">Émetteur : {n.actor || 'Bailleur'}</span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              TenantNotificationService.markAsRead(n.id);
+                              setPortalNotifs(TenantNotificationService.getNotifications());
+                              if (n.link.includes('tab=quittances')) handleTabChange('quittances');
+                              else if (n.link.includes('tab=bail')) handleTabChange('bail');
+                              else if (n.link.includes('tab=preavis')) handleTabChange('preavis');
+                              else if (n.link.includes('tab=solvabilite')) handleTabChange('solvabilite');
+                              else if (n.link.includes('action=declare_payment')) setDeclarationModalOpen(true);
+                              else if (n.link.includes('action=incident')) setReportIssueModalOpen(true);
+                            }}
+                            className="py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer self-start sm:self-auto"
+                          >
+                            <span>{n.actionLabel || 'Consulter'}</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
               {/* SECTION 1 : PRÉAVIS DE CONGÉ OFFICIELS */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
@@ -2359,39 +2697,167 @@ function TenantPortalContent() {
                 </div>
               </div>
 
+              {/* Sélecteur de Mode : Mois en cours ou Loyers d'Avance */}
               <div>
-                <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
-                  <span>Période concernée (Mois du loyer) *</span>
-                  <span className="text-[10px] text-brand-600 font-bold bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
-                    {declaredPeriod}
+                <label className="font-bold text-slate-700 block mb-1.5 flex items-center justify-between">
+                  <span>Nature du règlement de loyer *</span>
+                  <span className="text-[10px] text-purple-700 bg-purple-50 font-extrabold px-2 py-0.5 rounded-full border border-purple-200">
+                    {paymentType === 'current' ? '1 mois standard' : `${resolvedMonthsCount} mois au total`}
                   </span>
                 </label>
-                <select
-                  value={declaredPeriod}
-                  onChange={(e) => setDeclaredPeriod(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
-                >
-                  <optgroup label="Exercice 2026 (Année en cours)">
-                    <option value="Novembre 2026">Novembre 2026 (Mois en cours)</option>
-                    <option value="Octobre 2026">Octobre 2026</option>
-                    <option value="Septembre 2026">Septembre 2026</option>
-                    <option value="Août 2026">Août 2026</option>
-                    <option value="Juillet 2026">Juillet 2026</option>
-                    <option value="Juin 2026">Juin 2026</option>
-                    <option value="Mai 2026">Mai 2026</option>
-                    <option value="Avril 2026">Avril 2026</option>
-                    <option value="Mars 2026">Mars 2026</option>
-                    <option value="Février 2026">Février 2026</option>
-                    <option value="Janvier 2026">Janvier 2026</option>
-                    <option value="Décembre 2026">Décembre 2026</option>
-                  </optgroup>
-                  <optgroup label="Exercice 2025 (Arriérés)">
-                    <option value="Décembre 2025">Décembre 2025</option>
-                    <option value="Novembre 2025">Novembre 2025</option>
-                    <option value="Octobre 2025">Octobre 2025</option>
-                  </optgroup>
-                </select>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPaymentType('current')}
+                    className={`p-2.5 rounded-2xl border text-left cursor-pointer transition-all ${
+                      paymentType === 'current'
+                        ? 'border-brand-500 bg-brand-50 text-brand-900 ring-2 ring-brand-500/20 shadow-xs'
+                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    <span className="font-extrabold text-xs block">Mois en cours</span>
+                    <span className="text-[10px] text-slate-500 block">Novembre 2026 (1 mois)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPaymentType('advance')}
+                    className={`p-2.5 rounded-2xl border text-left cursor-pointer transition-all ${
+                      paymentType === 'advance'
+                        ? 'border-purple-500 bg-purple-50 text-purple-900 ring-2 ring-purple-500/20 shadow-xs'
+                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-extrabold text-xs block text-purple-950">Loyers d'avance 🚀</span>
+                      <span className="text-[9px] font-bold text-purple-700 bg-purple-100 px-1.5 py-0.2 rounded">Nouveau</span>
+                    </div>
+                    <span className="text-[10px] text-slate-500 block">Mois futurs à l'avance</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPaymentType('both')}
+                    className={`p-2.5 rounded-2xl border text-left cursor-pointer transition-all ${
+                      paymentType === 'both'
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500/20 shadow-xs'
+                        : 'border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700'
+                    }`}
+                  >
+                    <span className="font-extrabold text-xs block text-emerald-950">En cours + Avance</span>
+                    <span className="text-[10px] text-slate-500 block">Règlement groupé combiné</span>
+                  </button>
+                </div>
               </div>
+
+              {/* Cas 1 : Mois en cours seul */}
+              {paymentType === 'current' && (
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                    <span>Mois d'échéance concerné *</span>
+                    <span className="text-[10px] text-brand-600 font-bold bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
+                      {declaredPeriod}
+                    </span>
+                  </label>
+                  <select
+                    value={declaredPeriod}
+                    onChange={(e) => setDeclaredPeriod(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 cursor-pointer"
+                  >
+                    <optgroup label="Exercice 2026 (Année en cours)">
+                      <option value="Novembre 2026">Novembre 2026 (Mois en cours)</option>
+                      <option value="Octobre 2026">Octobre 2026</option>
+                      <option value="Septembre 2026">Septembre 2026</option>
+                      <option value="Août 2026">Août 2026</option>
+                      <option value="Juillet 2026">Juillet 2026</option>
+                      <option value="Juin 2026">Juin 2026</option>
+                      <option value="Mai 2026">Mai 2026</option>
+                      <option value="Avril 2026">Avril 2026</option>
+                      <option value="Mars 2026">Mars 2026</option>
+                      <option value="Février 2026">Février 2026</option>
+                      <option value="Janvier 2026">Janvier 2026</option>
+                    </optgroup>
+                    <optgroup label="Exercice 2025 (Arriérés éventuels)">
+                      <option value="Décembre 2025">Décembre 2025</option>
+                      <option value="Novembre 2025">Novembre 2025</option>
+                      <option value="Octobre 2025">Octobre 2025</option>
+                    </optgroup>
+                  </select>
+                </div>
+              )}
+
+              {/* Cas 2 & 3 : Sélection des mois d'avance */}
+              {(paymentType === 'advance' || paymentType === 'both') && (
+                <div className="p-3.5 rounded-2xl bg-purple-50/70 border border-purple-200/80 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-black text-xs text-purple-950 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Sélectionnez les mois futurs payés d'avance :</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded-full">
+                      {selectedAdvanceMonths.length} mois d'avance sélectionné{selectedAdvanceMonths.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  {/* Raccourcis rapides */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase mr-1">Raccourcis :</span>
+                    {[
+                      { label: '+1 mois', count: 1 },
+                      { label: '+2 mois', count: 2 },
+                      { label: '+3 mois (Trimestre)', count: 3 },
+                      { label: '+6 mois (Semestre)', count: 6 },
+                      { label: '+12 mois (1 an)', count: 12 },
+                    ].map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        onClick={() => handleApplyAdvancePreset(p.count)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-extrabold cursor-pointer transition-all ${
+                          selectedAdvanceMonths.length === p.count
+                            ? 'bg-purple-600 text-white shadow-xs'
+                            : 'bg-white hover:bg-purple-100 text-purple-900 border border-purple-200'
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Grille de sélection des mois futurs */}
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 max-h-40 overflow-y-auto p-1.5 bg-white/70 rounded-xl border border-purple-100">
+                    {AVAILABLE_FUTURE_MONTHS.map((m) => {
+                      const isSelected = selectedAdvanceMonths.includes(m);
+                      return (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => handleToggleAdvanceMonth(m)}
+                          className={`p-2 rounded-xl text-left font-bold text-[11px] flex items-center justify-between transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-purple-600 text-white shadow-xs'
+                              : 'bg-white text-slate-700 hover:bg-purple-50 border border-slate-200/80'
+                          }`}
+                        >
+                          <span className="truncate">{m}</span>
+                          {isSelected ? <Check className="w-3.5 h-3.5 shrink-0" /> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Synthèse du calcul du loyer */}
+                  <div className="p-2.5 rounded-xl bg-purple-100/70 border border-purple-200 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <span className="text-purple-900 font-medium">
+                      {paymentType === 'both' ? 'Novembre 2026 + ' : ''}
+                      <strong>{selectedAdvanceMonths.length} mois d'avance</strong> :
+                    </span>
+                    <span className="font-mono font-black text-purple-950 text-right">
+                      {formatFCFA(tenant.monthlyRent)} × {resolvedMonthsCount} mois = {formatFCFA(resolvedMonthsCount * tenant.monthlyRent)}
+                    </span>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>

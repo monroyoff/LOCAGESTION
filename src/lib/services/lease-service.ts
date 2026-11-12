@@ -1,5 +1,7 @@
 'use client';
 
+import { TenantNotificationService } from './tenant-notification-service';
+
 export type LeaseStatus =
   | 'actif'
   | 'en_attente_signature'
@@ -416,6 +418,19 @@ export const LeaseService = {
     }
 
     this.saveLease(updated);
+
+    // Alerter instantanément l'espace du locataire
+    TenantNotificationService.notifyLeaseTransmitted({
+      leaseId: updated.id,
+      propertyName: updated.property,
+      unitNumber: updated.unit,
+      rent: updated.rent,
+      tenantName: updated.tenant,
+      tenantEmail: updated.tenantEmail,
+      tenantPhone: updated.tenantPhone,
+      landlordName: updated.landlordSignature?.signedBy || 'Mamadou Diallo',
+    });
+
     return updated;
   },
 
@@ -520,7 +535,7 @@ export const LeaseService = {
     leases[leaseIndex] = updatedLease;
     this.saveAllLeases(leases);
 
-    // Notification de résiliation
+    // Notification de résiliation pour le bailleur
     this.addLandlordNotification({
       id: `notif-${Date.now()}`,
       title: 'Bail résilié',
@@ -533,6 +548,15 @@ export const LeaseService = {
       tenantName: updatedLease.tenant,
       unit: updatedLease.unit,
       property: updatedLease.property,
+    });
+
+    // Alerter le locataire
+    TenantNotificationService.notifyLeaseResiliated({
+      leaseId,
+      unitNumber: updatedLease.unit,
+      tenantName: updatedLease.tenant,
+      tenantEmail: updatedLease.tenantEmail,
+      reason: reason || 'Résiliation à la demande du bailleur',
     });
 
     return updatedLease;
@@ -576,6 +600,14 @@ export const LeaseService = {
       tenantName: updatedLease.tenant,
       unit: updatedLease.unit,
       property: updatedLease.property,
+    });
+
+    // Alerter le locataire
+    TenantNotificationService.notifyLeaseReactivated({
+      leaseId,
+      unitNumber: updatedLease.unit,
+      tenantName: updatedLease.tenant,
+      tenantEmail: updatedLease.tenantEmail,
     });
 
     return updatedLease;

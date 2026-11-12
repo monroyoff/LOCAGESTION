@@ -1,6 +1,7 @@
 'use client';
 
 import { LeaseService } from './lease-service';
+import { TenantNotificationService } from './tenant-notification-service';
 
 export type NoticeReasonType =
   | 'reprise_personnelle'
@@ -253,27 +254,16 @@ export class NoticeService {
     const updated = [newNotice, ...notices];
     this.saveNotices(updated);
 
-    // Synchronisation automatique des notifications dans la cloche
-    if (typeof window !== 'undefined') {
-      try {
-        const storedNotifs = localStorage.getItem('locagestion:tenant_notifications:v1');
-        const notifs = storedNotifs ? JSON.parse(storedNotifs) : [];
-        const tenantNotif = {
-          id: `t-notif-${id}`,
-          title: `Préavis officiel de congé (${id})`,
-          message: `Votre bailleur vous a notifié un préavis pour motif : ${newNotice.reasonTitle}. Date impérative de libération des locaux : ${newNotice.effectiveDate}.`,
-          time: 'À l’instant',
-          timestamp: 'À l’instant',
-          type: 'notice_issued',
-          read: false,
-          link: '/portal?tab=preavis',
-        };
-        localStorage.setItem('locagestion:tenant_notifications:v1', JSON.stringify([tenantNotif, ...notifs]));
-        window.dispatchEvent(new CustomEvent('locagestion:tenant_notifs_updated'));
-      } catch (e) {
-        console.error('Erreur sync notif locataire:', e);
-      }
-    }
+    // Alerter instantanément l'espace locataire
+    TenantNotificationService.notifyNoticeIssued({
+      noticeId: id,
+      reasonTitle: newNotice.reasonTitle,
+      effectiveDate: newNotice.effectiveDate,
+      tenantName: newNotice.tenantName,
+      tenantEmail: newNotice.tenantEmail,
+      propertyName: newNotice.propertyName,
+      unitNumber: newNotice.unitNumber,
+    });
 
     return newNotice;
   }

@@ -115,6 +115,10 @@ export interface PaymentTransaction {
   transactionRef?: string;
   notes?: string;
   isVerified: boolean;
+  tenantEmail?: string;
+  isAdvance?: boolean;
+  advanceMonthsCount?: number;
+  advanceMonthsList?: string[];
 }
 
 export interface DashboardKPIs {

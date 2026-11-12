@@ -3,6 +3,7 @@
 import { PaymentTransaction } from '../types';
 import { MOCK_RECENT_PAYMENTS } from '../data/mock-data';
 import { LeaseService } from './lease-service';
+import { TenantNotificationService } from './tenant-notification-service';
 
 const STORAGE_KEY_DECLARED = 'locagestion:declared_payments';
 const STORAGE_KEY_VERIFIED = 'locagestion:verified_payments';
@@ -169,6 +170,17 @@ export const PaymentService = {
       // Marquer la notification du bailleur comme lue
       LeaseService.markNotificationsAsRead();
 
+      // Alerter instantanément le locataire de la validation et de sa quittance
+      TenantNotificationService.notifyPaymentApproved({
+        receiptNumber: receiptNum,
+        amount: verifiedTx.amount,
+        period: verifiedTx.period,
+        tenantName: verifiedTx.tenantName,
+        tenantEmail: verifiedTx.tenantEmail,
+        isAdvance: verifiedTx.isAdvance,
+        advanceMonthsCount: verifiedTx.advanceMonthsCount,
+      });
+
       return {
         success: true,
         payment: verifiedTx,
@@ -185,6 +197,14 @@ export const PaymentService = {
 
       declared[index] = rejectedTx;
       this.saveDeclaredPayments(declared);
+
+      // Alerter le locataire du problème
+      TenantNotificationService.notifyPaymentRejected({
+        amount: rejectedTx.amount,
+        period: rejectedTx.period,
+        tenantName: rejectedTx.tenantName,
+        reason: options.rejectionReason,
+      });
 
       return {
         success: false,

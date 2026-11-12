@@ -363,6 +363,11 @@ function PaymentsPageContent() {
                               <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200">
                                 En attente de validation
                               </span>
+                              {p.isAdvance && (
+                                <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                                  Loyer d'avance ({p.advanceMonthsCount || 1} mois)
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
                               <Building2 className="w-3.5 h-3.5 text-slate-400" />

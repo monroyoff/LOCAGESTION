@@ -29,6 +29,11 @@ import {
   LeaseService,
   LandlordNotification,
 } from '@/lib/services/lease-service';
+import {
+  TenantNotificationService,
+  TenantNotification,
+  STORAGE_KEY_TENANT_NOTIFS,
+} from '@/lib/services/tenant-notification-service';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -37,72 +42,6 @@ interface HeaderProps {
   activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis';
   onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis') => void;
 }
-
-export interface TenantNotification {
-  id: string;
-  title: string;
-  message: string;
-  time?: string;
-  timestamp?: string;
-  type: 'receipt_issued' | 'lease_available' | 'passport_ready' | 'incident_update' | 'notice_issued' | 'reminder_received';
-  read: boolean;
-  link: string;
-}
-
-const STORAGE_KEY_TENANT_NOTIFS = 'locagestion:tenant_notifications:v1';
-
-const SEED_TENANT_NOTIFS: TenantNotification[] = [
-  {
-    id: 't-notif-notice-1',
-    title: 'Préavis officiel de congé notifié',
-    message: 'Votre bailleur vous a notifié un préavis de congé (Réf: PREAV-2026-001) pour reprise personnelle. Libération fixée au 31/12/2026.',
-    time: 'Nouveau',
-    timestamp: 'À l’instant',
-    type: 'notice_issued',
-    read: false,
-    link: '/portal?tab=preavis',
-  },
-  {
-    id: 't-notif-1',
-    title: 'Quittance officielle certifiée',
-    message: 'Votre loyer de Novembre 2026 (220 000 FCFA) a été validé. La quittance officielle UEMOA & CEMAC avec QR Code est disponible.',
-    time: 'Aujourd’hui',
-    timestamp: 'À l’instant',
-    type: 'receipt_issued',
-    read: false,
-    link: '/portal?tab=quittances',
-  },
-  {
-    id: 't-notif-reminder-1',
-    title: 'Rappel d’échéance mensuelle',
-    message: 'Le Cabinet Diallo Patrimoine vous rappelle l’échéance de loyer de Novembre exigible le 05. Règlement disponible par Wave ou Mobile Money.',
-    time: 'Hier',
-    timestamp: 'Hier',
-    type: 'reminder_received',
-    read: false,
-    link: '/portal?tab=preavis',
-  },
-  {
-    id: 't-notif-2',
-    title: 'Bail d’habitation scellé & actif',
-    message: 'Contrat BAIL-2026 signé par le Cabinet Diallo Patrimoine. Logement : Résidence Les Cocotiers (Appt A3).',
-    time: '30/10/2026',
-    timestamp: '30/10/2026',
-    type: 'lease_available',
-    read: true,
-    link: '/portal?tab=bail',
-  },
-  {
-    id: 't-notif-3',
-    title: 'Passeport Solvabilité certifié',
-    message: 'Votre score est de 96/100 (Excellente réputation certifiée pour vos démarches locatives).',
-    time: '01/11/2026',
-    timestamp: '01/11/2026',
-    type: 'passport_ready',
-    read: true,
-    link: '/portal?tab=solvabilite',
-  },
-];
 
 export function Header({
   onToggleSidebar,
@@ -125,19 +64,14 @@ export function Header({
   // Notifications Bailleur
   const [notifications, setNotifications] = useState<LandlordNotification[]>([]);
   // Notifications Locataire
-  const [tenantNotifs, setTenantNotifs] = useState<TenantNotification[]>(SEED_TENANT_NOTIFS);
+  const [tenantNotifs, setTenantNotifs] = useState<TenantNotification[]>([]);
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
 
   const updateNotifications = () => {
     setNotifications(LeaseService.getLandlordNotifications());
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY_TENANT_NOTIFS);
-        if (stored) setTenantNotifs(JSON.parse(stored));
-      } catch (e) {}
-    }
+    setTenantNotifs(TenantNotificationService.getNotifications());
   };
 
   useEffect(() => {
@@ -177,11 +111,8 @@ export function Header({
       LeaseService.markNotificationsAsRead();
       updateNotifications();
     } else {
-      const updated = tenantNotifs.map((n) => ({ ...n, read: true }));
-      setTenantNotifs(updated);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
-      }
+      TenantNotificationService.markAllAsRead();
+      setTenantNotifs(TenantNotificationService.getNotifications());
     }
   };
 
@@ -534,13 +465,8 @@ export function Header({
                                 type="button"
                                 onClick={() => {
                                   setIsNotifOpen(false);
-                                  const updated = tenantNotifs.map((x) =>
-                                    x.id === n.id ? { ...x, read: true } : x
-                                  );
-                                  setTenantNotifs(updated);
-                                  if (typeof window !== 'undefined') {
-                                    localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
-                                  }
+                                  TenantNotificationService.markAsRead(n.id);
+                                  setTenantNotifs(TenantNotificationService.getNotifications());
                                   if (n.link === '/portal?tab=preavis' && onPortalTabChange) {
                                     onPortalTabChange('preavis');
                                   } else if (n.link === '/portal?tab=quittances' && onPortalTabChange) {

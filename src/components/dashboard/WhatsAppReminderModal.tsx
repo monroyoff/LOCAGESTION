@@ -13,6 +13,7 @@ import {
 import { PaymentTransaction } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 import { notifyAction } from '@/lib/notifications/action-notifier';
+import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
 
 interface WhatsAppReminderModalProps {
   payment: PaymentTransaction | null;
@@ -66,7 +67,15 @@ DIALLO PATRIMOINE SARL`;
   const handleCopy = () => {
     navigator.clipboard.writeText(messageText);
     setCopied(true);
-    notifyAction('Message de relance copié dans le presse-papier !', 'Relance copiée !', 'success');
+    TenantNotificationService.notifyReminderSent({
+      period: payment.period,
+      expectedAmount: payment.expectedAmount,
+      tenantName: payment.tenantName,
+      tenantPhone: payment.tenantPhone,
+      propertyName: payment.propertyName,
+      unitNumber: payment.unitNumber,
+    });
+    notifyAction('Message de relance copié et consigné dans l’espace locataire !', 'Relance copiée !', 'success');
     setTimeout(() => setCopied(false), 2500);
   };
 
@@ -148,7 +157,17 @@ DIALLO PATRIMOINE SARL`;
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            onClick={onClose}
+            onClick={() => {
+              TenantNotificationService.notifyReminderSent({
+                period: payment.period,
+                expectedAmount: payment.expectedAmount,
+                tenantName: payment.tenantName,
+                tenantPhone: payment.tenantPhone,
+                propertyName: payment.propertyName,
+                unitNumber: payment.unitNumber,
+              });
+              onClose();
+            }}
             className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-md shadow-emerald-600/30 flex items-center gap-2 transition-all"
           >
             <Send className="w-4 h-4" />
