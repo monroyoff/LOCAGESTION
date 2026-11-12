@@ -314,7 +314,7 @@ export function Header({
                   )}
                 </div>
 
-                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 p-1">
+                <div className="max-h-[30rem] overflow-y-auto divide-y divide-slate-100 p-1">
                   {isLandlord ? (
                     notifications.length === 0 ? (
                       <div className="p-6 text-center text-slate-400 text-xs">
@@ -450,40 +450,57 @@ export function Header({
                             key={n.id}
                             className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${cardBg}`}
                           >
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 truncate">
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
                                 {n.title}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-medium">{n.time}</span>
+                              <span className="text-[10px] text-slate-400 font-medium shrink-0">{n.time}</span>
                             </div>
 
                             <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
 
-                            <div className="pt-1 flex items-center justify-end">
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsNotifOpen(false);
-                                  TenantNotificationService.markAsRead(n.id);
-                                  setTenantNotifs(TenantNotificationService.getNotifications());
-                                  if (n.link === '/portal?tab=preavis' && onPortalTabChange) {
-                                    onPortalTabChange('preavis');
-                                  } else if (n.link === '/portal?tab=quittances' && onPortalTabChange) {
-                                    onPortalTabChange('quittances');
-                                  } else if (n.link === '/portal?tab=bail' && onPortalTabChange) {
-                                    onPortalTabChange('bail');
-                                  } else if (n.link === '/portal?tab=solvabilite' && onPortalTabChange) {
-                                    onPortalTabChange('solvabilite');
-                                  } else {
-                                    router.push(n.link);
-                                  }
-                                }}
-                                className={`text-xs font-bold flex items-center gap-1 cursor-pointer ${linkColor}`}
-                              >
-                                <span>Consulter</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
+                            <div className="pt-1 flex items-center justify-between text-[11px]">
+                              <span className="text-[10px] text-slate-400 font-semibold italic">
+                                De : {n.actor || 'Bailleur'}
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    TenantNotificationService.deleteNotification(n.id);
+                                    setTenantNotifs(TenantNotificationService.getNotifications());
+                                  }}
+                                  className="p-1 rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                                  title="Supprimer la notification"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsNotifOpen(false);
+                                    TenantNotificationService.markAsRead(n.id);
+                                    setTenantNotifs(TenantNotificationService.getNotifications());
+                                    if (n.link?.includes('tab=preavis') && onPortalTabChange) {
+                                      onPortalTabChange('preavis');
+                                    } else if (n.link?.includes('tab=quittances') && onPortalTabChange) {
+                                      onPortalTabChange('quittances');
+                                    } else if (n.link?.includes('tab=bail') && onPortalTabChange) {
+                                      onPortalTabChange('bail');
+                                    } else if (n.link?.includes('tab=solvabilite') && onPortalTabChange) {
+                                      onPortalTabChange('solvabilite');
+                                    } else if (n.link) {
+                                      router.push(n.link);
+                                    }
+                                  }}
+                                  className={`text-xs font-bold flex items-center gap-1 cursor-pointer ${linkColor}`}
+                                >
+                                  <span>{n.actionLabel || 'Consulter'}</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
