@@ -569,12 +569,6 @@ export default function ListingsPage() {
 
             {/* Bouton Publier une annonce accessible à la fois aux bailleurs et aux locataires */}
             <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-              {isTenant && (
-                <div className="hidden md:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
-                  <Compass className="w-4 h-4 text-emerald-600" />
-                  <span>Espace Résident & Annonces</span>
-                </div>
-              )}
               <button
                 type="button"
                 onClick={() => setPublishModalOpen(true)}
