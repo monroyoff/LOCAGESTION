@@ -248,25 +248,11 @@ export function Sidebar({
       active: pathname.startsWith('/payments'),
     },
     {
-      name: 'Publier une annonce',
-      href: '/listings?action=publish',
-      icon: Plus,
-      active: false,
-    },
-    {
       name: 'Annonces & Visites',
       href: '/listings',
       icon: Compass,
-      active: pathname.startsWith('/listings') && currentListingsView !== 'my_listings',
+      active: pathname.startsWith('/listings'),
       badge: 'Nouveau',
-    },
-    {
-      name: 'Mes publications',
-      href: '/listings?view=my_listings',
-      icon: Layers,
-      active: pathname.startsWith('/listings') && currentListingsView === 'my_listings',
-      badgeCount: myListingsCount > 0 ? myListingsCount : undefined,
-      badgeColor: 'bg-brand-500',
     },
     {
       name: 'Messages',
