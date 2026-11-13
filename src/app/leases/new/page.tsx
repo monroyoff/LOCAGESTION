@@ -46,6 +46,8 @@ import {
   CreditCard,
   PhoneCall,
   MessageCircle,
+  Camera,
+  ClipboardCheck,
 } from 'lucide-react';
 import {
   buildWhatsAppUrl,
@@ -57,6 +59,7 @@ import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
+import { InspectionModal, InspectionData } from '@/components/leases/InspectionModal';
 import {
   REGISTERED_TENANTS,
   LeaseService,
@@ -275,6 +278,48 @@ export default function NewLeasePage() {
   // Modal de prévisualisation du contrat complet
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
+  // État des Lieux & Constat Photos
+  const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
+  const [inspectionData, setInspectionData] = useState<InspectionData>({
+    type: 'entree',
+    date: new Date().toISOString().split('T')[0],
+    meterCashPower: '1 420 kWh (Cash Power individuel)',
+    meterWater: '384 m³ (SODECI / SONEB)',
+    keysDelivered: '3 clés de sûreté + 1 télécommande portail',
+    generalState: 'tres_bon',
+    notes: 'Logement propre et prêt à emménager. Aucun dégât constaté lors de la visite contradictoire.',
+    photos: [
+      {
+        id: 'photo-1',
+        url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80',
+        label: 'Salon & Espace de vie',
+        room: 'Salon / Séjour',
+        timestamp: '13/11/2026 à 10:15',
+      },
+      {
+        id: 'photo-2',
+        url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=80',
+        label: 'Chambre principale & Sol carrelé',
+        room: 'Chambre principale',
+        timestamp: '13/11/2026 à 10:20',
+      },
+      {
+        id: 'photo-3',
+        url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
+        label: 'Cuisine & Plomberie évier',
+        room: 'Cuisine',
+        timestamp: '13/11/2026 à 10:25',
+      },
+      {
+        id: 'photo-4',
+        url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
+        label: 'Salle de bain & Sanitaires neufs',
+        room: 'Salle d’eau / WC',
+        timestamp: '13/11/2026 à 10:30',
+      },
+    ],
+  });
+
   // Calculs financiers dissociés
   const parsedRent = parseInt(monthlyRent, 10) || 0;
   const parsedCharges = parseInt(charges, 10) || 0;
@@ -471,14 +516,28 @@ export default function NewLeasePage() {
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsPreviewModalOpen(true)}
-              className="px-4 py-2 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-black shadow-xs flex items-center gap-2 transition-all self-start sm:self-auto cursor-pointer active:scale-95"
-            >
-              <Eye className="w-4 h-4 text-brand-600" />
-              <span>Visualiser le contrat</span>
-            </button>
+            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              <button
+                type="button"
+                onClick={() => setIsInspectionModalOpen(true)}
+                className="px-4 py-2 rounded-2xl bg-white border border-emerald-200 hover:bg-emerald-50 text-emerald-800 text-xs font-black shadow-xs flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+              >
+                <ClipboardCheck className="w-4 h-4 text-emerald-600" />
+                <span>État des lieux & Photos</span>
+                <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-black">
+                  {inspectionData.photos.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPreviewModalOpen(true)}
+                className="px-4 py-2 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 text-xs font-black shadow-xs flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+              >
+                <Eye className="w-4 h-4 text-brand-600" />
+                <span>Visualiser le contrat</span>
+              </button>
+            </div>
           </div>
 
           {/* Stepper Progress Bar */}
@@ -912,6 +971,37 @@ export default function NewLeasePage() {
                       {propertyMode === 'portfolio' ? 'Patrimoine' : 'Saisie directe'}
                     </span>
                   </div>
+                </div>
+
+                {/* Encadré État des Lieux & Photos d'Entrée */}
+                <div className="p-4 sm:p-5 rounded-3xl bg-emerald-500/5 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-11 h-11 rounded-2xl bg-emerald-500/15 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-500/30 shadow-xs">
+                      <Camera className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                          État des Lieux d'Entrée & Photos
+                        </h4>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          {inspectionData.photos.length} photo{inspectionData.photos.length > 1 ? 's' : ''} horodatée{inspectionData.photos.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Ajoutez les photos des pièces, compteurs et clés pour les annexer contradictoirement au bail.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsInspectionModalOpen(true)}
+                    className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 shrink-0"
+                  >
+                    <ClipboardCheck className="w-4 h-4" />
+                    <span>Ouvrir l'état des lieux & photos</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -2118,6 +2208,32 @@ export default function NewLeasePage() {
                         <li>Litiges soumis à la juridiction compétente : {activeLaw.competentCourt}.</li>
                       </ul>
                     </div>
+
+                    {/* Synthèse État des Lieux & Photos Horodatées Annexées */}
+                    <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 rounded-xl bg-emerald-600 text-white shrink-0 shadow-xs">
+                          <Camera className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <span className="text-xs font-black text-slate-900 block">
+                            Procès-Verbal d'État des Lieux Contradictoire ({inspectionData.photos.length} photos horodatées)
+                          </span>
+                          <span className="text-[11px] text-slate-600 block mt-0.5">
+                            Compteur : {inspectionData.meterCashPower} • {inspectionData.keysDelivered}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setIsInspectionModalOpen(true)}
+                        className="px-3.5 py-2 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-xs self-start sm:self-auto shrink-0"
+                      >
+                        <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Voir / Modifier les photos</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -2617,6 +2733,18 @@ export default function NewLeasePage() {
           </div>
         </div>
       )}
+
+      {/* Modal d'État des Lieux d'Entrée & Photos */}
+      <InspectionModal
+        isOpen={isInspectionModalOpen}
+        onClose={() => setIsInspectionModalOpen(false)}
+        leaseId={preparedLease?.id || 'BAIL-2026-N09'}
+        propertyName={resolvedPropertyName}
+        unitNumber={resolvedUnitName}
+        tenantName={tenantName}
+        inspectionData={inspectionData}
+        onSave={(updated) => setInspectionData(updated)}
+      />
     </div>
   );
 }
