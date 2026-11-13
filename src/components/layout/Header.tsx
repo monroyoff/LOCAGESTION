@@ -500,22 +500,6 @@ export function Header({
           </div>
 
           {/* ============================================================== */}
-          {/* ACTIONS STRICTEMENT RÉSERVÉES AU DÉMARCHEUR                    */}
-          {/* ============================================================== */}
-          {isDemarcheur && (
-            <button
-              type="button"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('locagestion:open_publish_listing'));
-              }}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>Publier une annonce</span>
-            </button>
-          )}
-
-          {/* ============================================================== */}
           {/* ACTIONS STRICTEMENT RÉSERVÉES AU BAILLEUR                      */}
           {/* ============================================================== */}
           {isLandlord && (
