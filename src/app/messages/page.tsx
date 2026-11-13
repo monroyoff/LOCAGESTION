@@ -242,7 +242,8 @@ const MOCK_CONVERSATIONS: Conversation[] = [
 export default function MessagesPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { activeSpace, switchSpace, isLandlord, isTenant } = useSpace();
+  const { activeSpace, switchSpace, isLandlord, isTenant, landlordSubRole } = useSpace();
+  const isDemarcheur = isLandlord && landlordSubRole === 'demarcheur';
   const [activeTab, setActiveTab] = useState<'general' | 'archive'>('general');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedConv, setSelectedConv] = useState<Conversation>(MOCK_CONVERSATIONS[0]);
@@ -364,11 +365,11 @@ export default function MessagesPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => router.push(isLandlord ? '/' : '/portal')}
+              onClick={() => router.push(isDemarcheur ? '/listings' : isLandlord ? '/' : '/portal')}
               className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
             >
               <Home className="w-4 h-4 text-slate-600" />
-              <span>← Retour {isLandlord ? 'au Tableau de bord' : 'à l’Accueil'}</span>
+              <span>← Retour {isDemarcheur ? 'aux Annonces & Visites' : isLandlord ? 'au Tableau de bord' : 'à l’Accueil'}</span>
             </button>
           </div>
 

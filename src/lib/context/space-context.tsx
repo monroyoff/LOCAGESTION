@@ -93,6 +93,10 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       pathname === '/' ||
       LANDLORD_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
     ) {
+      if (landlordSubRole === 'demarcheur') {
+        router.replace('/listings');
+        return;
+      }
       if (!current || current.role !== 'bailleur') {
         const landlordUser = AuthService.quickLogin('bailleur');
         setUser(landlordUser);
@@ -161,6 +165,8 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     setUser(targetUser);
     if (role === 'locataire') {
       router.push('/portal');
+    } else if (landlordSubRole === 'demarcheur') {
+      router.push('/listings');
     } else {
       router.push('/');
     }
@@ -172,6 +178,8 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     setUser(targetUser);
     if (targetSpace === 'locataire') {
       router.push('/portal');
+    } else if (landlordSubRole === 'demarcheur') {
+      router.push('/listings');
     } else {
       router.push('/');
     }

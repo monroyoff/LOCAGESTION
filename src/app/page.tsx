@@ -28,7 +28,14 @@ import { Footer } from '@/components/layout/Footer';
 export default function DashboardPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { activeSpace, switchSpace, isLandlord, isTenant } = useSpace();
+  const { activeSpace, switchSpace, isLandlord, isTenant, landlordSubRole } = useSpace();
+  const isDemarcheur = isLandlord && landlordSubRole === 'demarcheur';
+
+  useEffect(() => {
+    if (isDemarcheur) {
+      router.replace('/listings');
+    }
+  }, [isDemarcheur, router]);
 
   // Modals state
   const [selectedPayment, setSelectedPayment] = useState<PaymentTransaction | null>(null);
@@ -91,6 +98,10 @@ export default function DashboardPage() {
       setToastMessage(null);
     }, 4000);
   };
+
+  if (isDemarcheur) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-900 flex">

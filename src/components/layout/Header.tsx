@@ -58,6 +58,7 @@ export function Header({
     setTodayFormatted(formatDateFR(new Date()));
   }, []);
   const { isLandlord, isTenant, activeSpace, landlordSubRole } = useSpace();
+  const isDemarcheur = isLandlord && landlordSubRole === 'demarcheur';
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
@@ -102,7 +103,9 @@ export function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isNotifOpen]);
 
-  const unreadCount = isLandlord
+  const unreadCount = isDemarcheur
+    ? 0
+    : isLandlord
     ? notifications.filter((n) => !n.read).length
     : tenantNotifs.filter((n) => !n.read).length;
 
@@ -142,14 +145,18 @@ export function Header({
   }, [pathname]);
 
   // Détection d'écran d'accueil ou sous-page
-  const isHomeDashboard = isLandlord
+  const isHomeDashboard = isDemarcheur
+    ? pathname === '/listings'
+    : isLandlord
     ? pathname === '/'
     : pathname === '/portal' && (!activePortalTab || activePortalTab === 'accueil');
 
   const showBackButton = !isHomeDashboard;
 
   const handleBack = () => {
-    if (isTenant) {
+    if (isDemarcheur) {
+      router.push('/listings');
+    } else if (isTenant) {
       if (activePortalTab && activePortalTab !== 'accueil' && onPortalTabChange) {
         onPortalTabChange('accueil');
         return;
@@ -177,7 +184,7 @@ export function Header({
     if (pathname === '/listings') return 'Annonces & Visites';
     if (pathname === '/reminders') return 'Relances & Préavis';
     if (pathname === '/messages') return 'Messagerie Directe';
-    return 'Tableau de bord';
+    return isDemarcheur ? 'Annonces & Visites' : 'Tableau de bord';
   };
 
   return (
@@ -214,13 +221,25 @@ export function Header({
               </h1>
               <span
                 className={`hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${
-                  isLandlord
+                  isDemarcheur
+                    ? 'bg-amber-50 text-amber-700 border-amber-200'
+                    : isLandlord
                     ? 'bg-brand-50 text-brand-600 border-brand-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 }`}
               >
-                {isLandlord ? <Sparkles className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
-                {isLandlord ? 'Espace Bailleur/Démarcheur • UEMOA & CEMAC' : 'Locataire Titulaire'}
+                {isDemarcheur ? (
+                  <Sparkles className="w-3 h-3 text-amber-600" />
+                ) : isLandlord ? (
+                  <Sparkles className="w-3 h-3 text-brand-600" />
+                ) : (
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                )}
+                {isDemarcheur
+                  ? 'Espace Démarcheur • UEMOA & CEMAC'
+                  : isLandlord
+                  ? 'Espace Bailleur • UEMOA & CEMAC'
+                  : 'Locataire Titulaire'}
               </span>
             </div>
 
@@ -315,7 +334,13 @@ export function Header({
                 </div>
 
                 <div className="max-h-[30rem] overflow-y-auto divide-y divide-slate-100 p-1">
-                  {isLandlord ? (
+                  {isDemarcheur ? (
+                    <div className="p-6 text-center text-slate-400 text-xs">
+                      <CheckCircle2 className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-50" />
+                      <span className="font-bold text-slate-800 block mb-1">Espace Annonces & Visites</span>
+                      <span>Aucune notification pour le moment</span>
+                    </div>
+                  ) : isLandlord ? (
                     notifications.length === 0 ? (
                       <div className="p-6 text-center text-slate-400 text-xs">
                         <CheckCircle2 className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-50" />
