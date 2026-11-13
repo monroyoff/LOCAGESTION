@@ -271,11 +271,45 @@ function TenantPortalContent() {
 
   // Tenant state
   const [pendingLease, setPendingLease] = useState<Lease | null>(null);
+  const [signingLease, setSigningLease] = useState<Lease | null>(null);
   const [currentLease, setCurrentLease] = useState<Lease | null>(null);
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
 
+  const [dismissedLeaseIds, setDismissedLeaseIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('locagestion:dismissed_pending_leases');
+        if (stored) return JSON.parse(stored);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return [];
+  });
+
+  const handleDismissPendingBanner = (leaseId: string) => {
+    setDismissedLeaseIds((prev) => {
+      const updated = Array.from(new Set([...prev, leaseId]));
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('locagestion:dismissed_pending_leases', JSON.stringify(updated));
+        } catch (e) {}
+      }
+      return updated;
+    });
+    setPendingLease(null);
+  };
+
   const checkLeases = () => {
     const allLeases = LeaseService.getLeases();
+
+    let dismissed: string[] = [];
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('locagestion:dismissed_pending_leases');
+        if (stored) dismissed = JSON.parse(stored);
+      } catch (e) {}
+    }
 
     // Recherche dynamique par paramètre d'URL (leaseId, tenant, code)
     let queryLeaseId: string | null = null;
@@ -290,21 +324,27 @@ function TenantPortalContent() {
 
     let pl: Lease | undefined = undefined;
     if (queryLeaseId) {
-      pl = allLeases.find((l) => l.id === queryLeaseId && l.status === 'en_attente_signature');
+      pl = allLeases.find((l) => l.id === queryLeaseId && l.status === 'en_attente_signature' && !l.signedByTenant && !dismissed.includes(l.id));
     }
     if (!pl && queryCode) {
-      pl = allLeases.find((l) => l.invitationCode === queryCode && l.status === 'en_attente_signature');
+      pl = allLeases.find((l) => l.invitationCode === queryCode && l.status === 'en_attente_signature' && !l.signedByTenant && !dismissed.includes(l.id));
     }
     if (!pl && queryTenant) {
-      pl = LeaseService.getPendingLeaseForTenant(queryTenant);
+      const tenantMatch = LeaseService.getPendingLeaseForTenant(queryTenant);
+      if (tenantMatch && !tenantMatch.signedByTenant && !dismissed.includes(tenantMatch.id)) {
+        pl = tenantMatch;
+      }
     }
-    // Si aucun paramètre explicite, chercher le bail en attente le plus récent
+    // Si aucun paramètre explicite, chercher le bail en attente le plus récent non encore signé/rejeté
     if (!pl) {
-      pl = allLeases.find((l) => l.status === 'en_attente_signature');
+      pl = allLeases.find((l) => l.status === 'en_attente_signature' && !l.signedByTenant && !dismissed.includes(l.id));
     }
-    // Dernier recours : Koffi Mensah
+    // Dernier recours : Koffi Mensah (uniquement si non signé et non masqué)
     if (!pl) {
-      pl = LeaseService.getPendingLeaseForTenant('Koffi Mensah');
+      const koffiMatch = LeaseService.getPendingLeaseForTenant('Koffi Mensah');
+      if (koffiMatch && !koffiMatch.signedByTenant && !dismissed.includes(koffiMatch.id)) {
+        pl = koffiMatch;
+      }
     }
 
     setPendingLease(pl || null);
@@ -896,9 +936,19 @@ function TenantPortalContent() {
               )}
 
               {/* Bannière Bail en Attente de Signature Électronique */}
-              {pendingLease && (
-                <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 border border-amber-300 ring-4 ring-amber-500/20 animate-in slide-in-from-top-4">
-                  <div className="flex items-start gap-4">
+              {pendingLease && !dismissedLeaseIds.includes(pendingLease.id) && pendingLease.status === 'en_attente_signature' && !pendingLease.signedByTenant && (
+                <div className="relative p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 border border-amber-300 ring-4 ring-amber-500/20 animate-in slide-in-from-top-4">
+                  {/* Bouton de fermeture / masquage de la bannière */}
+                  <button
+                    type="button"
+                    onClick={() => handleDismissPendingBanner(pendingLease.id)}
+                    className="absolute top-3 right-3 p-1.5 rounded-full bg-black/20 hover:bg-black/40 text-white transition-colors cursor-pointer"
+                    title="Masquer cette notification"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+
+                  <div className="flex items-start gap-4 pr-6 sm:pr-0">
                     <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
                       <PenTool className="w-6 h-6 animate-bounce" />
                     </div>
@@ -922,7 +972,10 @@ function TenantPortalContent() {
 
                   <button
                     type="button"
-                    onClick={() => setIsSignModalOpen(true)}
+                    onClick={() => {
+                      setSigningLease(pendingLease);
+                      setIsSignModalOpen(true);
+                    }}
                     className="py-3 px-6 rounded-2xl bg-white hover:bg-amber-50 text-amber-950 font-black text-xs sm:text-sm shadow-lg flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer active:scale-95 w-full sm:w-auto"
                   >
                     <PenTool className="w-4 h-4 text-amber-600" />
@@ -1532,9 +1585,18 @@ function TenantPortalContent() {
               {(bailSubTab === 'tout' || bailSubTab === 'bail_etat') && (
                 <div className="space-y-6">
                   {/* Contrat en Attente de Signature si présent */}
-                  {pendingLease && (
-                    <div className="bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-3xl p-6 sm:p-7 border-2 border-amber-300 shadow-md space-y-4 ring-2 ring-amber-400/30">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-amber-200">
+                  {pendingLease && !dismissedLeaseIds.includes(pendingLease.id) && pendingLease.status === 'en_attente_signature' && !pendingLease.signedByTenant && (
+                    <div className="relative bg-gradient-to-br from-amber-50 to-amber-100/60 rounded-3xl p-6 sm:p-7 border-2 border-amber-300 shadow-md space-y-4 ring-2 ring-amber-400/30">
+                      <button
+                        type="button"
+                        onClick={() => handleDismissPendingBanner(pendingLease.id)}
+                        className="absolute top-4 right-4 p-1.5 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 transition-colors cursor-pointer"
+                        title="Masquer cette notification"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-amber-200 pr-8 sm:pr-0">
                         <div className="flex items-center gap-3">
                           <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-md">
                             <PenTool className="w-5 h-5" />
@@ -1556,7 +1618,10 @@ function TenantPortalContent() {
 
                         <button
                           type="button"
-                          onClick={() => setIsSignModalOpen(true)}
+                          onClick={() => {
+                            setSigningLease(pendingLease);
+                            setIsSignModalOpen(true);
+                          }}
                           className="w-full sm:w-auto py-2.5 px-5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer shrink-0"
                         >
                           <PenTool className="w-4 h-4" />
@@ -3117,16 +3182,32 @@ function TenantPortalContent() {
       )}
 
       {/* Modal de Contresignature Électronique du Bail */}
-      {pendingLease && (
+      {(signingLease || pendingLease) && (
         <TenantSignLeaseModal
-          lease={pendingLease}
+          lease={signingLease || pendingLease!}
           tenantName={tenant.name}
           isOpen={isSignModalOpen}
-          onClose={() => setIsSignModalOpen(false)}
+          onClose={() => {
+            setIsSignModalOpen(false);
+            setSigningLease(null);
+            checkLeases();
+          }}
           onSignedSuccess={(updatedLease) => {
             const signMsg = `Bail ${updatedLease.id} contresigné avec succès ! Notification et email transmis au bailleur.`;
             showToast(signMsg);
             notifySave(signMsg, 'Bail contresigné avec succès !');
+            handleDismissPendingBanner(updatedLease.id);
+            setPendingLease(null);
+            setCurrentLease(updatedLease);
+            if (typeof window !== 'undefined') {
+              try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('leaseId');
+                url.searchParams.delete('code');
+                url.searchParams.delete('tenant');
+                window.history.replaceState({}, '', url.toString());
+              } catch (e) {}
+            }
             checkLeases();
           }}
         />
