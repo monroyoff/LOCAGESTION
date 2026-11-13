@@ -503,10 +503,10 @@ export default function ListingsPage() {
               <button
                 type="button"
                 onClick={() => setPublishModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer whitespace-nowrap shrink-0"
               >
-                <Plus className="w-4 h-4" />
-                <span>Publier une annonce</span>
+                <Plus className="w-4 h-4 shrink-0" />
+                <span className="whitespace-nowrap">Publier une annonce</span>
               </button>
             </div>
           </div>

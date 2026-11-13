@@ -210,7 +210,6 @@ export function Sidebar({
       href: '/listings?action=publish',
       icon: Plus,
       active: false,
-      badge: '+ Nouveau',
     },
     {
       name: 'Relances & Préavis',
@@ -296,7 +295,6 @@ export function Sidebar({
       href: '/listings?action=publish',
       icon: Plus,
       active: false,
-      badge: '+ Nouveau',
     },
     {
       name: 'Relances & Préavis',
@@ -436,7 +434,7 @@ export function Sidebar({
                 }}
                 className={`${
                   item.mobileOnly ? 'lg:hidden ' : ''
-                }flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-semibold transition-all group ${
+                }flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all group min-w-0 ${
                   isPublishBtn
                     ? 'bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/30 shadow-xs'
                     : item.active
@@ -446,9 +444,9 @@ export function Sidebar({
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div
-                    className={`p-1.5 rounded-xl transition-colors ${
+                    className={`p-1.5 rounded-xl transition-colors shrink-0 ${
                       isPublishBtn
                         ? 'text-white bg-brand-500 shadow-sm'
                         : item.active
@@ -458,16 +456,16 @@ export function Sidebar({
                         : 'text-slate-400 group-hover:text-white'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <Icon className="w-4 h-4 shrink-0" />
                   </div>
-                  <span>{item.name}</span>
+                  <span className="truncate whitespace-nowrap text-xs">{item.name}</span>
                 </div>
 
                 {/* Badges */}
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   {item.count && (
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
                         isTenant
                           ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/25'
                           : 'text-slate-400 bg-white/5'
@@ -478,7 +476,7 @@ export function Sidebar({
                   )}
                   {item.badge && (
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
                         isPublishBtn
                           ? 'text-white bg-brand-500 font-extrabold shadow-sm'
                           : isTenant
@@ -493,7 +491,7 @@ export function Sidebar({
                     <span
                       className={`w-5 h-5 rounded-full ${
                         item.badgeColor || (isTenant ? 'bg-emerald-500' : 'bg-brand-500')
-                      } text-white font-black text-[10px] flex items-center justify-center shadow-md`}
+                      } text-white font-black text-[10px] flex items-center justify-center shadow-md whitespace-nowrap shrink-0`}
                     >
                       {item.badgeCount}
                     </span>
