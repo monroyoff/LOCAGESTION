@@ -14,9 +14,13 @@ const STORAGE_KEY_USERS = 'locagestion:auth:users:v1';
 export const DEMO_LANDLORD: AuthUser = {
   id: 'usr-bailleur-01',
   name: 'Mamadou Diallo',
+  firstName: 'Mamadou',
+  lastName: 'Diallo',
   email: 'contact@diallo-patrimoine.bj',
   phone: '+229 01 95 44 44 30',
   role: 'bailleur',
+  birthDate: '14/05/1978',
+  birthPlace: 'Cotonou',
   residenceCountry: 'Bénin',
   residenceCity: 'Cotonou',
   residenceDistrict: 'Haie Vive',
@@ -31,9 +35,13 @@ export const DEMO_LANDLORD: AuthUser = {
 export const DEMO_TENANT: AuthUser = {
   id: 'usr-locataire-01',
   name: 'Koffi Mensah',
+  firstName: 'Koffi',
+  lastName: 'Mensah',
   email: 'koffi.mensah@fintech-africa.com',
   phone: '+229 97 12 34 56',
   role: 'locataire',
+  birthDate: '22/09/1992',
+  birthPlace: 'Porto-Novo',
   residenceCountry: 'Bénin',
   residenceCity: 'Cotonou',
   residenceDistrict: 'Haie Vive',
@@ -46,9 +54,13 @@ export const DEMO_TENANT: AuthUser = {
 export const DEMO_DEMARCHEUR: AuthUser = {
   id: 'usr-demarcheur-01',
   name: 'Ibrahim Traoré',
+  firstName: 'Ibrahim',
+  lastName: 'Traoré',
   email: 'ibrahim.demarcheur@locagestion.africa',
   phone: '+229 96 00 11 22',
   role: 'demarcheur',
+  birthDate: '08/11/1985',
+  birthPlace: 'Parakou',
   residenceCountry: 'Bénin',
   residenceCity: 'Cotonou',
   residenceDistrict: 'Akpakpa',
@@ -137,9 +149,13 @@ export const AuthService = {
       saveUserProfile({
         id: user.id,
         name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         phone: user.phone,
         role: user.role,
+        birthDate: user.birthDate,
+        birthPlace: user.birthPlace,
         residenceCountry: user.residenceCountry,
         residenceCity: user.residenceCity,
         residenceDistrict: user.residenceDistrict,
@@ -166,13 +182,24 @@ export const AuthService = {
     password?: string
   ): { success: boolean; user?: AuthUser; error?: string } {
     const cleanIdentifier = emailOrPhone.trim().toLowerCase();
+    const digitsOnly = emailOrPhone.replace(/[^0-9]/g, '');
     const users = this.getRegisteredUsers();
 
-    const found = users.find(
-      (u) =>
-        u.email.toLowerCase() === cleanIdentifier ||
-        u.phone.replace(/[^0-9]/g, '') === cleanIdentifier.replace(/[^0-9]/g, '')
-    );
+    const found = users.find((u) => {
+      // 1. Correspondance par Email
+      if (u.email && u.email.toLowerCase() === cleanIdentifier) {
+        return true;
+      }
+      // 2. Correspondance par Numéro de téléphone (avec ou sans indicatif pays, espaces ou tirets)
+      if (digitsOnly.length >= 8 && u.phone) {
+        const userPhoneDigits = u.phone.replace(/[^0-9]/g, '');
+        if (userPhoneDigits === digitsOnly) return true;
+        if (userPhoneDigits.endsWith(digitsOnly) || digitsOnly.endsWith(userPhoneDigits)) {
+          return true;
+        }
+      }
+      return false;
+    });
 
     if (!found) {
       return {
@@ -197,10 +224,14 @@ export const AuthService = {
   },
 
   register(data: {
-    name: string;
+    role: UserSpace;
+    firstName: string;
+    lastName: string;
+    name?: string;
     email: string;
     phone: string;
-    role: UserSpace;
+    birthDate: string;
+    birthPlace: string;
     residenceCountry: string;
     residenceCity: string;
     residenceDistrict?: string;
@@ -210,8 +241,39 @@ export const AuthService = {
     avatarUrl?: string;
   }): { success: boolean; user?: AuthUser; error?: string } {
     const cleanEmail = data.email.trim().toLowerCase();
+    const cleanPhone = data.phone.trim();
+    const cleanPhoneDigits = cleanPhone.replace(/[^0-9]/g, '');
     const users = this.getRegisteredUsers();
 
+    if (!cleanEmail) {
+      return {
+        success: false,
+        error: 'Une adresse email valide est obligatoire.',
+      };
+    }
+
+    if (!cleanPhone || cleanPhoneDigits.length < 8) {
+      return {
+        success: false,
+        error: 'Un numéro de téléphone valide est obligatoire.',
+      };
+    }
+
+    if (!data.birthDate) {
+      return {
+        success: false,
+        error: 'La date de naissance est obligatoire.',
+      };
+    }
+
+    if (!data.birthPlace || !data.birthPlace.trim()) {
+      return {
+        success: false,
+        error: 'Le lieu de naissance est obligatoire.',
+      };
+    }
+
+    // Vérification de l'unicité de l'email
     if (users.some((u) => u.email.toLowerCase() === cleanEmail)) {
       return {
         success: false,
@@ -219,9 +281,24 @@ export const AuthService = {
       };
     }
 
+    // Vérification de l'unicité du numéro de téléphone
+    if (
+      users.some((u) => {
+        const uDigits = u.phone.replace(/[^0-9]/g, '');
+        return uDigits.length >= 8 && (uDigits === cleanPhoneDigits || uDigits.endsWith(cleanPhoneDigits) || cleanPhoneDigits.endsWith(uDigits));
+      })
+    ) {
+      return {
+        success: false,
+        error: 'Ce numéro de téléphone est déjà associé à un compte existant.',
+      };
+    }
+
     const defaultAvatar =
       data.role === 'bailleur'
         ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
+        : data.role === 'demarcheur'
+        ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80'
         : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80';
 
     const nowFormatted = new Date().toLocaleDateString('fr-FR', {
@@ -230,12 +307,18 @@ export const AuthService = {
       year: 'numeric',
     });
 
+    const fullName = data.name?.trim() || `${data.firstName.trim()} ${data.lastName.trim()}`;
+
     const newUser: AuthUser = {
       id: `usr-${data.role}-${Date.now().toString(36)}`,
-      name: data.name.trim(),
+      name: fullName,
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
       email: cleanEmail,
-      phone: data.phone.trim(),
+      phone: cleanPhone,
       role: data.role,
+      birthDate: data.birthDate.trim(),
+      birthPlace: data.birthPlace.trim(),
       residenceCountry: data.residenceCountry || 'Bénin',
       residenceCity: data.residenceCity || 'Cotonou',
       residenceDistrict: data.residenceDistrict?.trim() || 'Haie Vive',

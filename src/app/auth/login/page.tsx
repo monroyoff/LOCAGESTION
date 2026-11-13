@@ -214,20 +214,30 @@ export default function LoginPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                Adresse Email ou Téléphone
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-slate-300 block">
+                  Identifiant de connexion
+                </label>
+                <span className="text-[10px] font-bold text-brand-400 bg-brand-500/10 px-2 py-0.5 rounded-full border border-brand-500/20">
+                  Email ou Numéro de téléphone
+                </span>
+              </div>
               <div className="relative">
                 <input
                   type="text"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="ex: contact@diallo-patrimoine.bj ou +229..."
+                  placeholder="ex: contact@diallo-patrimoine.bj ou +229 01 95 44 44 30"
                   className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                   required
                 />
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                <div className="absolute left-3.5 top-3.5 flex items-center gap-1 text-slate-400">
+                  <Mail className="w-4 h-4" />
+                </div>
               </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">
+                Connectez-vous indifféremment avec votre email ou votre numéro de téléphone certifié.
+              </span>
             </div>
 
             <div>

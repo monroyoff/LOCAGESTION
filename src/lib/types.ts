@@ -227,9 +227,13 @@ export interface RentalListing {
 export interface UserProfile {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone: string;
   role: UserSpace;
+  birthDate?: string;       // Date de naissance
+  birthPlace?: string;      // Lieu de naissance
   residenceCountry: string; // Pays de résidence renseigné lors de l'inscription (ex: 'Bénin')
   residenceCity: string;    // Ville de résidence (ex: 'Cotonou')
   residenceDistrict?: string; // Quartier / Lieu actuel (ex: 'Haie Vive', 'Agla', etc.)
@@ -248,10 +252,14 @@ export interface UserProfile {
 export interface AuthUser {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phone: string;
   role: UserSpace; // 'bailleur' | 'locataire' | 'demarcheur'
-  residenceCountry: string; // Pays de résidence (ex: 'Bénin')
+  birthDate?: string; // Date de naissance (ex: '15/06/1988')
+  birthPlace?: string; // Lieu de naissance (ex: 'Cotonou')
+  residenceCountry: string; // Pays de résidence proposé par géolocalisation (ex: 'Bénin')
   residenceCity: string;    // Ville (ex: 'Cotonou')
   residenceDistrict?: string; // Quartier (ex: 'Haie Vive')
   avatarUrl?: string;
