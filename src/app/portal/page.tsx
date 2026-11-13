@@ -67,6 +67,8 @@ import { NoticeService, Notice } from '@/lib/services/notice-service';
 import { TenantNotificationService, TenantNotification } from '@/lib/services/tenant-notification-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
 import { TenantDepartureModal } from '@/components/portal/TenantDepartureModal';
+import { InspectionModal } from '@/components/leases/InspectionModal';
+import { InspectionService, InspectionData, InspectionPhoto } from '@/lib/services/inspection-service';
 import { IncidentService, ReportedIncident } from '@/lib/services/incident-service';
 import { MONTHS_OF_YEAR, PaymentService } from '@/lib/services/payment-service';
 import { notifyAction, notifySave } from '@/lib/notifications/action-notifier';
@@ -275,6 +277,13 @@ function TenantPortalContent() {
   const [currentLease, setCurrentLease] = useState<Lease | null>(null);
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
 
+  // État des lieux & Photos (Lecture seule depuis l'espace bailleur)
+  const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
+  const [selectedInspectionPhoto, setSelectedInspectionPhoto] = useState<InspectionPhoto | null>(null);
+  const [inspectionData, setInspectionData] = useState<InspectionData>(() =>
+    InspectionService.getInspectionByLeaseId('BAIL-2025-089')
+  );
+
   const [dismissedLeaseIds, setDismissedLeaseIds] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       try {
@@ -369,6 +378,22 @@ function TenantPortalContent() {
       window.removeEventListener('storage', handleUpdate);
     };
   }, []);
+
+  useEffect(() => {
+    const leaseId = currentLease?.id || pendingLease?.id || 'BAIL-2025-089';
+    setInspectionData(InspectionService.getInspectionByLeaseId(leaseId));
+  }, [currentLease, pendingLease]);
+
+  useEffect(() => {
+    const handleInspectionUpdate = () => {
+      const leaseId = currentLease?.id || pendingLease?.id || 'BAIL-2025-089';
+      setInspectionData(InspectionService.getInspectionByLeaseId(leaseId));
+    };
+    window.addEventListener('locagestion:inspections_updated', handleInspectionUpdate);
+    return () => {
+      window.removeEventListener('locagestion:inspections_updated', handleInspectionUpdate);
+    };
+  }, [currentLease, pendingLease]);
 
   const [consentGranted, setConsentGranted] = useState(true);
 
@@ -1038,6 +1063,15 @@ function TenantPortalContent() {
                       <Wrench className="w-4 h-4 text-brand-300" />
                       <span>Signaler une panne</span>
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsInspectionModalOpen(true)}
+                      className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-300 hover:text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      title="Accéder aux documents et photos de l'état des lieux"
+                    >
+                      <Camera className="w-4 h-4 text-emerald-400" />
+                      <span>État des lieux & photos ({inspectionData.photos.length})</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1181,6 +1215,188 @@ function TenantPortalContent() {
                     <span className="text-[10px] uppercase font-bold text-slate-400 block">Échéance Mensuelle</span>
                     <span className="text-base font-black text-emerald-700 mt-0.5 block">5 du mois</span>
                     <span className="text-[10px] text-slate-500">Au plus tard</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* ==================================================================== */}
+              {/* SECTION : ÉTAT DES LIEUX & CONSTAT PHOTOS DU LOGEMENT (Lecture Seule) */}
+              {/* ==================================================================== */}
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5 animate-in fade-in duration-200">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                  <div className="flex items-start sm:items-center gap-3 min-w-0">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 shadow-xs">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-black text-base sm:text-lg text-slate-900 leading-tight">
+                          État des Lieux & Constat Photos
+                        </h3>
+                        <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Certifié Contradictoire</span>
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shrink-0">
+                          <Lock className="w-3 h-3 text-amber-600" />
+                          <span>Consultation Locataire (Non modifiable)</span>
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Dossier contradictoire et documents établis par votre bailleur (<strong>{tenant.landlord.name}</strong>) pour le logement <strong>{tenant.unit}</strong> ({tenant.property}).
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions Buttons */}
+                  <div className="flex flex-wrap items-center gap-2.5 shrink-0 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => setIsInspectionModalOpen(true)}
+                      className="w-full sm:w-auto py-2.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Consulter l'état des lieux & photos ({inspectionData.photos.length})</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        generateInspectionPDF({
+                          id: currentLease?.id || tenant.leaseRef,
+                          tenantName: tenant.name,
+                          propertyName: tenant.property,
+                          unit: tenant.unit,
+                          date: inspectionData.date,
+                          meterCashPower: inspectionData.meterCashPower,
+                          meterWater: inspectionData.meterWater,
+                          keysDelivered: inspectionData.keysDelivered,
+                          generalState:
+                            inspectionData.generalState === 'neuf'
+                              ? 'Neuf / Rénovation complète'
+                              : inspectionData.generalState === 'tres_bon'
+                              ? 'Très bon état d’usage'
+                              : inspectionData.generalState === 'bon'
+                              ? 'Bon état général'
+                              : 'À rafraîchir',
+                        });
+                        showToast(`Procès-verbal officiel d'état des lieux téléchargé en PDF !`);
+                      }}
+                      className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                      title="Télécharger le PV officiel"
+                    >
+                      <Download className="w-4 h-4 text-emerald-600" />
+                      <span>Télécharger PV (PDF)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Récapitulatif technique : Compteurs, Clés & État */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0">
+                      <Zap className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Compteur Électricité</span>
+                      <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{inspectionData.meterCashPower}</span>
+                      <span className="text-[10px] text-slate-500 block">Relevé contradictoire</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-blue-100 text-blue-700 shrink-0">
+                      <Droplet className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Compteur d'Eau</span>
+                      <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{inspectionData.meterWater}</span>
+                      <span className="text-[10px] text-slate-500 block">Index initial</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
+                      <Key className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Clés & Accès</span>
+                      <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{inspectionData.keysDelivered}</span>
+                      <span className="text-[10px] text-slate-500 block">Inventaire remis</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-purple-100 text-purple-700 shrink-0">
+                      <CheckCircle2 className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">État Général</span>
+                      <span className="text-xs font-black text-slate-900 block mt-0.5 capitalize">
+                        {inspectionData.generalState === 'neuf'
+                          ? 'Neuf / Rénové'
+                          : inspectionData.generalState === 'tres_bon'
+                          ? 'Très bon état'
+                          : inspectionData.generalState === 'bon'
+                          ? 'Bon état général'
+                          : 'À rafraîchir'}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 font-bold block">Conforme au bail</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Galerie des Photos Horodatées de l'État des Lieux */}
+                <div className="space-y-3 pt-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                        Photos de l'État des Lieux du Bailleur ({inspectionData.photos.length} clichés horodatés)
+                      </span>
+                      <span className="text-[10px] text-slate-400 hidden sm:inline">• Cliquez pour agrandir en HD</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsInspectionModalOpen(true)}
+                      className="text-xs font-black text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>Ouvrir l'inspection complète</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+                    {inspectionData.photos.slice(0, 6).map((photo) => (
+                      <div
+                        key={photo.id}
+                        onClick={() => setSelectedInspectionPhoto(photo)}
+                        className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 aspect-square cursor-pointer shadow-xs hover:shadow-md transition-all"
+                        title={`${photo.label} (${photo.room})`}
+                      >
+                        <img
+                          src={photo.url}
+                          alt={photo.label}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30 opacity-80 group-hover:opacity-90 transition-opacity" />
+                        <div className="absolute top-1.5 left-1.5">
+                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-white border border-white/20">
+                            {photo.room}
+                          </span>
+                        </div>
+                        <div className="absolute bottom-1.5 left-1.5 right-1.5">
+                          <p className="text-[10px] font-bold text-white line-clamp-1 leading-tight">
+                            {photo.label}
+                          </p>
+                          <span className="text-[9px] text-slate-300 font-mono block">
+                            {photo.timestamp.split(' à ')[0]}
+                          </span>
+                        </div>
+                        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1 rounded text-white">
+                          <ZoomIn className="w-3 h-3" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -1795,26 +2011,45 @@ function TenantPortalContent() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          generateInspectionPDF({
-                            id: currentLease?.id || tenant.leaseRef,
-                            tenantName: tenant.name,
-                            propertyName: tenant.property,
-                            unit: tenant.unit,
-                            date: tenant.inventoryDate,
-                            meterCashPower: tenant.meterCashPower,
-                            meterWater: tenant.meterWater,
-                            keysDelivered: tenant.keysDelivered,
-                          });
-                          showToast(`Procès-verbal d'état des lieux téléchargé en PDF officiel !`);
-                        }}
-                        className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer shrink-0"
-                      >
-                        <Download className="w-4 h-4" />
-                        <span>Télécharger le PV (PDF)</span>
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                        <button
+                          type="button"
+                          onClick={() => setIsInspectionModalOpen(true)}
+                          className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer shrink-0"
+                        >
+                          <Eye className="w-4 h-4" />
+                          <span>Consulter les photos & PV ({inspectionData.photos.length})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            generateInspectionPDF({
+                              id: currentLease?.id || tenant.leaseRef,
+                              tenantName: tenant.name,
+                              propertyName: tenant.property,
+                              unit: tenant.unit,
+                              date: inspectionData.date,
+                              meterCashPower: inspectionData.meterCashPower,
+                              meterWater: inspectionData.meterWater,
+                              keysDelivered: inspectionData.keysDelivered,
+                              generalState:
+                                inspectionData.generalState === 'neuf'
+                                  ? 'Neuf / Rénovation complète'
+                                  : inspectionData.generalState === 'tres_bon'
+                                  ? 'Très bon état d’usage'
+                                  : inspectionData.generalState === 'bon'
+                                  ? 'Bon état général'
+                                  : 'À rafraîchir',
+                            });
+                            showToast(`Procès-verbal d'état des lieux téléchargé en PDF officiel !`);
+                          }}
+                          className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer shrink-0"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Télécharger le PV (PDF)</span>
+                        </button>
+                      </div>
                     </div>
 
                     {/* African Meter Readings */}
@@ -3228,6 +3463,64 @@ function TenantPortalContent() {
         unitNumber={tenant.unit}
         monthlyRent={tenant.monthlyRent}
       />
+
+      {/* Modal d'État des Lieux en Lecture Seule pour le Locataire */}
+      <InspectionModal
+        isOpen={isInspectionModalOpen}
+        onClose={() => setIsInspectionModalOpen(false)}
+        leaseId={currentLease?.id || pendingLease?.id || 'BAIL-2025-089'}
+        propertyName={tenant.property}
+        unitNumber={tenant.unit}
+        tenantName={tenant.name}
+        inspectionData={inspectionData}
+        readOnly={true}
+      />
+
+      {/* Lightbox Aperçu Photo Plein Écran */}
+      {selectedInspectionPhoto && (
+        <div
+          onClick={() => setSelectedInspectionPhoto(null)}
+          className="fixed inset-0 z-60 bg-black/90 backdrop-blur-md flex flex-col items-center justify-center p-4 animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-3xl w-full max-h-[88vh] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col"
+          >
+            <div className="p-4 bg-slate-900/95 text-white flex items-center justify-between border-b border-white/10">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-white">{selectedInspectionPhoto.label}</h4>
+                  <p className="text-[11px] text-slate-400">
+                    {selectedInspectionPhoto.room} • Prise le {selectedInspectionPhoto.timestamp}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedInspectionPhoto(null)}
+                className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="flex-1 flex items-center justify-center p-3 overflow-hidden bg-black/60">
+              <img
+                src={selectedInspectionPhoto.url}
+                alt={selectedInspectionPhoto.label}
+                className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl"
+              />
+            </div>
+            <div className="p-3 bg-slate-900/90 border-t border-white/10 text-center">
+              <span className="text-[11px] text-slate-400 font-medium">
+                Photo contradictoire certifiée de l'état des lieux • Sceau d'inviolabilité numérique
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastMessage && (

@@ -28,7 +28,10 @@ import {
   Filter,
   ArrowUpDown,
   Home,
+  Camera,
 } from 'lucide-react';
+import { InspectionModal, InspectionData } from '@/components/leases/InspectionModal';
+import { InspectionService } from '@/lib/services/inspection-service';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
@@ -50,6 +53,8 @@ export default function LeasesPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [lastResiliatedId, setLastResiliatedId] = useState<string | null>(null);
   const [leaseToTerminate, setLeaseToTerminate] = useState<Lease | null>(null);
+  const [selectedInspectionLease, setSelectedInspectionLease] = useState<Lease | null>(null);
+  const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
 
   // État des baux réactifs gérés par le LeaseService
   const [leases, setLeases] = useState<Lease[]>([]);
@@ -785,6 +790,20 @@ export default function LeasesPage() {
                           </button>
                         )}
 
+                        {/* Bouton État des lieux & Photos */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedInspectionLease(lease);
+                            setIsInspectionModalOpen(true);
+                          }}
+                          className="py-2 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                          title="Gérer l'état des lieux & photos pour ce bail"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>État des lieux & photos</span>
+                        </button>
+
                         <button
                           type="button"
                           onClick={() => handleDownloadLeasePDF(lease)}
@@ -826,6 +845,29 @@ export default function LeasesPage() {
           setLeaseToTerminate(null);
         }}
       />
+
+      {/* Modal d'État des Lieux & Photos */}
+      {selectedInspectionLease && (
+        <InspectionModal
+          isOpen={isInspectionModalOpen}
+          onClose={() => {
+            setIsInspectionModalOpen(false);
+            setSelectedInspectionLease(null);
+          }}
+          leaseId={selectedInspectionLease.id}
+          propertyName={selectedInspectionLease.property}
+          unitNumber={selectedInspectionLease.unit}
+          tenantName={selectedInspectionLease.tenant}
+          inspectionData={InspectionService.getInspectionByLeaseId(selectedInspectionLease.id)}
+          onSave={(updated) => {
+            InspectionService.saveInspection(selectedInspectionLease.id, updated);
+            notifySave(
+              `État des lieux du bail ${selectedInspectionLease.id} mis à jour avec ${updated.photos.length} photos horodatées.`,
+              'État des lieux enregistré !'
+            );
+          }}
+        />
+      )}
 
       {/* Toast Notification avec option Annuler l'erreur */}
       {toastMessage && (

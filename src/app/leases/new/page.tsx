@@ -60,6 +60,7 @@ import { UserSpace } from '@/lib/types';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { InspectionModal, InspectionData } from '@/components/leases/InspectionModal';
+import { InspectionService } from '@/lib/services/inspection-service';
 import {
   REGISTERED_TENANTS,
   LeaseService,
@@ -410,6 +411,9 @@ export default function NewLeasePage() {
       'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><text x="10" y="35" font-family="cursive" font-size="22" fill="%23ec4899">Mamadou Diallo</text></svg>';
 
     const generatedLeaseId = `BAIL-2026-${Math.floor(100 + Math.random() * 900)}`;
+
+    // Sauvegarde de l'état des lieux & photos pour ce bail
+    InspectionService.saveInspection(generatedLeaseId, inspectionData);
 
     const lease: Lease = {
       id: generatedLeaseId,
@@ -2743,7 +2747,10 @@ export default function NewLeasePage() {
         unitNumber={resolvedUnitName}
         tenantName={tenantName}
         inspectionData={inspectionData}
-        onSave={(updated) => setInspectionData(updated)}
+        onSave={(updated) => {
+          setInspectionData(updated);
+          InspectionService.saveInspection(preparedLease?.id || 'BAIL-2026-N09', updated);
+        }}
       />
     </div>
   );

@@ -20,6 +20,7 @@ import {
   Eye,
   Layers,
   Sparkles,
+  Lock,
 } from 'lucide-react';
 import { generateInspectionPDF } from '@/lib/export/pdf-download';
 import { notifySave } from '@/lib/notifications/action-notifier';
@@ -51,7 +52,8 @@ interface InspectionModalProps {
   unitNumber: string;
   tenantName: string;
   inspectionData: InspectionData;
-  onSave: (data: InspectionData) => void;
+  onSave?: (data: InspectionData) => void;
+  readOnly?: boolean;
 }
 
 const ROOM_OPTIONS = [
@@ -75,6 +77,7 @@ export function InspectionModal({
   tenantName,
   inspectionData: initialData,
   onSave,
+  readOnly = false,
 }: InspectionModalProps) {
   const [data, setData] = useState<InspectionData>(initialData);
   const [activeTab, setActiveTab] = useState<'photos' | 'meters' | 'notes'>('photos');
@@ -186,7 +189,7 @@ export function InspectionModal({
   };
 
   const handleSaveAndClose = () => {
-    onSave(data);
+    if (onSave) onSave(data);
     notifySave(
       `Procès-verbal d'état des lieux validé avec ${data.photos.length} photos horodatées annexées.`,
       'État des lieux annexé au bail !'
@@ -213,6 +216,12 @@ export function InspectionModal({
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                     {data.type === 'entree' ? 'État des Lieux d’Entrée' : 'État des Lieux de Sortie'}
                   </span>
+                  {readOnly && (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-amber-400" />
+                      <span>Consultation Locataire • Non modifiable</span>
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs text-slate-400 mt-0.5">
                   {propertyName} • Lot {unitNumber} • Locataire : <span className="text-white font-bold">{tenantName || 'En cours'}</span>
@@ -293,126 +302,153 @@ export function InspectionModal({
             {/* TAB 1: PHOTOS & VISUAL EVIDENCE */}
             {activeTab === 'photos' && (
               <div className="space-y-6 animate-in fade-in duration-150">
-                
-                {/* Upload Action Area */}
-                <div className="p-5 rounded-3xl bg-emerald-500/5 border-2 border-dashed border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 text-center sm:text-left">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
-                      <UploadCloud className="w-6 h-6" />
+                {readOnly ? (
+                  <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg border border-slate-700">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                        <ShieldCheck className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-black text-white">
+                            Dossier Photographique Certifié Conforme
+                          </h3>
+                          <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            Scellé Numérique
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-300 mt-1">
+                          Ces <strong>{data.photos.length} photos contradictoires</strong> ont été établies et certifiées par votre bailleur lors de l'état des lieux. Cliquez sur une photo pour l'agrandir en haute définition.
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm font-black text-slate-900">
-                        Ajoutez des photos de l'état des lieux
-                      </h3>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Importez vos photos réelles depuis votre téléphone ou ordinateur (JPG, PNG). Horodatage certifié automatique.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileUpload}
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={isUploading}
-                      className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                    >
-                      <Camera className="w-4 h-4" />
-                      <span>{isUploading ? 'Import en cours...' : '+ Prendre / Ajouter des photos'}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Quick Add Presets / Suggestions */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                      <span>Ajout instantané de pièces types (Exemples de référence) :</span>
+                    <span className="text-xs font-bold text-amber-300 px-3 py-1.5 rounded-xl bg-white/10 shrink-0 border border-amber-500/30">
+                      🔒 Lecture Seule • Non modifiable
                     </span>
-                    <span className="text-[10px] text-slate-400">Cliquez pour ajouter</span>
                   </div>
-                  <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleAddPresetPhoto(
-                          'Compteurs & Tableaux',
-                          'Compteur électrique & Index d’entrée',
-                          'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80'
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Zap className="w-3.5 h-3.5 text-amber-500" />
-                      <span>+ Compteur électrique</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleAddPresetPhoto(
-                          'Salon / Séjour',
-                          'Vue générale du salon & carrelage',
-                          'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80'
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Layers className="w-3.5 h-3.5 text-brand-500" />
-                      <span>+ Salon / Séjour</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleAddPresetPhoto(
-                          'Cuisine',
-                          'Plan de travail, évier & robinetterie',
-                          'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80'
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Droplet className="w-3.5 h-3.5 text-blue-500" />
-                      <span>+ Cuisine & Évier</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleAddPresetPhoto(
-                          'Salle d’eau / WC',
-                          'Douche sanitaire & lavabo neuf',
-                          'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80'
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Droplet className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>+ Sanitaires / Salle d’eau</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleAddPresetPhoto(
-                          'Entrée / Couloir',
-                          'Trousseau de clés & télécommandes remises',
-                          'https://images.unsplash.com/photo-1582139329536-e7284fece509?w=800&auto=format&fit=crop&q=80'
-                        )
-                      }
-                      className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
-                    >
-                      <Key className="w-3.5 h-3.5 text-rose-500" />
-                      <span>+ Remise des clés</span>
-                    </button>
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    {/* Upload Action Area */}
+                    <div className="p-5 rounded-3xl bg-emerald-500/5 border-2 border-dashed border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 text-center sm:text-left">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
+                          <UploadCloud className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-black text-slate-900">
+                            Ajoutez des photos de l'état des lieux
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Importez vos photos réelles depuis votre téléphone ou ordinateur (JPG, PNG). Horodatage certifié automatique.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          onChange={handleFileUpload}
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploading}
+                          className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                        >
+                          <Camera className="w-4 h-4" />
+                          <span>{isUploading ? 'Import en cours...' : '+ Prendre / Ajouter des photos'}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Quick Add Presets / Suggestions */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-[10px] font-black uppercase text-slate-500 tracking-wider flex items-center gap-1.5">
+                          <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                          <span>Ajout instantané de pièces types (Exemples de référence) :</span>
+                        </span>
+                        <span className="text-[10px] text-slate-400">Cliquez pour ajouter</span>
+                      </div>
+                      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAddPresetPhoto(
+                              'Compteurs & Tableaux',
+                              'Compteur électrique & Index d’entrée',
+                              'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80'
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Zap className="w-3.5 h-3.5 text-amber-500" />
+                          <span>+ Compteur électrique</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAddPresetPhoto(
+                              'Salon / Séjour',
+                              'Vue générale du salon & carrelage',
+                              'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80'
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Layers className="w-3.5 h-3.5 text-brand-500" />
+                          <span>+ Salon / Séjour</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAddPresetPhoto(
+                              'Cuisine',
+                              'Plan de travail, évier & robinetterie',
+                              'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80'
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Droplet className="w-3.5 h-3.5 text-blue-500" />
+                          <span>+ Cuisine & Évier</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAddPresetPhoto(
+                              'Salle d’eau / WC',
+                              'Douche sanitaire & lavabo neuf',
+                              'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80'
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Droplet className="w-3.5 h-3.5 text-emerald-500" />
+                          <span>+ Sanitaires / Salle d’eau</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAddPresetPhoto(
+                              'Entrée / Couloir',
+                              'Trousseau de clés & télécommandes remises',
+                              'https://images.unsplash.com/photo-1582139329536-e7284fece509?w=800&auto=format&fit=crop&q=80'
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-xl bg-white border border-slate-200 hover:border-emerald-500 text-[11px] font-bold text-slate-700 flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer shadow-xs"
+                        >
+                          <Key className="w-3.5 h-3.5 text-rose-500" />
+                          <span>+ Remise des clés</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
 
                 {/* Photos Grid */}
                 {data.photos.length === 0 ? (
@@ -447,14 +483,16 @@ export function InspectionModal({
                               {photo.room}
                             </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeletePhoto(photo.id)}
-                            className="absolute top-2 right-2 p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white shadow-sm transition-colors cursor-pointer"
-                            title="Supprimer cette photo"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+                          {!readOnly && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePhoto(photo.id)}
+                              className="absolute top-2 right-2 p-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-600 text-white shadow-sm transition-colors cursor-pointer"
+                              title="Supprimer cette photo"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <div
                             onClick={() => setPreviewPhoto(photo)}
                             className="absolute bottom-2 right-2 p-1.5 rounded-lg bg-slate-900/70 text-white hover:bg-slate-900 transition-colors"
@@ -465,35 +503,54 @@ export function InspectionModal({
                         </div>
 
                         {/* Card Info & Caption Editing */}
-                        <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
-                          <div>
-                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
-                              Légende / Constat :
-                            </label>
-                            <input
-                              type="text"
-                              value={photo.label}
-                              onChange={(e) => handleUpdatePhoto(photo.id, 'label', e.target.value)}
-                              placeholder="Description de la photo..."
-                              className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                            />
+                        {readOnly ? (
+                          <div className="p-3.5 space-y-2 flex-1 flex flex-col justify-between">
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
+                                Constat Photographique :
+                              </span>
+                              <p className="text-xs font-bold text-slate-800 leading-snug">
+                                {photo.label}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between text-[10px] text-slate-500 pt-2 border-t border-slate-100">
+                              <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold">
+                                {photo.room}
+                              </span>
+                              <span className="font-mono text-slate-500">{photo.timestamp}</span>
+                            </div>
                           </div>
+                        ) : (
+                          <div className="p-3.5 space-y-2.5 flex-1 flex flex-col justify-between">
+                            <div>
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                                Légende / Constat :
+                              </label>
+                              <input
+                                type="text"
+                                value={photo.label}
+                                onChange={(e) => handleUpdatePhoto(photo.id, 'label', e.target.value)}
+                                placeholder="Description de la photo..."
+                                className="w-full px-2.5 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                              />
+                            </div>
 
-                          <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
-                            <select
-                              value={photo.room}
-                              onChange={(e) => handleUpdatePhoto(photo.id, 'room', e.target.value)}
-                              className="px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-bold text-slate-700 border-none focus:outline-none cursor-pointer"
-                            >
-                              {ROOM_OPTIONS.map((r) => (
-                                <option key={r} value={r}>
-                                  {r}
-                                </option>
-                              ))}
-                            </select>
-                            <span className="font-mono text-slate-400">{photo.timestamp}</span>
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-slate-100">
+                              <select
+                                value={photo.room}
+                                onChange={(e) => handleUpdatePhoto(photo.id, 'room', e.target.value)}
+                                className="px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-bold text-slate-700 border-none focus:outline-none cursor-pointer"
+                              >
+                                {ROOM_OPTIONS.map((r) => (
+                                  <option key={r} value={r}>
+                                    {r}
+                                  </option>
+                                ))}
+                              </select>
+                              <span className="font-mono text-slate-400">{photo.timestamp}</span>
+                            </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -513,10 +570,15 @@ export function InspectionModal({
                     </label>
                     <input
                       type="text"
+                      readOnly={readOnly}
                       value={data.meterCashPower}
-                      onChange={(e) => setData({ ...data, meterCashPower: e.target.value })}
+                      onChange={readOnly ? undefined : (e) => setData({ ...data, meterCashPower: e.target.value })}
                       placeholder="Ex: 1 420 kWh (Cash Power N° 041289238)"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                        readOnly
+                          ? 'bg-slate-100 border-slate-200 text-slate-800 cursor-default'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+                      }`}
                     />
                     <p className="text-[11px] text-slate-500">
                       Indiquez l’index de départ et le numéro de série du compteur (SBEE, CIE, etc.).
@@ -531,10 +593,15 @@ export function InspectionModal({
                     </label>
                     <input
                       type="text"
+                      readOnly={readOnly}
                       value={data.meterWater}
-                      onChange={(e) => setData({ ...data, meterWater: e.target.value })}
+                      onChange={readOnly ? undefined : (e) => setData({ ...data, meterWater: e.target.value })}
                       placeholder="Ex: 384 m³ (SODECI / SONEB N° 99312)"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                        readOnly
+                          ? 'bg-slate-100 border-slate-200 text-slate-800 cursor-default'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+                      }`}
                     />
                     <p className="text-[11px] text-slate-500">
                       Relevé d'index volumétrique en mètres cubes le jour de la remise des clés.
@@ -549,10 +616,15 @@ export function InspectionModal({
                     </label>
                     <input
                       type="text"
+                      readOnly={readOnly}
                       value={data.keysDelivered}
-                      onChange={(e) => setData({ ...data, keysDelivered: e.target.value })}
+                      onChange={readOnly ? undefined : (e) => setData({ ...data, keysDelivered: e.target.value })}
                       placeholder="Ex: 3 clés de sûreté porte d'entrée + 1 télécommande portail + 1 badge"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                      className={`w-full px-3.5 py-2.5 rounded-xl border text-xs font-bold transition-all ${
+                        readOnly
+                          ? 'bg-slate-100 border-slate-200 text-slate-800 cursor-default'
+                          : 'bg-slate-50 border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+                      }`}
                     />
                     <p className="text-[11px] text-slate-500">
                       Mentionnez le nombre exact de clés et accès remis au locataire signataire.
@@ -577,8 +649,11 @@ export function InspectionModal({
                         <button
                           key={state.id}
                           type="button"
-                          onClick={() => setData({ ...data, generalState: state.id as any })}
-                          className={`p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                          disabled={readOnly}
+                          onClick={readOnly ? undefined : () => setData({ ...data, generalState: state.id as any })}
+                          className={`p-3 rounded-xl border text-xs font-bold transition-all text-center ${
+                            readOnly ? 'cursor-default' : 'cursor-pointer'
+                          } ${
                             isSelected
                               ? 'bg-emerald-50 border-emerald-500 text-emerald-800 ring-2 ring-emerald-500/20 shadow-xs'
                               : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -603,10 +678,15 @@ export function InspectionModal({
                   </label>
                   <textarea
                     rows={6}
+                    readOnly={readOnly}
                     value={data.notes}
-                    onChange={(e) => setData({ ...data, notes: e.target.value })}
+                    onChange={readOnly ? undefined : (e) => setData({ ...data, notes: e.target.value })}
                     placeholder="Notez ici les constats particuliers (ex: micro-rayures plinthes, peinture neuve refaite le 10/11, bon fonctionnement des climatiseurs et chauffe-eau)..."
-                    className="w-full p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all leading-relaxed"
+                    className={`w-full p-3.5 rounded-xl border text-xs font-medium transition-all leading-relaxed ${
+                      readOnly
+                        ? 'bg-slate-100 border-slate-200 text-slate-800 cursor-default'
+                        : 'bg-slate-50 border-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500'
+                    }`}
                   />
                   <p className="text-[11px] text-slate-500">
                     Ces observations seront textuellement intégrées au procès-verbal officiel contradictoire et annexées au bail.
@@ -635,24 +715,44 @@ export function InspectionModal({
               </span>
             </div>
 
-            <div className="flex items-center gap-2.5 w-full sm:w-auto">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer"
-              >
-                Annuler
-              </button>
+            {readOnly ? (
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleDownloadPDF}
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-white border border-slate-300 text-slate-800 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                >
+                  <Download className="w-4 h-4 text-emerald-600" />
+                  <span>Télécharger PV Officiel (PDF)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-black shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <span>Fermer la consultation</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
 
-              <button
-                type="button"
-                onClick={handleSaveAndClose}
-                className="flex-1 sm:flex-none px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                <span>Enregistrer & Annexer au Bail</span>
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={handleSaveAndClose}
+                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Enregistrer & Annexer au Bail</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
