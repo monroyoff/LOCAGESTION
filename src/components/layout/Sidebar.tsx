@@ -371,9 +371,9 @@ export function Sidebar({
         }`}
       >
         {/* Top: Logo & Space Switcher */}
-        <div className="p-6 pb-2">
+        <div className="px-4 pt-5 pb-2">
           {/* Brand Logo & Close Button */}
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center justify-between mb-5">
             <Link href={isTenant ? '/portal' : landlordSubRole === 'demarcheur' ? '/listings' : '/'} className="flex items-center gap-3 group">
               {/* Pink/Rose House Logo Icon */}
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform">
@@ -400,7 +400,7 @@ export function Sidebar({
                   LOCA<span className="text-brand-400">GESTION</span>
                 </span>
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                  {isTenant ? 'Portail Résidentiel' : 'Espace Bailleur'}
+                  {isTenant ? 'Portail Résidentiel' : 'Espace Bailleur/Démarcheur'}
                 </span>
               </div>
             </Link>
@@ -416,28 +416,30 @@ export function Sidebar({
 
           {/* SÉLECTEUR D'ESPACE RAPIDE */}
           <div className="space-y-2 mb-4">
-            {/* Les 2 espaces principaux : Bailleur & Locataire */}
+            {/* Les 2 espaces principaux : Bailleur/Démarcheur & Locataire */}
             <div className="p-1 bg-[#171b24] rounded-2xl border border-white/5 flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => handleSpaceChange('bailleur')}
-                className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
+                className={`flex-[1.4] py-2 px-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 whitespace-nowrap ${
                   isLandlord
                     ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
+                title="Espace Bailleur / Démarcheur"
               >
                 <Building2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">Bailleur</span>
+                <span className="truncate">Bailleur/Démarcheur</span>
               </button>
               <button
                 type="button"
                 onClick={() => handleSpaceChange('locataire')}
-                className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
+                className={`flex-1 py-2 px-1.5 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 whitespace-nowrap ${
                   isTenant
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
+                title="Portail Locataire"
               >
                 <Users className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">Locataire</span>
@@ -625,7 +627,7 @@ export function Sidebar({
                   e.stopPropagation();
                   handleSpaceChange(isLandlord ? 'locataire' : 'bailleur');
                 }}
-                title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : 'Bailleur'} (Mode Test)`}
+                title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : 'Bailleur/Démarcheur'} (Mode Test)`}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <Repeat className="w-4 h-4" />
