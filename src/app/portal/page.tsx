@@ -1004,9 +1004,9 @@ function TenantPortalContent() {
               <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-5 sm:gap-6">
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-2 flex-wrap">
                       <span className="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-500 text-white shadow-sm flex items-center gap-1">
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Loyer d’Octobre Soldé
@@ -1024,12 +1024,12 @@ function TenantPortalContent() {
                     </p>
                   </div>
 
-                  {/* Actions Rapides du Locataire */}
-                  <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+                  {/* Actions Principales du Locataire */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                     <button
                       type="button"
                       onClick={() => setDeclarationModalOpen(true)}
-                      className="w-full sm:w-auto py-3 sm:py-3.5 px-5 sm:px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs sm:text-sm font-black shadow-pink-glow active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto py-3.5 px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs sm:text-sm font-black shadow-pink-glow active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Smartphone className="w-4 h-4" />
                       <span>Déclarer un paiement de loyer</span>
@@ -1037,22 +1037,10 @@ function TenantPortalContent() {
                     <button
                       type="button"
                       onClick={() => setReportIssueModalOpen(true)}
-                      className="w-full sm:w-auto py-3 sm:py-3.5 px-4 sm:px-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Wrench className="w-4 h-4 text-brand-300" />
                       <span>Signaler une panne</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsInspectionModalOpen(true)}
-                      className="w-full sm:w-auto py-3 sm:py-3.5 px-4 sm:px-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                      title="Accéder aux documents et photos de l'état des lieux"
-                    >
-                      <Camera className="w-4 h-4 text-emerald-400" />
-                      <span>État des lieux & photos</span>
-                      <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/30">
-                        {inspectionData.photos.length}
-                      </span>
                     </button>
                   </div>
                 </div>
@@ -1165,16 +1153,26 @@ function TenantPortalContent() {
 
               {/* Fiche Logement Détaillée */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-4 pb-3 border-b border-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2.5">
                     <Building2 className="w-5 h-5 text-slate-700 shrink-0" />
                     <h3 className="font-black text-base text-slate-900">
                       Caractéristiques de Votre Logement Actuel
                     </h3>
                   </div>
-                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto shrink-0">
-                    Bail en cours d'exécution
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setIsInspectionModalOpen(true)}
+                      className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                    >
+                      <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>État des lieux ({inspectionData.photos.length} photos)</span>
+                    </button>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto shrink-0">
+                      Bail en cours d'exécution
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
@@ -1231,13 +1229,13 @@ function TenantPortalContent() {
                   </div>
 
                   {/* Actions Buttons */}
-                  <div className="flex flex-wrap items-center gap-2.5 shrink-0 w-full sm:w-auto">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0 w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => setIsInspectionModalOpen(true)}
-                      className="w-full sm:w-auto py-2.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                      className="py-2.5 px-4 sm:px-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 text-center"
                     >
-                      <Eye className="w-4 h-4" />
+                      <Eye className="w-4 h-4 shrink-0" />
                       <span>Consulter l'état des lieux & photos ({inspectionData.photos.length})</span>
                     </button>
 
@@ -1264,10 +1262,10 @@ function TenantPortalContent() {
                         });
                         showToast(`Procès-verbal officiel d'état des lieux téléchargé en PDF !`);
                       }}
-                      className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+                      className="py-2.5 px-4 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs text-center"
                       title="Télécharger le PV officiel"
                     >
-                      <Download className="w-4 h-4 text-emerald-600" />
+                      <Download className="w-4 h-4 text-emerald-600 shrink-0" />
                       <span>Télécharger PV (PDF)</span>
                     </button>
                   </div>
