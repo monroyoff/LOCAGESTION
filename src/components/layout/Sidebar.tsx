@@ -212,20 +212,20 @@ export function Sidebar({
       badge: 'Nouveau',
     },
     {
-      name: 'Relances & Préavis',
-      href: '/reminders',
-      icon: BellRing,
-      active: pathname.startsWith('/reminders'),
-      badgeCount: landlordNoticesCount > 0 ? landlordNoticesCount : undefined,
-      badgeColor: 'bg-rose-500',
-    },
-    {
       name: 'Messages',
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
       badgeCount: 3,
       badgeColor: 'bg-brand-500',
+    },
+    {
+      name: 'Relances & Préavis',
+      href: '/reminders',
+      icon: BellRing,
+      active: pathname.startsWith('/reminders'),
+      badgeCount: landlordNoticesCount > 0 ? landlordNoticesCount : undefined,
+      badgeColor: 'bg-rose-500',
     },
     {
       name: 'Pannes & Interventions',
