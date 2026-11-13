@@ -189,7 +189,7 @@ export default function RegisterPage() {
                     )}
                   </div>
                   <h3 className="font-black text-sm text-white">
-                    Bailleur / Gestionnaire
+                    Bailleur / Démarcheur
                   </h3>
                   <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
                     Gestion de biens, encaissements de loyers, baux OHADA, génération de quittances et pilotage financier.
@@ -445,7 +445,7 @@ export default function RegisterPage() {
               <span>
                 {isLoading
                   ? 'Création du compte en cours...'
-                  : `Créer mon compte ${role === 'bailleur' ? 'Bailleur' : 'Locataire'}`}
+                  : `Créer mon compte ${role === 'bailleur' ? 'Bailleur/Démarcheur' : 'Locataire'}`}
               </span>
               <ArrowRight className="w-4 h-4" />
             </button>

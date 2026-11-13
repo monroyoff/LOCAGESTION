@@ -363,7 +363,7 @@ export function Sidebar({
                   LOCA<span className="text-brand-400">GESTION</span>
                 </span>
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                  {isLandlord ? 'Espace Gestion Bailleur' : 'Portail Résidentiel'}
+                  {isLandlord ? 'Espace Bailleur/Démarcheur' : 'Portail Résidentiel'}
                 </span>
               </div>
             </Link>
@@ -382,26 +382,26 @@ export function Sidebar({
             <button
               type="button"
               onClick={() => handleSpaceChange('bailleur')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 whitespace-nowrap ${
                 isLandlord
                   ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Bailleur</span>
+              <Building2 className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Bailleur/Démarcheur</span>
             </button>
             <button
               type="button"
               onClick={() => handleSpaceChange('locataire')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 whitespace-nowrap ${
                 isTenant
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <Users className="w-3.5 h-3.5" />
-              <span>Locataire</span>
+              <Users className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">Locataire</span>
             </button>
           </div>
         </div>
@@ -409,7 +409,7 @@ export function Sidebar({
         {/* Middle: Space-Specific Navigation Links */}
         <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
           <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            {isLandlord ? 'Pilotage Bailleur' : 'Menu Résident'}
+            {isLandlord ? 'Pilotage Bailleur/Démarcheur' : 'Menu Résident'}
           </div>
 
           {currentNavItems.map((item) => {
@@ -547,7 +547,7 @@ export function Sidebar({
                   e.stopPropagation();
                   handleSpaceChange(isLandlord ? 'locataire' : 'bailleur');
                 }}
-                title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : 'Bailleur'} (Mode Test)`}
+                title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : 'Bailleur/Démarcheur'} (Mode Test)`}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <Repeat className="w-4 h-4" />

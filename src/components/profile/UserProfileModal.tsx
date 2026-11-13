@@ -206,7 +206,7 @@ export function UserProfileModal({
                   Profil & Informations d'Inscription
                 </h2>
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
-                  {profile.role === 'bailleur' ? 'Bailleur' : 'Locataire'}
+                  {profile.role === 'bailleur' ? 'Bailleur/Démarcheur' : 'Locataire'}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
@@ -247,7 +247,7 @@ export function UserProfileModal({
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-slate-900 block">
                     {profile.role === 'bailleur'
-                      ? 'Compte Bailleur / Gestionnaire'
+                      ? 'Compte Bailleur/Démarcheur'
                       : 'Compte Locataire Résident'}
                   </span>
                   <span
@@ -278,10 +278,10 @@ export function UserProfileModal({
                   onClose();
                 }}
                 className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
-                title={`Basculer immédiatement vers l'espace ${profile.role === 'bailleur' ? 'Locataire' : 'Bailleur'}`}
+                title={`Basculer immédiatement vers l'espace ${profile.role === 'bailleur' ? 'Locataire' : 'Bailleur/Démarcheur'}`}
               >
                 <Repeat className="w-3.5 h-3.5" />
-                <span>Passer en {profile.role === 'bailleur' ? 'Locataire' : 'Bailleur'}</span>
+                <span>Passer en {profile.role === 'bailleur' ? 'Locataire' : 'Bailleur/Démarcheur'}</span>
               </button>
             </div>
           </div>
