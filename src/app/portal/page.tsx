@@ -1001,26 +1001,26 @@ function TenantPortalContent() {
               </div>
 
               {/* Hero Banner: Rent Due & Quick Payment */}
-              <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+              <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-5 sm:p-7 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
 
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-500 text-white shadow-sm flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white shadow-xs flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" />
                         Loyer d’Octobre Soldé
                       </span>
-                      <span className="text-xs text-slate-300">
+                      <span className="text-[11px] text-slate-300 font-medium">
                         {tenant.property} • {tenant.unit}
                       </span>
                     </div>
 
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-tight">
+                    <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-snug">
                       Bonjour Koffi 👋, votre espace est parfaitement à jour
                     </h1>
-                    <p className="text-xs text-slate-400 mt-1 max-w-lg">
-                      Prochaine exigibilité de loyer : <strong>{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).
+                    <p className="text-xs text-slate-400 mt-1.5 max-w-lg leading-relaxed">
+                      Prochaine exigibilité de loyer : <strong className="text-slate-200">{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).
                     </p>
                   </div>
 
