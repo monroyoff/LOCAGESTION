@@ -378,11 +378,11 @@ export function Sidebar({
           </div>
 
           {/* SÉLECTEUR D'ESPACE RAPIDE (Navigation Libre pour Tests) */}
-          <div className="p-1.5 bg-[#171b24] rounded-2xl border border-white/5 flex items-center mb-4">
+          <div className="p-1 bg-[#171b24] rounded-2xl border border-white/5 flex items-center mb-4 gap-1">
             <button
               type="button"
               onClick={() => handleSpaceChange('bailleur')}
-              className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 whitespace-nowrap ${
+              className={`flex-[1.35] py-2 px-1.5 rounded-xl text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 whitespace-nowrap ${
                 isLandlord
                   ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -394,7 +394,7 @@ export function Sidebar({
             <button
               type="button"
               onClick={() => handleSpaceChange('locataire')}
-              className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 whitespace-nowrap ${
+              className={`flex-1 py-2 px-1.5 rounded-xl text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 whitespace-nowrap ${
                 isTenant
                   ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
                   : 'text-slate-400 hover:text-white hover:bg-white/5'
@@ -435,9 +435,7 @@ export function Sidebar({
                 className={`${
                   item.mobileOnly ? 'lg:hidden ' : ''
                 }flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all group min-w-0 ${
-                  isPublishBtn
-                    ? 'bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/30 shadow-xs'
-                    : item.active
+                  item.active
                     ? isLandlord
                       ? 'bg-white/[0.08] text-white shadow-sm font-bold'
                       : 'bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30'
@@ -447,9 +445,7 @@ export function Sidebar({
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div
                     className={`p-1.5 rounded-xl transition-colors shrink-0 ${
-                      isPublishBtn
-                        ? 'text-white bg-brand-500 shadow-sm'
-                        : item.active
+                      item.active
                         ? isLandlord
                           ? 'text-brand-400 bg-brand-500/10'
                           : 'text-emerald-400 bg-emerald-500/20'
@@ -477,9 +473,7 @@ export function Sidebar({
                   {item.badge && (
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
-                        isPublishBtn
-                          ? 'text-white bg-brand-500 font-extrabold shadow-sm'
-                          : isTenant
+                        isTenant
                           ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/25'
                           : 'text-tealAccent-400 bg-tealAccent-500/10 border border-tealAccent-500/20'
                       }`}
