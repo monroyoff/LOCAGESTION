@@ -28,6 +28,7 @@ import {
   LogOut,
   Repeat,
   Plus,
+  Layers,
 } from 'lucide-react';
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
@@ -35,6 +36,7 @@ import { IncidentService } from '@/lib/services/incident-service';
 import { UserProfileModal } from '@/components/profile/UserProfileModal';
 import { getUserProfile } from '@/lib/services/geo-service';
 import { NoticeService } from '@/lib/services/notice-service';
+import { ListingsService } from '@/lib/services/listings-service';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 
 interface NavItem {
@@ -170,6 +172,46 @@ export function Sidebar({
 
   const effectivePortalTab = activePortalTab || currentPortalTab || 'accueil';
 
+  // Détection de l'affichage actif des annonces (Toutes vs Mes publications)
+  const [currentListingsView, setCurrentListingsView] = useState<string | null>(null);
+  const [myListingsCount, setMyListingsCount] = useState(0);
+
+  useEffect(() => {
+    const updateMyListingsCount = () => {
+      const userListings = ListingsService.getUserListings(context?.user, activeSpace);
+      setMyListingsCount(userListings.length);
+    };
+    updateMyListingsCount();
+    window.addEventListener('locagestion:listings_updated', updateMyListingsCount);
+    window.addEventListener('storage', updateMyListingsCount);
+    return () => {
+      window.removeEventListener('locagestion:listings_updated', updateMyListingsCount);
+      window.removeEventListener('storage', updateMyListingsCount);
+    };
+  }, [context?.user, activeSpace]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const readView = () => {
+        const params = new URLSearchParams(window.location.search);
+        setCurrentListingsView(params.get('view'));
+      };
+      readView();
+      const handleSwitch = (e: Event) => {
+        const custom = e as CustomEvent<{ view?: string }>;
+        if (custom.detail?.view) {
+          setCurrentListingsView(custom.detail.view);
+        }
+      };
+      window.addEventListener('popstate', readView);
+      window.addEventListener('locagestion:switch_listings_view', handleSwitch);
+      return () => {
+        window.removeEventListener('popstate', readView);
+        window.removeEventListener('locagestion:switch_listings_view', handleSwitch);
+      };
+    }
+  }, [pathname]);
+
   // ============================================================================
   // NAVIGATION BAILLEUR (Gestion du patrimoine, encaissements, locataires, baux)
   // ============================================================================
@@ -215,8 +257,16 @@ export function Sidebar({
       name: 'Annonces & Visites',
       href: '/listings',
       icon: Compass,
-      active: pathname.startsWith('/listings'),
+      active: pathname.startsWith('/listings') && currentListingsView !== 'my_listings',
       badge: 'Nouveau',
+    },
+    {
+      name: 'Mes publications',
+      href: '/listings?view=my_listings',
+      icon: Layers,
+      active: pathname.startsWith('/listings') && currentListingsView === 'my_listings',
+      badgeCount: myListingsCount > 0 ? myListingsCount : undefined,
+      badgeColor: 'bg-brand-500',
     },
     {
       name: 'Messages',
@@ -300,8 +350,16 @@ export function Sidebar({
       name: 'Annonces & Visites',
       href: '/listings',
       icon: Compass,
-      active: pathname.startsWith('/listings'),
+      active: pathname.startsWith('/listings') && currentListingsView !== 'my_listings',
       badge: 'Nouveau',
+    },
+    {
+      name: 'Mes publications',
+      href: '/listings?view=my_listings',
+      icon: Layers,
+      active: pathname.startsWith('/listings') && currentListingsView === 'my_listings',
+      badgeCount: myListingsCount > 0 ? myListingsCount : undefined,
+      badgeColor: 'bg-emerald-500',
     },
     {
       name: 'Relances & Préavis',
@@ -336,8 +394,16 @@ export function Sidebar({
       name: 'Annonces & Visites',
       href: '/listings',
       icon: Compass,
-      active: pathname.startsWith('/listings'),
+      active: pathname.startsWith('/listings') && currentListingsView !== 'my_listings',
       badge: 'Nouveau',
+    },
+    {
+      name: 'Mes publications',
+      href: '/listings?view=my_listings',
+      icon: Layers,
+      active: pathname.startsWith('/listings') && currentListingsView === 'my_listings',
+      badgeCount: myListingsCount > 0 ? myListingsCount : undefined,
+      badgeColor: 'bg-amber-500',
     },
     {
       name: 'Messages',
@@ -487,6 +553,14 @@ export function Sidebar({
                 onClick={(e) => {
                   if (isPublishBtn) {
                     window.dispatchEvent(new CustomEvent('locagestion:open_publish_listing'));
+                  }
+                  if (item.name === 'Mes publications') {
+                    setCurrentListingsView('my_listings');
+                    window.dispatchEvent(new CustomEvent('locagestion:switch_listings_view', { detail: { view: 'my_listings' } }));
+                  }
+                  if (item.name === 'Annonces & Visites') {
+                    setCurrentListingsView('all');
+                    window.dispatchEvent(new CustomEvent('locagestion:switch_listings_view', { detail: { view: 'all' } }));
                   }
                   if (item.portalTab) {
                     setCurrentPortalTab(item.portalTab);

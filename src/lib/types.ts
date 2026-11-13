@@ -172,6 +172,7 @@ export type RentalPropertyType =
   | 'Villa'
   | 'Bureau'
   | 'Boutique'
+  | 'Colocation'
   | 'Autres';
 
 export interface RentalListing {
@@ -214,7 +215,13 @@ export interface RentalListing {
   longitude?: number;
   distanceKm?: number; // Distance calculée par rapport à l'utilisateur
   isVerified: boolean;
-  status: 'disponible' | 'reserve' | 'loue';
+  status: 'disponible' | 'reserve' | 'loue' | 'en_pause';
+  authorId?: string;
+  authorName?: string;
+  authorRole?: UserSpace;
+  createdAt?: string;
+  viewsCount?: number;
+  inquiriesCount?: number;
 }
 
 export interface UserProfile {

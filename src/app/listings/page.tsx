@@ -10,6 +10,8 @@ import { formatFCFA } from '@/lib/money/format';
 import { RentalListing } from '@/lib/types';
 import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
+import { EditListingModal } from '@/components/listings/EditListingModal';
+import { ListingsService } from '@/lib/services/listings-service';
 import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier';
 import {
   getUserResidenceCountry,
@@ -55,6 +57,12 @@ import {
   ChevronRight,
   ImageIcon,
   Navigation,
+  Layers,
+  Pencil,
+  Trash2,
+  PauseCircle,
+  PlayCircle,
+  AlertCircle,
 } from 'lucide-react';
 
 const ALL_CITIES = Array.from(
@@ -77,7 +85,13 @@ const PROPERTY_TYPES = ['Tous', 'Chambre salon sanitaire', 'Appartement', 'Meubl
 export default function ListingsPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
+  const { activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur, user } = useSpace();
+
+  // Mode d'affichage : Catalogue public ('all') vs Mes publications ('my_listings')
+  const [activeView, setActiveView] = useState<'all' | 'my_listings'>('all');
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedListingForEdit, setSelectedListingForEdit] = useState<RentalListing | null>(null);
+  const [myListingsFilter, setMyListingsFilter] = useState<'all' | 'disponible' | 'en_pause' | 'reserve_loue'>('all');
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -175,32 +189,57 @@ export default function ListingsPage() {
   const [visitTimeSlot, setVisitTimeSlot] = useState('15:00 - 17:00');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Charger les annonces publiées par les utilisateurs (bailleurs ou locataires)
+  // Charger les annonces centralisées via ListingsService
   useEffect(() => {
-    const loadCustomListings = () => {
-      try {
-        const saved = localStorage.getItem('locagestion:custom_listings');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setListings([...parsed, ...MOCK_RENTAL_LISTINGS.filter(m => !parsed.some((p: RentalListing) => p.id === m.id))]);
-            return;
-          }
-        }
-      } catch (e) {
-        console.error('Erreur chargement annonces personnalisées:', e);
-      }
-      setListings(MOCK_RENTAL_LISTINGS);
+    const loadListings = () => {
+      const all = ListingsService.getAllListings();
+      setListings(all);
     };
 
-    loadCustomListings();
-    window.addEventListener('locagestion:listings_updated', loadCustomListings);
-    window.addEventListener('storage', loadCustomListings);
+    loadListings();
+    window.addEventListener('locagestion:listings_updated', loadListings);
+    window.addEventListener('storage', loadListings);
     return () => {
-      window.removeEventListener('locagestion:listings_updated', loadCustomListings);
-      window.removeEventListener('storage', loadCustomListings);
+      window.removeEventListener('locagestion:listings_updated', loadListings);
+      window.removeEventListener('storage', loadListings);
     };
   }, []);
+
+  // Synchronisation de l'affichage avec l'URL (?view=my_listings) et les événements globaux
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('view') === 'my_listings') {
+        setActiveView('my_listings');
+      }
+      const handleSwitch = (e: Event) => {
+        const custom = e as CustomEvent<{ view?: string }>;
+        if (custom.detail?.view === 'my_listings') {
+          setActiveView('my_listings');
+        } else if (custom.detail?.view === 'all') {
+          setActiveView('all');
+        }
+      };
+      window.addEventListener('locagestion:switch_listings_view', handleSwitch);
+      return () => {
+        window.removeEventListener('locagestion:switch_listings_view', handleSwitch);
+      };
+    }
+  }, []);
+
+  const handleSwitchView = (view: 'all' | 'my_listings') => {
+    setActiveView(view);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (view === 'my_listings') {
+        url.searchParams.set('view', 'my_listings');
+      } else {
+        url.searchParams.delete('view');
+      }
+      window.history.replaceState({}, '', url.toString());
+      window.dispatchEvent(new CustomEvent('locagestion:switch_listings_view', { detail: { view } }));
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -208,20 +247,64 @@ export default function ListingsPage() {
   };
 
   const handlePublishListing = (newListing: RentalListing) => {
-    setListings((prev) => [newListing, ...prev]);
-    try {
-      const saved = localStorage.getItem('locagestion:custom_listings');
-      const parsed: RentalListing[] = saved ? JSON.parse(saved) : [];
-      const updated = [newListing, ...parsed.filter((p) => p.id !== newListing.id)];
-      localStorage.setItem('locagestion:custom_listings', JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
-    } catch (e) {
-      console.error('Erreur sauvegarde annonce:', e);
-    }
-    showToast(`Annonce « ${newListing.title} » publiée avec succès !`);
+    const enriched: RentalListing = {
+      ...newListing,
+      authorId: user?.id,
+      authorName: user?.name,
+      authorRole: activeSpace,
+      createdAt: new Date().toLocaleDateString('fr-FR'),
+      viewsCount: 0,
+      inquiriesCount: 0,
+    };
+    ListingsService.createListing(enriched);
+    showToast(`Annonce « ${enriched.title} » publiée avec succès !`);
     notifyPublish(
-      `Votre annonce « ${newListing.title} » est désormais en ligne et diffusée avec succès sur toute la plateforme !`
+      `Votre annonce « ${enriched.title} » est désormais en ligne et diffusée avec succès sur toute la plateforme !`
     );
+  };
+
+  // Publications de l'utilisateur connecté
+  const myListings = useMemo(() => {
+    return ListingsService.getUserListings(user, activeSpace);
+  }, [listings, user, activeSpace]);
+
+  const filteredMyListings = useMemo(() => {
+    if (myListingsFilter === 'disponible') {
+      return myListings.filter((l) => l.status === 'disponible');
+    }
+    if (myListingsFilter === 'en_pause') {
+      return myListings.filter((l) => l.status === 'en_pause');
+    }
+    if (myListingsFilter === 'reserve_loue') {
+      return myListings.filter((l) => l.status === 'reserve' || l.status === 'loue');
+    }
+    return myListings;
+  }, [myListings, myListingsFilter]);
+
+  const handleTogglePause = (id: string) => {
+    const updated = ListingsService.togglePause(id);
+    if (updated) {
+      if (updated.status === 'en_pause') {
+        showToast(`Annonce mise en pause : elle est temporairement masquée des recherches publiques.`);
+      } else {
+        showToast(`Annonce réactivée : elle est de nouveau visible en ligne !`);
+      }
+    }
+  };
+
+  const handleOpenEdit = (listing: RentalListing) => {
+    setSelectedListingForEdit(listing);
+    setEditModalOpen(true);
+  };
+
+  const handleSaveEdit = (id: string, updates: Partial<RentalListing>) => {
+    ListingsService.updateListing(id, updates);
+    showToast(`Modifications enregistrées avec succès !`);
+  };
+
+  const handleDeleteListing = (id: string) => {
+    ListingsService.deleteListing(id);
+    showToast(`Annonce supprimée définitivement.`);
   };
 
   // Sync with URL Query Parameters (ex: from Global Header Search or ?action=publish)
@@ -314,6 +397,11 @@ export default function ListingsPage() {
   // Filter listings & Calculate GPS Proximity
   const filteredListings = useMemo(() => {
     const list = listings.filter((l) => {
+      // Exclure les annonces en pause du catalogue public général
+      if (l.status === 'en_pause') {
+        return false;
+      }
+
       // 1. Country Filter (Par défaut strict Bénin selon le profil utilisateur)
       if (selectedCountry !== 'all' && l.country !== selectedCountry) {
         return false;
@@ -514,8 +602,364 @@ export default function ListingsPage() {
           </div>
 
           {/* ==================================================================== */}
-          {/* CONSOLE DE RECHERCHE & FILTRES MULTI-CRITÈRES                        */}
+          {/* SÉLECTEUR DE VUE : CATALOGUE PUBLIC vs MES PUBLICATIONS            */}
           {/* ==================================================================== */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="p-1 bg-slate-100 rounded-2xl border border-slate-200/80 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleSwitchView('all')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeView === 'all'
+                    ? 'bg-white text-slate-900 shadow-sm font-black'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <Compass className={`w-4 h-4 ${activeView === 'all' ? 'text-brand-500' : 'text-slate-400'}`} />
+                <span>Toutes les annonces</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-200 text-slate-700 font-extrabold">
+                  {filteredListings.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSwitchView('my_listings')}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                  activeView === 'my_listings'
+                    ? 'bg-gradient-to-r from-brand-500 to-rose-600 text-white shadow-md shadow-brand-500/25 font-black'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <Layers className="w-4 h-4" />
+                <span>Mes publications</span>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    activeView === 'my_listings'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-brand-50 text-brand-600 border border-brand-200'
+                  }`}
+                >
+                  {myListings.length}
+                </span>
+              </button>
+            </div>
+
+            {activeView === 'my_listings' && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPublishModalOpen(true)}
+                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Nouvelle annonce</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {activeView === 'my_listings' ? (
+            /* ================================================================== */
+            /* VUE : GESTION DE MES PUBLICATIONS (MODIFIER, PAUSE, SUPPRIMER)     */
+            /* ================================================================== */
+            <div className="space-y-6">
+              {/* KPIs de Mes Publications */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-soft">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 block">
+                    Total Publications
+                  </span>
+                  <div className="text-2xl font-black text-slate-900 mt-1">
+                    {myListings.length}
+                  </div>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">
+                    Sur toute la zone UEMOA/CEMAC
+                  </span>
+                </div>
+
+                <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-soft">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 block">
+                    Actives & En Ligne
+                  </span>
+                  <div className="text-2xl font-black text-emerald-600 mt-1">
+                    {myListings.filter((l) => l.status === 'disponible').length}
+                  </div>
+                  <span className="text-[11px] text-emerald-700/80 block mt-0.5">
+                    Visibles par les visiteurs
+                  </span>
+                </div>
+
+                <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-soft">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 block">
+                    En Pause
+                  </span>
+                  <div className="text-2xl font-black text-amber-600 mt-1">
+                    {myListings.filter((l) => l.status === 'en_pause').length}
+                  </div>
+                  <span className="text-[11px] text-amber-700/80 block mt-0.5">
+                    Temporairement masquées
+                  </span>
+                </div>
+
+                <div className="bg-white p-4 rounded-3xl border border-slate-200/80 shadow-soft">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-brand-600 block">
+                    Intérêt & Contacts
+                  </span>
+                  <div className="text-2xl font-black text-brand-600 mt-1">
+                    {myListings.reduce((sum, l) => sum + (l.inquiriesCount || 0), 0)}
+                  </div>
+                  <span className="text-[11px] text-slate-400 block mt-0.5">
+                    Demandes de visite reçues
+                  </span>
+                </div>
+              </div>
+
+              {/* Filtres par statut */}
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setMyListingsFilter('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      myListingsFilter === 'all'
+                        ? 'bg-slate-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Toutes ({myListings.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMyListingsFilter('disponible')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      myListingsFilter === 'disponible'
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>En ligne ({myListings.filter((l) => l.status === 'disponible').length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMyListingsFilter('en_pause')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      myListingsFilter === 'en_pause'
+                        ? 'bg-amber-500 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    <PauseCircle className="w-3.5 h-3.5" />
+                    <span>En pause ({myListings.filter((l) => l.status === 'en_pause').length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMyListingsFilter('reserve_loue')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      myListingsFilter === 'reserve_loue'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Réservées / Louées ({myListings.filter((l) => l.status === 'reserve' || l.status === 'loue').length})
+                  </button>
+                </div>
+
+                <div className="text-xs text-slate-500">
+                  Affichage de <span className="font-bold text-slate-800">{filteredMyListings.length}</span> publication{filteredMyListings.length > 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {/* Liste de Mes Publications */}
+              {filteredMyListings.length === 0 ? (
+                <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-soft max-w-lg mx-auto space-y-4">
+                  <div className="w-16 h-16 rounded-3xl bg-brand-50 text-brand-500 flex items-center justify-center mx-auto">
+                    <Layers className="w-8 h-8" />
+                  </div>
+                  <div className="space-y-1">
+                    <h3 className="font-black text-lg text-slate-900">
+                      {myListings.length === 0 ? "Vous n'avez pas encore publié d'annonce" : 'Aucune annonce avec ce statut'}
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      {myListings.length === 0
+                        ? 'Publiez votre premier logement dès maintenant pour recevoir des demandes de visite et trouver des locataires qualifiés.'
+                        : 'Modifiez votre filtre pour afficher vos autres publications.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setPublishModalOpen(true)}
+                    className="py-2.5 px-5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all cursor-pointer inline-flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Publier une annonce</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {filteredMyListings.map((listing) => {
+                    const isPaused = listing.status === 'en_pause';
+
+                    return (
+                      <div
+                        key={listing.id}
+                        className={`rounded-3xl border transition-all flex flex-col justify-between overflow-hidden group shadow-soft hover:shadow-lg ${
+                          isPaused
+                            ? 'bg-amber-50/20 border-amber-300/80 ring-1 ring-amber-400/20'
+                            : 'bg-white border-slate-200/90 hover:border-brand-500/40'
+                        }`}
+                      >
+                        {/* Photo avec badge de statut */}
+                        <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
+                          <img
+                            src={listing.images[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80'}
+                            alt={listing.title}
+                            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
+                              isPaused ? 'grayscale-[30%] opacity-80' : ''
+                            }`}
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
+
+                          {/* Statut en haut à gauche */}
+                          <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap">
+                            {isPaused ? (
+                              <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-amber-500 text-white shadow-md flex items-center gap-1">
+                                <PauseCircle className="w-3.5 h-3.5" />
+                                <span>En pause • Masquée</span>
+                              </span>
+                            ) : listing.status === 'disponible' ? (
+                              <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-emerald-600 text-white shadow-md flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-emerald-300 animate-pulse" />
+                                <span>En ligne • Active</span>
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 rounded-xl text-[10px] font-black bg-slate-800 text-white shadow-md">
+                                {listing.status === 'reserve' ? 'Réservé' : 'Loué'}
+                              </span>
+                            )}
+                            <span className="px-2 py-1 rounded-xl text-[10px] font-bold bg-black/60 backdrop-blur-md text-white border border-white/20">
+                              {listing.flag} {listing.city}
+                            </span>
+                          </div>
+
+                          {/* Loyer en bas à gauche */}
+                          <div className="absolute bottom-3 left-3 text-white">
+                            <div className="text-lg font-black tracking-tight drop-shadow-md">
+                              {formatFCFA(listing.monthlyRent)}
+                              <span className="text-xs font-normal opacity-90">/mois</span>
+                            </div>
+                            <div className="text-[10px] text-slate-300 font-medium">
+                              + {formatFCFA(listing.charges)} charges
+                            </div>
+                          </div>
+
+                          {/* Type de bien en haut à droite */}
+                          <span className="absolute top-3 right-3 px-2 py-0.5 rounded-lg text-[10px] font-black bg-white/90 backdrop-blur-sm text-slate-800 shadow-xs">
+                            {listing.propertyType}
+                          </span>
+                        </div>
+
+                        {/* Contenu */}
+                        <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+                          <div className="space-y-1.5">
+                            <h4 className="font-black text-sm text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1">
+                              {listing.title}
+                            </h4>
+                            <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
+                              <MapPin className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                              <span className="truncate">{listing.district}, {listing.city}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 italic line-clamp-1">
+                              « {listing.landmark} »
+                            </p>
+                          </div>
+
+                          {/* Caractéristiques */}
+                          <div className="flex items-center gap-3 py-2 border-y border-slate-100 text-[11px] text-slate-600 font-semibold">
+                            <span>📐 {listing.surface} m²</span>
+                            <span>•</span>
+                            <span>🛏️ {listing.bedrooms} ch</span>
+                            <span>•</span>
+                            <span>🚿 {listing.bathrooms} sdb</span>
+                          </div>
+
+                          {/* Statistiques d'engagement */}
+                          <div className="p-2.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between text-[11px]">
+                            <span className="text-slate-500 flex items-center gap-1">
+                              <Eye className="w-3.5 h-3.5 text-slate-400" />
+                              <span><strong>{listing.viewsCount || 0}</strong> vues</span>
+                            </span>
+                            <span className="text-slate-500 flex items-center gap-1">
+                              <MessageCircle className="w-3.5 h-3.5 text-brand-500" />
+                              <span><strong>{listing.inquiriesCount || 0}</strong> contacts</span>
+                            </span>
+                          </div>
+
+                          {/* BARRE D'ACTIONS : MODIFIER / METTRE EN PAUSE / SUPPRIMER */}
+                          <div className="pt-2 border-t border-slate-100 grid grid-cols-3 gap-2">
+                            {/* Bouton Mettre en pause / Réactiver */}
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePause(listing.id)}
+                              className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${
+                                isPaused
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                                  : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200'
+                              }`}
+                              title={isPaused ? "Réactiver l'annonce" : "Mettre en pause l'annonce"}
+                            >
+                              {isPaused ? (
+                                <>
+                                  <PlayCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span className="truncate">Activer</span>
+                                </>
+                              ) : (
+                                <>
+                                  <PauseCircle className="w-3.5 h-3.5 shrink-0" />
+                                  <span className="truncate">Pause</span>
+                                </>
+                              )}
+                            </button>
+
+                            {/* Bouton Modifier */}
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(listing)}
+                              className="py-2 px-2 rounded-xl text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors flex items-center justify-center gap-1 cursor-pointer min-w-0"
+                              title="Modifier l'annonce"
+                            >
+                              <Pencil className="w-3.5 h-3.5 shrink-0 text-slate-600" />
+                              <span className="truncate">Modifier</span>
+                            </button>
+
+                            {/* Bouton Supprimer */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Confirmez-vous la suppression définitive de votre publication « ${listing.title} » ?`)) {
+                                  handleDeleteListing(listing.id);
+                                }
+                              }}
+                              className="py-2 px-2 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors flex items-center justify-center gap-1 cursor-pointer min-w-0"
+                              title="Supprimer cette publication"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 shrink-0" />
+                              <span className="truncate">Effacer</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+          {/* ==================================================================== */}
+          /* CONSOLE DE RECHERCHE & FILTRES MULTI-CRITÈRES                        */
+          /* ==================================================================== */
           <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-soft space-y-4">
             {/* Ligne 1 : Mot-clé, Pays, Ville, Montant (Les 3 filtres demandés) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -1019,6 +1463,8 @@ export default function ListingsPage() {
                 Réinitialiser tous les filtres
               </button>
             </div>
+          )}
+            </>
           )}
         </main>
       </div>
