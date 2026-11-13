@@ -400,11 +400,7 @@ export function Sidebar({
                   LOCA<span className="text-brand-400">GESTION</span>
                 </span>
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                  {isTenant
-                    ? 'Portail Résidentiel'
-                    : landlordSubRole === 'demarcheur'
-                    ? 'Espace Démarcheur'
-                    : 'Espace Bailleur'}
+                  {isTenant ? 'Portail Résidentiel' : 'Espace Bailleur'}
                 </span>
               </div>
             </Link>
@@ -420,23 +416,19 @@ export function Sidebar({
 
           {/* SÉLECTEUR D'ESPACE RAPIDE */}
           <div className="space-y-2 mb-4">
-            {/* Switcher Principal : Bailleur/Démarcheur vs Locataire */}
+            {/* Les 2 espaces principaux : Bailleur & Locataire */}
             <div className="p-1 bg-[#171b24] rounded-2xl border border-white/5 flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => handleSpaceChange('bailleur')}
                 className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
                   isLandlord
-                    ? landlordSubRole === 'demarcheur'
-                      ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30 font-black'
-                      : 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
+                    ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
                     : 'text-slate-400 hover:text-white hover:bg-white/5'
                 }`}
               >
                 <Building2 className="w-3.5 h-3.5 shrink-0" />
-                <span className="truncate">
-                  {landlordSubRole === 'demarcheur' ? 'Démarcheur' : 'Bailleur'}
-                </span>
+                <span className="truncate">Bailleur</span>
               </button>
               <button
                 type="button"
@@ -633,7 +625,7 @@ export function Sidebar({
                   e.stopPropagation();
                   handleSpaceChange(isLandlord ? 'locataire' : 'bailleur');
                 }}
-                title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : landlordSubRole === 'demarcheur' ? 'Démarcheur' : 'Bailleur'} (Mode Test)`}
+                title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : 'Bailleur'} (Mode Test)`}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <Repeat className="w-4 h-4" />

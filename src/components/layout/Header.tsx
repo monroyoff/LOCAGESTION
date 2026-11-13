@@ -215,26 +215,12 @@ export function Header({
               <span
                 className={`hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${
                   isLandlord
-                    ? landlordSubRole === 'demarcheur'
-                      ? 'bg-amber-50 text-amber-700 border-amber-200'
-                      : 'bg-brand-50 text-brand-600 border-brand-200'
+                    ? 'bg-brand-50 text-brand-600 border-brand-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 }`}
               >
-                {isLandlord ? (
-                  landlordSubRole === 'demarcheur' ? (
-                    <Sparkles className="w-3 h-3 text-amber-600" />
-                  ) : (
-                    <Sparkles className="w-3 h-3 text-brand-600" />
-                  )
-                ) : (
-                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                )}
-                {isLandlord
-                  ? landlordSubRole === 'demarcheur'
-                    ? 'Espace Démarcheur • UEMOA & CEMAC'
-                    : 'Espace Bailleur • UEMOA & CEMAC'
-                  : 'Locataire Titulaire'}
+                {isLandlord ? <Sparkles className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
+                {isLandlord ? 'Espace Bailleur • UEMOA & CEMAC' : 'Locataire Titulaire'}
               </span>
             </div>
 
@@ -291,20 +277,8 @@ export function Header({
               type="button"
               onClick={() => setIsNotifOpen(!isNotifOpen)}
               className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 hover:border-brand-300 shadow-sm transition-colors cursor-pointer relative"
-              aria-label={
-                isLandlord
-                  ? landlordSubRole === 'demarcheur'
-                    ? 'Notifications Démarcheur'
-                    : 'Notifications Bailleur'
-                  : 'Mes Notifications Résident'
-              }
-              title={
-                isLandlord
-                  ? landlordSubRole === 'demarcheur'
-                    ? 'Notifications Démarcheur'
-                    : 'Notifications Bailleur'
-                  : 'Mes Notifications Résident'
-              }
+              aria-label={isLandlord ? 'Notifications Bailleur' : 'Mes Notifications Résident'}
+              title={isLandlord ? 'Notifications Bailleur' : 'Mes Notifications Résident'}
             >
               <Bell className="w-4 h-4 text-slate-600" />
               {unreadCount > 0 && (
@@ -321,11 +295,7 @@ export function Header({
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-amber-400" />
                     <span className="text-xs font-black tracking-tight">
-                      {isLandlord
-                        ? landlordSubRole === 'demarcheur'
-                          ? 'Notifications Démarcheur'
-                          : 'Notifications Bailleur'
-                        : 'Mes Notifications Résident'}
+                      {isLandlord ? 'Notifications Bailleur' : 'Mes Notifications Résident'}
                     </span>
                     {unreadCount > 0 && (
                       <span className="text-[10px] font-black px-2 py-0.2 rounded-full bg-amber-500 text-white">
