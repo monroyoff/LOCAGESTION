@@ -206,7 +206,11 @@ export function UserProfileModal({
                   Profil & Informations d'Inscription
                 </h2>
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
-                  {profile.role === 'bailleur' ? 'Bailleur/Démarcheur' : 'Locataire'}
+                  {profile.role === 'bailleur'
+                    ? 'Bailleur Propriétaire'
+                    : profile.role === 'demarcheur'
+                    ? 'Démarcheur Immobilier'
+                    : 'Locataire Résident'}
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
@@ -234,11 +238,15 @@ export function UserProfileModal({
                 className={`w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 ${
                   profile.role === 'bailleur'
                     ? 'bg-brand-500 shadow-md shadow-brand-500/20'
+                    : profile.role === 'demarcheur'
+                    ? 'bg-amber-500 shadow-md shadow-amber-500/20'
                     : 'bg-emerald-600 shadow-md shadow-emerald-600/20'
                 }`}
               >
                 {profile.role === 'bailleur' ? (
                   <Building2 className="w-5 h-5" />
+                ) : profile.role === 'demarcheur' ? (
+                  <Sparkles className="w-5 h-5" />
                 ) : (
                   <Users className="w-5 h-5" />
                 )}
@@ -247,22 +255,28 @@ export function UserProfileModal({
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-black text-slate-900 block">
                     {profile.role === 'bailleur'
-                      ? 'Compte Bailleur/Démarcheur'
+                      ? 'Compte Bailleur Propriétaire'
+                      : profile.role === 'demarcheur'
+                      ? 'Compte Démarcheur Professionnel'
                       : 'Compte Locataire Résident'}
                   </span>
                   <span
                     className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
                       profile.role === 'bailleur'
                         ? 'bg-brand-50 text-brand-600 border border-brand-200'
+                        : profile.role === 'demarcheur'
+                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
                         : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     }`}
                   >
-                    {profile.role === 'bailleur' ? 'Patrimoine' : 'Résident'}
+                    {profile.role === 'bailleur' ? 'Patrimoine' : profile.role === 'demarcheur' ? 'Intermédiaire' : 'Résident'}
                   </span>
                 </div>
                 <span className="text-[11px] text-slate-500 block mt-0.5">
                   {profile.role === 'bailleur'
                     ? 'Espace strictement dédié au pilotage de votre parc immobilier et baux'
+                    : profile.role === 'demarcheur'
+                    ? 'Espace strictement dédié aux annonces, visites et contacts'
                     : 'Espace strictement dédié à vos loyers et quittances certifiées'}
                 </span>
               </div>
@@ -272,16 +286,28 @@ export function UserProfileModal({
               <button
                 type="button"
                 onClick={() => {
-                  const nextRole = profile.role === 'bailleur' ? 'locataire' : 'bailleur';
+                  const nextRole: UserSpace =
+                    profile.role === 'bailleur'
+                      ? 'demarcheur'
+                      : profile.role === 'demarcheur'
+                      ? 'locataire'
+                      : 'bailleur';
                   setProfile((prev) => ({ ...prev, role: nextRole }));
                   switchSpace(nextRole);
                   onClose();
                 }}
                 className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
-                title={`Basculer immédiatement vers l'espace ${profile.role === 'bailleur' ? 'Locataire' : 'Bailleur/Démarcheur'}`}
+                title="Changer d'espace"
               >
                 <Repeat className="w-3.5 h-3.5" />
-                <span>Passer en {profile.role === 'bailleur' ? 'Locataire' : 'Bailleur/Démarcheur'}</span>
+                <span>
+                  Passer en{' '}
+                  {profile.role === 'bailleur'
+                    ? 'Démarcheur'
+                    : profile.role === 'demarcheur'
+                    ? 'Locataire'
+                    : 'Bailleur'}
+                </span>
               </button>
             </div>
           </div>

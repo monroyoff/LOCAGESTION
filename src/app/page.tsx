@@ -28,8 +28,7 @@ import { Footer } from '@/components/layout/Footer';
 export default function DashboardPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { activeSpace, switchSpace, isLandlord, isTenant, landlordSubRole } = useSpace();
-  const isDemarcheur = isLandlord && landlordSubRole === 'demarcheur';
+  const { activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
 
   useEffect(() => {
     if (isDemarcheur) {

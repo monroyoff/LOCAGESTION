@@ -43,7 +43,23 @@ export const DEMO_TENANT: AuthUser = {
   password: 'demo',
 };
 
-const SEED_USERS: AuthUser[] = [DEMO_LANDLORD, DEMO_TENANT];
+export const DEMO_DEMARCHEUR: AuthUser = {
+  id: 'usr-demarcheur-01',
+  name: 'Ibrahim Traoré',
+  email: 'ibrahim.demarcheur@locagestion.africa',
+  phone: '+229 96 00 11 22',
+  role: 'demarcheur',
+  residenceCountry: 'Bénin',
+  residenceCity: 'Cotonou',
+  residenceDistrict: 'Akpakpa',
+  avatarUrl:
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
+  companyName: 'Agence Immobilière Traoré & Associés',
+  registeredAt: '01/02/2025',
+  password: 'demo',
+};
+
+const SEED_USERS: AuthUser[] = [DEMO_LANDLORD, DEMO_DEMARCHEUR, DEMO_TENANT];
 
 function notifyAuthChange(user: AuthUser | null) {
   if (typeof window !== 'undefined') {
@@ -251,7 +267,12 @@ export const AuthService = {
   },
 
   quickLogin(role: UserSpace): AuthUser {
-    const target = role === 'bailleur' ? DEMO_LANDLORD : DEMO_TENANT;
+    const target =
+      role === 'bailleur'
+        ? DEMO_LANDLORD
+        : role === 'demarcheur'
+        ? DEMO_DEMARCHEUR
+        : DEMO_TENANT;
     this.setCurrentUser(target);
     return target;
   },

@@ -1,4 +1,4 @@
-export type UserSpace = 'bailleur' | 'locataire';
+export type UserSpace = 'bailleur' | 'locataire' | 'demarcheur';
 export type LandlordSubRole = 'bailleur' | 'demarcheur';
 
 export type PaymentMethod =
@@ -243,12 +243,12 @@ export interface AuthUser {
   name: string;
   email: string;
   phone: string;
-  role: UserSpace; // 'bailleur' | 'locataire'
+  role: UserSpace; // 'bailleur' | 'locataire' | 'demarcheur'
   residenceCountry: string; // Pays de résidence (ex: 'Bénin')
   residenceCity: string;    // Ville (ex: 'Cotonou')
   residenceDistrict?: string; // Quartier (ex: 'Haie Vive')
   avatarUrl?: string;
-  companyName?: string;     // Nom d'entreprise / Agence (Bailleur)
+  companyName?: string;     // Nom d'entreprise / Agence (Bailleur / Démarcheur)
   ifuNumber?: string;       // IFU fiscal (Bailleur)
   registeredAt: string;
   password?: string;

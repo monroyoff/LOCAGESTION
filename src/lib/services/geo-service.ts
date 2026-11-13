@@ -258,6 +258,21 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
     };
   }
 
+  if (role === 'demarcheur') {
+    return {
+      id: 'usr-demarcheur-01',
+      name: 'Ibrahim Traoré',
+      email: 'ibrahim.demarcheur@locagestion.africa',
+      phone: '+229 96 00 11 22',
+      role: 'demarcheur',
+      residenceCountry: country,
+      residenceCity: city,
+      residenceDistrict: district,
+      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
+      registrationDate: '01/02/2025',
+    };
+  }
+
   return {
     id: 'usr-locataire-01',
     name: 'Koffi Mensah',

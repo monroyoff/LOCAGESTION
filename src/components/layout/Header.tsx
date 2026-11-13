@@ -56,8 +56,7 @@ export function Header({
   useEffect(() => {
     setTodayFormatted(formatDateFR(new Date()));
   }, []);
-  const { isLandlord, isTenant, activeSpace, landlordSubRole } = useSpace();
-  const isDemarcheur = isLandlord && landlordSubRole === 'demarcheur';
+  const { isLandlord, isTenant, isDemarcheur, activeSpace } = useSpace();
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
@@ -501,48 +500,49 @@ export function Header({
           </div>
 
           {/* ============================================================== */}
-          {/* ACTIONS STRICTEMENT RÉSERVÉES AU BAILLEUR / DÉMARCHEUR         */}
+          {/* ACTIONS STRICTEMENT RÉSERVÉES AU DÉMARCHEUR                    */}
+          {/* ============================================================== */}
+          {isDemarcheur && (
+            <button
+              type="button"
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('locagestion:open_publish_listing'));
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>Publier une annonce</span>
+            </button>
+          )}
+
+          {/* ============================================================== */}
+          {/* ACTIONS STRICTEMENT RÉSERVÉES AU BAILLEUR                      */}
           {/* ============================================================== */}
           {isLandlord && (
             <>
-              {landlordSubRole === 'demarcheur' ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('locagestion:open_publish_listing'));
-                  }}
-                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
-                >
-                  <Plus className="w-4 h-4 stroke-[3]" />
-                  <span>Publier une annonce</span>
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onOpenQuickAction) {
-                        onOpenQuickAction('new_payment');
-                      } else {
-                        router.push('/payments?action=new');
-                      }
-                    }}
-                    className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
-                  >
-                    <Receipt className="w-4 h-4" />
-                    <span>Encaisser loyer</span>
-                  </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (onOpenQuickAction) {
+                    onOpenQuickAction('new_payment');
+                  } else {
+                    router.push('/payments?action=new');
+                  }
+                }}
+                className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+              >
+                <Receipt className="w-4 h-4" />
+                <span>Encaisser loyer</span>
+              </button>
 
-                  <button
-                    type="button"
-                    onClick={() => router.push('/leases/new')}
-                    className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer shrink-0"
-                  >
-                    <Plus className="w-4 h-4 stroke-[3]" />
-                    <span>Nouveau bail</span>
-                  </button>
-                </>
-              )}
+              <button
+                type="button"
+                onClick={() => router.push('/leases/new')}
+                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer shrink-0"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>Nouveau bail</span>
+              </button>
             </>
           )}
 

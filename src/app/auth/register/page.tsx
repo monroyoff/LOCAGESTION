@@ -86,8 +86,8 @@ export default function RegisterPage() {
         residenceCountry: country,
         residenceCity: city,
         residenceDistrict: district.trim() || undefined,
-        companyName: role === 'bailleur' ? companyName.trim() : undefined,
-        ifuNumber: role === 'bailleur' ? ifuNumber.trim() : undefined,
+        companyName: (role === 'bailleur' || role === 'demarcheur') ? companyName.trim() : undefined,
+        ifuNumber: (role === 'bailleur' || role === 'demarcheur') ? ifuNumber.trim() : undefined,
         password: password || 'demo1234',
       });
 
@@ -164,11 +164,11 @@ export default function RegisterPage() {
                 1. Choisissez votre profil d'activité :
               </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Option Bailleur */}
                 <div
                   onClick={() => setRole('bailleur')}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer text-left relative ${
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer text-left relative ${
                     role === 'bailleur'
                       ? 'bg-brand-500/15 border-brand-500 ring-2 ring-brand-500/40 text-white'
                       : 'bg-white/5 border-white/10 hover:border-white/20 text-slate-300'
@@ -182,27 +182,61 @@ export default function RegisterPage() {
                           : 'bg-white/10 text-slate-400'
                       }`}
                     >
-                      <Building2 className="w-5 h-5" />
+                      <Building2 className="w-4 h-4" />
                     </span>
                     {role === 'bailleur' && (
-                      <CheckCircle2 className="w-5 h-5 text-brand-400" />
+                      <CheckCircle2 className="w-4 h-4 text-brand-400" />
                     )}
                   </div>
-                  <h3 className="font-black text-sm text-white">
-                    Bailleur / Démarcheur
+                  <h3 className="font-black text-xs text-white">
+                    Bailleur
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                    Gestion de biens, encaissements de loyers, baux OHADA, génération de quittances et pilotage financier.
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                    Gestion de parc, loyers, baux OHADA et quittances.
                   </p>
-                  <div className="mt-3 text-[10px] font-bold text-brand-400 uppercase tracking-wider">
-                    Espace Pilotage & Patrimoine
+                  <div className="mt-2.5 text-[9px] font-bold text-brand-400 uppercase tracking-wider">
+                    Espace Bailleur
+                  </div>
+                </div>
+
+                {/* Option Démarcheur */}
+                <div
+                  onClick={() => setRole('demarcheur')}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer text-left relative ${
+                    role === 'demarcheur'
+                      ? 'bg-amber-500/15 border-amber-500 ring-2 ring-amber-500/40 text-white'
+                      : 'bg-white/5 border-white/10 hover:border-white/20 text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span
+                      className={`p-2 rounded-xl ${
+                        role === 'demarcheur'
+                          ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30'
+                          : 'bg-white/10 text-slate-400'
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </span>
+                    {role === 'demarcheur' && (
+                      <CheckCircle2 className="w-4 h-4 text-amber-400" />
+                    )}
+                  </div>
+                  <h3 className="font-black text-xs text-white">
+                    Démarcheur
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                    Publication d’annonces, visites et mise en relation.
+                  </p>
+                  <div className="mt-2.5 text-[9px] font-bold text-amber-400 uppercase tracking-wider">
+                    Espace Démarcheur
                   </div>
                 </div>
 
                 {/* Option Locataire */}
                 <div
                   onClick={() => setRole('locataire')}
-                  className={`p-4 rounded-2xl border transition-all cursor-pointer text-left relative ${
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer text-left relative ${
                     role === 'locataire'
                       ? 'bg-emerald-500/15 border-emerald-500 ring-2 ring-emerald-500/40 text-white'
                       : 'bg-white/5 border-white/10 hover:border-white/20 text-slate-300'
@@ -216,20 +250,20 @@ export default function RegisterPage() {
                           : 'bg-white/10 text-slate-400'
                       }`}
                     >
-                      <Users className="w-5 h-5" />
+                      <Users className="w-4 h-4" />
                     </span>
                     {role === 'locataire' && (
-                      <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     )}
                   </div>
-                  <h3 className="font-black text-sm text-white">
-                    Locataire / Résident
+                  <h3 className="font-black text-xs text-white">
+                    Locataire
                   </h3>
-                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                    Paiement du loyer (Mobile Money & Wave), téléchargement de quittances certifiées et signalement de pannes.
+                  <p className="text-[10px] text-slate-400 mt-1 leading-relaxed">
+                    Paiement Mobile Money / Wave et quittances certifiées.
                   </p>
-                  <div className="mt-3 text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
-                    Portail Résidentiel Dédié
+                  <div className="mt-2.5 text-[9px] font-bold text-emerald-400 uppercase tracking-wider">
+                    Portail Résident
                   </div>
                 </div>
               </div>
@@ -354,11 +388,11 @@ export default function RegisterPage() {
               </div>
             </div>
 
-            {/* Champs spécifiques Bailleur */}
-            {role === 'bailleur' && (
+            {/* Champs spécifiques Bailleur / Démarcheur */}
+            {(role === 'bailleur' || role === 'demarcheur') && (
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-3">
                 <span className="text-[11px] font-black uppercase text-brand-300 block">
-                  Informations professionnelles du Bailleur (Optionnel) :
+                  Informations professionnelles (Optionnel) :
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>

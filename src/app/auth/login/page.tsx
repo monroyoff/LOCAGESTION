@@ -18,7 +18,8 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/space-context';
-import { DEMO_LANDLORD, DEMO_TENANT } from '@/lib/services/auth-service';
+import { UserSpace } from '@/lib/types';
+import { DEMO_LANDLORD, DEMO_DEMARCHEUR, DEMO_TENANT } from '@/lib/services/auth-service';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = (role: 'bailleur' | 'locataire') => {
+  const handleQuickLogin = (role: UserSpace) => {
     quickLogin(role);
   };
 
@@ -110,29 +111,55 @@ export default function LoginPage() {
               Connexion instantanée (Comptes Démo certifiés) :
             </label>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {/* Card Bailleur */}
               <button
                 type="button"
                 onClick={() => handleQuickLogin('bailleur')}
-                className="p-3.5 rounded-2xl bg-gradient-to-br from-brand-950/40 to-slate-900 border border-brand-500/30 hover:border-brand-500 text-left transition-all group hover:scale-[1.02] cursor-pointer"
+                className="p-3 rounded-2xl bg-gradient-to-br from-brand-950/40 to-slate-900 border border-brand-500/30 hover:border-brand-500 text-left transition-all group hover:scale-[1.02] cursor-pointer"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="p-2 rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30">
+                  <span className="p-1.5 rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30">
                     <Building2 className="w-4 h-4" />
                   </span>
-                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-brand-500 text-white">
+                  <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-brand-500 text-white">
                     Bailleur
                   </span>
                 </div>
-                <div className="font-bold text-white text-xs group-hover:text-brand-300">
+                <div className="font-bold text-white text-xs truncate group-hover:text-brand-300">
                   {DEMO_LANDLORD.name}
                 </div>
-                <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                <div className="text-[9.5px] text-slate-400 truncate mt-0.5">
                   Cabinet Diallo • Bénin 🇧🇯
                 </div>
-                <div className="mt-2.5 text-[10px] font-bold text-brand-400 flex items-center gap-1">
-                  <span>Accéder au Dashboard</span>
+                <div className="mt-2 text-[9.5px] font-bold text-brand-400 flex items-center gap-1">
+                  <span>Dashboard</span>
+                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                </div>
+              </button>
+
+              {/* Card Démarcheur */}
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('demarcheur')}
+                className="p-3 rounded-2xl bg-gradient-to-br from-amber-950/40 to-slate-900 border border-amber-500/30 hover:border-amber-500 text-left transition-all group hover:scale-[1.02] cursor-pointer"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="p-1.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
+                    <Sparkles className="w-4 h-4" />
+                  </span>
+                  <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-white">
+                    Démarcheur
+                  </span>
+                </div>
+                <div className="font-bold text-white text-xs truncate group-hover:text-amber-300">
+                  {DEMO_DEMARCHEUR.name}
+                </div>
+                <div className="text-[9.5px] text-slate-400 truncate mt-0.5">
+                  Agence Traoré • Bénin 🇧🇯
+                </div>
+                <div className="mt-2 text-[9.5px] font-bold text-amber-400 flex items-center gap-1">
+                  <span>Annonces</span>
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </button>
@@ -141,24 +168,24 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleQuickLogin('locataire')}
-                className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 hover:border-emerald-500 text-left transition-all group hover:scale-[1.02] cursor-pointer"
+                className="p-3 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 hover:border-emerald-500 text-left transition-all group hover:scale-[1.02] cursor-pointer"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
                     <Users className="w-4 h-4" />
                   </span>
-                  <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-600 text-white">
+                  <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-600 text-white">
                     Locataire
                   </span>
                 </div>
-                <div className="font-bold text-white text-xs group-hover:text-emerald-300">
+                <div className="font-bold text-white text-xs truncate group-hover:text-emerald-300">
                   {DEMO_TENANT.name}
                 </div>
-                <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                  Résident Titulaire • Bénin 🇧🇯
+                <div className="text-[9.5px] text-slate-400 truncate mt-0.5">
+                  Résident • Bénin 🇧🇯
                 </div>
-                <div className="mt-2.5 text-[10px] font-bold text-emerald-400 flex items-center gap-1">
-                  <span>Accéder au Portail</span>
+                <div className="mt-2 text-[9.5px] font-bold text-emerald-400 flex items-center gap-1">
+                  <span>Portail</span>
                   <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
                 </div>
               </button>

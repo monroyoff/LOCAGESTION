@@ -3,13 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { UserSpace, AuthUser, LandlordSubRole } from '../types';
-import { AuthService, DEMO_LANDLORD, DEMO_TENANT } from '../services/auth-service';
+import { AuthService, DEMO_LANDLORD, DEMO_DEMARCHEUR, DEMO_TENANT } from '../services/auth-service';
 import { notifyAction } from '../notifications/action-notifier';
 
 export interface SpaceContextType {
   activeSpace: UserSpace;
   isLandlord: boolean;
   isTenant: boolean;
+  isDemarcheur: boolean;
   landlordSubRole: LandlordSubRole;
   setLandlordSubRole: (role: LandlordSubRole) => void;
   user: AuthUser | null;
@@ -28,13 +29,14 @@ export interface SpaceContextType {
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
 
-// Routes réservées au Bailleur
+// Routes strictement réservées au Bailleur (inaccessibles au Démarcheur et au Locataire)
 const LANDLORD_ONLY_PREFIXES = [
   '/properties',
   '/leases',
   '/tenants',
   '/payments',
   '/reminders',
+  '/incidents',
 ];
 
 export function SpaceProvider({ children }: { children: React.ReactNode }) {
@@ -45,43 +47,12 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const isPortalRoute = pathname ? pathname.startsWith('/portal') : false;
   const [user, setUser] = useState<AuthUser | null>(() => (isPortalRoute ? DEMO_TENANT : DEMO_LANDLORD));
   const [mounted, setMounted] = useState(false);
-  const [landlordSubRole, setLandlordSubRoleState] = useState<LandlordSubRole>('bailleur');
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('locagestion:landlord_sub_role') as LandlordSubRole | null;
-      if (saved === 'bailleur' || saved === 'demarcheur') {
-        setLandlordSubRoleState(saved);
-      }
-      const handleStorage = (e: StorageEvent) => {
-        if (e.key === 'locagestion:landlord_sub_role' && (e.newValue === 'bailleur' || e.newValue === 'demarcheur')) {
-          setLandlordSubRoleState(e.newValue);
-        }
-      };
-      window.addEventListener('storage', handleStorage);
-      return () => window.removeEventListener('storage', handleStorage);
-    }
-  }, []);
-
-  const setLandlordSubRole = (role: LandlordSubRole) => {
-    setLandlordSubRoleState(role);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('locagestion:landlord_sub_role', role);
-      window.dispatchEvent(new CustomEvent('locagestion:landlord_subrole_changed', { detail: { role } }));
-    }
-    if (role === 'demarcheur') {
-      const demarcheurAllowed = ['/listings', '/messages'];
-      const isAllowed = demarcheurAllowed.some((p) => pathname.startsWith(p));
-      if (!isAllowed) {
-        router.push('/listings');
-      }
-    }
-  };
 
   useEffect(() => {
     setMounted(true);
     // Synchroniser avec la session réelle après le montage client
     const current = AuthService.getCurrentUser();
+
     if (pathname.startsWith('/portal')) {
       if (!current || current.role !== 'locataire') {
         const tenantUser = AuthService.quickLogin('locataire');
@@ -93,8 +64,12 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       pathname === '/' ||
       LANDLORD_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
     ) {
-      if (landlordSubRole === 'demarcheur') {
+      if (current && current.role === 'demarcheur') {
         router.replace('/listings');
+        return;
+      }
+      if (current && current.role === 'locataire') {
+        router.replace('/portal');
         return;
       }
       if (!current || current.role !== 'bailleur') {
@@ -121,7 +96,13 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const activeSpace: UserSpace = user ? user.role : 'bailleur';
   const isLandlord = activeSpace === 'bailleur';
   const isTenant = activeSpace === 'locataire';
+  const isDemarcheur = activeSpace === 'demarcheur';
+  const landlordSubRole: LandlordSubRole = isDemarcheur ? 'demarcheur' : 'bailleur';
   const isAuthenticated = !!user;
+
+  const setLandlordSubRole = (role: LandlordSubRole) => {
+    switchSpace(role);
+  };
 
   const login = (emailOrPhone: string, password?: string) => {
     const res = AuthService.login(emailOrPhone, password);
@@ -129,6 +110,8 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       setUser(res.user);
       if (res.user.role === 'locataire') {
         router.push('/portal');
+      } else if (res.user.role === 'demarcheur') {
+        router.push('/listings');
       } else {
         router.push('/');
       }
@@ -142,6 +125,8 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       setUser(res.user);
       if (res.user.role === 'locataire') {
         router.push('/portal');
+      } else if (res.user.role === 'demarcheur') {
+        router.push('/listings');
       } else {
         router.push('/');
       }
@@ -165,20 +150,20 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     setUser(targetUser);
     if (role === 'locataire') {
       router.push('/portal');
-    } else if (landlordSubRole === 'demarcheur') {
+    } else if (role === 'demarcheur') {
       router.push('/listings');
     } else {
       router.push('/');
     }
   };
 
-  // Bascule instantanée entre Bailleur et Locataire sans obligation de se déconnecter
+  // Bascule instantanée entre les 3 espaces : Bailleur, Démarcheur et Locataire
   const switchSpace = (targetSpace: UserSpace) => {
     const targetUser = AuthService.quickLogin(targetSpace);
     setUser(targetUser);
     if (targetSpace === 'locataire') {
       router.push('/portal');
-    } else if (landlordSubRole === 'demarcheur') {
+    } else if (targetSpace === 'demarcheur') {
       router.push('/listings');
     } else {
       router.push('/');
@@ -191,6 +176,7 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
         activeSpace,
         isLandlord,
         isTenant,
+        isDemarcheur,
         landlordSubRole,
         setLandlordSubRole,
         user,

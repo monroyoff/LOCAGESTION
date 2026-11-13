@@ -242,8 +242,7 @@ const MOCK_CONVERSATIONS: Conversation[] = [
 export default function MessagesPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { activeSpace, switchSpace, isLandlord, isTenant, landlordSubRole } = useSpace();
-  const isDemarcheur = isLandlord && landlordSubRole === 'demarcheur';
+  const { activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
   const [activeTab, setActiveTab] = useState<'general' | 'archive'>('general');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedConv, setSelectedConv] = useState<Conversation>(MOCK_CONVERSATIONS[0]);

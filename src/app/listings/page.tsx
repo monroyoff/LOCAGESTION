@@ -77,8 +77,7 @@ const PROPERTY_TYPES = ['Tous', 'Chambre salon sanitaire', 'Appartement', 'Meubl
 export default function ListingsPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { activeSpace, switchSpace, isLandlord, isTenant, landlordSubRole } = useSpace();
-  const isDemarcheur = isLandlord && landlordSubRole === 'demarcheur';
+  const { activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
