@@ -226,26 +226,36 @@ export default function ListingsPage() {
 
   // Sync with URL Query Parameters (ex: from Global Header Search or ?action=publish)
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const action = params.get('action');
-      if (action === 'publish' || action === 'new' || params.get('publish') === 'true') {
-        setPublishModalOpen(true);
-      }
-      const q = params.get('q');
-      const country = params.get('country');
-      const city = params.get('city');
-      const maxPrice = params.get('maxPrice');
-      const type = params.get('type');
+    const handleUrlActions = () => {
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const action = params.get('action');
+        if (action === 'publish' || action === 'new' || params.get('publish') === 'true') {
+          setPublishModalOpen(true);
+        }
+        const q = params.get('q');
+        const country = params.get('country');
+        const city = params.get('city');
+        const maxPrice = params.get('maxPrice');
+        const type = params.get('type');
 
-      if (q) setSearchQuery(q);
-      if (country && (country in COUNTRIES_CITIES || country === 'all')) {
-        setSelectedCountry(country);
+        if (q) setSearchQuery(q);
+        if (country && (country in COUNTRIES_CITIES || country === 'all')) {
+          setSelectedCountry(country);
+        }
+        if (city) setSelectedCity(city);
+        if (maxPrice) setCustomMaxPrice(maxPrice);
+        if (type && PROPERTY_TYPES.includes(type)) setSelectedPropertyType(type);
       }
-      if (city) setSelectedCity(city);
-      if (maxPrice) setCustomMaxPrice(maxPrice);
-      if (type && PROPERTY_TYPES.includes(type)) setSelectedPropertyType(type);
-    }
+    };
+
+    handleUrlActions();
+
+    const handleOpenPublish = () => setPublishModalOpen(true);
+    window.addEventListener('locagestion:open_publish_listing', handleOpenPublish);
+    return () => {
+      window.removeEventListener('locagestion:open_publish_listing', handleOpenPublish);
+    };
   }, []);
 
   // When country changes, reset city if it does not belong to the selected country

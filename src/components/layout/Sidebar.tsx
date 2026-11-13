@@ -27,6 +27,7 @@ import {
   Lock,
   LogOut,
   Repeat,
+  Plus,
 } from 'lucide-react';
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
@@ -205,6 +206,13 @@ export function Sidebar({
       badge: 'Nouveau',
     },
     {
+      name: 'Publier une annonce',
+      href: '/listings?action=publish',
+      icon: Plus,
+      active: false,
+      badge: '+ Nouveau',
+    },
+    {
       name: 'Relances & Préavis',
       href: '/reminders',
       icon: BellRing,
@@ -282,6 +290,13 @@ export function Sidebar({
       icon: Compass,
       active: pathname.startsWith('/listings'),
       badge: 'Nouveau',
+    },
+    {
+      name: 'Publier une annonce',
+      href: '/listings?action=publish',
+      icon: Plus,
+      active: false,
+      badge: '+ Nouveau',
     },
     {
       name: 'Relances & Préavis',
@@ -401,11 +416,15 @@ export function Sidebar({
 
           {currentNavItems.map((item) => {
             const Icon = item.icon;
+            const isPublishBtn = item.name === 'Publier une annonce';
             return (
               <Link
                 key={item.name}
                 href={item.href}
                 onClick={(e) => {
+                  if (isPublishBtn) {
+                    window.dispatchEvent(new CustomEvent('locagestion:open_publish_listing'));
+                  }
                   if (item.portalTab) {
                     setCurrentPortalTab(item.portalTab);
                     if (pathname === '/portal' && onPortalTabChange) {
@@ -418,7 +437,9 @@ export function Sidebar({
                 className={`${
                   item.mobileOnly ? 'lg:hidden ' : ''
                 }flex items-center justify-between px-3.5 py-3 rounded-2xl text-xs font-semibold transition-all group ${
-                  item.active
+                  isPublishBtn
+                    ? 'bg-brand-500/10 hover:bg-brand-500/20 text-brand-300 border border-brand-500/30 shadow-xs'
+                    : item.active
                     ? isLandlord
                       ? 'bg-white/[0.08] text-white shadow-sm font-bold'
                       : 'bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30'
@@ -428,7 +449,9 @@ export function Sidebar({
                 <div className="flex items-center gap-3">
                   <div
                     className={`p-1.5 rounded-xl transition-colors ${
-                      item.active
+                      isPublishBtn
+                        ? 'text-white bg-brand-500 shadow-sm'
+                        : item.active
                         ? isLandlord
                           ? 'text-brand-400 bg-brand-500/10'
                           : 'text-emerald-400 bg-emerald-500/20'
@@ -456,7 +479,9 @@ export function Sidebar({
                   {item.badge && (
                     <span
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        isTenant
+                        isPublishBtn
+                          ? 'text-white bg-brand-500 font-extrabold shadow-sm'
+                          : isTenant
                           ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/25'
                           : 'text-tealAccent-400 bg-tealAccent-500/10 border border-tealAccent-500/20'
                       }`}
