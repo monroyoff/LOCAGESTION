@@ -1025,7 +1025,7 @@ function TenantPortalContent() {
               <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="relative z-10 flex flex-col xl:flex-row xl:items-center justify-between gap-5 sm:gap-6">
                   <div>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="px-3 py-0.5 rounded-full text-[11px] font-black bg-emerald-500 text-white shadow-sm flex items-center gap-1">
@@ -1045,12 +1045,12 @@ function TenantPortalContent() {
                     </p>
                   </div>
 
-                  {/* Big Action Button */}
-                  <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
+                  {/* Actions Rapides du Locataire */}
+                  <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
                     <button
                       type="button"
                       onClick={() => setDeclarationModalOpen(true)}
-                      className="w-full sm:w-auto py-3.5 px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs sm:text-sm font-black shadow-pink-glow active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto py-3 sm:py-3.5 px-5 sm:px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs sm:text-sm font-black shadow-pink-glow active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Smartphone className="w-4 h-4" />
                       <span>Déclarer un paiement de loyer</span>
@@ -1058,7 +1058,7 @@ function TenantPortalContent() {
                     <button
                       type="button"
                       onClick={() => setReportIssueModalOpen(true)}
-                      className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto py-3 sm:py-3.5 px-4 sm:px-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Wrench className="w-4 h-4 text-brand-300" />
                       <span>Signaler une panne</span>
@@ -1066,11 +1066,14 @@ function TenantPortalContent() {
                     <button
                       type="button"
                       onClick={() => setIsInspectionModalOpen(true)}
-                      className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/40 text-emerald-300 hover:text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full sm:w-auto py-3 sm:py-3.5 px-4 sm:px-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                       title="Accéder aux documents et photos de l'état des lieux"
                     >
                       <Camera className="w-4 h-4 text-emerald-400" />
-                      <span>État des lieux & photos ({inspectionData.photos.length})</span>
+                      <span>État des lieux & photos</span>
+                      <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[10px] font-black border border-emerald-500/30">
+                        {inspectionData.photos.length}
+                      </span>
                     </button>
                   </div>
                 </div>
