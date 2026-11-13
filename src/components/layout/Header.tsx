@@ -20,7 +20,6 @@ import {
   X,
   ExternalLink,
   MessageSquare,
-  ArrowLeft,
 } from 'lucide-react';
 import { formatDateFR } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
@@ -144,29 +143,6 @@ export function Header({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [pathname]);
 
-  // Détection d'écran d'accueil ou sous-page
-  const isHomeDashboard = isDemarcheur
-    ? pathname === '/listings'
-    : isLandlord
-    ? pathname === '/'
-    : pathname === '/portal' && (!activePortalTab || activePortalTab === 'accueil');
-
-  const showBackButton = !isHomeDashboard;
-
-  const handleBack = () => {
-    if (isDemarcheur) {
-      router.push('/listings');
-    } else if (isTenant) {
-      if (activePortalTab && activePortalTab !== 'accueil' && onPortalTabChange) {
-        onPortalTabChange('accueil');
-        return;
-      }
-      router.push('/portal');
-    } else {
-      router.push('/');
-    }
-  };
-
   const getPageTitle = () => {
     if (isTenant) {
       if (activePortalTab === 'quittances') return 'Mes Quittances & Reçus';
@@ -190,21 +166,8 @@ export function Header({
   return (
     <>
       <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
-        {/* Left: Universal Back Button & Mobile Menu & Space Badge / Title */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-          {showBackButton && (
-            <button
-              type="button"
-              onClick={handleBack}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200/90 text-slate-800 text-xs sm:text-sm font-black shadow-xs transition-all active:scale-95 cursor-pointer shrink-0 group"
-              title="Retour à la page précédente"
-              aria-label="Retour"
-            >
-              <ArrowLeft className="w-4 h-4 text-slate-600 group-hover:text-slate-900 group-hover:-translate-x-0.5 transition-transform" />
-              <span>Retour</span>
-            </button>
-          )}
-
+        {/* Left: Mobile Menu & Space Badge / Title (Emplacement réservé exclusivement au menu) */}
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button
             onClick={onToggleSidebar}
             className="lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
@@ -216,7 +179,7 @@ export function Header({
 
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
-              <h1 className="text-sm sm:text-base lg:text-xl font-black text-slate-900 tracking-tight truncate max-w-[140px] xs:max-w-[180px] sm:max-w-none">
+              <h1 className="text-sm sm:text-base lg:text-xl font-black text-slate-900 tracking-tight truncate max-w-[180px] xs:max-w-none">
                 {getPageTitle()}
               </h1>
               <span
