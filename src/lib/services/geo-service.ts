@@ -315,6 +315,9 @@ export function saveUserProfile(profile: UserProfile): void {
     if (profile.residenceDistrict) {
       localStorage.setItem(STORAGE_KEY_DISTRICT, profile.residenceDistrict);
     }
+    if (profile.projectCountry) {
+      localStorage.setItem('locagestion:user_project_country', profile.projectCountry);
+    }
     window.dispatchEvent(new CustomEvent('locagestion:profile_updated', { detail: profile }));
     window.dispatchEvent(
       new CustomEvent('locagestion:residence_updated', {

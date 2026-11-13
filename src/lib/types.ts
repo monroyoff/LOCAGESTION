@@ -234,9 +234,10 @@ export interface UserProfile {
   role: UserSpace;
   birthDate?: string;       // Date de naissance
   birthPlace?: string;      // Lieu de naissance
-  residenceCountry: string; // Pays de résidence renseigné lors de l'inscription (ex: 'Bénin')
-  residenceCity: string;    // Ville de résidence (ex: 'Cotonou')
+  residenceCountry: string; // Pays de résidence renseigné lors de l'inscription (ex: 'Bénin', 'France')
+  residenceCity: string;    // Ville de résidence (ex: 'Cotonou', 'Paris')
   residenceDistrict?: string; // Quartier / Lieu actuel (ex: 'Haie Vive', 'Agla', etc.)
+  projectCountry?: string;  // Pays du projet immobilier situé dans l'UEMOA & CEMAC (ex: 'Bénin')
   avatarUrl?: string;
   registrationDate?: string;
   companyName?: string;
@@ -259,9 +260,10 @@ export interface AuthUser {
   role: UserSpace; // 'bailleur' | 'locataire' | 'demarcheur'
   birthDate?: string; // Date de naissance (ex: '15/06/1988')
   birthPlace?: string; // Lieu de naissance (ex: 'Cotonou')
-  residenceCountry: string; // Pays de résidence proposé par géolocalisation (ex: 'Bénin')
-  residenceCity: string;    // Ville (ex: 'Cotonou')
+  residenceCountry: string; // Pays de résidence proposé par géolocalisation (ex: 'Bénin', 'France')
+  residenceCity: string;    // Ville (ex: 'Cotonou', 'Paris')
   residenceDistrict?: string; // Quartier (ex: 'Haie Vive')
+  projectCountry?: string;  // Pays du projet immobilier dans l'espace UEMOA & CEMAC (ex: 'Bénin')
   avatarUrl?: string;
   companyName?: string;     // Nom d'entreprise / Agence (Bailleur / Démarcheur)
   ifuNumber?: string;       // IFU fiscal (Bailleur)

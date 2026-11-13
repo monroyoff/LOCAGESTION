@@ -26,32 +26,64 @@ import {
   Navigation,
   RefreshCw,
   Briefcase,
-  FileText,
-  BadgeCheck,
+  Layers,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/space-context';
 import { UserSpace } from '@/lib/types';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { detectUserGeoLocation, UserGeoLocation } from '@/lib/services/geo-service';
 
-const AFRICAN_COUNTRIES_CONFIG: Record<
+// Les 14 pays officiels des zones UEMOA & CEMAC
+const UEMOA_CEMAC_COUNTRIES = [
+  'Bénin',
+  'Côte d’Ivoire',
+  'Sénégal',
+  'Togo',
+  'Cameroun',
+  'Burkina Faso',
+  'Mali',
+  'Niger',
+  'Gabon',
+  'Congo',
+  'Centrafrique',
+  'Tchad',
+  'Guinée-Bissau',
+  'Guinée Équatoriale',
+];
+
+// Configuration complète : UEMOA & CEMAC + Principaux pays de la Diaspora internationale
+const ALL_COUNTRIES_CONFIG: Record<
   string,
-  { flag: string; dialCode: string; defaultCity: string }
+  { flag: string; dialCode: string; defaultCity: string; isUemoaCemac: boolean }
 > = {
-  'Bénin': { flag: '🇧🇯', dialCode: '+229', defaultCity: 'Cotonou' },
-  'Côte d’Ivoire': { flag: '🇨🇮', dialCode: '+225', defaultCity: 'Abidjan' },
-  'Sénégal': { flag: '🇸🇳', dialCode: '+221', defaultCity: 'Dakar' },
-  'Togo': { flag: '🇹🇬', dialCode: '+228', defaultCity: 'Lomé' },
-  'Cameroun': { flag: '🇨🇲', dialCode: '+237', defaultCity: 'Douala' },
-  'Burkina Faso': { flag: '🇧🇫', dialCode: '+226', defaultCity: 'Ouagadougou' },
-  'Mali': { flag: '🇲🇱', dialCode: '+223', defaultCity: 'Bamako' },
-  'Niger': { flag: '🇳🇪', dialCode: '+227', defaultCity: 'Niamey' },
-  'Gabon': { flag: '🇬🇦', dialCode: '+241', defaultCity: 'Libreville' },
-  'Congo': { flag: '🇨🇬', dialCode: '+242', defaultCity: 'Brazzaville' },
-  'Centrafrique': { flag: '🇨🇫', dialCode: '+236', defaultCity: 'Bangui' },
-  'Tchad': { flag: '🇹🇩', dialCode: '+235', defaultCity: 'N’Djamena' },
-  'Guinée-Bissau': { flag: '🇬🇼', dialCode: '+245', defaultCity: 'Bissau' },
-  'Guinée Équatoriale': { flag: '🇬🇶', dialCode: '+240', defaultCity: 'Malabo' },
+  // --- Zone UEMOA & CEMAC ---
+  'Bénin': { flag: '🇧🇯', dialCode: '+229', defaultCity: 'Cotonou', isUemoaCemac: true },
+  'Côte d’Ivoire': { flag: '🇨🇮', dialCode: '+225', defaultCity: 'Abidjan', isUemoaCemac: true },
+  'Sénégal': { flag: '🇸🇳', dialCode: '+221', defaultCity: 'Dakar', isUemoaCemac: true },
+  'Togo': { flag: '🇹🇬', dialCode: '+228', defaultCity: 'Lomé', isUemoaCemac: true },
+  'Cameroun': { flag: '🇨🇲', dialCode: '+237', defaultCity: 'Douala', isUemoaCemac: true },
+  'Burkina Faso': { flag: '🇧🇫', dialCode: '+226', defaultCity: 'Ouagadougou', isUemoaCemac: true },
+  'Mali': { flag: '🇲🇱', dialCode: '+223', defaultCity: 'Bamako', isUemoaCemac: true },
+  'Niger': { flag: '🇳🇪', dialCode: '+227', defaultCity: 'Niamey', isUemoaCemac: true },
+  'Gabon': { flag: '🇬🇦', dialCode: '+241', defaultCity: 'Libreville', isUemoaCemac: true },
+  'Congo': { flag: '🇨🇬', dialCode: '+242', defaultCity: 'Brazzaville', isUemoaCemac: true },
+  'Centrafrique': { flag: '🇨🇫', dialCode: '+236', defaultCity: 'Bangui', isUemoaCemac: true },
+  'Tchad': { flag: '🇹🇩', dialCode: '+235', defaultCity: 'N’Djamena', isUemoaCemac: true },
+  'Guinée-Bissau': { flag: '🇬🇼', dialCode: '+245', defaultCity: 'Bissau', isUemoaCemac: true },
+  'Guinée Équatoriale': { flag: '🇬🇶', dialCode: '+240', defaultCity: 'Malabo', isUemoaCemac: true },
+
+  // --- Diaspora & International (Europe, Amérique, etc.) ---
+  'France': { flag: '🇫🇷', dialCode: '+33', defaultCity: 'Paris', isUemoaCemac: false },
+  'Belgique': { flag: '🇧🇪', dialCode: '+32', defaultCity: 'Bruxelles', isUemoaCemac: false },
+  'Suisse': { flag: '🇨🇭', dialCode: '+41', defaultCity: 'Genève', isUemoaCemac: false },
+  'Canada': { flag: '🇨🇦', dialCode: '+1', defaultCity: 'Montréal', isUemoaCemac: false },
+  'États-Unis': { flag: '🇺🇸', dialCode: '+1', defaultCity: 'New York', isUemoaCemac: false },
+  'Royaume-Uni': { flag: '🇬🇧', dialCode: '+44', defaultCity: 'Londres', isUemoaCemac: false },
+  'Allemagne': { flag: '🇩🇪', dialCode: '+49', defaultCity: 'Berlin', isUemoaCemac: false },
+  'Italie': { flag: '🇮🇹', dialCode: '+39', defaultCity: 'Rome', isUemoaCemac: false },
+  'Espagne': { flag: '🇪🇸', dialCode: '+34', defaultCity: 'Madrid', isUemoaCemac: false },
+  'Maroc': { flag: '🇲🇦', dialCode: '+212', defaultCity: 'Casablanca', isUemoaCemac: false },
+  'Autre pays (International)': { flag: '🌍', dialCode: '+', defaultCity: '', isUemoaCemac: false },
 };
 
 const TOTAL_STEPS = 6;
@@ -60,13 +92,13 @@ export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
 
-  // Wizard Navigation
+  // Navigation du wizard
   const [currentStep, setCurrentStep] = useState(1);
 
-  // Étape 1 : Choix de l'espace en premier (Bailleur, Locataire ou Démarcheur)
+  // Étape 1 : Choix en primo de l'espace (Bailleur, Locataire ou Démarcheur)
   const [role, setRole] = useState<UserSpace>('bailleur');
 
-  // Étape 2 : Nom et Prénoms (+ infos entreprise pour pro)
+  // Étape 2 : Nom et Prénoms (+ infos entreprise, IFU uniquement pour bailleur)
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -77,14 +109,15 @@ export default function RegisterPage() {
   const [dialCode, setDialCode] = useState('+229');
   const [phoneDigits, setPhoneDigits] = useState('');
 
-  // Étape 4 : État Civil (Date et Lieu de naissance)
+  // Étape 4 : État civil (Lieu de naissance mondial, non restreint à l'UEMOA/CEMAC)
   const [birthDate, setBirthDate] = useState('');
   const [birthPlace, setBirthPlace] = useState('');
 
-  // Étape 5 : Pays de résidence (proposé automatiquement par géolocalisation)
+  // Étape 5 : Pays de résidence (proposé automatiquement) + Pays du projet (si résidence hors UEMOA/CEMAC)
   const [residenceCountry, setResidenceCountry] = useState('Bénin');
   const [residenceCity, setResidenceCity] = useState('Cotonou');
-  const [residenceDistrict, setResidenceDistrict] = useState('Haie Vive');
+  const [residenceDistrict, setResidenceDistrict] = useState('');
+  const [projectCountry, setProjectCountry] = useState('Bénin');
   const [isDetectingGeo, setIsDetectingGeo] = useState(false);
   const [detectedGeoLabel, setDetectedGeoLabel] = useState<string | null>(null);
   const [geoSource, setGeoSource] = useState<'gps' | 'ip' | 'default'>('default');
@@ -94,13 +127,23 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Form State
+  // États de validation
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Villes disponibles pour le pays sélectionné
+  // Vérifier si la résidence actuelle est hors zone UEMOA / CEMAC (ex: France, Belgique, USA...)
+  const isOutsideUEMOACEMAC = !UEMOA_CEMAC_COUNTRIES.includes(residenceCountry);
+
+  // Villes suggérées
   const availableCities =
-    COUNTRIES_CITIES[residenceCountry]?.cities || ['Cotonou', 'Porto-Novo', 'Abomey-Calavi', 'Parakou'];
+    COUNTRIES_CITIES[residenceCountry]?.cities ||
+    (residenceCountry === 'France'
+      ? ['Paris', 'Lyon', 'Marseille', 'Bordeaux', 'Toulouse', 'Lille', 'Nantes']
+      : residenceCountry === 'Belgique'
+      ? ['Bruxelles', 'Liège', 'Anvers', 'Gand']
+      : residenceCountry === 'Canada'
+      ? ['Montréal', 'Québec', 'Toronto', 'Ottawa']
+      : ['Cotonou', 'Porto-Novo', 'Abomey-Calavi', 'Parakou']);
 
   // Détection automatique de la géolocalisation au chargement
   const runGeoDetection = async () => {
@@ -108,34 +151,43 @@ export default function RegisterPage() {
     try {
       const geo: UserGeoLocation = await detectUserGeoLocation();
       if (geo && geo.country) {
-        // Normalisation avec les pays supportés
-        const matchedCountry = Object.keys(AFRICAN_COUNTRIES_CONFIG).find(
-          (c) => c.toLowerCase() === geo.country.toLowerCase() || geo.country.toLowerCase().includes(c.toLowerCase())
+        // Trouver une correspondance dans notre liste de pays
+        const matchedCountry = Object.keys(ALL_COUNTRIES_CONFIG).find(
+          (c) =>
+            c.toLowerCase() === geo.country.toLowerCase() ||
+            geo.country.toLowerCase().includes(c.toLowerCase()) ||
+            c.toLowerCase().includes(geo.country.toLowerCase())
         );
 
-        const finalCountry = matchedCountry || 'Bénin';
-        setResidenceCountry(finalCountry);
+        const detectedCountryName = matchedCountry || geo.country;
+        setResidenceCountry(detectedCountryName);
 
         if (geo.city) {
           setResidenceCity(geo.city);
-        } else if (AFRICAN_COUNTRIES_CONFIG[finalCountry]) {
-          setResidenceCity(AFRICAN_COUNTRIES_CONFIG[finalCountry].defaultCity);
+        } else if (ALL_COUNTRIES_CONFIG[detectedCountryName]) {
+          setResidenceCity(ALL_COUNTRIES_CONFIG[detectedCountryName].defaultCity);
         }
 
         if (geo.district) {
           setResidenceDistrict(geo.district);
         }
 
-        // Mettre à jour l'indicatif téléphonique par défaut selon le pays détecté
-        if (AFRICAN_COUNTRIES_CONFIG[finalCountry]) {
-          setDialCode(AFRICAN_COUNTRIES_CONFIG[finalCountry].dialCode);
+        if (ALL_COUNTRIES_CONFIG[detectedCountryName]) {
+          setDialCode(ALL_COUNTRIES_CONFIG[detectedCountryName].dialCode);
         }
 
-        setDetectedGeoLabel(geo.label || `${geo.city || 'Position active'} (${finalCountry})`);
+        setDetectedGeoLabel(geo.label || `${geo.city || 'Position active'} (${detectedCountryName})`);
         setGeoSource(geo.source === 'gps' ? 'gps' : 'ip');
+
+        // Si le pays de résidence détecté est hors UEMOA/CEMAC, pré-initialiser le pays du projet sur le Bénin
+        if (!UEMOA_CEMAC_COUNTRIES.includes(detectedCountryName)) {
+          setProjectCountry('Bénin');
+        } else {
+          setProjectCountry(detectedCountryName);
+        }
       }
     } catch (e) {
-      console.warn('Géolocalisation automatique indisponible, utilisation du Bénin par défaut.');
+      console.warn('Géolocalisation automatique indisponible, utilisation du profil par défaut.');
     } finally {
       setIsDetectingGeo(false);
     }
@@ -147,7 +199,7 @@ export default function RegisterPage() {
 
   const handleCountryChange = (newCountry: string) => {
     setResidenceCountry(newCountry);
-    const countryCfg = AFRICAN_COUNTRIES_CONFIG[newCountry];
+    const countryCfg = ALL_COUNTRIES_CONFIG[newCountry];
     if (countryCfg) {
       setDialCode(countryCfg.dialCode);
       const cities = COUNTRIES_CITIES[newCountry]?.cities;
@@ -156,6 +208,13 @@ export default function RegisterPage() {
       } else {
         setResidenceCity(countryCfg.defaultCity);
       }
+    }
+
+    if (UEMOA_CEMAC_COUNTRIES.includes(newCountry)) {
+      setProjectCountry(newCountry);
+    } else {
+      // Pour les pays hors zone, proposer le Bénin ou conserver le projet existant
+      setProjectCountry((prev) => (UEMOA_CEMAC_COUNTRIES.includes(prev) ? prev : 'Bénin'));
     }
   };
 
@@ -192,27 +251,27 @@ export default function RegisterPage() {
         return false;
       }
       const digits = phoneDigits.replace(/[^0-9]/g, '');
-      if (!digits || digits.length < 8) {
-        setErrorMsg('Un numéro de téléphone valide d’au moins 8 chiffres est obligatoire.');
+      if (!digits || digits.length < 6) {
+        setErrorMsg('Un numéro de téléphone valide est obligatoire.');
         return false;
       }
       return true;
     }
 
-    // Question 4 : État Civil (Date et Lieu de naissance)
+    // Question 4 : État Civil (Date et Lieu de naissance mondial)
     if (currentStep === 4) {
       if (!birthDate) {
         setErrorMsg('Veuillez indiquer votre date de naissance.');
         return false;
       }
       if (!birthPlace.trim()) {
-        setErrorMsg('Veuillez indiquer votre commune ou ville de naissance.');
+        setErrorMsg('Veuillez indiquer votre lieu de naissance (ex: Paris, Cotonou, Montréal...).');
         return false;
       }
       return true;
     }
 
-    // Question 5 : Résidence
+    // Question 5 : Résidence & Projet UEMOA/CEMAC
     if (currentStep === 5) {
       if (!residenceCountry) {
         setErrorMsg('Veuillez sélectionner votre pays de résidence.');
@@ -220,6 +279,10 @@ export default function RegisterPage() {
       }
       if (!residenceCity) {
         setErrorMsg('Veuillez indiquer votre ville de résidence.');
+        return false;
+      }
+      if (isOutsideUEMOACEMAC && (!projectCountry || !UEMOA_CEMAC_COUNTRIES.includes(projectCountry))) {
+        setErrorMsg('Pour les résidents hors UEMOA/CEMAC, veuillez sélectionner le pays de votre projet immobilier.');
         return false;
       }
       return true;
@@ -268,6 +331,7 @@ export default function RegisterPage() {
 
     const fullPhoneNumber = `${dialCode} ${phoneDigits.trim()}`;
     const fullName = `${lastName.trim()} ${firstName.trim()}`;
+    const targetProjectCountry = isOutsideUEMOACEMAC ? projectCountry : residenceCountry;
 
     try {
       const res = register({
@@ -282,8 +346,10 @@ export default function RegisterPage() {
         residenceCountry,
         residenceCity,
         residenceDistrict: residenceDistrict.trim() || undefined,
-        companyName: (role === 'bailleur' || role === 'demarcheur') && companyName.trim() ? companyName.trim() : undefined,
-        ifuNumber: (role === 'bailleur' || role === 'demarcheur') && ifuNumber.trim() ? ifuNumber.trim() : undefined,
+        projectCountry: targetProjectCountry,
+        companyName: companyName.trim() ? companyName.trim() : undefined,
+        // IFU uniquement pour le bailleur (pas d'obligation pour démarcheur)
+        ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
         password: password || 'demo1234',
       });
 
@@ -297,7 +363,6 @@ export default function RegisterPage() {
     }
   };
 
-  // Progression en pourcentage
   const progressPercent = Math.round((currentStep / TOTAL_STEPS) * 100);
 
   return (
@@ -334,7 +399,7 @@ export default function RegisterPage() {
                 LOCA<span className="text-brand-400">GESTION</span>
               </span>
               <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">
-                Création de compte sécurisée
+                Gestion Locative UEMOA & CEMAC
               </span>
             </div>
           </Link>
@@ -343,7 +408,7 @@ export default function RegisterPage() {
             href="/auth/login"
             className="text-xs font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"
           >
-            <span>Déjà un compte ?</span>
+            <span>Déjà inscrit ?</span>
             <span className="text-brand-400 font-black">Connexion</span>
           </Link>
         </div>
@@ -394,7 +459,7 @@ export default function RegisterPage() {
                   Quel est votre profil sur LOCAGESTION ?
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Sélectionnez votre espace en premier pour adapter immédiatement les fonctionnalités à votre usage.
+                  Sélectionnez votre espace en premier pour configurer immédiatement votre tableau de bord.
                 </p>
               </div>
 
@@ -422,11 +487,11 @@ export default function RegisterPage() {
                       Bailleur
                     </h3>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Propriétaire ou gestionnaire de logements, baux et encaissements de loyers.
+                      Propriétaire ou gestionnaire de biens immobiliers, baux et encaissements de loyers.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-white/5 text-[10px] font-bold text-brand-400">
-                    Tableau de bord & Patrimoine
+                    Tableau de bord & Baux
                   </div>
                 </button>
 
@@ -453,7 +518,7 @@ export default function RegisterPage() {
                       Locataire
                     </h3>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Résident occupant, paiement de loyers, quittances certifiées et pannes.
+                      Résident occupant, paiement de loyer, quittances certifiées et suivi des pannes.
                     </p>
                   </div>
                   <div className="mt-4 pt-3 border-t border-white/5 text-[10px] font-bold text-emerald-400">
@@ -496,7 +561,7 @@ export default function RegisterPage() {
           )}
 
           {/* ================================================================ */}
-          {/* QUESTION 2 : NOM ET PRÉNOMS                                      */}
+          {/* QUESTION 2 : NOM ET PRÉNOMS (SANS OBLIGATION D'IFU DÉMARCHEUR)   */}
           {/* ================================================================ */}
           {currentStep === 2 && (
             <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
@@ -522,7 +587,7 @@ export default function RegisterPage() {
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      placeholder="ex: Diallo"
+                      placeholder="ex: Diallo, Dupont..."
                       className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                       autoFocus
                     />
@@ -539,7 +604,7 @@ export default function RegisterPage() {
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="ex: Mamadou Ibrahim"
+                      placeholder="ex: Mamadou, Jean-Pierre..."
                       className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                     />
                     <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -547,8 +612,30 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Informations professionnelles facultatives pour Bailleur et Démarcheur */}
-              {(role === 'bailleur' || role === 'demarcheur') && (
+              {/* Pour le Démarcheur : Enseigne / Nom d'agence uniquement (PAS d'obligation d'IFU) */}
+              {role === 'demarcheur' && (
+                <div className="pt-3 border-t border-white/10 space-y-2">
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Briefcase className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Enseigne commerciale ou agence (Optionnel)</span>
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="ex: Agence Immobilière Traoré & Associés (Optionnel)"
+                      className="w-full px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                    />
+                    <span className="text-[10px] text-slate-500 mt-1 block">
+                      En tant que démarcheur, aucun numéro fiscal IFU n'est requis.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Pour le Bailleur : Société / IFU optionnel */}
+              {role === 'bailleur' && (
                 <div className="pt-3 border-t border-white/10 space-y-3">
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Briefcase className="w-3.5 h-3.5 text-brand-400" />
@@ -558,19 +645,19 @@ export default function RegisterPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div>
                       <label className="text-xs font-semibold text-slate-300 block mb-1">
-                        Nom de l'agence ou cabinet
+                        Nom de l'agence ou cabinet (Optionnel)
                       </label>
                       <input
                         type="text"
                         value={companyName}
                         onChange={(e) => setCompanyName(e.target.value)}
-                        placeholder="ex: Cabinet Diallo & Fils SARL"
+                        placeholder="ex: SCI Les Palmiers"
                         className="w-full px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                       />
                     </div>
                     <div>
                       <label className="text-xs font-semibold text-slate-300 block mb-1">
-                        Numéro IFU fiscal (Bénin / UEMOA)
+                        Numéro IFU fiscal (Optionnel)
                       </label>
                       <input
                         type="text"
@@ -599,7 +686,7 @@ export default function RegisterPage() {
                   Vos coordonnées obligatoires
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Chaque compte nécessite obligatoirement un email et un numéro de téléphone pour la délivrance des quittances et la sécurité.
+                  Chaque compte nécessite obligatoirement un email et un numéro de téléphone pour la connexion et la certification des quittances.
                 </p>
               </div>
 
@@ -614,7 +701,7 @@ export default function RegisterPage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="ex: contact@diallo-patrimoine.bj"
+                      placeholder="ex: nom@domaine.com"
                       className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                       autoFocus
                       required
@@ -622,11 +709,11 @@ export default function RegisterPage() {
                     <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                   </div>
                   <span className="text-[10px] text-slate-500 mt-1 block">
-                    Utilisé pour la connexion, l'envoi des quittances officielles et des notifications de contrat.
+                    Sert pour la connexion, l'envoi des quittances certifiées et les notifications officielles.
                   </span>
                 </div>
 
-                {/* Téléphone Obligatoire avec indicatif pays */}
+                {/* Téléphone Obligatoire avec indicatif international */}
                 <div>
                   <label className="text-xs font-bold text-slate-300 block mb-1.5">
                     Numéro de Téléphone (Mobile Money & WhatsApp) <span className="text-rose-400">*</span>
@@ -637,11 +724,25 @@ export default function RegisterPage() {
                       onChange={(e) => setDialCode(e.target.value)}
                       className="xs:col-span-1 px-3 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 cursor-pointer"
                     >
-                      {Object.entries(AFRICAN_COUNTRIES_CONFIG).map(([cName, cfg]) => (
-                        <option key={cName} value={cfg.dialCode} className="bg-[#171b24] text-white">
-                          {cfg.flag} {cfg.dialCode} ({cName})
-                        </option>
-                      ))}
+                      <optgroup label="Zone UEMOA & CEMAC" className="bg-[#171b24] text-brand-300 font-bold">
+                        {UEMOA_CEMAC_COUNTRIES.map((cName) => {
+                          const cfg = ALL_COUNTRIES_CONFIG[cName];
+                          return (
+                            <option key={cName} value={cfg.dialCode} className="bg-[#171b24] text-white">
+                              {cfg.flag} {cfg.dialCode} ({cName})
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                      <optgroup label="International & Diaspora" className="bg-[#171b24] text-emerald-300 font-bold">
+                        {Object.entries(ALL_COUNTRIES_CONFIG)
+                          .filter(([_, cfg]) => !cfg.isUemoaCemac)
+                          .map(([cName, cfg]) => (
+                            <option key={cName} value={cfg.dialCode} className="bg-[#171b24] text-white">
+                              {cfg.flag} {cfg.dialCode} ({cName})
+                            </option>
+                          ))}
+                      </optgroup>
                     </select>
 
                     <div className="xs:col-span-2 relative">
@@ -649,7 +750,7 @@ export default function RegisterPage() {
                         type="tel"
                         value={phoneDigits}
                         onChange={(e) => setPhoneDigits(e.target.value)}
-                        placeholder="ex: 01 95 44 44 30 ou 97 12 34 56"
+                        placeholder="ex: 01 95 44 44 30 ou 06 12 34 56 78"
                         className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                         required
                       />
@@ -657,7 +758,7 @@ export default function RegisterPage() {
                     </div>
                   </div>
                   <span className="text-[10px] text-slate-500 mt-1 block">
-                    Sert pour la connexion rapide, les notifications SMS et les relances de loyer.
+                    Permet la connexion directe par numéro, les alertes par SMS et les prises de contact WhatsApp.
                   </span>
                 </div>
               </div>
@@ -665,7 +766,7 @@ export default function RegisterPage() {
           )}
 
           {/* ================================================================ */}
-          {/* QUESTION 4 : ÉTAT CIVIL (DATE ET LIEU DE NAISSANCE)              */}
+          {/* QUESTION 4 : ÉTAT CIVIL (DATE ET LIEU DE NAISSANCE MONDIAL)      */}
           {/* ================================================================ */}
           {currentStep === 4 && (
             <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
@@ -677,7 +778,7 @@ export default function RegisterPage() {
                   Votre date et lieu de naissance
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Obligatoire selon la législation UEMOA / CEMAC pour l'édition des baux notifiés et des quittances authentifiées.
+                  Requis pour l'établissement des contrats de bail et quittances probantes conformément au droit OHADA.
                 </p>
               </div>
 
@@ -702,14 +803,14 @@ export default function RegisterPage() {
 
                 <div>
                   <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                    Lieu de naissance <span className="text-rose-400">*</span>
+                    Lieu de naissance (Ville & Pays) <span className="text-rose-400">*</span>
                   </label>
                   <div className="relative">
                     <input
                       type="text"
                       value={birthPlace}
                       onChange={(e) => setBirthPlace(e.target.value)}
-                      placeholder="ex: Cotonou, Dakar, Abidjan..."
+                      placeholder="ex: Paris (France), Montréal, Cotonou..."
                       className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                       required
                     />
@@ -718,33 +819,35 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-xs text-brand-300 flex items-start gap-2.5 mt-2">
-                <ShieldCheck className="w-4 h-4 shrink-0 text-brand-400 mt-0.5" />
+              {/* Clarification : Lieu de naissance international permis */}
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 flex items-start gap-2.5 mt-2">
+                <Globe className="w-4 h-4 shrink-0 text-brand-400 mt-0.5" />
                 <span className="text-[11px] leading-relaxed">
-                  Conformément au droit OHADA et au Code Foncier et Domanial, ces mentions garantissent la validité juridique de vos contrats de location.
+                  <strong>Validité internationale :</strong> Votre lieu de naissance peut être situé n'importe où dans le monde (Europe, Amérique, Afrique...).
+                  C'est le lieu de situation du bien et de conclusion des baux qui est obligatoirement régi par la juridiction UEMOA / CEMAC.
                 </span>
               </div>
             </div>
           )}
 
           {/* ================================================================ */}
-          {/* QUESTION 5 : PAYS DE RÉSIDENCE (GÉOLOCALISATION AUTOMATIQUE)     */}
+          {/* QUESTION 5 : RÉSIDENCE & PAYS DU PROJET (UEMOA / CEMAC)          */}
           {/* ================================================================ */}
           {currentStep === 5 && (
             <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
               <div>
                 <span className="text-[11px] font-black uppercase tracking-wider text-brand-400 block mb-1">
-                  Question 5 • Résidence & Géolocalisation
+                  Question 5 • Résidence & Projet Immobilier
                 </span>
                 <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                  Votre pays de résidence
+                  Votre pays de résidence & lieu du projet
                 </h2>
                 <p className="text-xs text-slate-400 mt-1">
-                  Proposé automatiquement par votre géolocalisation pour paramétrer vos devises et lois locatives applicables.
+                  Proposé automatiquement selon votre géolocalisation. Si vous résidez à l'étranger, précisez le pays de votre projet.
                 </p>
               </div>
 
-              {/* Badge dynamique de géolocalisation automatique */}
+              {/* Badge de géolocalisation automatique en direct */}
               <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
@@ -755,7 +858,7 @@ export default function RegisterPage() {
                       {detectedGeoLabel ? `Position détectée : ${detectedGeoLabel}` : 'Position géographique détectée automatiquement'}
                     </div>
                     <div className="text-[10px] text-emerald-400/80">
-                      Proposition automatique basée sur votre {geoSource === 'gps' ? 'GPS' : 'connexion réseau'}.
+                      Détection automatique via {geoSource === 'gps' ? 'GPS' : 'réseau'}.
                     </div>
                   </div>
                 </div>
@@ -772,10 +875,10 @@ export default function RegisterPage() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-                {/* Pays de résidence */}
+                {/* Pays de résidence actuel */}
                 <div>
                   <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                    Pays de résidence <span className="text-rose-400">*</span>
+                    Pays où vous vivez actuellement <span className="text-rose-400">*</span>
                   </label>
                   <div className="relative">
                     <select
@@ -783,11 +886,22 @@ export default function RegisterPage() {
                       onChange={(e) => handleCountryChange(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs focus:outline-none focus:ring-2 focus:ring-brand-500/50 cursor-pointer"
                     >
-                      {Object.keys(AFRICAN_COUNTRIES_CONFIG).map((cName) => (
-                        <option key={cName} value={cName} className="bg-[#171b24] text-white">
-                          {AFRICAN_COUNTRIES_CONFIG[cName].flag} {cName}
-                        </option>
-                      ))}
+                      <optgroup label="Zone UEMOA & CEMAC" className="bg-[#171b24] text-brand-300 font-bold">
+                        {UEMOA_CEMAC_COUNTRIES.map((cName) => (
+                          <option key={cName} value={cName} className="bg-[#171b24] text-white">
+                            {ALL_COUNTRIES_CONFIG[cName]?.flag} {cName}
+                          </option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Diaspora & International" className="bg-[#171b24] text-emerald-300 font-bold">
+                        {Object.entries(ALL_COUNTRIES_CONFIG)
+                          .filter(([_, cfg]) => !cfg.isUemoaCemac)
+                          .map(([cName, cfg]) => (
+                            <option key={cName} value={cName} className="bg-[#171b24] text-white">
+                              {cfg.flag} {cName}
+                            </option>
+                          ))}
+                      </optgroup>
                     </select>
                     <Globe className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 pointer-events-none" />
                   </div>
@@ -804,7 +918,7 @@ export default function RegisterPage() {
                       list="cities-suggestions"
                       value={residenceCity}
                       onChange={(e) => setResidenceCity(e.target.value)}
-                      placeholder="ex: Cotonou"
+                      placeholder="ex: Cotonou, Paris, Abidjan..."
                       className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                       required
                     />
@@ -818,22 +932,58 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Quartier / Zone */}
-              <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1.5">
-                  Quartier / Repère géographique (Optionnel)
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={residenceDistrict}
-                    onChange={(e) => setResidenceDistrict(e.target.value)}
-                    placeholder="ex: Haie Vive, Akpakpa, Cocody, Almadies..."
-                    className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-                  />
-                  <Compass className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+              {/* CONDITION DIASPORA / INTERNATIONAL : DEMANDER OBLIGATOIREMENT LE PAYS DU PROJET DANS L'UEMOA & CEMAC */}
+              {isOutsideUEMOACEMAC ? (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-3 animate-in fade-in">
+                  <div className="flex items-center gap-2 text-amber-300 font-black text-xs">
+                    <Compass className="w-4 h-4 text-amber-400" />
+                    <span>Résidence internationale détectée ({residenceCountry})</span>
+                  </div>
+
+                  <p className="text-[11px] text-amber-200/90 leading-relaxed">
+                    Vous résidez en dehors de l'Afrique de l'Ouest ou Centrale. Pour calibrer votre espace, vos annonces et vos baux légaux, 
+                    <strong> veuillez choisir le pays où se situe votre projet immobilier</strong> (biens gérés, recherche de location ou achat).
+                  </p>
+
+                  <div>
+                    <label className="text-xs font-bold text-white block mb-1.5">
+                      Pays du projet immobilier (Zone UEMOA & CEMAC) <span className="text-rose-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={projectCountry}
+                        onChange={(e) => setProjectCountry(e.target.value)}
+                        className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/10 border border-amber-500/40 text-white font-black text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/50 cursor-pointer"
+                        required
+                      >
+                        {UEMOA_CEMAC_COUNTRIES.map((cName) => (
+                          <option key={cName} value={cName} className="bg-[#171b24] text-white">
+                            {ALL_COUNTRIES_CONFIG[cName]?.flag} {cName} (Zone UEMOA/CEMAC)
+                          </option>
+                        ))}
+                      </select>
+                      <Layers className="w-4 h-4 text-amber-400 absolute left-3.5 top-3.5 pointer-events-none" />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Quartier local pour résident UEMOA/CEMAC */
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                    Quartier ou commune (Optionnel)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={residenceDistrict}
+                      onChange={(e) => setResidenceDistrict(e.target.value)}
+                      placeholder="ex: Haie Vive, Cocody, Akpakpa, Almadies..."
+                      className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                    />
+                    <Compass className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -902,6 +1052,15 @@ export default function RegisterPage() {
                       {residenceCountry} ({residenceCity})
                     </span>
                   </div>
+
+                  {isOutsideUEMOACEMAC && (
+                    <div className="col-span-2 pt-1 border-t border-white/5">
+                      <span className="text-amber-400 block text-[10px] font-bold">Pays du Projet (Zone UEMOA & CEMAC) :</span>
+                      <span className="font-black text-amber-300 block mt-0.5">
+                        {ALL_COUNTRIES_CONFIG[projectCountry]?.flag} {projectCountry}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -995,7 +1154,7 @@ export default function RegisterPage() {
             <span>Conformité UEMOA, CEMAC & OHADA</span>
           </span>
           <span>•</span>
-          <span>Données Chiffrées & Sécurisées</span>
+          <span>Diaspora & International</span>
           <span>•</span>
           <span>Zone FCFA</span>
         </div>

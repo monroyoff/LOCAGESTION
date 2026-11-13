@@ -159,6 +159,7 @@ export const AuthService = {
         residenceCountry: user.residenceCountry,
         residenceCity: user.residenceCity,
         residenceDistrict: user.residenceDistrict,
+        projectCountry: user.projectCountry,
         avatarUrl: user.avatarUrl,
         companyName: user.companyName,
         ifuNumber: user.ifuNumber,
@@ -235,6 +236,7 @@ export const AuthService = {
     residenceCountry: string;
     residenceCity: string;
     residenceDistrict?: string;
+    projectCountry?: string;
     companyName?: string;
     ifuNumber?: string;
     password?: string;
@@ -322,6 +324,7 @@ export const AuthService = {
       residenceCountry: data.residenceCountry || 'Bénin',
       residenceCity: data.residenceCity || 'Cotonou',
       residenceDistrict: data.residenceDistrict?.trim() || 'Haie Vive',
+      projectCountry: data.projectCountry || data.residenceCountry || 'Bénin',
       avatarUrl: data.avatarUrl || defaultAvatar,
       companyName: data.companyName?.trim(),
       ifuNumber: data.ifuNumber?.trim(),
