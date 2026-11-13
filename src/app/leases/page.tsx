@@ -80,12 +80,6 @@ export default function LeasesPage() {
     };
   }, []);
 
-  // Réinitialisation automatique des filtres lors de la bascule d'espace
-  useEffect(() => {
-    setFilterTab('all');
-    setLeaseSearchTerm('');
-  }, [activeSpace]);
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);

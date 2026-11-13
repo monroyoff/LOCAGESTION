@@ -69,13 +69,6 @@ export default function RemindersCenterPage() {
   const [selectedNoticeForDetails, setSelectedNoticeForDetails] = useState<Notice | null>(null);
   const [selectedNoticeForEmail, setSelectedNoticeForEmail] = useState<Notice | null>(null);
 
-  // Réinitialisation automatique des filtres lors de la bascule d'espace
-  useEffect(() => {
-    setNoticeSearch('');
-    setSelectedReasonFilter('all');
-    setSelectedStatusFilter('all');
-  }, [activeSpace]);
-
   useEffect(() => {
     setNotices(NoticeService.getNotices());
   }, []);

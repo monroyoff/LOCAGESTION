@@ -73,11 +73,6 @@ function IncidentsPageContent() {
   const [incidents, setIncidents] = useState<ReportedIncident[]>(INITIAL_INCIDENTS);
   const [selectedIncident, setSelectedIncident] = useState<ReportedIncident | null>(null);
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'in_progress' | 'resolved'>('all');
-
-  // Réinitialisation automatique des filtres lors de la bascule d'espace
-  useEffect(() => {
-    setStatusFilter('all');
-  }, [activeSpace]);
   const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'critique' | 'urgente' | 'normale'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);

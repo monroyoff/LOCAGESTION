@@ -374,12 +374,6 @@ export default function TenantsPage() {
     };
   }, []);
 
-  // Réinitialisation automatique des filtres lors de la bascule d'espace
-  useEffect(() => {
-    setFilterBadge('all');
-    setSearchQuery('');
-  }, [activeSpace]);
-
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
