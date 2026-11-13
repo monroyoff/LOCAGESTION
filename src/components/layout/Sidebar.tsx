@@ -199,17 +199,17 @@ export function Sidebar({
       active: pathname.startsWith('/payments'),
     },
     {
+      name: 'Publier une annonce',
+      href: '/listings?action=publish',
+      icon: Plus,
+      active: false,
+    },
+    {
       name: 'Annonces & Visites',
       href: '/listings',
       icon: Compass,
       active: pathname.startsWith('/listings'),
       badge: 'Nouveau',
-    },
-    {
-      name: 'Publier une annonce',
-      href: '/listings?action=publish',
-      icon: Plus,
-      active: false,
     },
     {
       name: 'Relances & Préavis',
@@ -284,17 +284,17 @@ export function Sidebar({
       badgeColor: 'bg-emerald-500',
     },
     {
+      name: 'Publier une annonce',
+      href: '/listings?action=publish',
+      icon: Plus,
+      active: false,
+    },
+    {
       name: 'Annonces & Visites',
       href: '/listings',
       icon: Compass,
       active: pathname.startsWith('/listings'),
       badge: 'Nouveau',
-    },
-    {
-      name: 'Publier une annonce',
-      href: '/listings?action=publish',
-      icon: Plus,
-      active: false,
     },
     {
       name: 'Relances & Préavis',
