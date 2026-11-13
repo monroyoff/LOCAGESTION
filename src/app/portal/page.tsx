@@ -562,27 +562,6 @@ function TenantPortalContent() {
     },
   };
 
-  const inventoryPhotos = [
-    {
-      title: 'Séjour & Climatiseur split',
-      desc: 'Peinture satinée blanche sans éclat, climatiseur Haier 1.5 CV révisé, carrelage 60x60 nickel.',
-      image: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80',
-      date: '01/11/2025 • 10:15',
-    },
-    {
-      title: 'Cuisine équipée & Robinetterie',
-      desc: 'Évier inox double bac, mitigeur sans fuite, placards hauts et bas impeccables, prises électriques conformes.',
-      image: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-      date: '01/11/2025 • 10:32',
-    },
-    {
-      title: 'Salle d’eau & Chauffe-eau 50L',
-      desc: 'Douche à l’italienne avec paroi vitrée, chauffe-eau Ariston 50L en service, évacuation testée.',
-      image: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-      date: '01/11/2025 • 10:48',
-    },
-  ];
-
   const DEFAULT_TENANT_RECEIPTS: PaymentTransaction[] = [
     {
       id: 'rec-01',
@@ -1757,7 +1736,7 @@ function TenantPortalContent() {
                       </h2>
                     </div>
                     <p className="text-xs text-slate-500 mt-1">
-                      Votre contrat d'habitation certifié, l'état des lieux contradictoire avec photos horodatées et les coordonnées directes de votre bailleur.
+                      Votre contrat d'habitation certifié conforme, conditions juridiques et coordonnées directes de votre bailleur.
                     </p>
                   </div>
 
@@ -1783,7 +1762,7 @@ function TenantPortalContent() {
                           : 'text-slate-500 hover:text-slate-900'
                       }`}
                     >
-                      Bail & État
+                      Mon Contrat
                     </button>
                     <button
                       type="button"
@@ -1996,131 +1975,6 @@ function TenantPortalContent() {
                       <span className="text-[10px] font-mono text-emerald-400 font-bold hidden sm:inline">
                         HASH: SHA256-CERT-98421
                       </span>
-                    </div>
-                  </div>
-
-                  {/* État des Lieux d'Entrée Card */}
-                  <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
-                      <div className="flex items-start sm:items-center gap-2.5 min-w-0">
-                        <Camera className="w-5 h-5 mt-0.5 sm:mt-0 text-emerald-600 shrink-0" />
-                        <div className="min-w-0">
-                          <h3 className="font-black text-base text-slate-900 leading-tight">
-                            Procès-Verbal d’État des Lieux d'Entrée
-                          </h3>
-                          <span className="text-[11px] text-slate-400 block mt-1 break-words">
-                            Contradictoire et approuvé le {tenant.inventoryDate} avec relevé des compteurs
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                        <button
-                          type="button"
-                          onClick={() => setIsInspectionModalOpen(true)}
-                          className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer shrink-0"
-                        >
-                          <Eye className="w-4 h-4" />
-                          <span>Consulter les photos & PV ({inspectionData.photos.length})</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            generateInspectionPDF({
-                              id: currentLease?.id || tenant.leaseRef,
-                              tenantName: tenant.name,
-                              propertyName: tenant.property,
-                              unit: tenant.unit,
-                              date: inspectionData.date,
-                              meterCashPower: inspectionData.meterCashPower,
-                              meterWater: inspectionData.meterWater,
-                              keysDelivered: inspectionData.keysDelivered,
-                              generalState:
-                                inspectionData.generalState === 'neuf'
-                                  ? 'Neuf / Rénovation complète'
-                                  : inspectionData.generalState === 'tres_bon'
-                                  ? 'Très bon état d’usage'
-                                  : inspectionData.generalState === 'bon'
-                                  ? 'Bon état général'
-                                  : 'À rafraîchir',
-                            });
-                            showToast(`Procès-verbal d'état des lieux téléchargé en PDF officiel !`);
-                          }}
-                          className="w-full sm:w-auto py-2.5 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-sm cursor-pointer shrink-0"
-                        >
-                          <Download className="w-4 h-4" />
-                          <span>Télécharger le PV (PDF)</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* African Meter Readings */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200">
-                        <div className="flex items-center gap-2 text-emerald-800 text-xs font-bold mb-1">
-                          <Zap className="w-4 h-4 text-emerald-600" />
-                          <span>Compteur Cash Power (SBEE)</span>
-                        </div>
-                        <span className="text-sm font-black text-emerald-950 font-mono block">
-                          Index : 1 420 kWh
-                        </span>
-                        <span className="text-[10px] text-emerald-700">Compteur prépayé individuel</span>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-blue-50/70 border border-blue-200">
-                        <div className="flex items-center gap-2 text-blue-800 text-xs font-bold mb-1">
-                          <Droplet className="w-4 h-4 text-blue-600" />
-                          <span>Compteur d’Eau (SODECI)</span>
-                        </div>
-                        <span className="text-sm font-black text-blue-950 font-mono block">
-                          Index : 384 m³
-                        </span>
-                        <span className="text-[10px] text-blue-700">Raccordé avec surpresseur</span>
-                      </div>
-
-                      <div className="p-4 rounded-2xl bg-purple-50/70 border border-purple-200">
-                        <div className="flex items-center gap-2 text-purple-800 text-xs font-bold mb-1">
-                          <Key className="w-4 h-4 text-purple-600" />
-                          <span>Clés & Télécommandes</span>
-                        </div>
-                        <span className="text-xs font-black text-purple-950 block">
-                          {tenant.keysDelivered}
-                        </span>
-                        <span className="text-[10px] text-purple-700">Remises à l'entrée</span>
-                      </div>
-                    </div>
-
-                    {/* Inventory Photos Gallery */}
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-700 mb-3 uppercase tracking-wider">
-                        Photos Horodatées de l’Inventaire d’Entrée
-                      </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {inventoryPhotos.map((photo, idx) => (
-                          <div
-                            key={idx}
-                            className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden group hover:border-brand-500 transition-colors"
-                          >
-                            <div className="relative h-36 overflow-hidden">
-                              <img
-                                src={photo.image}
-                                alt={photo.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                              />
-                              <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-mono font-bold backdrop-blur-sm">
-                                {photo.date}
-                              </span>
-                            </div>
-                            <div className="p-3.5 space-y-1">
-                              <h5 className="font-bold text-xs text-slate-900">{photo.title}</h5>
-                              <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
-                                {photo.desc}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
                     </div>
                   </div>
                 </div>
