@@ -358,7 +358,6 @@ export function TenantSignLeaseModal({
               </div>
             </>
           ) : (
-            /* Écran de Succès : Contrat Contresigné & Notifications Envoyées */
             <div className="text-center py-4 space-y-5 animate-in fade-in duration-300">
               <div className="w-16 h-16 rounded-3xl bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
                 <CheckCircle2 className="w-9 h-9" />

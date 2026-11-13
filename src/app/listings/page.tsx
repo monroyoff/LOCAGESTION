@@ -35,7 +35,6 @@ import {
   Phone,
   MessageCircle,
   Eye,
-  Home,
   ShieldCheck,
   Zap,
   Droplet,
@@ -552,20 +551,6 @@ export default function ListingsPage() {
         />
 
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
-          {/* Bouton Retour Accueil sur Mobile & Desktop (Masqué en mode Démarcheur car Annonces & Visites est l'accueil démarcheur) */}
-          {!isDemarcheur && (
-            <div className="flex items-center gap-2 pb-1">
-              <button
-                type="button"
-                onClick={() => router.push(isLandlord ? '/' : '/portal')}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
-              >
-                <Home className="w-4 h-4 text-slate-600" />
-                <span>← Retour {isLandlord ? 'au Tableau de bord' : 'à l’Accueil'}</span>
-              </button>
-            </div>
-          )}
-
           {/* Top Title & Publisher Button */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
@@ -660,9 +645,6 @@ export default function ListingsPage() {
           </div>
 
           {activeView === 'my_listings' ? (
-            /* ================================================================== */
-            /* VUE : GESTION DE MES PUBLICATIONS (MODIFIER, PAUSE, SUPPRIMER)     */
-            /* ================================================================== */
             <div className="space-y-6">
               {/* KPIs de Mes Publications */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -957,10 +939,8 @@ export default function ListingsPage() {
             </div>
           ) : (
             <>
-          {/* ==================================================================== */}
-          /* CONSOLE DE RECHERCHE & FILTRES MULTI-CRITÈRES                        */
-          /* ==================================================================== */
-          <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-soft space-y-4">
+              {/* Console de recherche & filtres multi-critères */}
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-soft space-y-4">
             {/* Ligne 1 : Mot-clé, Pays, Ville, Montant (Les 3 filtres demandés) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               {/* Filtre 1 : Pays */}
@@ -1442,7 +1422,6 @@ export default function ListingsPage() {
               })}
             </div>
           ) : (
-            /* Empty State */
             <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-soft max-w-lg mx-auto space-y-4">
               <div className="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Search className="w-8 h-8" />

@@ -914,7 +914,6 @@ export default function TenantsPage() {
                               <span>Réactiver le bail</span>
                             </button>
                           ) : (
-                            /* Bouton Résilier le bail */
                             <button
                               type="button"
                               onClick={() =>

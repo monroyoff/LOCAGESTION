@@ -419,7 +419,6 @@ export function TransmitLeaseModal({
             </div>
           </div>
         ) : (
-          /* Success Screen with REAL DISPATCH ACTIONS */
           <div className="p-6 text-center space-y-4 overflow-y-auto animate-in fade-in duration-150">
             <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
               <CheckCircle2 className="w-7 h-7" />

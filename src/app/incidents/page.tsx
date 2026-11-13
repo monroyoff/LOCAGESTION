@@ -677,9 +677,6 @@ function IncidentsPageContent() {
               )}
             </div>
           ) : (
-            /* ==================================================================== */
-            /* VUE 2 : ESPACE LOCATAIRE (Signaler une panne & Suivi personnel)       */
-            /* ==================================================================== */
             <div className="space-y-6">
               {/* Bouton Retour Accueil (visible sur mobile et desktop) */}
               <div className="flex items-center gap-2 pb-1">
