@@ -57,7 +57,7 @@ export function Header({
   useEffect(() => {
     setTodayFormatted(formatDateFR(new Date()));
   }, []);
-  const { isLandlord, isTenant, activeSpace } = useSpace();
+  const { isLandlord, isTenant, activeSpace, landlordSubRole } = useSpace();
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
@@ -215,12 +215,26 @@ export function Header({
               <span
                 className={`hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${
                   isLandlord
-                    ? 'bg-brand-50 text-brand-600 border-brand-200'
+                    ? landlordSubRole === 'demarcheur'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-brand-50 text-brand-600 border-brand-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                 }`}
               >
-                {isLandlord ? <Sparkles className="w-3 h-3" /> : <ShieldCheck className="w-3 h-3" />}
-                {isLandlord ? 'Espace Bailleur/Démarcheur • UEMOA & CEMAC' : 'Locataire Titulaire'}
+                {isLandlord ? (
+                  landlordSubRole === 'demarcheur' ? (
+                    <Sparkles className="w-3 h-3 text-amber-600" />
+                  ) : (
+                    <Sparkles className="w-3 h-3 text-brand-600" />
+                  )
+                ) : (
+                  <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                )}
+                {isLandlord
+                  ? landlordSubRole === 'demarcheur'
+                    ? 'Espace Démarcheur • UEMOA & CEMAC'
+                    : 'Espace Bailleur • UEMOA & CEMAC'
+                  : 'Locataire Titulaire'}
               </span>
             </div>
 
@@ -277,8 +291,20 @@ export function Header({
               type="button"
               onClick={() => setIsNotifOpen(!isNotifOpen)}
               className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 hover:border-brand-300 shadow-sm transition-colors cursor-pointer relative"
-              aria-label={isLandlord ? 'Notifications Bailleur/Démarcheur' : 'Mes Notifications Résident'}
-              title={isLandlord ? 'Notifications Bailleur/Démarcheur' : 'Mes Notifications Résident'}
+              aria-label={
+                isLandlord
+                  ? landlordSubRole === 'demarcheur'
+                    ? 'Notifications Démarcheur'
+                    : 'Notifications Bailleur'
+                  : 'Mes Notifications Résident'
+              }
+              title={
+                isLandlord
+                  ? landlordSubRole === 'demarcheur'
+                    ? 'Notifications Démarcheur'
+                    : 'Notifications Bailleur'
+                  : 'Mes Notifications Résident'
+              }
             >
               <Bell className="w-4 h-4 text-slate-600" />
               {unreadCount > 0 && (
@@ -295,7 +321,11 @@ export function Header({
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-amber-400" />
                     <span className="text-xs font-black tracking-tight">
-                      {isLandlord ? 'Notifications Bailleur/Démarcheur' : 'Mes Notifications Résident'}
+                      {isLandlord
+                        ? landlordSubRole === 'demarcheur'
+                          ? 'Notifications Démarcheur'
+                          : 'Notifications Bailleur'
+                        : 'Mes Notifications Résident'}
                     </span>
                     {unreadCount > 0 && (
                       <span className="text-[10px] font-black px-2 py-0.2 rounded-full bg-amber-500 text-white">
@@ -513,33 +543,48 @@ export function Header({
           </div>
 
           {/* ============================================================== */}
-          {/* ACTIONS STRICTEMENT RÉSERVÉES AU BAILLEUR                      */}
+          {/* ACTIONS STRICTEMENT RÉSERVÉES AU BAILLEUR / DÉMARCHEUR         */}
           {/* ============================================================== */}
           {isLandlord && (
             <>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onOpenQuickAction) {
-                    onOpenQuickAction('new_payment');
-                  } else {
-                    router.push('/payments?action=new');
-                  }
-                }}
-                className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
-              >
-                <Receipt className="w-4 h-4" />
-                <span>Encaisser loyer</span>
-              </button>
+              {landlordSubRole === 'demarcheur' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('locagestion:open_publish_listing'));
+                  }}
+                  className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-extrabold shadow-md active:scale-95 transition-all cursor-pointer shrink-0"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>Publier une annonce</span>
+                </button>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onOpenQuickAction) {
+                        onOpenQuickAction('new_payment');
+                      } else {
+                        router.push('/payments?action=new');
+                      }
+                    }}
+                    className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Receipt className="w-4 h-4" />
+                    <span>Encaisser loyer</span>
+                  </button>
 
-              <button
-                type="button"
-                onClick={() => router.push('/leases/new')}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer shrink-0"
-              >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>Nouveau bail</span>
-              </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push('/leases/new')}
+                    className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>Nouveau bail</span>
+                  </button>
+                </>
+              )}
             </>
           )}
 

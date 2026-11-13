@@ -74,6 +74,12 @@ export function Sidebar({
   const activeSpace = context ? context.activeSpace : propSpace || 'bailleur';
   const isLandlord = activeSpace === 'bailleur';
   const isTenant = activeSpace === 'locataire';
+  const landlordSubRole = context?.landlordSubRole || 'bailleur';
+  const setLandlordSubRole = (role: 'bailleur' | 'demarcheur') => {
+    if (context?.setLandlordSubRole) {
+      context.setLandlordSubRole(role);
+    }
+  };
 
   const handleSpaceChange = (target: UserSpace) => {
     if (context) {
@@ -315,7 +321,38 @@ export function Sidebar({
     },
   ];
 
-  const currentNavItems = isLandlord ? landlordItems : tenantItems;
+  // ============================================================================
+  // NAVIGATION STRICTEMENT DÉMARCHEUR (Publier, Annonces & Visites, Messages)
+  // ============================================================================
+  const demarcheurItems: NavItem[] = [
+    {
+      name: 'Publier une annonce',
+      href: '/listings?action=publish',
+      icon: Plus,
+      active: false,
+    },
+    {
+      name: 'Annonces & Visites',
+      href: '/listings',
+      icon: Compass,
+      active: pathname.startsWith('/listings'),
+      badge: 'Nouveau',
+    },
+    {
+      name: 'Messages',
+      href: '/messages',
+      icon: MessageSquare,
+      active: pathname.startsWith('/messages'),
+      badgeCount: 3,
+      badgeColor: 'bg-amber-500',
+    },
+  ];
+
+  const currentNavItems = isTenant
+    ? tenantItems
+    : landlordSubRole === 'demarcheur'
+    ? demarcheurItems
+    : landlordItems;
 
   return (
     <>
@@ -337,7 +374,7 @@ export function Sidebar({
         <div className="p-6 pb-2">
           {/* Brand Logo & Close Button */}
           <div className="flex items-center justify-between mb-6">
-            <Link href={isLandlord ? '/' : '/portal'} className="flex items-center gap-3 group">
+            <Link href={isTenant ? '/portal' : landlordSubRole === 'demarcheur' ? '/listings' : '/'} className="flex items-center gap-3 group">
               {/* Pink/Rose House Logo Icon */}
               <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform">
                 <svg
@@ -363,7 +400,11 @@ export function Sidebar({
                   LOCA<span className="text-brand-400">GESTION</span>
                 </span>
                 <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                  {isLandlord ? 'Espace Bailleur/Démarcheur' : 'Portail Résidentiel'}
+                  {isTenant
+                    ? 'Portail Résidentiel'
+                    : landlordSubRole === 'demarcheur'
+                    ? 'Espace Démarcheur'
+                    : 'Espace Bailleur'}
                 </span>
               </div>
             </Link>
@@ -377,39 +418,86 @@ export function Sidebar({
             </button>
           </div>
 
-          {/* SÉLECTEUR D'ESPACE RAPIDE (Navigation Libre pour Tests) */}
-          <div className="p-1 bg-[#171b24] rounded-2xl border border-white/5 flex items-center mb-4 gap-1">
-            <button
-              type="button"
-              onClick={() => handleSpaceChange('bailleur')}
-              className={`flex-[1.35] py-2 px-1.5 rounded-xl text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 whitespace-nowrap ${
-                isLandlord
-                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Bailleur/Démarcheur</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSpaceChange('locataire')}
-              className={`flex-1 py-2 px-1.5 rounded-xl text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 whitespace-nowrap ${
-                isTenant
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-            >
-              <Users className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Locataire</span>
-            </button>
+          {/* SÉLECTEUR D'ESPACE RAPIDE */}
+          <div className="space-y-2 mb-4">
+            {/* Switcher Principal : Bailleur/Démarcheur vs Locataire */}
+            <div className="p-1 bg-[#171b24] rounded-2xl border border-white/5 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => handleSpaceChange('bailleur')}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
+                  isLandlord
+                    ? landlordSubRole === 'demarcheur'
+                      ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30 font-black'
+                      : 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Building2 className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">
+                  {landlordSubRole === 'demarcheur' ? 'Démarcheur' : 'Bailleur'}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSpaceChange('locataire')}
+                className={`flex-1 py-2 px-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
+                  isTenant
+                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
+                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Locataire</span>
+              </button>
+            </div>
+
+            {/* CURSEUR DOUBLE BOUTON GLISSANT : BAILLEUR & DÉMARCHEUR */}
+            {isLandlord && (
+              <div className="relative p-1 bg-[#121620] rounded-xl border border-white/10 flex items-center shadow-inner">
+                {/* Curseur glissant avec transition fluide */}
+                <div
+                  className={`absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-lg transition-all duration-300 ease-out shadow-md pointer-events-none ${
+                    landlordSubRole === 'bailleur'
+                      ? 'left-1 bg-gradient-to-r from-brand-500 to-rose-600 shadow-brand-500/30'
+                      : 'left-[calc(50%+2px)] bg-gradient-to-r from-amber-500 to-orange-500 shadow-amber-500/30'
+                  }`}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setLandlordSubRole('bailleur')}
+                  className={`relative z-10 flex-1 py-1.5 px-2 text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                    landlordSubRole === 'bailleur' ? 'text-white font-black' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Bailleur</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLandlordSubRole('demarcheur')}
+                  className={`relative z-10 flex-1 py-1.5 px-2 text-[11px] font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer ${
+                    landlordSubRole === 'demarcheur' ? 'text-white font-black' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <span>Démarcheur</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Middle: Space-Specific Navigation Links */}
         <div className="flex-1 overflow-y-auto px-4 py-2 space-y-1">
           <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">
-            {isLandlord ? 'Pilotage Bailleur/Démarcheur' : 'Menu Résident'}
+            {isTenant
+              ? 'Menu Résident'
+              : landlordSubRole === 'demarcheur'
+              ? 'Espace Démarcheur'
+              : 'Pilotage Bailleur'}
           </div>
 
           {currentNavItems.map((item) => {
@@ -437,7 +525,9 @@ export function Sidebar({
                 }flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all group min-w-0 ${
                   item.active
                     ? isLandlord
-                      ? 'bg-white/[0.08] text-white shadow-sm font-bold'
+                      ? landlordSubRole === 'demarcheur'
+                        ? 'bg-amber-500/15 text-amber-200 font-bold border border-amber-500/30 shadow-sm'
+                        : 'bg-white/[0.08] text-white shadow-sm font-bold'
                       : 'bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30'
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                 }`}
@@ -447,7 +537,9 @@ export function Sidebar({
                     className={`p-1.5 rounded-xl transition-colors shrink-0 ${
                       item.active
                         ? isLandlord
-                          ? 'text-brand-400 bg-brand-500/10'
+                          ? landlordSubRole === 'demarcheur'
+                            ? 'text-amber-400 bg-amber-500/20'
+                            : 'text-brand-400 bg-brand-500/10'
                           : 'text-emerald-400 bg-emerald-500/20'
                         : 'text-slate-400 group-hover:text-white'
                     }`}
@@ -541,7 +633,7 @@ export function Sidebar({
                   e.stopPropagation();
                   handleSpaceChange(isLandlord ? 'locataire' : 'bailleur');
                 }}
-                title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : 'Bailleur/Démarcheur'} (Mode Test)`}
+                title={`Basculer vers l'espace ${isLandlord ? 'Locataire' : landlordSubRole === 'demarcheur' ? 'Démarcheur' : 'Bailleur'} (Mode Test)`}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <Repeat className="w-4 h-4" />

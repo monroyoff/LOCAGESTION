@@ -1,4 +1,5 @@
 export type UserSpace = 'bailleur' | 'locataire';
+export type LandlordSubRole = 'bailleur' | 'demarcheur';
 
 export type PaymentMethod =
   | 'wave'

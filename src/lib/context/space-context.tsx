@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { UserSpace, AuthUser } from '../types';
+import { UserSpace, AuthUser, LandlordSubRole } from '../types';
 import { AuthService, DEMO_LANDLORD, DEMO_TENANT } from '../services/auth-service';
 import { notifyAction } from '../notifications/action-notifier';
 
@@ -10,6 +10,8 @@ export interface SpaceContextType {
   activeSpace: UserSpace;
   isLandlord: boolean;
   isTenant: boolean;
+  landlordSubRole: LandlordSubRole;
+  setLandlordSubRole: (role: LandlordSubRole) => void;
   user: AuthUser | null;
   isAuthenticated: boolean;
   login: (
@@ -43,6 +45,38 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const isPortalRoute = pathname ? pathname.startsWith('/portal') : false;
   const [user, setUser] = useState<AuthUser | null>(() => (isPortalRoute ? DEMO_TENANT : DEMO_LANDLORD));
   const [mounted, setMounted] = useState(false);
+  const [landlordSubRole, setLandlordSubRoleState] = useState<LandlordSubRole>('bailleur');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('locagestion:landlord_sub_role') as LandlordSubRole | null;
+      if (saved === 'bailleur' || saved === 'demarcheur') {
+        setLandlordSubRoleState(saved);
+      }
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key === 'locagestion:landlord_sub_role' && (e.newValue === 'bailleur' || e.newValue === 'demarcheur')) {
+          setLandlordSubRoleState(e.newValue);
+        }
+      };
+      window.addEventListener('storage', handleStorage);
+      return () => window.removeEventListener('storage', handleStorage);
+    }
+  }, []);
+
+  const setLandlordSubRole = (role: LandlordSubRole) => {
+    setLandlordSubRoleState(role);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('locagestion:landlord_sub_role', role);
+      window.dispatchEvent(new CustomEvent('locagestion:landlord_subrole_changed', { detail: { role } }));
+    }
+    if (role === 'demarcheur') {
+      const demarcheurAllowed = ['/listings', '/messages'];
+      const isAllowed = demarcheurAllowed.some((p) => pathname.startsWith(p));
+      if (!isAllowed) {
+        router.push('/listings');
+      }
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -149,6 +183,8 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
         activeSpace,
         isLandlord,
         isTenant,
+        landlordSubRole,
+        setLandlordSubRole,
         user,
         isAuthenticated,
         login,
