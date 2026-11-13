@@ -80,9 +80,8 @@ export default function ListingsPage() {
   const { activeSpace, switchSpace, isLandlord, isTenant, landlordSubRole } = useSpace();
   const isDemarcheur = isLandlord && landlordSubRole === 'demarcheur';
 
-  // Search & Filter States
+  // Search & Filter States : Aucun filtre par défaut pour afficher l'ensemble des annonces
   const [searchQuery, setSearchQuery] = useState('');
-  // Pays de résidence renseigné lors de l'inscription (mis par défaut pour toute recherche)
   const [selectedCountry, setSelectedCountry] = useState<string>(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -91,16 +90,29 @@ export default function ListingsPage() {
         return queryCountry;
       }
     }
-    return getUserResidenceCountry();
+    return 'all';
   });
   const [selectedCity, setSelectedCity] = useState('all');
-  const [currentDistrict, setCurrentDistrict] = useState<string>(() => getUserResidenceDistrict());
+  const [currentDistrict, setCurrentDistrict] = useState<string>('');
   const [pricePresetIdx, setPricePresetIdx] = useState(0);
   const [customMinPrice, setCustomMinPrice] = useState<string>('');
   const [customMaxPrice, setCustomMaxPrice] = useState<string>('');
   const [selectedPropertyType, setSelectedPropertyType] = useState('Tous');
   // Tri prioritaire par proximité géographique / GPS
   const [sortBy, setSortBy] = useState<'proximity' | 'featured' | 'price_asc' | 'price_desc' | 'surface_desc'>('proximity');
+
+  // Réinitialisation automatique de tous les filtres à chaque sélection / bascule d'espace
+  useEffect(() => {
+    setSearchQuery('');
+    setSelectedCountry('all');
+    setSelectedCity('all');
+    setCurrentDistrict('');
+    setPricePresetIdx(0);
+    setCustomMinPrice('');
+    setCustomMaxPrice('');
+    setSelectedPropertyType('Tous');
+    setSortBy('proximity');
+  }, [activeSpace, landlordSubRole]);
 
   // Géolocalisation dynamique de l'utilisateur
   const [userLocation, setUserLocation] = useState<UserGeoLocation | null>(null);
@@ -127,10 +139,6 @@ export default function ListingsPage() {
   // Écoute de mise à jour du profil d'inscription
   useEffect(() => {
     const handleResidenceUpdate = () => {
-      const country = getUserResidenceCountry();
-      const dist = getUserResidenceDistrict();
-      setSelectedCountry(country);
-      setCurrentDistrict(dist);
       detectUserGeoLocation().then((geo) => setUserLocation(geo)).catch(() => {});
     };
     window.addEventListener('locagestion:residence_updated', handleResidenceUpdate);
@@ -408,24 +416,25 @@ export default function ListingsPage() {
     userCoords,
   ]);
 
-  // Clear all filters back to default (Pays de résidence d'inscription par défaut)
+  // Clear all filters (Aucun filtre par défaut, tout réinitialisé à blanc)
   const resetFilters = () => {
-    const defaultCountry = getUserResidenceCountry();
     setSearchQuery('');
-    setSelectedCountry(defaultCountry);
+    setSelectedCountry('all');
     setSelectedCity('all');
+    setCurrentDistrict('');
     setPricePresetIdx(0);
     setCustomMinPrice('');
     setCustomMaxPrice('');
     setSelectedPropertyType('Tous');
     setSortBy('proximity');
-    showToast(`Filtres réinitialisés sur votre pays de résidence d'inscription (${defaultCountry}) et proximité.`);
+    showToast('Filtres réinitialisés. Affichage de toutes les annonces.');
   };
 
   const hasActiveFilters =
     searchQuery.trim() !== '' ||
-    selectedCountry !== getUserResidenceCountry() ||
+    selectedCountry !== 'all' ||
     selectedCity !== 'all' ||
+    currentDistrict !== '' ||
     pricePresetIdx !== 0 ||
     customMinPrice !== '' ||
     customMaxPrice !== '' ||

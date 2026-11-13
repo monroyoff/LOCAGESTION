@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -47,6 +47,11 @@ export default function PropertiesPage() {
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Réinitialisation automatique des filtres lors de la bascule d'espace
+  useEffect(() => {
+    setSearchQuery('');
+  }, [activeSpace]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
