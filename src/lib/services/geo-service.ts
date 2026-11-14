@@ -115,9 +115,9 @@ export function calculateDistanceKm(
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return Math.round(R * c * 10) / 10;
 }
@@ -282,15 +282,15 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
           localStorage.removeItem(`${STORAGE_KEY_PROFILE}:${role}`);
         }
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   const defaultAvatar =
     role === 'bailleur'
       ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
       : role === 'demarcheur'
-      ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80'
-      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80';
+        ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80'
+        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80';
 
   return {
     id: `usr-${role}`,
@@ -468,7 +468,7 @@ export async function requestUserGeolocationWithFeedback(): Promise<GeoRequestRe
           STORAGE_KEY_GPS,
           JSON.stringify({ lat: latitude, lng: longitude, time: Date.now() })
         );
-      } catch (e) {}
+      } catch (e) { }
 
       // Trouver la zone connue la plus proche
       let closestZone: { name: string; distance: number; data: (typeof KNOWN_ZONE_COORDINATES)[string] } | null = null;

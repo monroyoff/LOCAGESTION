@@ -152,7 +152,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                Bonjour {user?.name ? user.name.split(' ')[0] : 'Bailleur'} 👋, voici le point de gestion locative
+                Bonjour {user?.firstName || (user?.name ? user.name.split(' ')[0] : 'Bailleur')} 👋, voici le point de gestion locative
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-xl">
                 {dashboardKPIs.occupancyRate.occupiedUnits === 0

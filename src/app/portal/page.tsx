@@ -966,7 +966,7 @@ function TenantPortalContent() {
                     </div>
 
                     <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-snug">
-                      Bonjour {user?.name ? user.name.split(' ')[0] : 'Locataire'} 👋, votre espace est parfaitement à jour
+                      Bonjour {user?.firstName || (user?.name ? user.name.split(' ')[0] : 'Locataire')} 👋, votre espace est parfaitement à jour
                     </h1>
                     <p className="text-xs text-slate-400 mt-1.5 max-w-lg leading-relaxed">
                       Prochaine exigibilité de loyer : <strong className="text-slate-200">{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).

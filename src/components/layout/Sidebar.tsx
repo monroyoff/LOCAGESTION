@@ -470,52 +470,53 @@ export function Sidebar({
             </button>
           </div>
 
-          {/* SÉLECTEUR RAPIDE DES 3 ESPACES : BAILLEUR / DÉMARCHEUR / LOCATAIRE */}
-          <div className="p-1 bg-[#171b24] rounded-2xl border border-white/5 grid grid-cols-3 gap-1 mb-4">
-            {/* 1. ESPACE BAILLEUR */}
-            <button
-              type="button"
-              onClick={() => handleSpaceChange('bailleur')}
-              className={`py-2 px-1 rounded-xl text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${
-                isLandlord
-                  ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30 font-black'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-              title="Espace Bailleur"
-            >
-              <Building2 className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Bailleur</span>
-            </button>
-
-            {/* 2. ESPACE DÉMARCHEUR */}
-            <button
-              type="button"
-              onClick={() => handleSpaceChange('demarcheur')}
-              className={`py-2 px-1 rounded-xl text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${
-                isDemarcheur
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/30 font-black'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-              title="Espace Démarcheur"
-            >
-              <Sparkles className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Démarcheur</span>
-            </button>
-
-            {/* 3. ESPACE LOCATAIRE */}
-            <button
-              type="button"
-              onClick={() => handleSpaceChange('locataire')}
-              className={`py-2 px-1 rounded-xl text-[10.5px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${
-                isTenant
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 font-black'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
-              }`}
-              title="Portail Locataire"
-            >
-              <Users className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">Locataire</span>
-            </button>
+          {/* BADGE DE L'ESPACE EXCLUSIF DE L'UTILISATEUR */}
+          <div className="p-3 bg-[#171b24] rounded-2xl border border-white/10 flex items-center gap-2.5 mb-4 shadow-sm">
+            {isLandlord && (
+              <>
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30 flex items-center justify-center shrink-0">
+                  <Building2 className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Espace Dédié
+                  </span>
+                  <span className="text-xs font-black text-white truncate block">
+                    Propriétaire Bailleur
+                  </span>
+                </div>
+              </>
+            )}
+            {isDemarcheur && (
+              <>
+                <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Espace Dédié
+                  </span>
+                  <span className="text-xs font-black text-white truncate block">
+                    Démarcheur & Agent
+                  </span>
+                </div>
+              </>
+            )}
+            {isTenant && (
+              <>
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Espace Dédié
+                  </span>
+                  <span className="text-xs font-black text-white truncate block">
+                    Portail Résidentiel
+                  </span>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -670,25 +671,12 @@ export function Sidebar({
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  const nextSpace: UserSpace = isLandlord ? 'demarcheur' : isDemarcheur ? 'locataire' : 'bailleur';
-                  handleSpaceChange(nextSpace);
-                }}
-                title={`Basculer vers l'espace ${isLandlord ? 'Démarcheur' : isDemarcheur ? 'Locataire' : 'Bailleur'}`}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              >
-                <Repeat className="w-4 h-4" />
-              </button>
-
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
                   if (context && context.logout) {
                     context.logout();
                   }
                 }}
                 title="Se déconnecter de votre session"
-                className="p-1.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
               </button>

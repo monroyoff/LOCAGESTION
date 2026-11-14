@@ -283,32 +283,9 @@ export function UserProfileModal({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                type="button"
-                onClick={() => {
-                  const nextRole: UserSpace =
-                    profile.role === 'bailleur'
-                      ? 'demarcheur'
-                      : profile.role === 'demarcheur'
-                      ? 'locataire'
-                      : 'bailleur';
-                  setProfile((prev) => ({ ...prev, role: nextRole }));
-                  switchSpace(nextRole);
-                  onClose();
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold flex items-center gap-1.5 cursor-pointer transition-colors shadow-xs"
-                title="Changer d'espace"
-              >
-                <Repeat className="w-3.5 h-3.5" />
-                <span>
-                  Passer en{' '}
-                  {profile.role === 'bailleur'
-                    ? 'Démarcheur'
-                    : profile.role === 'demarcheur'
-                    ? 'Locataire'
-                    : 'Bailleur'}
-                </span>
-              </button>
+              <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-[11px] font-bold border border-slate-200">
+                Espace {profile.role === 'bailleur' ? 'Bailleur' : profile.role === 'demarcheur' ? 'Démarcheur' : 'Locataire'}
+              </span>
             </div>
           </div>
 

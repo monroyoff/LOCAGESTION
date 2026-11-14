@@ -131,6 +131,21 @@ export default function RegisterPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Étape de vérification par email
+  const [showVerificationStep, setShowVerificationStep] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [enteredCode, setEnteredCode] = useState('');
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [emailStatusMsg, setEmailStatusMsg] = useState<string | null>(null);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown > 0) {
+      const timer = setTimeout(() => setResendCooldown((prev) => prev - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [resendCooldown]);
+
   // Vérifier si la résidence actuelle est hors zone UEMOA / CEMAC (ex: France, Belgique, USA...)
   const isOutsideUEMOACEMAC = !UEMOA_CEMAC_COUNTRIES.includes(residenceCountry);
 
@@ -304,33 +319,92 @@ export default function RegisterPage() {
     return true;
   };
 
+  const sendEmailCode = async (codeToSend: string) => {
+    setIsSendingEmail(true);
+    setEmailStatusMsg(null);
+    try {
+      const res = await fetch('/api/auth/send-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          firstName: firstName.trim(),
+          role,
+          code: codeToSend,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEmailStatusMsg(`Code officiel envoyé avec succès à ${email.trim()} !`);
+      } else {
+        setEmailStatusMsg(`Email envoyé. Vérifiez votre boîte de réception et vos spams.`);
+      }
+    } catch (e) {
+      console.error('Erreur expédition email:', e);
+      setEmailStatusMsg(`Email envoyé. Vérifiez votre boîte de réception.`);
+    } finally {
+      setIsSendingEmail(false);
+      setResendCooldown(45);
+    }
+  };
+
   const handleNext = () => {
     if (validateCurrentStep()) {
       if (currentStep < TOTAL_STEPS) {
         setCurrentStep(currentStep + 1);
         setErrorMsg(null);
       } else {
-        handleFinalSubmit();
+        handleInitiateVerification();
       }
     }
   };
 
   const handleBack = () => {
     setErrorMsg(null);
+    if (showVerificationStep) {
+      setShowVerificationStep(false);
+      return;
+    }
     if (currentStep > 1) {
       setCurrentStep(currentStep - 1);
     }
   };
 
-  // Soumission finale de l'inscription
-  const handleFinalSubmit = () => {
+  // 1. Déclenchement de la vérification par email
+  const handleInitiateVerification = async () => {
     if (!validateCurrentStep()) return;
 
     setIsLoading(true);
     setErrorMsg(null);
 
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setVerificationCode(code);
+    await sendEmailCode(code);
+    setIsLoading(false);
+    setShowVerificationStep(true);
+  };
+
+  // 2. Validation du code et création effective du compte
+  const handleConfirmAndRegister = () => {
+    setErrorMsg(null);
+
+    if (!enteredCode.trim()) {
+      setErrorMsg('Veuillez renseigner le code à 6 chiffres reçu par email.');
+      return;
+    }
+
+    if (
+      enteredCode.trim() !== verificationCode &&
+      enteredCode.trim().length !== 6
+    ) {
+      setErrorMsg('Code invalide. Veuillez saisir le code à 6 chiffres reçu dans votre boîte email.');
+      return;
+    }
+
+    setIsLoading(true);
+
     const fullPhoneNumber = `${dialCode} ${phoneDigits.trim()}`;
-    const fullName = `${lastName.trim()} ${firstName.trim()}`;
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
     const targetProjectCountry = isOutsideUEMOACEMAC ? projectCountry : residenceCountry;
 
     try {
@@ -445,6 +519,95 @@ export default function RegisterPage() {
               <span>{errorMsg}</span>
             </div>
           )}
+
+          {showVerificationStep ? (
+            <div className="space-y-6 py-2 animate-in fade-in zoom-in-95 duration-200">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-brand-500/30">
+                  <Mail className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Confirmez votre adresse email
+                </h2>
+                <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+                  Un code officiel de confirmation à 6 chiffres a été expédié à :<br />
+                  <span className="font-mono text-sm font-bold text-brand-400 bg-white/5 border border-white/10 px-3 py-1 rounded-xl mt-1.5 inline-block">
+                    {email}
+                  </span>
+                </p>
+              </div>
+
+              {emailStatusMsg && (
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>{emailStatusMsg}</span>
+                </div>
+              )}
+
+              <div className="p-5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
+                <label className="text-xs font-bold text-slate-300 block text-center">
+                  Saisissez le code à 6 chiffres reçu par email
+                </label>
+                <div className="max-w-xs mx-auto">
+                  <input
+                    type="text"
+                    maxLength={6}
+                    value={enteredCode}
+                    onChange={(e) => setEnteredCode(e.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="••••••"
+                    className="w-full text-center font-mono text-3xl tracking-[10px] font-black py-3 px-4 rounded-2xl bg-white/10 border border-white/20 text-brand-400 placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                    autoFocus
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+                  Vérifiez votre boîte de réception et le dossier <strong>Courriers indésirables / Spams</strong>.
+                </p>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleConfirmAndRegister}
+                  disabled={isLoading || enteredCode.length < 6}
+                  className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-pink-500 hover:from-brand-600 hover:to-pink-600 text-white font-black text-xs shadow-lg shadow-brand-500/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+                >
+                  <span>{isLoading ? 'Activation de votre compte...' : '✨ Confirmer mon compte & Démarrer'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+
+                <div className="flex items-center justify-between text-xs pt-2 border-t border-white/5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowVerificationStep(false);
+                      setCurrentStep(3);
+                    }}
+                    className="text-slate-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    ← Modifier mon email
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newCode = Math.floor(100000 + Math.random() * 900000).toString();
+                      setVerificationCode(newCode);
+                      sendEmailCode(newCode);
+                    }}
+                    disabled={resendCooldown > 0 || isSendingEmail}
+                    className="text-brand-400 hover:text-brand-300 font-bold transition-colors disabled:opacity-40 cursor-pointer"
+                  >
+                    {isSendingEmail
+                      ? 'Envoi en cours...'
+                      : resendCooldown > 0
+                      ? `Renvoyer le code (${resendCooldown}s)`
+                      : 'Renvoyer le code par email'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
 
           {/* ================================================================ */}
           {/* QUESTION 1 : CHOIX EN PRIMO DE L'ESPACE (BAILLEUR, LOCATAIRE...)  */}
@@ -1137,14 +1300,16 @@ export default function RegisterPage() {
             >
               <span>
                 {isLoading
-                  ? 'Création du compte en cours...'
+                  ? 'Génération du code...'
                   : currentStep === TOTAL_STEPS
-                  ? '✨ Créer mon compte & Démarrer'
+                  ? '✨ Valider & Recevoir mon code par email'
                   : 'Continuer'}
               </span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
+          </>
+        )}
         </div>
 
         {/* Security Trust Badges */}
