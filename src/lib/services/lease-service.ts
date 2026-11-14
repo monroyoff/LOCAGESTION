@@ -498,7 +498,7 @@ export const LeaseService = {
       emailSentTo: 'diallo.patrimoine@afrique-gestion.com',
       emailDelivered: {
         to: 'diallo.patrimoine@afrique-gestion.com',
-        from: 'baux-notification@locagestion.app',
+        from: 'baux@locagestion.site',
         subject: `[Bail Contresigné] ${leaseId} — ${tenantName} (${updatedLease.unit})`,
         date: nowFormatted,
         preview: `Le contrat de bail ${leaseId} a été contresigné électroniquement par ${tenantName} avec horodatage légal conforme UEMOA & CEMAC.`,

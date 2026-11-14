@@ -1141,13 +1141,13 @@ export default function TenantsPage() {
                   <input
                     type="text"
                     readOnly
-                    value="https://site.omegafacture.app/invite/tok_8942abc"
+                    value="https://locagestion.site/portal?invite=tok_8942abc"
                     className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600"
                   />
                   <button
                     type="button"
                     onClick={() => {
-                      navigator.clipboard?.writeText('https://site.omegafacture.app/invite/tok_8942abc');
+                      navigator.clipboard?.writeText('https://locagestion.site/portal?invite=tok_8942abc');
                       showToast('Lien d’invitation copié dans le presse-papier !');
                     }}
                     className="py-1.5 px-3 rounded-lg bg-slate-900 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer"

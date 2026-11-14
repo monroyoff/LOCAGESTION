@@ -22,7 +22,7 @@
 
 ## 1. Vision & Présentation Générale
 
-**LOCAGESTION** (conçu par le groupe OMEGA) est la première plateforme PropTech SaaS d'Afrique francophone dédiée à la gestion locative intégrale, à la sécurisation des baux d'habitation et commerciaux, et à l'intermédiation immobilière de confiance.
+**LOCAGESTION** (conçu par le groupe OMEGA, accessible sur **https://locagestion.site**) est la première plateforme PropTech SaaS d'Afrique francophone dédiée à la gestion locative intégrale, à la sécurisation des baux d'habitation et commerciaux, et à l'intermédiation immobilière de confiance.
 
 ### Problématiques résolues en Afrique francophone (UEMOA & CEMAC) :
 - **Absence d'écrits et d'actes juridiques certifiés :** La majorité des baux étaient conclus verbalement ou sur des brouillons fragiles. LOCAGESTION génère des contrats de baux électroniques conformes aux codes civils nationaux et à l'Acte Uniforme OHADA portant sur le Droit Commercial Général.
@@ -234,7 +234,9 @@ LOCAGESTION/
 │   └── status-service.sh               # Vérification du code HTTP et du PID
 ├── src/
 │   ├── app/                             # Pages Next.js 14 (App Router)
-│   │   ├── layout.tsx                   # Layout racine avec Providers et Modals globaux
+│   │   ├── layout.tsx                   # Layout racine avec Metadata & OpenGraph locagestion.site
+│   │   ├── robots.ts                    # Génération automatique de robots.txt
+│   │   ├── sitemap.ts                   # Génération automatique du sitemap.xml
 │   │   ├── page.tsx                     # Tableau de bord principal du Bailleur
 │   │   ├── globals.css                  # Feuilles de style Tailwind et animations
 │   │   ├── auth/                        # Authentification
@@ -294,6 +296,8 @@ LOCAGESTION/
 │   │       └── GlobalDownloadToast.tsx  # Confirmation de téléchargement PDF
 │   └── lib/                             # Logique métier, services et état global
 │       ├── types.ts                     # Modèles TypeScript complets de l'application
+│       ├── config/
+│       │   └── site.ts                  # Configuration du domaine locagestion.site & URLs
 │       ├── context/
 │       │   └── space-context.tsx        # Contexte d'authentification et gestion d'espace
 │       ├── legal/

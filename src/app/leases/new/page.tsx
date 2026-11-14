@@ -444,11 +444,11 @@ export default function NewLeasePage() {
       invitationCode: tenantMode === 'new' ? generatedInvitationCode : undefined,
       invitationSentBySms: tenantMode === 'new' ? notifyBySms : true,
       invitationSentByEmail: tenantMode === 'new' ? notifyByEmail : true,
-      appDownloadLink: 'https://locagestion.app/download',
+      appDownloadLink: 'https://locagestion.site/download',
       portalAccessLink:
         typeof window !== 'undefined'
           ? `${window.location.origin}/portal?tab=bail&leaseId=${generatedLeaseId}&code=${tenantMode === 'new' ? generatedInvitationCode : ''}&tenant=${encodeURIComponent(tenantName)}`
-          : `http://localhost:3001/portal?tab=bail&leaseId=${generatedLeaseId}`,
+          : `https://locagestion.site/portal?tab=bail&leaseId=${generatedLeaseId}`,
       startDate: '2026-11-01',
       endDate: '2029-10-31',
       durationMonths: parseInt(durationMonths, 10) || 36,
@@ -1368,9 +1368,9 @@ export default function NewLeasePage() {
                         <p className="text-slate-600 italic bg-slate-50 p-2 rounded-lg border border-slate-200/60 text-[10.5px]">
                           « Bonjour <strong>{tenantName || 'Locataire'}</strong>, M. Mamadou Diallo a établi votre contrat de bail pour <strong>{resolvedUnitName}</strong> ({resolvedPropertyName}).
                           <br />
-                          👉 <strong>Accédez à votre espace sécurisé pour contresigner :</strong> http://localhost:3001/portal?tab=bail
+                          👉 <strong>Accédez à votre espace sécurisé pour contresigner :</strong> https://locagestion.site/portal?tab=bail
                           <br />
-                          📲 <strong>Téléchargez l'application mobile LOCAGESTION :</strong> https://locagestion.app/download
+                          📲 <strong>Téléchargez l'application mobile LOCAGESTION :</strong> https://locagestion.site/download
                           <br />
                           Code d’activation : <strong>{generatedInvitationCode}</strong> »
                         </p>
@@ -2429,7 +2429,7 @@ export default function NewLeasePage() {
                 totalDueAtEntry,
                 portalUrl: typeof window !== 'undefined'
                   ? `${window.location.origin}/portal?tab=bail&leaseId=${preparedLease?.id || 'BAIL-2026-N09'}&code=${generatedInvitationCode}&tenant=${encodeURIComponent(tenantName)}`
-                  : `http://localhost:3001/portal?tab=bail&leaseId=${preparedLease?.id || 'BAIL-2026-N09'}`,
+                  : `https://locagestion.site/portal?tab=bail&leaseId=${preparedLease?.id || 'BAIL-2026-N09'}`,
                 invitationCode: generatedInvitationCode,
                 landlordName: 'Mamadou Diallo',
                 governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,

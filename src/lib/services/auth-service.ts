@@ -56,7 +56,7 @@ export const DEMO_DEMARCHEUR: AuthUser = {
   name: 'Ibrahim Traoré',
   firstName: 'Ibrahim',
   lastName: 'Traoré',
-  email: 'ibrahim.demarcheur@locagestion.africa',
+  email: 'ibrahim.demarcheur@locagestion.site',
   phone: '+229 96 00 11 22',
   role: 'demarcheur',
   birthDate: '08/11/1985',

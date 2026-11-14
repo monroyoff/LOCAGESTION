@@ -71,7 +71,7 @@ Veuillez agréer, Madame, Monsieur, l'expression de nos salutations distinguées
 Direction de la Gestion Immobilière
 Cabinet DIALLO Patrimoine
 Rue 340, Haie Vive, Cotonou (Bénin)
-Tél : +229 97 12 34 56 • Email : gestion@locagestion.bj`;
+Tél : +229 01 95 44 44 30 • Email : contact@locagestion.site`;
 
   const handleOpenMailClient = () => {
     if (!recipientEmail.trim()) {

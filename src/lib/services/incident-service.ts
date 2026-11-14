@@ -246,7 +246,7 @@ export const IncidentService = {
       emailSentTo: 'diallo.patrimoine@afrique-gestion.com',
       emailDelivered: {
         to: 'diallo.patrimoine@afrique-gestion.com',
-        from: 'alertes-techniques@locagestion.app',
+        from: 'alertes@locagestion.site',
         subject: `[ALERTE TECHNIQUE ${newIncident.urgency.toUpperCase()}] ${newIncident.category} — ${newIncident.unit} (${newIncident.tenantName})`,
         date: nowFormatted,
         preview: `Nouveau constat technique transmis par le locataire ${newIncident.tenantName} avec ${newIncident.photos.length} photo(s) justificative(s).`,

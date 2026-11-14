@@ -4,10 +4,67 @@ import { SpaceProvider } from '@/lib/context/space-context';
 import { GlobalDownloadToast } from '@/components/ui/GlobalDownloadToast';
 import { GlobalCenterToast } from '@/components/ui/GlobalCenterToast';
 
+import { SITE_CONFIG } from '@/lib/config/site';
+
 export const metadata: Metadata = {
-  title: 'LOCAGESTION — Plateforme de Gestion Locative & Immobilière UEMOA & CEMAC',
+  metadataBase: new URL(SITE_CONFIG.url),
+  title: {
+    default: 'LOCAGESTION — Plateforme de Gestion Locative & Immobilière UEMOA & CEMAC',
+    template: '%s | LOCAGESTION',
+  },
   description:
-    'SaaS moderne de gestion locative, baux, encaissement de loyers, solvabilité et quittances certifiées en Afrique de l’Ouest et Centrale.',
+    'SaaS moderne de gestion locative, baux électroniques certifiés OHADA, encaissement de loyers Mobile Money & devises FCFA, et annonces immobilières en Afrique.',
+  applicationName: 'LOCAGESTION',
+  keywords: [
+    'gestion locative Afrique',
+    'baux certifiés OHADA',
+    'quittances de loyer numériques',
+    'Mobile Money Wave MTN Moov Orange',
+    'immobilier UEMOA CEMAC',
+    'Bénin',
+    'Côte d’Ivoire',
+    'Sénégal',
+    'Togo',
+    'Cameroun',
+    'locagestion.site',
+  ],
+  authors: [{ name: 'LOCAGESTION — Groupe OMEGA', url: 'https://locagestion.site' }],
+  creator: 'Groupe OMEGA',
+  publisher: 'LOCAGESTION',
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    title: 'LOCAGESTION — Plateforme de Gestion Locative & Immobilière UEMOA & CEMAC',
+    description:
+      'SaaS moderne de gestion locative, baux électroniques certifiés OHADA, encaissement de loyers Mobile Money & devises FCFA, et annonces immobilières en Afrique.',
+    url: 'https://locagestion.site',
+    siteName: 'LOCAGESTION',
+    locale: 'fr_FR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'LOCAGESTION — Gestion Locative & Baux OHADA',
+    description:
+      'Plateforme PropTech tout-en-un de gestion locative et immobilière en Afrique francophone (UEMOA & CEMAC).',
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  alternates: {
+    canonical: 'https://locagestion.site',
+  },
 };
 
 export const viewport: Viewport = {

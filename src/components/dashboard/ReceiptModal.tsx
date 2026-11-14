@@ -233,7 +233,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               <div className="text-xs text-slate-500 hidden sm:block">
                 <span className="font-bold text-slate-800 block">Vérification en ligne</span>
                 <span className="text-[10px] text-slate-400 font-mono">
-                  code: /verify/{payment.id}
+                  https://locagestion.site/verify/{payment.id}
                 </span>
               </div>
               <div className="w-14 h-14 bg-white p-1 rounded-xl border border-slate-300 shadow-sm flex items-center justify-center">

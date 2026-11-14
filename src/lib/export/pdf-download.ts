@@ -597,7 +597,7 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   doc.text('Sceau de certification électronique apposé ✓', margin + 4, y + 17);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  doc.text(`Code de vérification : /verify/${payment.id || payment.receiptNumber}`, margin + 4, y + 22);
+  doc.text(`Vérification en ligne : https://locagestion.site/verify/${payment.id || payment.receiptNumber}`, margin + 4, y + 22);
   doc.text('Document probant conforme SYSCOHADA et législation fiscale UEMOA & CEMAC', margin + 4, y + 27);
 
   // Bas de page
@@ -841,7 +841,7 @@ export function generateNoticePDF(data: NoticePDFData, customFilename?: string):
   doc.setFontSize(7);
   doc.text('Représenté par Mamadou DIALLO', margin + 4, y + 17.5);
   doc.text('Rue 340, Haie Vive, Cotonou (Bénin)', margin + 4, y + 22);
-  doc.text('Tél : +229 97 12 34 56 • Email : gestion@locagestion.bj', margin + 4, y + 26.5);
+  doc.text('Tél : +229 01 95 44 44 30 • Email : contact@locagestion.site', margin + 4, y + 26.5);
   doc.text('Réf. Mandat de Gestion : MANDAT-2026-COTI', margin + 4, y + 31);
 
   // Cadre Locataire & Logement

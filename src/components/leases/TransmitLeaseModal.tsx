@@ -129,7 +129,7 @@ export function TransmitLeaseModal({
       ? `${window.location.origin}/portal?tab=bail&leaseId=${activeLease.id}&code=${activeLease.invitationCode || 'LOCA-INV-7842'}&tenant=${encodeURIComponent(
           activeLease.tenant
         )}`
-      : `http://localhost:3001/portal?tab=bail&leaseId=${activeLease.id}&code=${activeLease.invitationCode || 'LOCA-INV-7842'}`;
+      : `https://locagestion.site/portal?tab=bail&leaseId=${activeLease.id}&code=${activeLease.invitationCode || 'LOCA-INV-7842'}`;
 
   const invitationData = {
     recipientName: activeLease.tenant,
@@ -143,7 +143,7 @@ export function TransmitLeaseModal({
     utilitiesDeposit: activeLease.utilitiesDeposit,
     totalDueAtEntry: activeLease.totalDueAtEntry,
     portalUrl,
-    appDownloadUrl: 'https://locagestion.app/download',
+    appDownloadUrl: 'https://locagestion.site/download',
     invitationCode: activeLease.invitationCode || 'LOCA-INV-7842',
     landlordName: activeLease.landlordSignature?.signedBy || 'Mamadou Diallo',
     governingLaw: activeLease.governingLaw,

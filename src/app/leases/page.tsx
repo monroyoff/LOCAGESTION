@@ -738,7 +738,7 @@ export default function LeasesPage() {
                               type="button"
                               onClick={() => {
                                 const waUrl = `https://wa.me/${(lease.tenantPhone || '22997001122').replace(/\+/g, '').replace(/\s+/g, '')}?text=${encodeURIComponent(
-                                  `Bonjour ${lease.tenant}, votre contrat de bail officiel (${lease.id}) pour ${lease.unit} vous a été transmis sur votre Portail Résidentiel LOCAGESTION pour contresignature électronique. Rendez-vous sur https://locagestion.app/portal pour le contresigner.`
+                                  `Bonjour ${lease.tenant}, votre contrat de bail officiel (${lease.id}) pour ${lease.unit} vous a été transmis sur votre Portail Résidentiel LOCAGESTION pour contresignature électronique. Rendez-vous sur https://locagestion.site/portal pour le contresigner.`
                                 )}`;
                                 window.open(waUrl, '_blank');
                               }}

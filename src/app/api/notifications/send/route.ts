@@ -57,8 +57,8 @@ export async function POST(req: NextRequest) {
       deposit: body.deposit ? Number(body.deposit) : undefined,
       utilitiesDeposit: body.utilitiesDeposit ? Number(body.utilitiesDeposit) : undefined,
       totalDueAtEntry: body.totalDueAtEntry ? Number(body.totalDueAtEntry) : undefined,
-      portalUrl: body.portalUrl || 'http://localhost:3001/portal?tab=bail',
-      appDownloadUrl: body.appDownloadUrl || 'https://locagestion.app/download',
+      portalUrl: body.portalUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/portal?tab=bail` : 'https://locagestion.site/portal?tab=bail'),
+      appDownloadUrl: body.appDownloadUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/download` : 'https://locagestion.site/download'),
       invitationCode: body.invitationCode || 'LOCA-INV-7842',
       landlordName: body.landlordName || 'Mamadou Diallo',
       countryName: body.countryName,
@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
     const smtpPort = Number(process.env.SMTP_PORT || process.env.EMAIL_SERVER_PORT) || 587;
     const smtpUser = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER;
     const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_SERVER_PASSWORD;
-    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || '"LOCAGESTION" <notifications@locagestion.bj>';
+    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || '"LOCAGESTION" <notifications@locagestion.site>';
 
     if (smtpHost && smtpUser && smtpPass && invitationData.recipientEmail) {
       try {
