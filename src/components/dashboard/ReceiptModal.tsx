@@ -15,6 +15,7 @@ import {
 import { PaymentTransaction } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 import { generateReceiptPDF } from '@/lib/export/pdf-download';
+import { useAuth } from '@/lib/context/space-context';
 
 interface ReceiptModalProps {
   payment: PaymentTransaction | null;
@@ -22,18 +23,21 @@ interface ReceiptModalProps {
 }
 
 export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
+  const { user } = useAuth();
   if (!payment) return null;
+
+  const landlordName = payment.landlordName || user?.companyName || user?.name || 'Bailleur Propriétaire';
 
   const handleDownloadQuittance = () => {
     generateReceiptPDF({
       id: payment.id,
       receiptNumber: payment.receiptNumber || 'QUITT-2026',
-      tenantName: payment.tenantName || 'Koffi Mensah',
-      tenantPhone: payment.tenantPhone || '+229 97 12 34 56',
-      propertyName: payment.propertyName || 'Résidence Les Cocotiers',
-      unitNumber: payment.unitNumber || 'Appt A3 (3 pièces)',
-      period: payment.period || 'Novembre 2026',
-      amount: payment.amount || 220000,
+      tenantName: payment.tenantName || 'Locataire',
+      tenantPhone: payment.tenantPhone || '',
+      propertyName: payment.propertyName || 'Bien immobilier',
+      unitNumber: payment.unitNumber || 'Lot',
+      period: payment.period || 'Mois en cours',
+      amount: payment.amount || 0,
       expectedAmount: payment.expectedAmount,
       paymentDate: payment.paymentDate || new Date().toLocaleDateString('fr-FR'),
       method: payment.method || 'wave',
@@ -111,12 +115,12 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
                 Bailleur Émetteur
               </span>
               <h2 className="text-xl font-black text-slate-900">
-                DIALLO PATRIMOINE SARL
+                {landlordName}
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Rue 340 Haie Vive • Cotonou, République du Bénin<br />
-                IFU: 0202110485960 • RCCM: RB/COT/21 B 1042<br />
-                Tél : +229 01 95 44 44 30 • contact@diallo-patrimoine.bj
+                {user?.companyName ? `${user.companyName} • ` : ''}{user?.residenceCity || 'Cotonou'}, {user?.residenceCountry || 'Bénin'}<br />
+                {user?.ifuNumber ? `IFU : ${user.ifuNumber}` : 'Bailleur vérifié'}<br />
+                {user?.phone ? `Tél : ${user.phone}` : ''} {user?.email ? `• ${user.email}` : ''}
               </p>
             </div>
 
@@ -138,9 +142,9 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
                 Locataire Titulaire
               </span>
               <h4 className="font-extrabold text-sm text-slate-900">
-                {payment.tenantName || 'Koffi Mensah'}
+                {payment.tenantName || 'Locataire Titulaire'}
               </h4>
-              <p className="text-xs text-slate-500 mt-0.5">{payment.tenantPhone || '+229 97 12 34 56'}</p>
+              <p className="text-xs text-slate-500 mt-0.5">{payment.tenantPhone || 'N/A'}</p>
             </div>
 
             <div className="p-4 bg-white rounded-2xl border border-slate-200">
@@ -224,7 +228,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               </div>
               <div className="text-xs text-slate-500">
                 <span className="font-bold text-slate-800 block">Signé numériquement</span>
-                <span>Mamadou Diallo • Gérant</span>
+                <span>{user?.name || landlordName} • Bailleur</span>
               </div>
             </div>
 

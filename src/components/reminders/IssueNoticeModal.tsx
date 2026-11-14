@@ -313,7 +313,7 @@ export function IssueNoticeModal({
                     required
                     value={tenantName}
                     onChange={(e) => setTenantName(e.target.value)}
-                    placeholder="Ex: Koffi Mensah"
+                    placeholder="Nom complet du locataire"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                   />
                 </div>
@@ -464,7 +464,7 @@ export function IssueNoticeModal({
                       type="text"
                       value={beneficiaryName}
                       onChange={(e) => setBeneficiaryName(e.target.value)}
-                      placeholder="Ex: M. Mamadou Diallo (Propriétaire) ou Mlle Aminata Diallo (Fille)"
+                      placeholder="Ex: Propriétaire, conjoint ou descendant direct"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                     />
                   </div>

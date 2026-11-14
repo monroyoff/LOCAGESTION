@@ -151,7 +151,7 @@ export const LeaseService = {
     return leases.find((l) => l.id === id);
   },
 
-  // Récupérer le bail en attente de signature pour un locataire spécifique (ex: Koffi Mensah)
+  // Récupérer le bail en attente de signature pour un locataire spécifique
   getPendingLeaseForTenant(tenantNameOrId: string): Lease | undefined {
     const leases = this.getLeases();
     return leases.find(
@@ -287,7 +287,7 @@ export const LeaseService = {
       tenantName: updated.tenant,
       tenantEmail: updated.tenantEmail,
       tenantPhone: updated.tenantPhone,
-      landlordName: updated.landlordSignature?.signedBy || 'Mamadou Diallo',
+      landlordName: updated.landlordSignature?.signedBy || 'Le Bailleur',
     });
 
     return updated;

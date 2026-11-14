@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { UserSpace, AuthUser, LandlordSubRole } from '../types';
-import { AuthService, DEMO_LANDLORD, DEMO_DEMARCHEUR, DEMO_TENANT } from '../services/auth-service';
+import { AuthService } from '../services/auth-service';
 import { notifyAction } from '../notifications/action-notifier';
 
 export interface SpaceContextType {
@@ -23,7 +23,6 @@ export interface SpaceContextType {
     data: Parameters<typeof AuthService.register>[0]
   ) => { success: boolean; user?: AuthUser; error?: string };
   logout: () => void;
-  quickLogin: (role: UserSpace) => void;
   switchSpace: (targetSpace: UserSpace) => void;
 }
 
@@ -161,18 +160,6 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     );
   };
 
-  const quickLogin = (role: UserSpace) => {
-    const targetUser = AuthService.quickLogin(role);
-    setUser(targetUser);
-    if (role === 'locataire') {
-      router.push('/portal');
-    } else if (role === 'demarcheur') {
-      router.push('/listings');
-    } else {
-      router.push('/');
-    }
-  };
-
   // Bascule entre les espaces pour le compte connecté
   const switchSpace = (targetSpace: UserSpace) => {
     if (!user) {
@@ -218,7 +205,6 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
         login,
         register,
         logout,
-        quickLogin,
         switchSpace,
       }}
     >

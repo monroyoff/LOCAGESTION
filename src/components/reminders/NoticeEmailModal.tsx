@@ -231,11 +231,10 @@ Tél : +229 01 95 44 44 30 • Email : contact@locagestion.site`;
           <button
             type="button"
             onClick={handleCopyText}
-            className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${
-              copied
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
-            }`}
+            className={`py-2.5 px-4 rounded-xl text-xs font-bold border transition-all flex items-center gap-1.5 cursor-pointer ${copied
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+              }`}
           >
             {copied ? (
               <>

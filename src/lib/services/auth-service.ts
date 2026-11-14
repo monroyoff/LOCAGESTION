@@ -11,67 +11,23 @@ import {
 const STORAGE_KEY_SESSION = 'locagestion:auth:session:v1';
 const STORAGE_KEY_USERS = 'locagestion:auth:users:v1';
 
-export const DEMO_LANDLORD: AuthUser = {
-  id: 'usr-bailleur-01',
-  name: 'Mamadou Diallo',
-  firstName: 'Mamadou',
-  lastName: 'Diallo',
-  email: 'contact@diallo-patrimoine.bj',
-  phone: '+229 01 95 44 44 30',
-  role: 'bailleur',
-  birthDate: '14/05/1978',
-  birthPlace: 'Cotonou',
-  residenceCountry: 'Bénin',
-  residenceCity: 'Cotonou',
-  residenceDistrict: 'Haie Vive',
-  avatarUrl:
-    'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80',
-  companyName: 'Cabinet Diallo Patrimoine SARL',
-  ifuNumber: '0202110485960',
-  registeredAt: '15/01/2025',
-  password: 'demo',
-};
-
-export const DEMO_TENANT: AuthUser = {
-  id: 'usr-locataire-01',
-  name: 'Koffi Mensah',
-  firstName: 'Koffi',
-  lastName: 'Mensah',
-  email: 'koffi.mensah@fintech-africa.com',
-  phone: '+229 97 12 34 56',
-  role: 'locataire',
-  birthDate: '22/09/1992',
-  birthPlace: 'Porto-Novo',
-  residenceCountry: 'Bénin',
-  residenceCity: 'Cotonou',
-  residenceDistrict: 'Haie Vive',
-  avatarUrl:
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-  registeredAt: '01/11/2025',
-  password: 'demo',
-};
-
-export const DEMO_DEMARCHEUR: AuthUser = {
-  id: 'usr-demarcheur-01',
-  name: 'Ibrahim Traoré',
-  firstName: 'Ibrahim',
-  lastName: 'Traoré',
-  email: 'ibrahim.demarcheur@locagestion.site',
-  phone: '+229 96 00 11 22',
-  role: 'demarcheur',
-  birthDate: '08/11/1985',
-  birthPlace: 'Parakou',
-  residenceCountry: 'Bénin',
-  residenceCity: 'Cotonou',
-  residenceDistrict: 'Akpakpa',
-  avatarUrl:
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-  companyName: 'Agence Immobilière Traoré & Associés',
-  registeredAt: '01/02/2025',
-  password: 'demo',
-};
-
-const SEED_USERS: AuthUser[] = [];
+function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
+  if (!u) return false;
+  if (u.id === 'usr-bailleur-01' || u.id === 'usr-locataire-01' || u.id === 'usr-demarcheur-01') return true;
+  if (u.name === 'Mamadou Diallo' || u.name === 'Koffi Mensah' || u.name === 'Ibrahim Traoré') return true;
+  if (u.email && (
+    u.email.toLowerCase().includes('diallo-patrimoine') ||
+    u.email.toLowerCase().includes('fintech-africa') ||
+    u.email.toLowerCase().includes('ibrahim.demarcheur') ||
+    u.email.toLowerCase().includes('demarcheur@locagestion')
+  )) return true;
+  if (u.phone && (
+    u.phone.includes('95 44 44 30') ||
+    u.phone.includes('97 12 34 56') ||
+    u.phone.includes('96 00 11 22')
+  )) return true;
+  return false;
+}
 
 function notifyAuthChange(user: AuthUser | null) {
   if (typeof window !== 'undefined') {
@@ -90,7 +46,11 @@ export const AuthService = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          return parsed;
+          const sanitized = parsed.filter((u) => !isFakeDemoUser(u));
+          if (sanitized.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(sanitized));
+          }
+          return sanitized;
         }
       }
     } catch (e) {
@@ -102,7 +62,8 @@ export const AuthService = {
   saveRegisteredUsers(users: AuthUser[]): void {
     if (typeof window === 'undefined') return;
     try {
-      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+      const sanitized = users.filter((u) => !isFakeDemoUser(u));
+      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(sanitized));
     } catch (e) {
       console.error('Erreur sauvegarde utilisateurs:', e);
     }
@@ -114,6 +75,10 @@ export const AuthService = {
       const session = localStorage.getItem(STORAGE_KEY_SESSION);
       if (session) {
         const parsed = JSON.parse(session);
+        if (parsed && isFakeDemoUser(parsed)) {
+          localStorage.removeItem(STORAGE_KEY_SESSION);
+          return null;
+        }
         return parsed || null;
       }
       return null;
@@ -284,8 +249,8 @@ export const AuthService = {
       data.role === 'bailleur'
         ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
         : data.role === 'demarcheur'
-        ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80'
-        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80';
+          ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80'
+          : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80';
 
     const nowFormatted = new Date().toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -334,16 +299,5 @@ export const AuthService = {
     } catch (e) {
       console.error('Erreur déconnexion:', e);
     }
-  },
-
-  quickLogin(role: UserSpace): AuthUser {
-    const target =
-      role === 'bailleur'
-        ? DEMO_LANDLORD
-        : role === 'demarcheur'
-        ? DEMO_DEMARCHEUR
-        : DEMO_TENANT;
-    this.setCurrentUser(target);
-    return target;
   },
 };

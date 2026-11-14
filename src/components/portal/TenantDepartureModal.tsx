@@ -40,12 +40,12 @@ export function TenantDepartureModal({
   isOpen,
   onClose,
   onSuccess,
-  tenantName = 'Koffi Mensah',
-  tenantPhone = '+229 97 00 11 22',
-  tenantEmail = 'koffi.mensah@fintech-africa.com',
-  propertyName = 'Résidence Les Cocotiers',
-  unitNumber = 'Appt A3 (3 pièces)',
-  monthlyRent = 220000,
+  tenantName = 'Locataire',
+  tenantPhone = '',
+  tenantEmail = '',
+  propertyName = 'Logement',
+  unitNumber = 'Lot',
+  monthlyRent = 0,
 }: TenantDepartureModalProps) {
   const [noticeMonths, setNoticeMonths] = useState<number>(3);
   const [selectedReason, setSelectedReason] = useState<string>(DEPARTURE_REASONS[0]);

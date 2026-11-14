@@ -67,7 +67,7 @@ function IncidentsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { isLandlord, isTenant, activeSpace, switchSpace } = useSpace();
+  const { user, isLandlord, isTenant, activeSpace, switchSpace } = useSpace();
 
   // Liste des incidents synchronisée
   const [incidents, setIncidents] = useState<ReportedIncident[]>(INITIAL_INCIDENTS);
@@ -148,11 +148,11 @@ function IncidentsPageContent() {
       urgency: issueUrgency,
       description: issueDesc,
       photos: issuePhotos,
-      tenantName: 'Koffi Mensah',
-      tenantPhone: '+229 97 00 11 22',
-      tenantEmail: 'koffi.mensah@fintech-africa.com',
-      property: 'Résidence Les Cocotiers',
-      unit: 'Appt A3 (3 pièces)',
+      tenantName: user?.name || 'Locataire',
+      tenantPhone: user?.phone || '',
+      tenantEmail: user?.email || '',
+      property: 'Logement principal',
+      unit: 'Lot',
       status: 'en_attente',
     });
 
@@ -698,7 +698,7 @@ function IncidentsPageContent() {
                       Assistance Technique Résident
                     </span>
                     <span className="text-slate-400 text-xs">•</span>
-                    <span className="text-slate-300 text-xs font-semibold">Koffi Mensah • Appt A3</span>
+                    <span className="text-slate-300 text-xs font-semibold">{user?.name || 'Locataire'}</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
                     <Wrench className="w-6 h-6 text-brand-400" />

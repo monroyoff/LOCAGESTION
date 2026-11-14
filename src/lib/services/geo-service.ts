@@ -224,78 +224,89 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
 
   if (useCache && typeof window !== 'undefined') {
     try {
+      // 1. Priorité absolue : Session utilisateur authentifié
+      const session = localStorage.getItem('locagestion:auth:session:v1');
+      if (session) {
+        const u = JSON.parse(session);
+        if (
+          u &&
+          u.id !== 'usr-bailleur-01' &&
+          u.id !== 'usr-locataire-01' &&
+          u.id !== 'usr-demarcheur-01' &&
+          u.name !== 'Mamadou Diallo' &&
+          u.name !== 'Koffi Mensah' &&
+          u.name !== 'Ibrahim Traoré'
+        ) {
+          return {
+            id: u.id,
+            name: u.name,
+            firstName: u.firstName,
+            lastName: u.lastName,
+            email: u.email,
+            phone: u.phone,
+            role: u.role || role,
+            birthDate: u.birthDate,
+            birthPlace: u.birthPlace,
+            residenceCountry: u.residenceCountry || country,
+            residenceCity: u.residenceCity || city,
+            residenceDistrict: u.residenceDistrict || district,
+            projectCountry: u.projectCountry,
+            avatarUrl: u.avatarUrl,
+            companyName: u.companyName,
+            ifuNumber: u.ifuNumber,
+            registrationDate: u.registeredAt || new Date().toLocaleDateString('fr-FR'),
+          };
+        }
+      }
+
+      // 2. Profil en cache
       const saved = localStorage.getItem(`${STORAGE_KEY_PROFILE}:${role}`);
       if (saved) {
         const parsed = JSON.parse(saved);
-        const profile = {
-          ...parsed,
-          residenceCountry: parsed.residenceCountry || country,
-          residenceCity: parsed.residenceCity || city,
-          residenceDistrict: parsed.residenceDistrict || district,
-          avatarUrl:
-            (role === 'bailleur' || parsed.name === 'Mamadou Diallo') &&
-            parsed.avatarUrl?.includes('photo-1534528741775-53994a69daeb')
-              ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
-              : parsed.avatarUrl,
-        };
-        return profile;
+        if (
+          parsed &&
+          parsed.id !== 'usr-bailleur-01' &&
+          parsed.id !== 'usr-locataire-01' &&
+          parsed.id !== 'usr-demarcheur-01' &&
+          parsed.name !== 'Mamadou Diallo' &&
+          parsed.name !== 'Koffi Mensah' &&
+          parsed.name !== 'Ibrahim Traoré'
+        ) {
+          return {
+            ...parsed,
+            residenceCountry: parsed.residenceCountry || country,
+            residenceCity: parsed.residenceCity || city,
+            residenceDistrict: parsed.residenceDistrict || district,
+          };
+        } else {
+          localStorage.removeItem(`${STORAGE_KEY_PROFILE}:${role}`);
+        }
       }
     } catch (e) {}
   }
 
-  if (role === 'bailleur') {
-    return {
-      id: 'usr-bailleur-01',
-      name: 'Mamadou Diallo',
-      firstName: 'Mamadou',
-      lastName: 'Diallo',
-      email: 'contact@diallo-patrimoine.bj',
-      phone: '+229 01 95 44 44 30',
-      role: 'bailleur',
-      birthDate: '14/05/1978',
-      birthPlace: 'Cotonou',
-      residenceCountry: country,
-      residenceCity: city,
-      residenceDistrict: district,
-      avatarUrl: 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80',
-      registrationDate: '15/01/2025',
-    };
-  }
-
-  if (role === 'demarcheur') {
-    return {
-      id: 'usr-demarcheur-01',
-      name: 'Ibrahim Traoré',
-      firstName: 'Ibrahim',
-      lastName: 'Traoré',
-      email: 'ibrahim.demarcheur@locagestion.site',
-      phone: '+229 96 00 11 22',
-      role: 'demarcheur',
-      birthDate: '08/11/1985',
-      birthPlace: 'Parakou',
-      residenceCountry: country,
-      residenceCity: city,
-      residenceDistrict: district,
-      avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-      registrationDate: '01/02/2025',
-    };
-  }
+  const defaultAvatar =
+    role === 'bailleur'
+      ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
+      : role === 'demarcheur'
+      ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80'
+      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80';
 
   return {
-    id: 'usr-locataire-01',
-    name: 'Koffi Mensah',
-    firstName: 'Koffi',
-    lastName: 'Mensah',
-    email: 'koffi.mensah@fintech-africa.com',
-    phone: '+229 97 12 34 56',
-    role: 'locataire',
-    birthDate: '22/09/1992',
-    birthPlace: 'Porto-Novo',
+    id: `usr-${role}`,
+    name: role === 'bailleur' ? 'Bailleur' : role === 'demarcheur' ? 'Démarcheur' : 'Locataire',
+    firstName: role === 'bailleur' ? 'Bailleur' : role === 'demarcheur' ? 'Démarcheur' : 'Locataire',
+    lastName: '',
+    email: '',
+    phone: '',
+    role: role,
+    birthDate: '',
+    birthPlace: '',
     residenceCountry: country,
     residenceCity: city,
     residenceDistrict: district,
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-    registrationDate: '01/11/2025',
+    avatarUrl: defaultAvatar,
+    registrationDate: new Date().toLocaleDateString('fr-FR'),
   };
 }
 

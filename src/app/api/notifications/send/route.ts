@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
       portalUrl: body.portalUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/portal?tab=bail` : 'https://locagestion.site/portal?tab=bail'),
       appDownloadUrl: body.appDownloadUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/download` : 'https://locagestion.site/download'),
       invitationCode: body.invitationCode || 'LOCA-INV-7842',
-      landlordName: body.landlordName || 'Mamadou Diallo',
+      landlordName: body.landlordName || 'Le Bailleur',
       countryName: body.countryName,
       governingLaw: body.governingLaw,
     };

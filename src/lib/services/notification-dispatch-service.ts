@@ -56,7 +56,7 @@ export function sanitizePhoneNumber(phone: string, defaultCountry = '229'): stri
  * Génère le texte professionnel complet d'invitation pour SMS et WhatsApp.
  */
 export function buildLeaseInvitationTextMessage(data: LeaseInvitationData): string {
-  const landlord = data.landlordName || 'Mamadou Diallo';
+  const landlord = data.landlordName || 'Le Bailleur';
   const appUrl = data.appDownloadUrl || (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/download` : 'https://locagestion.site/download');
   const rentFormatted = new Intl.NumberFormat('fr-FR').format(data.rent);
   const totalFormatted = data.totalDueAtEntry
@@ -138,7 +138,7 @@ export function buildGmailComposeUrl(data: LeaseInvitationData): string {
  * Génère le gabarit HTML premium responsive pour l'email.
  */
 export function buildLeaseEmailHtml(data: LeaseInvitationData): string {
-  const landlord = data.landlordName || 'Mamadou Diallo';
+  const landlord = data.landlordName || 'Le Bailleur';
   const appUrl = data.appDownloadUrl || (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/download` : 'https://locagestion.site/download');
   const rentFormatted = new Intl.NumberFormat('fr-FR').format(data.rent);
   const depositFormatted = data.deposit

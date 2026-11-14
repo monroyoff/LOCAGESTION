@@ -536,8 +536,8 @@ export default function MessagesPage() {
                     {/* Right avatar for sent message */}
                     {isMe && (
                       <img
-                        src="https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80"
-                        alt="Mamadou Diallo"
+                        src={user?.avatarUrl || "https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80"}
+                        alt={user?.name || "Moi"}
                         className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0 mb-1 ring-1 ring-brand-500/50"
                       />
                     )}

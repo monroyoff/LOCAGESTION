@@ -181,8 +181,8 @@ function TenantPortalContent() {
       description: issueDesc,
       photos: issuePhotos,
       tenantName: user?.name || 'Locataire',
-      tenantPhone: '+229 97 00 11 22',
-      tenantEmail: 'koffi.mensah@fintech-africa.com',
+      tenantPhone: user?.phone || '',
+      tenantEmail: user?.email || '',
       property: tenant.property,
       unit: tenant.unit,
       status: 'en_attente',
@@ -915,7 +915,7 @@ function TenantPortalContent() {
                         </span>
                       </div>
                       <p className="text-xs text-amber-50 leading-relaxed max-w-xl">
-                        Votre bailleur ({pendingLease.landlordSignature?.signedBy || 'Mamadou Diallo'})
+                        Votre bailleur ({pendingLease.landlordSignature?.signedBy || 'Le Bailleur'})
                         a signé et vous a transmis le contrat de bail <strong>{pendingLease.id}</strong>{' '}
                         pour le lot <strong>{pendingLease.unit}</strong> ({formatFCFA(pendingLease.rent)}/mois).
                         Veuillez apposer votre signature électronique pour activer le bail.
@@ -2524,33 +2524,20 @@ function TenantPortalContent() {
                   </div>
 
                   {/* Message de relance reçu */}
-                  <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2">
-                    <div className="flex items-center justify-between text-xs font-bold text-amber-900">
-                      <span className="flex items-center gap-1.5">
-                        <BellRing className="w-3.5 h-3.5 text-amber-600" />
-                        <span>Dernier message de rappel transmis par le Cabinet Diallo Patrimoine</span>
-                      </span>
-                      <span className="text-[10px] text-amber-600 font-medium">Reçu le 01/11/2026</span>
+                  {tenantNotices.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2">
+                      <div className="flex items-center justify-between text-xs font-bold text-amber-900">
+                        <span className="flex items-center gap-1.5">
+                          <BellRing className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Dernier avis ou rappel de paiement reçu</span>
+                        </span>
+                        <span className="text-[10px] text-amber-600 font-medium">Reçu le {tenantNotices[0].noticeDate || tenantNotices[0].createdAt}</span>
+                      </div>
+                      <p className="text-xs text-amber-950 font-mono leading-relaxed bg-white/70 p-3 rounded-xl border border-amber-200/60">
+                        « {tenantNotices[0].reasonTitle || tenantNotices[0].reasonDetails || 'Rappel d’échéance de loyer'}. Montant exigible : {formatFCFA(tenantNotices[0].monthlyRent)}. Merci de déclarer votre règlement une fois le versement effectué. »
+                      </p>
                     </div>
-                    <p className="text-xs text-amber-950 font-mono leading-relaxed bg-white/70 p-3 rounded-xl border border-amber-200/60">
-                      « Bonjour M. Koffi Mensah. Le Cabinet Diallo Patrimoine vous rappelle que l’échéance de loyer de Novembre 2026 (220 000 FCFA) pour l’appartement A3 de la Résidence Les Cocotiers est exigible. Merci de bien vouloir effectuer votre versement via Wave ou Mobile Money au +229 01 95 44 44 30 et de déclarer la transaction sur votre espace locataire pour émission de votre quittance. »
-                    </p>
-                    <div className="flex items-center justify-end gap-2 pt-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (navigator.clipboard) {
-                            navigator.clipboard.writeText('+229 01 95 44 44 30');
-                            showToast('Numéro Wave/Mobile Money copié (+229 01 95 44 44 30) !');
-                          }
-                        }}
-                        className="text-xs font-bold text-amber-800 hover:text-amber-900 flex items-center gap-1 cursor-pointer"
-                      >
-                        <Copy className="w-3 h-3" />
-                        <span>Copier le numéro de paiement (+229 01 95 44 44 30)</span>
-                      </button>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   ShieldCheck,
@@ -14,6 +14,8 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
+import { PaymentService } from '@/lib/services/payment-service';
+import { PaymentTransaction } from '@/lib/types';
 
 interface VerifyPageProps {
   params: {
@@ -22,7 +24,34 @@ interface VerifyPageProps {
 }
 
 export default function VerifyReceiptPage({ params }: VerifyPageProps) {
-  const code = params.code || 'QUITT-2026-1048';
+  const code = params.code || 'QUITT-2026';
+  const [matchedPayment, setMatchedPayment] = useState<PaymentTransaction | null>(null);
+
+  useEffect(() => {
+    try {
+      const allPayments = [
+        ...PaymentService.getVerifiedPayments(),
+        ...PaymentService.getDeclaredPayments(),
+      ];
+      const found = allPayments.find(
+        (p) => p.id === code || p.receiptNumber === code
+      );
+      if (found) {
+        setMatchedPayment(found);
+      }
+    } catch (e) {
+      console.error('Erreur recherche quittance:', e);
+    }
+  }, [code]);
+
+  const landlordName = matchedPayment?.landlordName || 'Cabinet de Gestion Immobilière';
+  const tenantName = matchedPayment?.tenantName || 'Locataire Titulaire';
+  const propertyDesc = matchedPayment
+    ? `${matchedPayment.propertyName} (${matchedPayment.unitNumber})`
+    : 'Lot sous contrat de bail certifié';
+  const period = matchedPayment?.period || 'Période contractuelle';
+  const method = matchedPayment?.method?.toUpperCase() || 'MOBILE MONEY / VIREMENT';
+  const amount = matchedPayment?.amount || 0;
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-900 py-12 px-4 sm:px-6 flex flex-col justify-center items-center">
@@ -69,32 +98,32 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
             <span className="text-slate-400 font-medium">Bailleur Émetteur :</span>
-            <span className="font-bold text-slate-900">DIALLO PATRIMOINE SARL</span>
+            <span className="font-bold text-slate-900">{landlordName}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
-            <span className="text-slate-400 font-medium">Numéro IFU Bailleur :</span>
-            <span className="font-mono font-bold text-slate-700">0202110485960 (Bénin)</span>
+            <span className="text-slate-400 font-medium">Statut Enregistrement :</span>
+            <span className="font-mono font-bold text-emerald-600">Certifié conforme OHADA</span>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
             <span className="text-slate-400 font-medium">Locataire Titulaire :</span>
-            <span className="font-bold text-slate-900">Koffi Mensah</span>
+            <span className="font-bold text-slate-900">{tenantName}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
             <span className="text-slate-400 font-medium">Logement :</span>
-            <span className="font-bold text-brand-600">Résidence Les Cocotiers (Appt A3)</span>
+            <span className="font-bold text-brand-600">{propertyDesc}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
             <span className="text-slate-400 font-medium">Période Quittancée :</span>
-            <span className="font-bold text-slate-900">Octobre 2026</span>
+            <span className="font-bold text-slate-900">{period}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-slate-100">
             <span className="text-slate-400 font-medium">Mode d'encaissement :</span>
-            <span className="font-bold text-slate-900">Wave Mobile Money</span>
+            <span className="font-bold text-slate-900">{method}</span>
           </div>
           <div className="flex justify-between py-2 pt-3">
             <span className="text-slate-700 font-bold text-sm">Montant Total Réglé :</span>
             <span className="font-black text-emerald-600 text-lg">
-              {formatFCFA(220000)}
+              {formatFCFA(amount)}
             </span>
           </div>
         </div>

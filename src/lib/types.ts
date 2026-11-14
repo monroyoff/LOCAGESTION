@@ -117,6 +117,7 @@ export interface PaymentTransaction {
   notes?: string;
   isVerified: boolean;
   tenantEmail?: string;
+  landlordName?: string;
   isAdvance?: boolean;
   advanceMonthsCount?: number;
   advanceMonthsList?: string[];

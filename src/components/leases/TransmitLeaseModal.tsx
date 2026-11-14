@@ -27,6 +27,7 @@ import {
 import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { formatFCFA } from '@/lib/money/format';
 import { notifySave, notifyAction } from '@/lib/notifications/action-notifier';
+import { useAuth } from '@/lib/context/space-context';
 import {
   buildWhatsAppUrl,
   buildSmsUri,
@@ -73,6 +74,7 @@ export function TransmitLeaseModal({
   onTransmittedSuccess,
 }: TransmitLeaseModalProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const [isTransmitting, setIsTransmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -99,17 +101,17 @@ export function TransmitLeaseModal({
   // Normalisation des données du bail
   const activeLease: Lease = lease || {
     id: leaseData?.id || `BAIL-2026-${Math.floor(100 + Math.random() * 900)}`,
-    tenant: leaseData?.tenantName || 'Koffi Mensah',
-    tenantId: leaseData?.tenantId || 'ten-01',
-    tenantEmail: leaseData?.tenantEmail || 'koffi.mensah@fintech-africa.com',
-    tenantPhone: leaseData?.tenantPhone || '+229 97 00 11 22',
-    property: leaseData?.propertyName || 'Résidence Les Cocotiers',
-    unit: leaseData?.unitNumber || 'Appt A3',
-    rent: leaseData?.rent || 220000,
-    charges: leaseData?.charges || 30000,
-    deposit: leaseData?.deposit || 440000,
+    tenant: leaseData?.tenantName || 'Locataire',
+    tenantId: leaseData?.tenantId || undefined,
+    tenantEmail: leaseData?.tenantEmail || '',
+    tenantPhone: leaseData?.tenantPhone || '',
+    property: leaseData?.propertyName || 'Bien immobilier',
+    unit: leaseData?.unitNumber || 'Lot',
+    rent: leaseData?.rent || 0,
+    charges: leaseData?.charges || 0,
+    deposit: leaseData?.deposit || 0,
     utilitiesDeposit: leaseData?.utilitiesDeposit || 0,
-    totalDueAtEntry: leaseData?.totalDueAtEntry || (leaseData?.rent || 220000) * 3,
+    totalDueAtEntry: leaseData?.totalDueAtEntry || 0,
     startDate: leaseData?.startDate || '2026-11-01',
     endDate: leaseData?.endDate || '2029-10-31',
     status: 'en_attente_signature',
@@ -117,7 +119,7 @@ export function TransmitLeaseModal({
     specialConditions: leaseData?.specialConditions,
     invitationCode: leaseData?.invitationCode || 'LOCA-INV-7842',
     landlordSignature: {
-      signedBy: 'Mamadou Diallo',
+      signedBy: user?.name || user?.companyName || 'Le Bailleur',
       date: new Date().toLocaleDateString('fr-FR'),
       signatureDataUrl: '',
     },
@@ -145,7 +147,7 @@ export function TransmitLeaseModal({
     portalUrl,
     appDownloadUrl: 'https://locagestion.site/download',
     invitationCode: activeLease.invitationCode || 'LOCA-INV-7842',
-    landlordName: activeLease.landlordSignature?.signedBy || 'Mamadou Diallo',
+    landlordName: activeLease.landlordSignature?.signedBy || user?.name || user?.companyName || 'Le Bailleur',
     governingLaw: activeLease.governingLaw,
   };
 
@@ -275,7 +277,7 @@ export function TransmitLeaseModal({
                   Le bail sera placé en statut « En attente de signature »
                 </span>
                 <p className="text-amber-800 text-[11px] leading-relaxed">
-                  Votre signature en tant que bailleur ({activeLease.landlordSignature?.signedBy || 'Mamadou Diallo'})
+                  Votre signature en tant que bailleur ({activeLease.landlordSignature?.signedBy || user?.name || 'Bailleur'})
                   a été apposée. Le contrat sera mis à disposition sur le portail sécurisé et le locataire sera notifié.
                 </p>
               </div>

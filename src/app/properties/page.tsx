@@ -369,14 +369,7 @@ export default function PropertiesPage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {(selectedProperty.unitsList || [
-                    { unit: 'Appt A1', type: '3 Pièces • 75 m²', surface: 75, rent: 220000, tenant: 'Koffi Mensah', status: 'occupe' },
-                    { unit: 'Appt A2', type: '2 Pièces • 55 m²', surface: 55, rent: 180000, tenant: 'Amina Diop', status: 'occupe' },
-                    { unit: 'Appt A3', type: '3 Pièces • 75 m²', surface: 75, rent: 220000, tenant: 'Koffi Mensah', status: 'occupe' },
-                    { unit: 'Appt B1', type: '2 Pièces • 55 m²', surface: 55, rent: 180000, tenant: 'Fatoumata Traoré', status: 'occupe' },
-                    { unit: 'Appt B2', type: '3 Pièces • 80 m²', surface: 80, rent: 250000, tenant: 'Disponible', status: 'vacant' },
-                    { unit: 'Penthouse C', type: '4 Pièces • 160 m²', surface: 160, rent: 450000, tenant: 'Rodrigue Agbodjan', status: 'occupe' },
-                  ]).map((l, idx) => (
+                  {(selectedProperty.unitsList || []).map((l, idx) => (
                     <div
                       key={idx}
                       onClick={() => {

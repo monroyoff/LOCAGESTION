@@ -185,13 +185,13 @@ export const TenantNotificationService = {
   }) {
     return this.addNotification({
       title: 'Nouveau Contrat de Bail Prêt à Signer',
-      message: `Votre bailleur ${params.landlordName || 'Mamadou Diallo'} vous a transmis le bail ${params.leaseId} pour le logement ${params.unitNumber} (${params.propertyName}) au loyer de ${new Intl.NumberFormat('fr-FR').format(params.rent)} FCFA/mois. Vous pouvez le visualiser et le contresigner dès maintenant.`,
+      message: `Votre bailleur ${params.landlordName || 'Le Bailleur'} vous a transmis le bail ${params.leaseId} pour le logement ${params.unitNumber} (${params.propertyName}) au loyer de ${new Intl.NumberFormat('fr-FR').format(params.rent)} FCFA/mois. Vous pouvez le visualiser et le contresigner dès maintenant.`,
       type: 'lease_available',
       link: `/portal?tab=bail&leaseId=${params.leaseId}&tenant=${encodeURIComponent(params.tenantName)}`,
       tenantName: params.tenantName,
       tenantEmail: params.tenantEmail,
       tenantPhone: params.tenantPhone,
-      actor: params.landlordName || 'Mamadou Diallo (Bailleur)',
+      actor: params.landlordName || 'Le Bailleur',
       actionLabel: 'Visualiser & Signer',
     });
   },
@@ -262,7 +262,7 @@ export const TenantNotificationService = {
   }) {
     return this.addNotification({
       title: 'Notification de Résiliation de Bail',
-      message: `Votre bailleur ${params.landlordName || 'Mamadou Diallo'} a prononcé la résiliation du contrat ${params.leaseId} concernant le logement ${params.unitNumber}.${params.reason ? ` Motif : ${params.reason}.` : ''}`,
+      message: `Votre bailleur ${params.landlordName || 'Le Bailleur'} a prononcé la résiliation du contrat ${params.leaseId} concernant le logement ${params.unitNumber}.${params.reason ? ` Motif : ${params.reason}.` : ''}`,
       type: 'lease_resiliated',
       link: '/portal?tab=bail',
       tenantName: params.tenantName,

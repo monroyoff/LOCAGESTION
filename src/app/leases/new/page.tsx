@@ -69,6 +69,7 @@ import {
 import { TransmitLeaseModal } from '@/components/leases/TransmitLeaseModal';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { getUserResidenceCountry } from '@/lib/services/geo-service';
+import { useAuth } from '@/lib/context/space-context';
 import {
   CountryTenancyLaw,
   COUNTRIES_TENANCY_LAWS,
@@ -87,6 +88,7 @@ const LEASE_PROPERTY_TYPES = [
 
 export default function NewLeasePage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
 
@@ -214,18 +216,18 @@ export default function NewLeasePage() {
     }
   };
 
-  const [tenantMode, setTenantMode] = useState<'existing' | 'new'>('existing');
-  const [selectedRegisteredTenantId, setSelectedRegisteredTenantId] = useState<string>('ten-01');
-  const [tenantName, setTenantName] = useState('Koffi Mensah');
-  const [tenantEmail, setTenantEmail] = useState('koffi.mensah@fintech-africa.com');
-  const [tenantPhone, setTenantPhone] = useState('+229 97 00 11 22');
-  const [tenantAddress, setTenantAddress] = useState('Rue 340, Haie Vive, Cotonou');
-  const [tenantIdType, setTenantIdType] = useState('CIP / CNI (Bénin)');
-  const [tenantIdNumber, setTenantIdNumber] = useState('0120198402918');
-  const [tenantIfu, setTenantIfu] = useState('3202110485960');
-  const [emergencyContactName, setEmergencyContactName] = useState('Mireille Mensah');
-  const [emergencyContactPhone, setEmergencyContactPhone] = useState('+229 97 11 22 33');
-  const [emergencyContactRelation, setEmergencyContactRelation] = useState('Époux / Épouse');
+  const [tenantMode, setTenantMode] = useState<'existing' | 'new'>('new');
+  const [selectedRegisteredTenantId, setSelectedRegisteredTenantId] = useState<string>('');
+  const [tenantName, setTenantName] = useState('');
+  const [tenantEmail, setTenantEmail] = useState('');
+  const [tenantPhone, setTenantPhone] = useState('');
+  const [tenantAddress, setTenantAddress] = useState('');
+  const [tenantIdType, setTenantIdType] = useState('CIP / CNI');
+  const [tenantIdNumber, setTenantIdNumber] = useState('');
+  const [tenantIfu, setTenantIfu] = useState('');
+  const [emergencyContactName, setEmergencyContactName] = useState('');
+  const [emergencyContactPhone, setEmergencyContactPhone] = useState('');
+  const [emergencyContactRelation, setEmergencyContactRelation] = useState('');
 
   const [isTransmitModalOpen, setIsTransmitModalOpen] = useState(false);
   const [preparedLease, setPreparedLease] = useState<Lease | null>(null);
@@ -412,9 +414,10 @@ export default function NewLeasePage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleFinish = () => {
+    const landlordDisplayName = user?.name || user?.companyName || 'Le Bailleur';
     const signatureData =
       canvasRef.current?.toDataURL('image/png') ||
-      'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><text x="10" y="35" font-family="cursive" font-size="22" fill="%23ec4899">Mamadou Diallo</text></svg>';
+      `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><text x="10" y="35" font-family="cursive" font-size="22" fill="%23ec4899">${encodeURIComponent(landlordDisplayName)}</text></svg>`;
 
     const generatedLeaseId = `BAIL-2026-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -460,7 +463,7 @@ export default function NewLeasePage() {
       durationMonths: parseInt(durationMonths, 10) || 36,
       status: 'en_attente_signature',
       landlordSignature: {
-        signedBy: 'Mamadou Diallo',
+        signedBy: landlordDisplayName,
         date: new Date().toLocaleDateString('fr-FR'),
         signatureDataUrl: signatureData,
       },
@@ -1376,7 +1379,7 @@ export default function NewLeasePage() {
                           <span className="text-[10px] text-slate-400 font-mono">Code : {generatedInvitationCode}</span>
                         </div>
                         <p className="text-slate-600 italic bg-slate-50 p-2 rounded-lg border border-slate-200/60 text-[10.5px]">
-                          « Bonjour <strong>{tenantName || 'Locataire'}</strong>, M. Mamadou Diallo a établi votre contrat de bail pour <strong>{resolvedUnitName}</strong> ({resolvedPropertyName}).
+                          « Bonjour <strong>{tenantName || 'Locataire'}</strong>, {user?.name ? `${user.name} a` : 'votre bailleur a'} établi votre contrat de bail pour <strong>{resolvedUnitName}</strong> ({resolvedPropertyName}).
                           <br />
                           👉 <strong>Accédez à votre espace sécurisé pour contresigner :</strong> https://locagestion.site/portal?tab=bail
                           <br />
@@ -2073,16 +2076,16 @@ export default function NewLeasePage() {
                           1. Le Bailleur (Propriétaire)
                         </span>
                         <div className="font-extrabold text-slate-900 text-xs">
-                          Cabinet DIALLO Patrimoine SARL
+                          {user?.companyName || user?.name || 'Bailleur Propriétaire'}
                         </div>
                         <div className="text-[11px] text-slate-600">
-                          Représenté par M. Mamadou DIALLO • IFU : 0202110485960
+                          {user?.name ? `Représenté par ${user.name}` : 'Propriétaire certifié'} {user?.ifuNumber ? `• IFU : ${user.ifuNumber}` : ''}
                         </div>
                         <div className="text-[11px] text-slate-500">
-                          Rue 340, Haie Vive, Cotonou ({activeLaw.countryName})
+                          {user?.residenceCity || 'Cotonou'} ({activeLaw.countryName})
                         </div>
                         <div className="text-[11px] text-slate-500 font-mono">
-                          Tél : +229 01 95 44 44 30 • contact@diallo-patrimoine.bj
+                          {user?.phone ? `Tél : ${user.phone}` : ''} {user?.email ? `• ${user.email}` : ''}
                         </div>
                       </div>
 
@@ -2257,7 +2260,7 @@ export default function NewLeasePage() {
                     <div>
                       <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                         <PenTool className="w-3.5 h-3.5 text-brand-600" />
-                        <span>Signature Tactile du Bailleur (Mamadou Diallo) :</span>
+                        <span>Signature Tactile du Bailleur ({user?.name || 'Propriétaire'}) :</span>
                       </h3>
                       <p className="text-[11px] text-slate-500">
                         Apposez votre signature au doigt ou à la souris pour sceller le contrat de bail visualisé ci-dessus.
@@ -2292,7 +2295,7 @@ export default function NewLeasePage() {
 
                     {!hasSignature && (
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs font-semibold">
-                        Apposez votre signature ici (Bailleur : Mamadou Diallo)
+                        Apposez votre signature ici (Bailleur : {user?.name || 'Propriétaire'})
                       </div>
                     )}
                   </div>
@@ -2441,7 +2444,7 @@ export default function NewLeasePage() {
                   ? `${window.location.origin}/portal?tab=bail&leaseId=${preparedLease?.id || 'BAIL-2026-N09'}&code=${generatedInvitationCode}&tenant=${encodeURIComponent(tenantName)}`
                   : `https://locagestion.site/portal?tab=bail&leaseId=${preparedLease?.id || 'BAIL-2026-N09'}`,
                 invitationCode: generatedInvitationCode,
-                landlordName: 'Mamadou Diallo',
+                landlordName: user?.name || user?.companyName || 'Le Bailleur',
                 governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,
               };
               const msg = buildLeaseInvitationTextMessage(invData);

@@ -28,6 +28,8 @@ export interface LeasePDFData {
   propertyName: string;
   unit: string;
   country?: string;
+  countryName?: string;
+  landlordName?: string;
   governingLaw?: string;
   specialConditions?: string;
   rent: number;
@@ -47,6 +49,7 @@ export interface ReceiptPDFData {
   receiptNumber: string;
   tenantName: string;
   tenantPhone?: string;
+  landlordName?: string;
   propertyName: string;
   unitNumber: string;
   period: string;
@@ -182,15 +185,16 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   doc.setFontSize(8);
   doc.text('1. LE BAILLEUR (PROPRIÉTAIRE)', margin + 3, y + 5);
 
+  const landlordName = data.landlordName || 'Le Bailleur Propriétaire';
   doc.setFontSize(7.5);
   doc.setTextColor(30, 41, 59);
-  doc.text('Cabinet DIALLO Patrimoine SARL', margin + 3, y + 12);
+  doc.text(landlordName, margin + 3, y + 12);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(71, 85, 105);
-  doc.text('Représenté par M. Mamadou DIALLO', margin + 3, y + 17);
-  doc.text('Rue 340, Haie Vive, Cotonou (Bénin)', margin + 3, y + 22);
-  doc.text('IFU : 0202110485960 • Tél : +229 01 95 44 44 30', margin + 3, y + 27);
-  doc.text('Email : contact@diallo-patrimoine.bj', margin + 3, y + 31);
+  doc.text('Bailleur enregistré sur LOCAGESTION', margin + 3, y + 17);
+  doc.text(`Juridiction : ${data.countryName || 'Zone UEMOA & CEMAC'}`, margin + 3, y + 22);
+  doc.text('Signature électronique certifiée SHA-256', margin + 3, y + 27);
+  doc.text('Plateforme : https://locagestion.site', margin + 3, y + 31);
 
   // Preneur / Locataire
   doc.setFillColor(255, 255, 255);
@@ -452,28 +456,29 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
-  doc.text('DIALLO Patrimoine SARL', margin + 4, y + 12);
-  doc.text('Rue 340, Haie Vive, Cotonou (Bénin)', margin + 4, y + 17);
-  doc.text('IFU : 0202110485960', margin + 4, y + 22);
-  doc.text('Tél : +229 01 95 44 44 30', margin + 4, y + 27);
+  const landlordName = payment.landlordName || 'Bailleur Propriétaire';
+  doc.text(landlordName, margin + 4, y + 12);
+  doc.text('Gestion Locative Sécurisée', margin + 4, y + 17);
+  doc.text('Conformité UEMOA / CEMAC', margin + 4, y + 22);
+  doc.text('Plateforme : locagestion.site', margin + 4, y + 27);
 
   // Valeurs sécurisées pour le locataire
   const tenantDisplayName =
     payment.tenantName && payment.tenantName.trim() !== ''
       ? payment.tenantName
-      : 'Koffi Mensah';
+      : 'Locataire Titulaire';
   const propertyDisplayName =
     payment.propertyName && payment.propertyName.trim() !== ''
       ? payment.propertyName
-      : 'Résidence Les Cocotiers';
+      : 'Bien Immobilier';
   const unitDisplayName =
     payment.unitNumber && payment.unitNumber.trim() !== ''
       ? payment.unitNumber
-      : 'Appt A3 (3 pièces)';
+      : 'Lot';
   const tenantPhoneDisplay =
     payment.tenantPhone && payment.tenantPhone.trim() !== ''
       ? payment.tenantPhone
-      : '+229 97 12 34 56';
+      : 'N/A';
 
   // Locataire
   doc.setFillColor(255, 255, 255);
@@ -1045,12 +1050,12 @@ export function downloadDocument(filename: string, content: string, mimeType: st
     const leaseId = idMatch ? idMatch[1] : 'BAIL-2026';
     generateLeasePDF({
       id: leaseId,
-      tenantName: 'Koffi Mensah',
-      propertyName: 'Résidence Les Cocotiers',
-      unit: 'Appt A3 (3 pièces)',
-      rent: 220000,
-      deposit: 440000,
-      startDate: '01/11/2025',
+      tenantName: 'Locataire',
+      propertyName: 'Bien immobilier',
+      unit: 'Lot',
+      rent: 0,
+      deposit: 0,
+      startDate: new Date().toLocaleDateString('fr-FR'),
     }, filename.replace('.txt', '.pdf'));
     return;
   }
@@ -1060,13 +1065,13 @@ export function downloadDocument(filename: string, content: string, mimeType: st
     const receiptNum = numMatch ? numMatch[1] : 'QUITT-2026';
     generateReceiptPDF({
       receiptNumber: receiptNum,
-      tenantName: 'Koffi Mensah',
-      propertyName: 'Résidence Les Cocotiers',
-      unitNumber: 'Appt A3 (3 pièces)',
-      period: 'Octobre 2026',
-      amount: 220000,
-      paymentDate: '30/10/2026',
-      method: 'wave',
+      tenantName: 'Locataire',
+      propertyName: 'Bien immobilier',
+      unitNumber: 'Lot',
+      period: 'Période en cours',
+      amount: 0,
+      paymentDate: new Date().toLocaleDateString('fr-FR'),
+      method: 'virement',
     }, filename.replace('.txt', '.pdf'));
     return;
   }
@@ -1076,9 +1081,9 @@ export function downloadDocument(filename: string, content: string, mimeType: st
     const leaseId = idMatch ? idMatch[1] : 'BAIL-2026';
     generateInspectionPDF({
       id: leaseId,
-      tenantName: 'Koffi Mensah',
-      propertyName: 'Résidence Les Cocotiers',
-      unit: 'Appt A3 (3 pièces)',
+      tenantName: 'Locataire',
+      propertyName: 'Bien immobilier',
+      unit: 'Lot',
     }, filename.replace('.txt', '.pdf'));
     return;
   }

@@ -337,7 +337,7 @@ export default function LeasesPage() {
                     </span>
                   </div>
                   <p className="text-xs text-amber-800 mt-0.5">
-                    Le bail a été scellé par vous ({'Mamadou Diallo'}) et transmis au compte de{' '}
+                    Le bail a été scellé par vous ({spaceCtx.user?.name || 'Bailleur'}) et transmis au compte de{' '}
                     <strong>{pendingLeases[0].tenant}</strong>. Une fois contresigné, vous recevrez
                     une notification instantanée dans l'application et par email.
                   </p>
@@ -684,7 +684,7 @@ export default function LeasesPage() {
                         <div className="pt-2 flex flex-wrap items-center gap-2">
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            <span>Signé par le bailleur (Mamadou Diallo)</span>
+                            <span>Signé par le bailleur ({lease.landlordSignature?.signedBy || spaceCtx.user?.name || 'Bailleur'})</span>
                           </span>
 
                           {isResiliated ? (

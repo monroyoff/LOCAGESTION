@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { notifySave } from '@/lib/notifications/action-notifier';
+import { LeaseService } from '@/lib/services/lease-service';
 
 interface QuickActionModalProps {
   actionType: 'new_lease' | 'new_payment' | 'new_property' | null;
@@ -99,17 +100,30 @@ export function QuickActionModal({
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">
                   Locataire
                 </label>
-                <select
-                  value={tenantName}
-                  onChange={(e) => setTenantName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                >
-                  <option value="">-- Sélectionner un locataire --</option>
-                  <option value="Fatoumata Traoré">Fatoumata Traoré (Appt B1 - Retard 180k FCFA)</option>
-                  <option value="Sékou Camara">Sékou Camara (Appt 4B - Retard 240k FCFA)</option>
-                  <option value="Jean-Yves Kouassi">Jean-Yves Kouassi (Studio B12 - Solde 50k FCFA)</option>
-                  <option value="Autre locataire">Autre locataire</option>
-                </select>
+                {LeaseService.getLeases().length > 0 ? (
+                  <select
+                    value={tenantName}
+                    onChange={(e) => setTenantName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  >
+                    <option value="">-- Sélectionner un locataire --</option>
+                    {LeaseService.getLeases().map((l) => (
+                      <option key={l.id} value={l.tenant}>
+                        {l.tenant} ({l.property} - {l.unit})
+                      </option>
+                    ))}
+                    <option value="Autre locataire">Autre locataire</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    required
+                    value={tenantName}
+                    onChange={(e) => setTenantName(e.target.value)}
+                    placeholder="Nom complet du locataire"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

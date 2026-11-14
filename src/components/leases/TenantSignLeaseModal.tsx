@@ -205,8 +205,8 @@ export function TenantSignLeaseModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                   <div>
                     <span className="text-slate-400 block text-[11px]">Bailleur / Propriétaire :</span>
-                    <strong className="text-slate-900 block font-bold">Mamadou Diallo</strong>
-                    <span className="text-[11px] text-slate-500">Diallo Patrimoine Immobilier</span>
+                    <strong className="text-slate-900 block font-bold">{lease.landlordSignature?.signedBy || 'Le Bailleur'}</strong>
+                    <span className="text-[11px] text-slate-500">Propriétaire certifié</span>
                   </div>
 
                   <div>
@@ -253,8 +253,8 @@ export function TenantSignLeaseModal({
                         Signature du Bailleur apposée & certifiée
                       </span>
                       <span className="text-[10px] text-emerald-700">
-                        Signé par {lease.landlordSignature?.signedBy || 'Mamadou Diallo'} le{' '}
-                        {lease.landlordSignature?.date || lease.transmittedAt || '01/11/2026'}
+                        Signé par {lease.landlordSignature?.signedBy || 'Le Bailleur'} le{' '}
+                        {lease.landlordSignature?.date || lease.transmittedAt || new Date().toLocaleDateString('fr-FR')}
                       </span>
                     </div>
                   </div>
@@ -392,7 +392,7 @@ export function TenantSignLeaseModal({
                         Notification dans l'application envoyée au bailleur
                       </strong>
                       <span className="text-[11px] text-slate-500 block">
-                        Mamadou Diallo a été notifié en direct que Koffi Mensah a contresigné le bail.
+                        {lease.landlordSignature?.signedBy || 'Le bailleur'} a été notifié en direct que {tenantName || 'le locataire'} a contresigné le bail.
                       </span>
                     </div>
                   </div>
@@ -405,8 +405,7 @@ export function TenantSignLeaseModal({
                         Email officiel transmis avec le bail contresigné
                       </strong>
                       <span className="text-[11px] text-slate-500 block">
-                        Envoyé à : <strong>diallo.patrimoine@afrique-gestion.com</strong> avec copie archivée
-                        pour le locataire.
+                        Envoyé avec copie archivée certifiée pour le bailleur et le locataire.
                       </span>
                     </div>
                   </div>

@@ -134,7 +134,8 @@ export class NoticeService {
     }
   }
 
-  static getTenantNotices(tenantName: string = 'Koffi Mensah'): Notice[] {
+  static getTenantNotices(tenantName: string = ''): Notice[] {
+    if (!tenantName.trim()) return [];
     const notices = this.getNotices();
     return notices.filter(
       (n) =>
