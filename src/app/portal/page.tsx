@@ -95,7 +95,7 @@ const ISSUE_SAMPLE_PHOTOS = [
 
 function TenantPortalContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { switchSpace } = useSpace();
+  const { user, switchSpace } = useSpace();
 
   // Primary Tab state: 'accueil' (Mon Logement), 'quittances' (Mes Quittances & Reçus), 'bail' (Mon Bail & Contrat), 'solvabilite' (Passeport), 'preavis' (Relances & Préavis)
   const [activeTab, setActiveTab] = useState<'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis'>('accueil');
@@ -112,7 +112,7 @@ function TenantPortalContent() {
 
   useEffect(() => {
     const loadNotices = () => {
-      setTenantNotices(NoticeService.getTenantNotices('Koffi Mensah'));
+      setTenantNotices(NoticeService.getTenantNotices(user?.name || ''));
     };
     loadNotices();
     window.addEventListener('locagestion:notices_updated', loadNotices);
@@ -180,7 +180,7 @@ function TenantPortalContent() {
       urgency: issueUrgency,
       description: issueDesc,
       photos: issuePhotos,
-      tenantName: 'Koffi Mensah',
+      tenantName: user?.name || 'Locataire',
       tenantPhone: '+229 97 00 11 22',
       tenantEmail: 'koffi.mensah@fintech-africa.com',
       property: tenant.property,
@@ -348,11 +348,11 @@ function TenantPortalContent() {
     if (!pl) {
       pl = allLeases.find((l) => l.status === 'en_attente_signature' && !l.signedByTenant && !dismissed.includes(l.id));
     }
-    // Dernier recours : Koffi Mensah (uniquement si non signé et non masqué)
-    if (!pl) {
-      const koffiMatch = LeaseService.getPendingLeaseForTenant('Koffi Mensah');
-      if (koffiMatch && !koffiMatch.signedByTenant && !dismissed.includes(koffiMatch.id)) {
-        pl = koffiMatch;
+    // Chercher le bail du locataire connecté
+    if (!pl && user?.name) {
+      const userMatch = LeaseService.getPendingLeaseForTenant(user.name);
+      if (userMatch && !userMatch.signedByTenant && !dismissed.includes(userMatch.id)) {
+        pl = userMatch;
       }
     }
 
@@ -362,8 +362,9 @@ function TenantPortalContent() {
       (l) =>
         (pl && l.id === pl.id) ||
         (queryLeaseId && l.id === queryLeaseId) ||
-        l.id === 'BAIL-2025-089' ||
-        l.tenant.toLowerCase().includes('koffi')
+        (user?.email && l.tenantEmail?.toLowerCase() === user.email.toLowerCase()) ||
+        (user?.phone && l.tenantPhone === user.phone) ||
+        (user?.name && l.tenant.toLowerCase() === user.name.toLowerCase())
     );
     setCurrentLease(myLease || null);
   };
@@ -520,101 +521,49 @@ function TenantPortalContent() {
 
 
   const tenant = {
-    name: 'Koffi Mensah',
-    phone: '+229 97 12 34 56',
-    email: 'koffi.mensah@fintech-africa.com',
-    property: 'Résidence Les Cocotiers',
-    unit: 'Appt A3 (3 pièces • 75 m²)',
-    address: 'Rue 340, Haie Vive, Cotonou (Bénin)',
-    monthlyRent: 220000,
-    charges: 30000,
-    deposit: 440000,
-    dueDate: '05/11/2026',
-    paymentStatus: 'a_jour', // À jour
-    leaseRef: 'BAIL-2025-089',
-    leaseStartDate: '01/11/2025',
-    leaseDuration: '1 an renouvelable',
-    inventoryDate: '01/11/2025',
-    meterCashPower: '1 420 kWh (Compteur prépayé SBEE individuel)',
-    meterWater: '384 m³ (SODECI / Surpresseur collectif)',
-    keysDelivered: '3 clés blindées de sécurité + 1 télécommande portail parking',
+    name: user?.name || currentLease?.tenant || 'Locataire',
+    phone: user?.phone || currentLease?.tenantPhone || '',
+    email: user?.email || currentLease?.tenantEmail || '',
+    property: currentLease?.property || 'Aucun logement lié',
+    unit: currentLease?.unit || 'Non assigné',
+    address: currentLease?.tenantAddress || '',
+    monthlyRent: currentLease?.rent || 0,
+    charges: currentLease?.charges || 0,
+    deposit: currentLease?.deposit || 0,
+    dueDate: '05 du mois',
+    paymentStatus: 'a_jour',
+    leaseRef: currentLease?.id || 'N/A',
+    leaseStartDate: currentLease?.startDate || 'N/A',
+    leaseDuration: currentLease?.durationMonths ? `${currentLease.durationMonths} mois` : '1 an renouvelable',
+    inventoryDate: currentLease?.startDate || 'N/A',
+    meterCashPower: 'Compteur individuel',
+    meterWater: 'Compteur d’eau',
+    keysDelivered: 'Clés de sécurité remises',
     landlord: {
-      name: 'Diallo Patrimoine SARL',
-      contactPerson: 'Mamadou Diallo',
-      role: 'Gérant & Propriétaire',
-      phone: '+229 01 95 44 44 30',
-      whatsapp: '2290195444430',
-      email: 'contact@diallo-patrimoine.bj',
-      address: 'Boulevard de la Marina, Immeuble Horizon 3e étage, Cotonou',
-      ifu: '02024109482910',
+      name: currentLease?.landlordSignature?.signedBy || 'Bailleur',
+      contactPerson: currentLease?.landlordSignature?.signedBy || 'Bailleur',
+      role: 'Propriétaire',
+      phone: '',
+      whatsapp: '',
+      email: '',
+      address: '',
+      ifu: '',
       paymentMethods: {
-        wave: '+229 01 95 44 44 30 (Diallo Patrimoine)',
-        mtn: '+229 97 00 00 12',
-        moov: '+229 95 88 77 66',
-        bank: 'BOA Bénin — Compte N° BJ061 01001 00123456789 45',
+        wave: '',
+        mtn: '',
+        moov: '',
+        bank: '',
       },
     },
     scoring: {
-      score: 96,
-      badge: 'Excellent Payeur',
+      score: 100,
+      badge: 'Nouveau Locataire',
       onTimeRate: 100,
-      totalMonthsPaid: 22,
+      totalMonthsPaid: 0,
     },
   };
 
-  const DEFAULT_TENANT_RECEIPTS: PaymentTransaction[] = [
-    {
-      id: 'rec-01',
-      receiptNumber: 'QUITT-2026-1048',
-      tenantId: 'ten-01',
-      tenantName: 'Koffi Mensah',
-      tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-      tenantPhone: '+229 97 12 34 56',
-      propertyName: 'Résidence Les Cocotiers',
-      unitNumber: 'Appt A3 (3 pièces)',
-      amount: 220000,
-      expectedAmount: 220000,
-      period: 'Octobre 2026',
-      paymentDate: '30/10/2026',
-      method: 'wave',
-      status: 'paye',
-      isVerified: true,
-    },
-    {
-      id: 'rec-02',
-      receiptNumber: 'QUITT-2026-0940',
-      tenantId: 'ten-01',
-      tenantName: 'Koffi Mensah',
-      tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-      tenantPhone: '+229 97 12 34 56',
-      propertyName: 'Résidence Les Cocotiers',
-      unitNumber: 'Appt A3 (3 pièces)',
-      amount: 220000,
-      expectedAmount: 220000,
-      period: 'Septembre 2026',
-      paymentDate: '02/09/2026',
-      method: 'wave',
-      status: 'paye',
-      isVerified: true,
-    },
-    {
-      id: 'rec-03',
-      receiptNumber: 'QUITT-2026-0830',
-      tenantId: 'ten-01',
-      tenantName: 'Koffi Mensah',
-      tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-      tenantPhone: '+229 97 12 34 56',
-      propertyName: 'Résidence Les Cocotiers',
-      unitNumber: 'Appt A3 (3 pièces)',
-      amount: 220000,
-      expectedAmount: 220000,
-      period: 'Août 2026',
-      paymentDate: '01/08/2026',
-      method: 'virement',
-      status: 'paye',
-      isVerified: true,
-    },
-  ];
+  const DEFAULT_TENANT_RECEIPTS: PaymentTransaction[] = [];
 
   const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>(DEFAULT_TENANT_RECEIPTS);
 
@@ -1017,7 +966,7 @@ function TenantPortalContent() {
                     </div>
 
                     <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-snug">
-                      Bonjour Koffi 👋, votre espace est parfaitement à jour
+                      Bonjour {user?.name ? user.name.split(' ')[0] : 'Locataire'} 👋, votre espace est parfaitement à jour
                     </h1>
                     <p className="text-xs text-slate-400 mt-1.5 max-w-lg leading-relaxed">
                       Prochaine exigibilité de loyer : <strong className="text-slate-200">{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).
@@ -3308,7 +3257,7 @@ function TenantPortalContent() {
         isOpen={departureModalOpen}
         onClose={() => setDepartureModalOpen(false)}
         onSuccess={() => {
-          setTenantNotices(NoticeService.getTenantNotices('Koffi Mensah'));
+          setTenantNotices(NoticeService.getTenantNotices(user?.name || ''));
           showToast('Préavis de départ volontaire transmis au bailleur.');
         }}
         tenantName={tenant.name}

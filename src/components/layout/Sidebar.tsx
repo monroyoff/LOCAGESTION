@@ -138,7 +138,7 @@ export function Sidebar({
       const activeLandlord = allNotices.filter((n) => n.status === 'en_cours' || n.status === 'notifie').length;
       setLandlordNoticesCount(activeLandlord);
 
-      const tenantNotices = NoticeService.getTenantNotices('Koffi Mensah');
+      const tenantNotices = context.user?.name ? NoticeService.getTenantNotices(context.user.name) : [];
       const activeTenant = tenantNotices.filter((n) => n.status === 'en_cours' || n.status === 'notifie').length;
       setTenantNoticesCount(activeTenant);
     };

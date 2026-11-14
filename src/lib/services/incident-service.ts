@@ -31,112 +31,9 @@ export interface ReportedIncident {
   artisanInvoiceRef?: string; // N° de facture ou reçu d'intervention
 }
 
-export const INITIAL_INCIDENTS: ReportedIncident[] = [
-  {
-    id: 'INC-2026-042',
-    category: 'Plomberie / Fuite d’eau',
-    urgency: 'urgente',
-    description: 'Léger suintement sous le siphon du lavabo de la salle d’eau principale.',
-    photos: [
-      'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-    ],
-    createdAt: '28/10/2026',
-    status: 'pris_en_charge',
-    tenantName: 'Koffi Mensah',
-    tenantPhone: '+229 97 00 11 22',
-    tenantEmail: 'koffi.mensah@fintech-africa.com',
-    property: 'Résidence Les Cocotiers',
-    unit: 'Appt A3 (3 pièces)',
-    assignedTechnician: {
-      name: 'Moussa Plomberie Express',
-      phone: '+229 95 12 34 56',
-      trade: 'Plombier Sanitaire',
-    },
-    artisanFee: 85000,
-    artisanPaymentStatus: 'paye',
-    artisanInvoiceRef: 'FAC-PLOMB-2026-018',
-  },
-  {
-    id: 'INC-2026-039',
-    category: 'Climatisation / Split en panne',
-    urgency: 'normale',
-    description: 'Le split du salon principal nécessite un nettoyage des filtres et recharge de gaz.',
-    photos: [
-      'https://images.unsplash.com/photo-1621905251918-48416bd8575a?w=800&auto=format&fit=crop&q=80',
-    ],
-    createdAt: '24/10/2026',
-    status: 'resolu',
-    tenantName: 'Fatoumata Traoré',
-    tenantPhone: '+225 07 89 01 23',
-    tenantEmail: 'fatou.traore@ecobank.ci',
-    property: 'Résidence Les Cocotiers',
-    unit: 'Appt B1 (2 pièces)',
-    assignedTechnician: {
-      name: 'Clim Express UEMOA & CEMAC',
-      phone: '+225 05 44 33 22',
-      trade: 'Frigoriste Climaticien',
-    },
-    resolutionNotes: 'Intervention effectuée le 26/10. Filtres nettoyés et gaz R410A rechargé.',
-    resolvedAt: '26/10/2026',
-    artisanFee: 120000,
-    artisanPaymentStatus: 'paye',
-    artisanInvoiceRef: 'CLIM-2026-88',
-  },
-  {
-    id: 'INC-2026-035',
-    category: 'Électricité / Disjoncteur différentiel',
-    urgency: 'normale',
-    description: 'Remplacement disjoncteur différentiel 30mA et vérification de la prise terre cuisine.',
-    photos: [
-      'https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80',
-    ],
-    createdAt: '18/10/2026',
-    status: 'resolu',
-    tenantName: 'Jean-Eudes Agbessy',
-    tenantPhone: '+229 96 11 22 33',
-    tenantEmail: 'j.agbessy@groupe-sa.com',
-    property: 'Villa Les Palmiers',
-    unit: 'Villa V1',
-    assignedTechnician: {
-      name: 'Kaboré Électricité Bâtiment',
-      phone: '+229 97 55 44 33',
-      trade: 'Électricien Bâtiment & Réseau',
-    },
-    resolutionNotes: 'Disjoncteur Legrand neuf posé et test d’isolement conforme.',
-    resolvedAt: '19/10/2026',
-    artisanFee: 240000,
-    artisanPaymentStatus: 'paye',
-    artisanInvoiceRef: 'FAC-ELEC-2026-104',
-  },
-  {
-    id: 'INC-2026-028',
-    category: 'Maçonnerie & Étanchéité balcon',
-    urgency: 'normale',
-    description: 'Réfection de l’étanchéité sous les joints de la terrasse balcon suite aux intempéries.',
-    photos: [
-      'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-    ],
-    createdAt: '12/10/2026',
-    status: 'resolu',
-    tenantName: 'Aïssatou Diallo',
-    tenantPhone: '+221 77 654 32 10',
-    tenantEmail: 'aissatou.diallo@sonatel.sn',
-    property: 'Résidence Marina Golf',
-    unit: 'Appt C2',
-    assignedTechnician: {
-      name: 'BTP Bénin Rénovation & Étanchéité',
-      phone: '+229 95 88 77 66',
-      trade: 'Maçonnerie & Étanchéité',
-    },
-    resolutionNotes: 'Jointoiement polyuréthane et couche hydrofuge appliquée avec garantie.',
-    resolvedAt: '14/10/2026',
-    artisanFee: 175000,
-    artisanPaymentStatus: 'paye',
-    artisanInvoiceRef: 'BTP-2026-044',
-  },
-];
+export const INITIAL_INCIDENTS: ReportedIncident[] = [];
 
-const INCIDENTS_STORAGE_KEY = 'locagestion:incidents:v2';
+const INCIDENTS_STORAGE_KEY = 'locagestion:incidents:v1';
 
 function notifyIncidentsChange() {
   if (typeof window !== 'undefined') {
@@ -147,33 +44,19 @@ function notifyIncidentsChange() {
 
 export const IncidentService = {
   getIncidents(): ReportedIncident[] {
-    if (typeof window === 'undefined') return INITIAL_INCIDENTS;
+    if (typeof window === "undefined") return [];
     try {
       const stored = localStorage.getItem(INCIDENTS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored) as ReportedIncident[];
-        // Rétrocompatibilité : fusionne les frais et statuts artisans avec les valeurs de référence si absents
-        return parsed.map((item) => {
-          const initial = INITIAL_INCIDENTS.find((i) => i.id === item.id);
-          return {
-            ...item,
-            artisanFee:
-              item.artisanFee !== undefined
-                ? item.artisanFee
-                : initial?.artisanFee ?? (item.status === 'resolu' ? 85000 : 85000),
-            artisanPaymentStatus:
-              item.artisanPaymentStatus ??
-              initial?.artisanPaymentStatus ??
-              (item.status === 'resolu' ? 'paye' : 'paye'),
-            artisanInvoiceRef: item.artisanInvoiceRef ?? initial?.artisanInvoiceRef ?? `FAC-${item.id}`,
-            assignedTechnician: item.assignedTechnician ?? initial?.assignedTechnician,
-          };
-        });
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
       }
     } catch (e) {
-      console.error('Erreur lecture incidents:', e);
+      console.error("Erreur lecture incidents:", e);
     }
-    return INITIAL_INCIDENTS;
+    return [];
   },
 
   getIncidentById(id: string): ReportedIncident | undefined {

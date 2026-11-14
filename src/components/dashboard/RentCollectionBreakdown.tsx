@@ -20,9 +20,19 @@ interface RentCollectionBreakdownProps {
 }
 
 export function RentCollectionBreakdown({ breakdown }: RentCollectionBreakdownProps) {
-  const [activeBar, setActiveBar] = useState<number>(5); // Default to Octobre (current)
+  const collections = MOCK_MONTHLY_COLLECTIONS.length > 0 ? MOCK_MONTHLY_COLLECTIONS : [
+    { month: 'Mai', amount: 0, expenses: 0 },
+    { month: 'Juin', amount: 0, expenses: 0 },
+    { month: 'Juil', amount: 0, expenses: 0 },
+    { month: 'Août', amount: 0, expenses: 0 },
+    { month: 'Sept', amount: 0, expenses: 0 },
+    { month: 'Oct', amount: 0, expenses: 0, current: true },
+  ];
+  const [activeBar, setActiveBar] = useState<number>(collections.length - 1);
 
-  const maxAmount = Math.max(...MOCK_MONTHLY_COLLECTIONS.map((m) => m.amount));
+  const maxAmount = Math.max(...collections.map((m) => m.amount), 1);
+  const selectedMonth = collections[activeBar] || collections[collections.length - 1];
+  const totalBaux = breakdown.paidCount + breakdown.partialCount + breakdown.overdueCount;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -36,7 +46,7 @@ export function RentCollectionBreakdown({ breakdown }: RentCollectionBreakdownPr
                 <span>Loyers d’Octobre 2026</span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
-                Sur 28 baux actifs en cours
+                {totalBaux > 0 ? `Sur ${totalBaux} baux actifs en cours` : 'Aucun bail actif pour le moment'}
               </p>
             </div>
             <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
@@ -210,7 +220,7 @@ export function RentCollectionBreakdown({ breakdown }: RentCollectionBreakdownPr
 
           {/* Interactive Bar Chart Representation */}
           <div className="h-56 flex items-end justify-between gap-3 sm:gap-6 pt-6 pb-2 px-2 border-b border-slate-100">
-            {MOCK_MONTHLY_COLLECTIONS.map((item, idx) => {
+            {collections.map((item, idx) => {
               const heightPct = Math.round((item.amount / maxAmount) * 100);
               const isSelected = activeBar === idx;
 
@@ -267,10 +277,10 @@ export function RentCollectionBreakdown({ breakdown }: RentCollectionBreakdownPr
           <div className="mt-5 p-4 rounded-2xl bg-slate-50 border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <span className="text-[11px] font-bold text-slate-400 uppercase">
-                Détail du mois sélectionné : {MOCK_MONTHLY_COLLECTIONS[activeBar].month} 2026
+                Détail du mois sélectionné : {selectedMonth.month}
               </span>
               <div className="text-lg font-black text-slate-900 mt-0.5">
-                {formatFCFA(MOCK_MONTHLY_COLLECTIONS[activeBar].amount)} encaissés
+                {formatFCFA(selectedMonth.amount)} encaissés
               </div>
             </div>
 
@@ -278,16 +288,13 @@ export function RentCollectionBreakdown({ breakdown }: RentCollectionBreakdownPr
               <div>
                 <span className="text-[10px] text-slate-400 block font-normal">Dépenses associées</span>
                 <span className="text-amber-600 font-bold">
-                  {formatFCFA(MOCK_MONTHLY_COLLECTIONS[activeBar].expenses)}
+                  {formatFCFA(selectedMonth.expenses)}
                 </span>
               </div>
               <div>
                 <span className="text-[10px] text-slate-400 block font-normal">Marge d’exploitation</span>
                 <span className="text-emerald-600 font-bold">
-                  {formatFCFA(
-                    MOCK_MONTHLY_COLLECTIONS[activeBar].amount -
-                      MOCK_MONTHLY_COLLECTIONS[activeBar].expenses
-                  )}
+                  {formatFCFA(selectedMonth.amount - selectedMonth.expenses)}
                 </span>
               </div>
             </div>

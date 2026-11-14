@@ -25,49 +25,26 @@ export const MONTHS_OF_YEAR = [
   'Février 2027',
 ];
 
-const INITIAL_DECLARED_PAYMENTS: PaymentTransaction[] = [
-  {
-    id: 'decl-initial-01',
-    receiptNumber: 'DEC-2026-9842',
-    tenantId: 'ten-01',
-    tenantName: 'Koffi Mensah',
-    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-    tenantPhone: '+229 97 12 34 56',
-    propertyName: 'Résidence Les Cocotiers',
-    unitNumber: 'Appt A3 (3 pièces)',
-    amount: 220000,
-    expectedAmount: 220000,
-    period: 'Novembre 2026',
-    paymentDate: '01/11/2026',
-    method: 'wave',
-    status: 'en_attente',
-    isVerified: false,
-    transactionRef: 'WAVE-BJ-984210',
-    proofUrl: 'https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&auto=format&fit=crop&q=80',
-    notes: 'Règlement du loyer de Novembre 2026 effectué via Wave Money',
-  },
-];
+const INITIAL_DECLARED_PAYMENTS: PaymentTransaction[] = [];
 
 export const PaymentService = {
   /**
    * Récupère la liste des déclarations de paiement en attente ou traitées
    */
   getDeclaredPayments(): PaymentTransaction[] {
-    if (typeof window === 'undefined') return INITIAL_DECLARED_PAYMENTS;
+    if (typeof window === 'undefined') return [];
     try {
       const saved = localStorage.getItem(STORAGE_KEY_DECLARED);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
     } catch (e) {
       console.error('Erreur lecture déclarations:', e);
     }
-    // Initialiser le stockage avec la déclaration par défaut
-    this.saveDeclaredPayments(INITIAL_DECLARED_PAYMENTS);
-    return INITIAL_DECLARED_PAYMENTS;
+    return [];
   },
 
   /**
@@ -81,19 +58,19 @@ export const PaymentService = {
    * Récupère la liste des paiements vérifiés et validés
    */
   getVerifiedPayments(): PaymentTransaction[] {
-    if (typeof window === 'undefined') return MOCK_RECENT_PAYMENTS;
+    if (typeof window === 'undefined') return [];
     try {
       const saved = localStorage.getItem(STORAGE_KEY_VERIFIED);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
     } catch (e) {
       console.error('Erreur lecture paiements vérifiés:', e);
     }
-    return MOCK_RECENT_PAYMENTS;
+    return [];
   },
 
   /**

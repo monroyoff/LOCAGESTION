@@ -109,236 +109,13 @@ interface TenantDetail {
   };
 }
 
-const MOCK_TENANTS: TenantDetail[] = [
-  {
-    id: 'ten-01',
-    firstName: 'Koffi',
-    lastName: 'Mensah',
-    fullName: 'Koffi Mensah',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-    email: 'koffi.mensah@fintech-africa.com',
-    phone: '+229 97 12 34 56',
-    profession: 'Ingénieur DevOps Senior',
-    employer: 'Fintech West Africa Hub',
-    emergencyContact: {
-      name: 'Dr. Mensah Paul',
-      phone: '+229 95 11 22 33',
-      relation: 'Frère aîné',
-    },
-    property: {
-      name: 'Résidence Les Cocotiers',
-      unit: 'Appt A3 (3 pièces)',
-      address: 'Rue 340 Haie Vive',
-      city: 'Cotonou, Bénin',
-    },
-    financials: {
-      monthlyRent: 220000,
-      charges: 30000,
-      deposit: 660000,
-      advanceMonths: 3,
-      paymentDay: 5,
-    },
-    lease: {
-      id: 'BAIL-2025-089',
-      startDate: '01/01/2025',
-      durationMonths: 12,
-      status: 'actif',
-    },
-    scoring: {
-      score: 96,
-      badge: 'Excellent',
-      onTimeRate: 100,
-      averageDelayDays: 0,
-      maxDelayDays: 2,
-      criticalDelaysCount: 0,
-      finalArrears: 0,
-      historyConsentGranted: true,
-      consentExpiresAt: '31/12/2026',
-    },
-    recentReceipts: [
-      { id: 'pay-01', receiptNumber: 'QUITT-2026-1048', period: 'Octobre 2026', date: '30/10/2026', amount: 220000, method: 'wave' },
-      { id: 'pay-01b', receiptNumber: 'QUITT-2026-0940', period: 'Septembre 2026', date: '02/09/2026', amount: 220000, method: 'wave' },
-      { id: 'pay-01c', receiptNumber: 'QUITT-2026-0830', period: 'Août 2026', date: '01/08/2026', amount: 220000, method: 'virement' },
-    ],
-    inspection: {
-      date: '01/01/2025',
-      generalState: 'Excellent état neuf, climatisation révisée',
-      photosCount: 8,
-      signedByBoth: true,
-    },
-  },
-  {
-    id: 'ten-02',
-    firstName: 'Amina',
-    lastName: 'Diop',
-    fullName: 'Amina Diop',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&auto=format&fit=crop&q=80',
-    email: 'amina.diop@dakar-law.sn',
-    phone: '+221 77 456 78 90',
-    profession: 'Avocate au Barreau',
-    employer: 'Cabinet Diop & Associés',
-    emergencyContact: {
-      name: 'Ousmane Diop',
-      phone: '+221 78 999 88 77',
-      relation: 'Père',
-    },
-    property: {
-      name: 'Villa Émeraude',
-      unit: 'Villa R+1 Ouest',
-      address: 'Route des Almadies',
-      city: 'Dakar, Sénégal',
-    },
-    financials: {
-      monthlyRent: 350000,
-      charges: 50000,
-      deposit: 1050000,
-      advanceMonths: 3,
-      paymentDay: 1,
-    },
-    lease: {
-      id: 'BAIL-2025-112',
-      startDate: '15/03/2025',
-      durationMonths: 24,
-      status: 'actif',
-    },
-    scoring: {
-      score: 94,
-      badge: 'Excellent',
-      onTimeRate: 98,
-      averageDelayDays: 1,
-      maxDelayDays: 3,
-      criticalDelaysCount: 0,
-      finalArrears: 0,
-      historyConsentGranted: true,
-      consentExpiresAt: '15/03/2027',
-    },
-    recentReceipts: [
-      { id: 'pay-02', receiptNumber: 'QUITT-2026-1047', period: 'Octobre 2026', date: '29/10/2026', amount: 350000, method: 'orange_money' },
-      { id: 'pay-02b', receiptNumber: 'QUITT-2026-0938', period: 'Septembre 2026', date: '28/09/2026', amount: 350000, method: 'orange_money' },
-    ],
-    inspection: {
-      date: '15/03/2025',
-      generalState: 'Très bon état général avec jardin entretenu',
-      photosCount: 12,
-      signedByBoth: true,
-    },
-  },
-  {
-    id: 'ten-04',
-    firstName: 'Fatoumata',
-    lastName: 'Traoré',
-    fullName: 'Fatoumata Traoré',
-    avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=160&auto=format&fit=crop&q=80',
-    email: 'fatou.traore@commerce-mali.com',
-    phone: '+223 76 12 34 56',
-    profession: 'Directrice Commerciale',
-    employer: 'Import-Export Sahel',
-    emergencyContact: {
-      name: 'Moussa Traoré',
-      phone: '+223 66 55 44 33',
-      relation: 'Époux',
-    },
-    property: {
-      name: 'Résidence Les Cocotiers',
-      unit: 'Appt B1 (2 pièces)',
-      address: 'Rue 340 Haie Vive',
-      city: 'Cotonou, Bénin',
-    },
-    financials: {
-      monthlyRent: 180000,
-      charges: 20000,
-      deposit: 540000,
-      advanceMonths: 3,
-      paymentDay: 5,
-    },
-    lease: {
-      id: 'BAIL-2025-045',
-      startDate: '01/06/2025',
-      durationMonths: 12,
-      status: 'actif',
-    },
-    scoring: {
-      score: 62,
-      badge: 'À surveiller',
-      onTimeRate: 65,
-      averageDelayDays: 14,
-      maxDelayDays: 22,
-      criticalDelaysCount: 2,
-      finalArrears: 180000,
-      historyConsentGranted: false,
-    },
-    recentReceipts: [
-      { id: 'pay-04b', receiptNumber: 'QUITT-2026-0915', period: 'Septembre 2026', date: '22/09/2026', amount: 180000, method: 'wave' },
-    ],
-    inspection: {
-      date: '01/06/2025',
-      generalState: 'État d’usage conforme, 1 impact sur carrelage salon noté',
-      photosCount: 6,
-      signedByBoth: true,
-    },
-  },
-  {
-    id: 'ten-03',
-    firstName: 'Jean-Yves',
-    lastName: 'Kouassi',
-    fullName: 'Jean-Yves Kouassi',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-    email: 'jykouassi@abidjan-tech.ci',
-    phone: '+225 07 89 12 34',
-    profession: 'Designer UX Freelance',
-    employer: 'Indépendant',
-    emergencyContact: {
-      name: 'Chantal Kouassi',
-      phone: '+225 05 44 33 22',
-      relation: 'Mère',
-    },
-    property: {
-      name: 'Immeuble Palmier Royal',
-      unit: 'Studio B12',
-      address: 'Boulevard de France, Cocody',
-      city: 'Abidjan, Côte d’Ivoire',
-    },
-    financials: {
-      monthlyRent: 140000,
-      charges: 15000,
-      deposit: 420000,
-      advanceMonths: 2,
-      paymentDay: 5,
-    },
-    lease: {
-      id: 'BAIL-2025-072',
-      startDate: '01/02/2025',
-      durationMonths: 12,
-      status: 'actif',
-    },
-    scoring: {
-      score: 82,
-      badge: 'Fiable',
-      onTimeRate: 85,
-      averageDelayDays: 4,
-      maxDelayDays: 8,
-      criticalDelaysCount: 0,
-      finalArrears: 50000,
-      historyConsentGranted: true,
-      consentExpiresAt: '01/02/2027',
-    },
-    recentReceipts: [
-      { id: 'pay-03', receiptNumber: 'REC-2026-089', period: 'Octobre 2026', date: '28/10/2026', amount: 90000, method: 'mtn_momo' },
-    ],
-    inspection: {
-      date: '01/02/2025',
-      generalState: 'Studio repeint à neuf, chauffe-eau électrique fonctionnel',
-      photosCount: 5,
-      signedByBoth: true,
-    },
-  },
-];
+const MOCK_TENANTS: TenantDetail[] = [];
 
 export default function TenantsPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
-  const [selectedTenant, setSelectedTenant] = useState<TenantDetail>(MOCK_TENANTS[0]);
+  const [selectedTenant, setSelectedTenant] = useState<TenantDetail | null>(null);
   const [activeTab, setActiveTab] = useState<'apercu' | 'solvabilite' | 'bail' | 'edl' | 'paiements'>('apercu');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBadge, setFilterBadge] = useState<string>('all');
@@ -406,6 +183,12 @@ export default function TenantsPage() {
     const matchesFilter = filterBadge === 'all' || t.scoring.badge === filterBadge;
     return matchesSearch && matchesFilter;
   });
+
+  useEffect(() => {
+    if (!selectedTenant && filteredTenants.length > 0) {
+      setSelectedTenant(filteredTenants[0]);
+    }
+  }, [filteredTenants, selectedTenant]);
 
   const getScoringBadgeUI = (badge: string) => {
     switch (badge) {
@@ -498,7 +281,29 @@ export default function TenantsPage() {
             </button>
           </div>
 
-          {/* Master-Detail 2 Columns Grid */}
+          {filteredTenants.length === 0 ? (
+            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-soft space-y-4">
+              <div className="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                <Users className="w-8 h-8" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-black text-lg text-slate-900">
+                  Aucun locataire enregistré pour le moment
+                </h3>
+                <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                  Vos locataires apparaîtront ici dès la création de leurs baux ou après envoi d’une invitation électronique.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(true)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all cursor-pointer"
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>+ Inviter un premier locataire</span>
+              </button>
+            </div>
+          ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Left Column (5 cols): Tenants List */}
             <div className="lg:col-span-5 bg-white rounded-3xl p-5 border border-slate-200/80 shadow-soft space-y-4">
@@ -537,7 +342,7 @@ export default function TenantsPage() {
               {/* Tenants Vertical Cards */}
               <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
                 {filteredTenants.map((t) => {
-                  const isSelected = selectedTenant.id === t.id;
+                  const isSelected = selectedTenant?.id === t.id;
 
                   return (
                     <div
@@ -602,7 +407,13 @@ export default function TenantsPage() {
 
             {/* Right Column (7 cols): Full Tenant File & Tabs */}
             <div className="lg:col-span-7 bg-white rounded-3xl border border-slate-200/80 shadow-soft overflow-hidden">
-              {/* Tenant Header Banner */}
+              {!selectedTenant ? (
+                <div className="p-12 text-center text-slate-400 text-xs">
+                  Sélectionnez un locataire dans la liste pour afficher sa fiche complète.
+                </div>
+              ) : (
+                <>
+                {/* Tenant Header Banner */}
               <div className="p-6 bg-gradient-to-r from-slate-900 via-[#161a25] to-slate-900 text-white relative">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
@@ -1067,8 +878,11 @@ export default function TenantsPage() {
                   </div>
                 )}
               </div>
+              </>
+              )}
             </div>
           </div>
+          )}
 
           {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
           <Footer />
@@ -1188,7 +1002,7 @@ export default function TenantsPage() {
             <button
               type="button"
               onClick={() => {
-                handleReactivateTenantLease(lastResiliatedId, selectedTenant.fullName);
+                handleReactivateTenantLease(lastResiliatedId, selectedTenant?.fullName || 'Locataire');
               }}
               className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-md active:scale-95"
             >

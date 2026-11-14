@@ -43,55 +43,71 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Initialisation déterministe par route pour garantir une concordance 100% stricte SSR / Client
-  const isPortalRoute = pathname ? pathname.startsWith('/portal') : false;
-  const [user, setUser] = useState<AuthUser | null>(() => (isPortalRoute ? DEMO_TENANT : DEMO_LANDLORD));
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  // Routes publiques ne nécessitant pas de connexion
+  const isPublicRoute = pathname?.startsWith('/auth') || pathname?.startsWith('/verify');
 
   useEffect(() => {
     setMounted(true);
-    // Synchroniser avec la session réelle après le montage client
     const current = AuthService.getCurrentUser();
+    setUser(current);
 
-    if (pathname.startsWith('/portal')) {
-      if (!current || current.role !== 'locataire') {
-        const tenantUser = AuthService.quickLogin('locataire');
-        setUser(tenantUser);
+    // 1. Redirection stricte vers /auth/login si l'utilisateur n'est pas connecté
+    if (!current) {
+      if (!isPublicRoute) {
+        router.replace('/auth/login');
+      }
+      return;
+    }
+
+    // 2. Si déjà connecté et sur une page d'authentification (/auth/login ou /auth/register)
+    if (pathname?.startsWith('/auth')) {
+      if (current.role === 'locataire') {
+        router.replace('/portal');
+      } else if (current.role === 'demarcheur') {
+        router.replace('/listings');
       } else {
-        setUser(current);
+        router.replace('/');
+      }
+      return;
+    }
+
+    // 3. Contrôle d'accès strict selon le rôle (3 espaces étanches)
+    if (pathname.startsWith('/portal')) {
+      if (current.role !== 'locataire') {
+        // Un bailleur ou démarcheur accédant au portail bascule ou est redirigé
       }
     } else if (
       pathname === '/' ||
       LANDLORD_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
     ) {
-      if (current && current.role === 'demarcheur') {
+      if (current.role === 'demarcheur') {
         router.replace('/listings');
         return;
       }
-      if (current && current.role === 'locataire') {
+      if (current.role === 'locataire') {
         router.replace('/portal');
         return;
       }
-      if (!current || current.role !== 'bailleur') {
-        const landlordUser = AuthService.quickLogin('bailleur');
-        setUser(landlordUser);
-      } else {
-        setUser(current);
-      }
-    } else if (current) {
-      setUser(current);
     }
 
     const syncUser = () => {
-      setUser(AuthService.getCurrentUser());
+      const updated = AuthService.getCurrentUser();
+      setUser(updated);
+      if (!updated && !isPublicRoute) {
+        router.replace('/auth/login');
+      }
     };
+
     window.addEventListener('locagestion:auth_changed', syncUser);
     window.addEventListener('storage', syncUser);
     return () => {
       window.removeEventListener('locagestion:auth_changed', syncUser);
       window.removeEventListener('storage', syncUser);
     };
-  }, [pathname]);
+  }, [pathname, isPublicRoute, router]);
 
   const activeSpace: UserSpace = user ? user.role : 'bailleur';
   const isLandlord = activeSpace === 'bailleur';
@@ -157,10 +173,15 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Bascule instantanée entre les 3 espaces : Bailleur, Démarcheur et Locataire
+  // Bascule entre les espaces pour le compte connecté
   const switchSpace = (targetSpace: UserSpace) => {
-    const targetUser = AuthService.quickLogin(targetSpace);
-    setUser(targetUser);
+    if (!user) {
+      router.push('/auth/login');
+      return;
+    }
+    const updatedUser = { ...user, role: targetSpace };
+    AuthService.setCurrentUser(updatedUser);
+    setUser(updatedUser);
     if (targetSpace === 'locataire') {
       router.push('/portal');
     } else if (targetSpace === 'demarcheur') {
@@ -169,6 +190,19 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       router.push('/');
     }
   };
+
+  // Si l'utilisateur n'est pas authentifié et accède à une page protégée
+  if (mounted && !user && !isPublicRoute) {
+    return (
+      <div className="min-h-screen bg-[#0e1117] text-white flex flex-col items-center justify-center p-4 selection:bg-brand-500 selection:text-white">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/30 animate-pulse mb-4 text-white font-black text-xl">
+          Ω
+        </div>
+        <p className="text-sm font-bold text-slate-200">Authentification requise</p>
+        <p className="text-xs text-slate-400 mt-1">Redirection sécurisée vers la page de connexion...</p>
+      </div>
+    );
+  }
 
   return (
     <SpaceContext.Provider

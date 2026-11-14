@@ -37,8 +37,23 @@ export default function PropertiesPage() {
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
 
   // Properties State
-  const [properties, setProperties] = useState<Property[]>(MOCK_PROPERTIES);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(MOCK_PROPERTIES[0] || null);
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem('locagestion:properties:v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setProperties(parsed);
+          setSelectedProperty(parsed[0]);
+        }
+      }
+    } catch (e) {
+      console.error('Erreur lecture propriétés:', e);
+    }
+  }, []);
 
   // Modals State
   const [detailModalProperty, setDetailModalProperty] = useState<Property | null>(null);
@@ -58,6 +73,9 @@ export default function PropertiesPage() {
   const handleDeleteProperty = (propertyId: string, propertyName: string) => {
     setProperties((prev) => {
       const updated = prev.filter((p) => p.id !== propertyId);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('locagestion:properties:v1', JSON.stringify(updated));
+      }
       if (selectedProperty?.id === propertyId) {
         setSelectedProperty(updated.length > 0 ? updated[0] : null);
       }
@@ -70,7 +88,13 @@ export default function PropertiesPage() {
 
   // Ajout d'un nouveau bien
   const handleAddProperty = (newProp: Property) => {
-    setProperties((prev) => [newProp, ...prev]);
+    setProperties((prev) => {
+      const updated = [newProp, ...prev];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('locagestion:properties:v1', JSON.stringify(updated));
+      }
+      return updated;
+    });
     setSelectedProperty(newProp);
     const msg = `La résidence « ${newProp.name} » a été ajoutée au patrimoine avec succès !`;
     showToast(msg);

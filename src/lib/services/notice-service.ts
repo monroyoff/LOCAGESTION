@@ -116,109 +116,21 @@ export const NOTICE_REASONS_CATALOG: {
   },
 ];
 
-export const INITIAL_NOTICES: Notice[] = [
-  {
-    id: 'PREAV-2026-001',
-    tenantName: 'Koffi Mensah',
-    tenantPhone: '+229 97 00 11 22',
-    tenantEmail: 'koffi.mensah@fintech-africa.com',
-    propertyName: 'Résidence Les Cocotiers',
-    unitNumber: 'Appt A3 (3 pièces)',
-    monthlyRent: 220000,
-    reasonType: 'reprise_personnelle',
-    reasonTitle: 'Reprise pour Habitation Personnelle',
-    reasonDetails: 'Le propriétaire bailleur reprend possession du logement pour y loger son fils étudiant revenant à Cotonou à compter du terme du préavis légal.',
-    noticeMonths: 3,
-    noticeDate: '01/10/2026',
-    effectiveDate: '31/12/2026',
-    deliveryMethod: 'email_officiel',
-    status: 'en_cours',
-    beneficiaryName: 'M. Rodrigue Diallo (Fils du propriétaire)',
-    legalBasis: 'Code Foncier & Domanial UEMOA - Droit de reprise du bailleur pour descendant direct',
-    departureInspectionDate: '30/12/2026',
-    notes: 'Notification formelle transmise par email officiel certifié et acte de Commissaire de Justice.',
-    createdAt: '2026-10-01T08:30:00Z',
-  },
-  {
-    id: 'PREAV-2026-002',
-    tenantName: 'Ibrahim Touré',
-    tenantPhone: '+225 05 67 89 01',
-    tenantEmail: 'ibrahim.toure@afdb.org',
-    propertyName: 'Immeuble Palmier Royal',
-    unitNumber: 'Lot 201 (3 Pièces • 85 m²)',
-    monthlyRent: 280000,
-    reasonType: 'vente',
-    reasonTitle: 'Congé pour Vente du Bien Immobilier',
-    reasonDetails: 'Cession de l’immeuble libre de toute occupation. Offre de vente formulée en priorité au locataire avec droit de préemption légal.',
-    noticeMonths: 3,
-    noticeDate: '01/10/2026',
-    effectiveDate: '31/12/2026',
-    deliveryMethod: 'main_propre',
-    salePrice: 48000000,
-    status: 'en_cours',
-    legalBasis: 'Droit des Baux UEMOA - Droit de préemption légal d’achat ouvert pour 30 jours',
-    departureInspectionDate: '30/12/2026',
-    notes: 'Courrier remis en main propre contre décharge manuscrite signée le 01/10/2026.',
-    createdAt: '2026-10-01T09:15:00Z',
-  },
-  {
-    id: 'PREAV-2026-003',
-    tenantName: 'Fatoumata Traoré',
-    tenantPhone: '+225 07 89 01 23',
-    tenantEmail: 'fatou.traore@ecobank.ci',
-    propertyName: 'Résidence Les Cocotiers',
-    unitNumber: 'Appt B1 (2 pièces • 55 m²)',
-    monthlyRent: 180000,
-    reasonType: 'impayes_manquements',
-    reasonTitle: 'Motif Légitime & Sérieux (Impayés)',
-    reasonDetails: 'Retards cumulés excédant 26 jours sur l’échéance d’octobre et relances restées sans régularisation intégrale.',
-    noticeMonths: 1,
-    noticeDate: '28/10/2026',
-    effectiveDate: '28/11/2026',
-    deliveryMethod: 'huissier',
-    status: 'notifie',
-    legalBasis: 'Résiliation du bail pour manquements répétés aux obligations contractuelles de paiement',
-    departureInspectionDate: '27/11/2026',
-    notes: 'Notification formelle de mise en demeure avec préavis d’un mois pour libération des locaux.',
-    createdAt: '2026-10-28T11:00:00Z',
-  },
-  {
-    id: 'PREAV-2026-004',
-    tenantName: 'Amina Diop',
-    tenantPhone: '+221 77 123 45 67',
-    tenantEmail: 'amina.diop@orange-sonatel.sn',
-    propertyName: 'Villa Émeraude',
-    unitNumber: 'Villa R+1 Ouest',
-    monthlyRent: 350000,
-    reasonType: 'travaux_majeurs',
-    reasonTitle: 'Travaux Substantiels & Rénovation',
-    reasonDetails: 'Réfection de la charpente et réhabilitation complète du système d’assainissement et étanchéité.',
-    noticeMonths: 3,
-    noticeDate: '01/09/2026',
-    effectiveDate: '01/12/2026',
-    deliveryMethod: 'courrier_recommande',
-    status: 'en_cours',
-    legalBasis: 'Arrêté d’autorisation de travaux municipaux et code de l’urbanisme',
-    departureInspectionDate: '30/11/2026',
-    notes: 'Devis de l’artisan BTP validé. Chantier planifié pour démarrage le 05/12/2026.',
-    createdAt: '2026-09-01T14:20:00Z',
-  },
-];
+export const INITIAL_NOTICES: Notice[] = [];
 
 const NOTICES_STORAGE_KEY = 'locagestion:notices:v2';
 
 export class NoticeService {
   static getNotices(): Notice[] {
-    if (typeof window === 'undefined') return INITIAL_NOTICES;
+    if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem(NOTICES_STORAGE_KEY);
       if (!stored) {
-        localStorage.setItem(NOTICES_STORAGE_KEY, JSON.stringify(INITIAL_NOTICES));
-        return INITIAL_NOTICES;
+        return [];
       }
       return JSON.parse(stored);
     } catch {
-      return INITIAL_NOTICES;
+      return [];
     }
   }
 

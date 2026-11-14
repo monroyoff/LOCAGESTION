@@ -1,0 +1,7 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "cleanUrls": true,
+  "regions": ["cdg1"]
+}
+

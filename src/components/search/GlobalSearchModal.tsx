@@ -15,8 +15,9 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
-import { COUNTRIES_CITIES, MOCK_RENTAL_LISTINGS } from '@/lib/data/mock-data';
+import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { RentalListing } from '@/lib/types';
+import { ListingsService } from '@/lib/services/listings-service';
 import { getUserResidenceCountry } from '@/lib/services/geo-service';
 
 interface GlobalSearchModalProps {
@@ -128,7 +129,7 @@ export function GlobalSearchModal({
 
   // Real-time matching listings calculation
   const matchingListings = useMemo(() => {
-    return MOCK_RENTAL_LISTINGS.filter((l) => {
+    return ListingsService.getAllListings().filter((l) => {
       // Country
       if (selectedCountry !== 'all' && l.country !== selectedCountry) {
         return false;

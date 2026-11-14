@@ -83,57 +83,8 @@ export default function RemindersCenterPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  const pendingOverdue = [
-    {
-      id: 'rem-1',
-      tenantName: 'Fatoumata Traoré',
-      tenantPhone: '+223 76 12 34 56',
-      property: 'Résidence Les Cocotiers (Appt B1)',
-      period: 'Octobre 2026',
-      expectedAmount: 180000,
-      daysLate: 26,
-      level: 'Relance Ferme',
-      channel: 'WhatsApp & SMS',
-    },
-    {
-      id: 'rem-2',
-      tenantName: 'Sékou Camara',
-      tenantPhone: '+224 62 12 34 56',
-      property: 'Immeuble Palmier Royal (Appt 4B)',
-      period: 'Octobre 2026',
-      expectedAmount: 240000,
-      daysLate: 21,
-      level: 'Relance Ferme',
-      channel: 'WhatsApp',
-    },
-  ];
-
-  const reminderLogs = [
-    {
-      id: 'log-1',
-      date: '25/10/2026 à 09:00',
-      type: 'Rappel Collectif Automatique (Le 25)',
-      recipients: '28 locataires',
-      channel: 'WhatsApp Direct',
-      status: 'Livré à 100%',
-    },
-    {
-      id: 'log-2',
-      date: '05/10/2026 à 10:30',
-      type: 'Avis d’échéance mensuelle',
-      recipients: '28 locataires',
-      channel: 'SMS & Email',
-      status: 'Livré',
-    },
-    {
-      id: 'log-3',
-      date: '20/10/2026 à 14:15',
-      type: 'Relance ciblée impayé',
-      recipients: 'Fatoumata Traoré',
-      channel: 'WhatsApp',
-      status: 'Lu (Double coche bleue)',
-    },
-  ];
+  const pendingOverdue: any[] = [];
+  const reminderLogs: any[] = [];
 
   // Filtrage des préavis
   const filteredNotices = notices.filter((n) => {
@@ -372,6 +323,13 @@ export default function RemindersCenterPage() {
                   </span>
                 </div>
 
+                {pendingOverdue.length === 0 ? (
+                  <div className="py-8 text-center text-slate-400 text-xs space-y-2">
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
+                    <p className="font-bold text-slate-700">Aucun locataire en retard d'échéance</p>
+                    <p className="text-[11px] text-slate-400">Tous vos loyers sont à jour pour le moment.</p>
+                  </div>
+                ) : (
                 <div className="divide-y divide-slate-100">
                   {pendingOverdue.map((item) => (
                     <div
@@ -427,6 +385,7 @@ export default function RemindersCenterPage() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
 
               {/* Delivery Logs */}
@@ -436,6 +395,11 @@ export default function RemindersCenterPage() {
                   <span>Journal Récent d’Exécution des Relances</span>
                 </h3>
 
+                {reminderLogs.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 text-xs">
+                    Aucun historique de relance récent enregistré.
+                  </div>
+                ) : (
                 <div className="divide-y divide-slate-100 text-xs">
                   {reminderLogs.map((log) => (
                     <div key={log.id} className="py-3 flex items-center justify-between gap-4">
@@ -451,6 +415,7 @@ export default function RemindersCenterPage() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             </div>
           )}

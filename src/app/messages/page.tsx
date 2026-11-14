@@ -62,190 +62,15 @@ interface Conversation {
   messages: Message[];
 }
 
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: 'conv-01',
-    tenantName: 'Edwin Johnson',
-    tenantAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-    isOnline: true,
-    propertyTitle: 'Résidence Les Cocotiers',
-    propertyUnit: 'Appartement 2 Pièces',
-    propertySurface: '55 m²',
-    propertyPrice: 180000,
-    propertyThumbnail: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=160&auto=format&fit=crop&q=80',
-    lastMessage: 'D’accord très bien ! Y a-t-il une place de parking réservée ?',
-    lastMessageTime: '09:01',
-    isRead: true,
-    messages: [
-      {
-        id: 'm1',
-        sender: 'them',
-        senderName: 'Edwin Johnson',
-        text: 'Bonjour M. Diallo ! Je suis très intéressé par l’appartement 2 pièces à Haie Vive que j’ai vu sur votre annonce. Est-il toujours disponible pour une entrée début décembre ?',
-        time: '08:35',
-        status: 'read',
-      },
-      {
-        id: 'm2',
-        sender: 'me',
-        senderName: 'Mamadou Diallo',
-        text: 'Bonjour Edwin ! Oui, il est parfaitement disponible. Pour confirmer votre dossier, serez-vous seul ou accompagné ?',
-        time: '08:51',
-        status: 'read',
-      },
-      {
-        id: 'm3',
-        sender: 'them',
-        senderName: 'Edwin Johnson',
-        text: 'Ce sera pour moi et mon épouse. Nous cherchons un cadre calme et sécurisé avec balcon.',
-        time: '08:54',
-        status: 'read',
-      },
-      {
-        id: 'm4',
-        sender: 'them',
-        senderName: 'Edwin Johnson',
-        text: 'Pouvez-vous me montrer la vue depuis le balcon du séjour ?',
-        time: '08:55',
-        status: 'read',
-      },
-      {
-        id: 'm5',
-        sender: 'me',
-        senderName: 'Mamadou Diallo',
-        imageUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800&auto=format&fit=crop&q=80',
-        text: 'Voici la terrasse principale orientée Sud-Est sans vis-à-vis !',
-        time: '08:59',
-        status: 'read',
-      },
-      {
-        id: 'm6',
-        sender: 'them',
-        senderName: 'Edwin Johnson',
-        text: 'D’accord très bien ! Y a-t-il une place de parking réservée ?',
-        time: '09:01',
-        status: 'read',
-      },
-    ],
-  },
-  {
-    id: 'conv-02',
-    tenantName: 'Albert Flores',
-    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-    isOnline: false,
-    propertyTitle: 'Immeuble Palmier Royal',
-    propertyUnit: 'Studio Meublé B12',
-    propertySurface: '32 m²',
-    propertyPrice: 140000,
-    propertyThumbnail: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=160&auto=format&fit=crop&q=80',
-    lastMessage: 'Parfait, je transmets mon attestation de travail.',
-    lastMessageTime: '10:37',
-    isRead: true,
-    messages: [
-      {
-        id: 'm20',
-        sender: 'them',
-        senderName: 'Albert Flores',
-        text: 'Bonjour, je viens de finaliser mon dossier locatif sur LOCAGESTION.',
-        time: '10:35',
-        status: 'read',
-      },
-      {
-        id: 'm21',
-        sender: 'me',
-        senderName: 'Mamadou Diallo',
-        text: 'Bien reçu Albert, nous étudions votre profil.',
-        time: '10:36',
-        status: 'read',
-      },
-      {
-        id: 'm22',
-        sender: 'them',
-        senderName: 'Albert Flores',
-        text: 'Parfait, je transmets mon attestation de travail.',
-        time: '10:37',
-        status: 'read',
-      },
-    ],
-  },
-  {
-    id: 'conv-03',
-    tenantName: 'Annette Black',
-    tenantAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&auto=format&fit=crop&q=80',
-    isOnline: true,
-    propertyTitle: 'Villa Émeraude',
-    propertyUnit: 'Villa R+1 Ouest',
-    propertySurface: '180 m²',
-    propertyPrice: 350000,
-    propertyThumbnail: 'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=160&auto=format&fit=crop&q=80',
-    lastMessage: 'Bonjour, j’arriverai demain matin vers 10h pour l’état des lieux.',
-    lastMessageTime: '09:15',
-    unreadCount: 1,
-    messages: [
-      {
-        id: 'm30',
-        sender: 'them',
-        senderName: 'Annette Black',
-        text: 'Bonjour, j’arriverai demain matin vers 10h pour l’état des lieux.',
-        time: '09:15',
-        status: 'delivered',
-      },
-    ],
-  },
-  {
-    id: 'conv-04',
-    tenantName: 'Jerome Bell',
-    tenantAvatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&auto=format&fit=crop&q=80',
-    isOnline: false,
-    propertyTitle: 'Résidence Marina Golfe',
-    propertyUnit: 'Boutique Commerciale RDC',
-    propertySurface: '60 m²',
-    propertyPrice: 150000,
-    propertyThumbnail: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=160&auto=format&fit=crop&q=80',
-    lastMessage: 'J’ai bien reçu le reçu de mon virement d’avance de loyer.',
-    lastMessageTime: 'Jeu',
-    isRead: true,
-    messages: [],
-  },
-  {
-    id: 'conv-05',
-    tenantName: 'Darrell Steward',
-    tenantAvatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=160&auto=format&fit=crop&q=80',
-    isOnline: true,
-    propertyTitle: 'Résidence Les Cocotiers',
-    propertyUnit: 'Appt A3',
-    propertySurface: '75 m²',
-    propertyPrice: 220000,
-    propertyThumbnail: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=160&auto=format&fit=crop&q=80',
-    lastMessage: 'Merci pour le passage rapide du technicien de climatisation.',
-    lastMessageTime: 'Jeu',
-    isRead: true,
-    messages: [],
-  },
-  {
-    id: 'conv-06',
-    tenantName: 'Steven Jordan',
-    tenantAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
-    isOnline: false,
-    propertyTitle: 'Immeuble Palmier Royal',
-    propertyUnit: 'Appt 4B',
-    propertySurface: '68 m²',
-    propertyPrice: 240000,
-    propertyThumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=160&auto=format&fit=crop&q=80',
-    lastMessage: 'Je confirme la date de signature électronique du bail.',
-    lastMessageTime: 'Mer',
-    unreadCount: 2,
-    messages: [],
-  },
-];
+const MOCK_CONVERSATIONS: Conversation[] = [];
 
 export default function MessagesPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
+  const { user, activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
   const [activeTab, setActiveTab] = useState<'general' | 'archive'>('general');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedConv, setSelectedConv] = useState<Conversation>(MOCK_CONVERSATIONS[0]);
+  const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [optionsMenuOpen, setOptionsMenuOpen] = useState(false);
@@ -268,18 +93,18 @@ export default function MessagesPage() {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !selectedConv) return;
 
     const newMessage: Message = {
       id: `m-${Date.now()}`,
       sender: 'me',
-      senderName: 'Mamadou Diallo',
+      senderName: user?.name || 'Moi',
       text: inputText,
       time: 'À l’instant',
       status: 'sent',
     };
 
-    setSelectedConv((prev) => ({
+    setSelectedConv((prev) => !prev ? null : ({
       ...prev,
       messages: [...prev.messages, newMessage],
       lastMessage: inputText,
@@ -290,16 +115,17 @@ export default function MessagesPage() {
   };
 
   const handleAttachDocument = () => {
+    if (!selectedConv) return;
     const docMessage: Message = {
       id: `m-doc-${Date.now()}`,
       sender: 'me',
-      senderName: 'Mamadou Diallo',
+      senderName: user?.name || 'Moi',
       text: '📄 Pièce jointe : Quittance_Loyer_Certifiee_REC-2026-088.pdf (Transmis)',
       time: 'À l’instant',
       status: 'sent',
     };
 
-    setSelectedConv((prev) => ({
+    setSelectedConv((prev) => !prev ? null : ({
       ...prev,
       messages: [...prev.messages, docMessage],
       lastMessage: '📄 Quittance de loyer transmise',
@@ -309,17 +135,18 @@ export default function MessagesPage() {
   };
 
   const handleAttachPhoto = () => {
+    if (!selectedConv) return;
     const photoMessage: Message = {
       id: `m-img-${Date.now()}`,
       sender: 'me',
-      senderName: 'Mamadou Diallo',
+      senderName: user?.name || 'Moi',
       text: 'Voici la photo récente du logement et des équipements :',
       time: 'À l’instant',
       status: 'sent',
       imageUrl: selectedConv.propertyThumbnail,
     };
 
-    setSelectedConv((prev) => ({
+    setSelectedConv((prev) => !prev ? null : ({
       ...prev,
       messages: [...prev.messages, photoMessage],
       lastMessage: '📷 Photo du logement envoyée',
@@ -329,8 +156,9 @@ export default function MessagesPage() {
   };
 
   const handleToggleArchive = () => {
+    if (!selectedConv) return;
     setOptionsMenuOpen(false);
-    setSelectedConv((prev) => ({
+    setSelectedConv((prev) => !prev ? null : ({
       ...prev,
       isArchived: !prev.isArchived,
     }));
@@ -437,7 +265,7 @@ export default function MessagesPage() {
             {/* Conversations Scrollable List */}
             <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
               {filteredConversations.map((conv) => {
-                const isSelected = selectedConv.id === conv.id;
+                const isSelected = selectedConv?.id === conv.id;
 
                 return (
                   <div
@@ -514,6 +342,18 @@ export default function MessagesPage() {
               mobileChatOpen ? 'flex' : 'hidden lg:flex'
             }`}
           >
+            {!selectedConv ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-400">
+                <div className="w-16 h-16 rounded-3xl bg-slate-100 flex items-center justify-center mb-3">
+                  <MessageCircle className="w-8 h-8 text-slate-400" />
+                </div>
+                <h4 className="text-base font-bold text-slate-700">Aucune conversation active</h4>
+                <p className="text-xs text-slate-400 max-w-sm mt-1">
+                  Sélectionnez un échange dans la boîte principale ou contactez un utilisateur depuis une annonce.
+                </p>
+              </div>
+            ) : (
+              <>
             {/* Conversation Top Header */}
             <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-2 sm:gap-4 bg-white/95 backdrop-blur-sm z-10 shrink-0">
               {/* Back to list on mobile */}
@@ -752,6 +592,8 @@ export default function MessagesPage() {
                 <Send className="w-3.5 h-3.5" />
               </button>
             </form>
+            </>
+            )}
           </div>
         </div>
       </div>

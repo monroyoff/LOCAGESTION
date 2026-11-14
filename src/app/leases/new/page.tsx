@@ -94,12 +94,18 @@ export default function NewLeasePage() {
   const [currentStep, setCurrentStep] = useState(1);
 
   // Form state - Bien & Lot / Chambre
-  const [propertyMode, setPropertyMode] = useState<'portfolio' | 'manual'>('portfolio');
+  const [propertyMode, setPropertyMode] = useState<'portfolio' | 'manual'>(
+    MOCK_PROPERTIES.length > 0 ? 'portfolio' : 'manual'
+  );
 
   // Mode Patrimoine
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(MOCK_PROPERTIES[0].id);
-  const [selectedProperty, setSelectedProperty] = useState(MOCK_PROPERTIES[0].name);
-  const [selectedUnitMode, setSelectedUnitMode] = useState<'catalog' | 'custom'>('catalog');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(
+    MOCK_PROPERTIES[0]?.id || ''
+  );
+  const [selectedProperty, setSelectedProperty] = useState(
+    MOCK_PROPERTIES[0]?.name || ''
+  );
+  const [selectedUnitMode, setSelectedUnitMode] = useState<'catalog' | 'custom'>('custom');
   const [customUnitNumber, setCustomUnitNumber] = useState('');
 
   // Mode Saisie Directe
@@ -110,12 +116,12 @@ export default function NewLeasePage() {
   const [manualAddress, setManualAddress] = useState('');
 
   // Données communes
-  const [unitNumber, setUnitNumber] = useState('Appt B2 (3 pièces)');
-  const [surface, setSurface] = useState('78');
+  const [unitNumber, setUnitNumber] = useState('Appt 1 (2 pièces)');
+  const [surface, setSurface] = useState('50');
 
   // Bien sélectionné dans le patrimoine
   const currentProperty =
-    MOCK_PROPERTIES.find((p) => p.id === selectedPropertyId) || MOCK_PROPERTIES[0];
+    MOCK_PROPERTIES.find((p) => p.id === selectedPropertyId) || MOCK_PROPERTIES[0] || null;
 
   // Pays de juridiction & droit applicable
   const [selectedCountryName, setSelectedCountryName] = useState<string>(() => {
@@ -653,15 +659,19 @@ export default function NewLeasePage() {
                         onChange={(e) => handleSelectProperty(e.target.value)}
                         className="w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-none cursor-pointer"
                       >
-                        {MOCK_PROPERTIES.map((p) => {
-                          const vacantCount =
-                            p.unitsList?.filter((u) => u.status === 'vacant').length || 0;
-                          return (
-                            <option key={p.id} value={p.id}>
-                              {p.name} — {p.district ? `${p.district}, ` : ''}{p.city} ({p.totalUnits} lots{vacantCount > 0 ? ` • ${vacantCount} disponible(s)` : ''})
-                            </option>
-                          );
-                        })}
+                        {MOCK_PROPERTIES.length === 0 ? (
+                          <option value="">Aucun bien dans le patrimoine (utilisez la saisie directe)</option>
+                        ) : (
+                          MOCK_PROPERTIES.map((p) => {
+                            const vacantCount =
+                              p.unitsList?.filter((u) => u.status === 'vacant').length || 0;
+                            return (
+                              <option key={p.id} value={p.id}>
+                                {p.name} — {p.district ? `${p.district}, ` : ''}{p.city} ({p.totalUnits} lots{vacantCount > 0 ? ` • ${vacantCount} disponible(s)` : ''})
+                              </option>
+                            );
+                          })
+                        )}
                       </select>
                     </div>
 

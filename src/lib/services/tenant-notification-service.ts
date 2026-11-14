@@ -30,51 +30,11 @@ export interface TenantNotification {
 
 export const STORAGE_KEY_TENANT_NOTIFS = 'locagestion:tenant_notifications:v1';
 
-export const INITIAL_TENANT_NOTIFICATIONS: TenantNotification[] = [
-  {
-    id: 't-notif-lease-init',
-    title: 'Contrat de Bail d’Habitation Scellé',
-    message: 'Votre bail pour le logement Appt A3 (Résidence Les Cocotiers) a été établi et signé par votre bailleur Mamadou Diallo. Il est actif et disponible.',
-    time: 'Récemment',
-    timestamp: '01/11/2026',
-    type: 'lease_available',
-    read: false,
-    link: '/portal?tab=bail',
-    tenantName: 'Koffi Mensah',
-    actor: 'Mamadou Diallo (Bailleur)',
-    actionLabel: 'Voir le bail',
-  },
-  {
-    id: 't-notif-receipt-init',
-    title: 'Quittance Officielle Émise (Octobre 2026)',
-    message: 'Votre loyer d’Octobre 2026 (220 000 FCFA) a été validé par votre bailleur. La quittance officielle UEMOA & CEMAC avec QR Code est disponible.',
-    time: 'Récemment',
-    timestamp: '30/10/2026',
-    type: 'receipt_issued',
-    read: false,
-    link: '/portal?tab=quittances',
-    tenantName: 'Koffi Mensah',
-    actor: 'Mamadou Diallo (Bailleur)',
-    actionLabel: 'Télécharger',
-  },
-  {
-    id: 't-notif-passport-init',
-    title: 'Passeport Solvabilité Certifié (96/100)',
-    message: 'Votre profil locatif exemplaire est certifié. Vos 22 quittances consécutives à jour vous attribuent le badge "Excellent Payeur".',
-    time: 'Récemment',
-    timestamp: '01/11/2026',
-    type: 'passport_ready',
-    read: true,
-    link: '/portal?tab=solvabilite',
-    tenantName: 'Koffi Mensah',
-    actor: 'Système LOCAGESTION',
-    actionLabel: 'Voir mon score',
-  },
-];
+export const INITIAL_TENANT_NOTIFICATIONS: TenantNotification[] = [];
 
 function dispatchUpdateEvent() {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('locagestion:tenant_notifs_updated'));
+    window.dispatchEvent(new Event('locagestion:tenant_notifications_updated'));
     window.dispatchEvent(new Event('storage'));
   }
 }
@@ -84,7 +44,7 @@ export const TenantNotificationService = {
    * Récupère toutes les notifications destinées au locataire
    */
   getNotifications(tenantFilter?: string): TenantNotification[] {
-    if (typeof window === 'undefined') return INITIAL_TENANT_NOTIFICATIONS;
+    if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem(STORAGE_KEY_TENANT_NOTIFS);
       if (stored) {
@@ -103,7 +63,7 @@ export const TenantNotificationService = {
     } catch (e) {
       console.error('Erreur lecture notifications locataire:', e);
     }
-    return INITIAL_TENANT_NOTIFICATIONS;
+    return [];
   },
 
   /**

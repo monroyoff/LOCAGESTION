@@ -16,19 +16,33 @@ import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import {
   MOCK_KPIS,
   MOCK_FEATURED_PROPERTY,
-  MOCK_RECENT_PAYMENTS,
 } from '@/lib/data/mock-data';
 import { UserSpace, PaymentTransaction, DashboardKPIs } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
 import { IncidentService } from '@/lib/services/incident-service';
+import { PaymentService } from '@/lib/services/payment-service';
 import { notifyAction } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
+  const { user, activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
+  const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+
+  useEffect(() => {
+    const refreshPayments = () => {
+      setPayments(PaymentService.getVerifiedPayments());
+    };
+    refreshPayments();
+    window.addEventListener('locagestion:payments_updated', refreshPayments);
+    window.addEventListener('storage', refreshPayments);
+    return () => {
+      window.removeEventListener('locagestion:payments_updated', refreshPayments);
+      window.removeEventListener('storage', refreshPayments);
+    };
+  }, []);
 
   useEffect(() => {
     if (isDemarcheur) {
@@ -131,17 +145,19 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2 mb-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-[11px] font-black bg-brand-500 text-white shadow-md shadow-brand-500/30">
                   <Sparkles className="w-3.5 h-3.5" />
-                  Cabinet Diallo Patrimoine
+                  {user?.companyName || user?.name || 'Mon Patrimoine'}
                 </span>
                 <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-                  • 4 Résidences • 32 Lots gérés
+                  • {dashboardKPIs.occupancyRate.totalUnits} Lots gérés
                 </span>
               </div>
               <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                Bonjour Mamadou 👋, voici le point de gestion locative
+                Bonjour {user?.name ? user.name.split(' ')[0] : 'Bailleur'} 👋, voici le point de gestion locative
               </h2>
               <p className="text-xs text-slate-300 mt-1 max-w-xl">
-                23 loyers ont été perçus ce mois-ci sur les 28 lots occupés. 2 relances d’impayés nécessitent votre attention.
+                {dashboardKPIs.occupancyRate.occupiedUnits === 0
+                  ? "Bienvenue sur votre espace de gestion locative. Enregistrez vos biens et baux pour activer le suivi en direct."
+                  : `${dashboardKPIs.rentBreakdown.paidCount} loyer${dashboardKPIs.rentBreakdown.paidCount > 1 ? 's ont' : ' a'} été perçu${dashboardKPIs.rentBreakdown.paidCount > 1 ? 's' : ''} ce mois-ci sur les ${dashboardKPIs.occupancyRate.occupiedUnits} lots occupés.`}
               </p>
             </div>
 
@@ -170,7 +186,7 @@ export default function DashboardPage() {
             className="order-2 lg:order-5"
           >
             <RecentPaymentsTable
-              payments={MOCK_RECENT_PAYMENTS}
+              payments={payments}
               initialTab={dashboardPaymentTab}
               onSelectPayment={(p) => setSelectedPayment(p)}
               onSendReminder={(p) => setReminderPayment(p)}

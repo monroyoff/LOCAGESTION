@@ -18,12 +18,10 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/space-context';
-import { UserSpace } from '@/lib/types';
-import { DEMO_LANDLORD, DEMO_DEMARCHEUR, DEMO_TENANT } from '@/lib/services/auth-service';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, quickLogin } = useAuth();
+  const { login } = useAuth();
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -40,6 +38,11 @@ export default function LoginPage() {
       return;
     }
 
+    if (!password) {
+      setErrorMsg('Veuillez renseigner votre mot de passe.');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const res = login(identifier.trim(), password);
@@ -51,10 +54,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleQuickLogin = (role: UserSpace) => {
-    quickLogin(role);
   };
 
   return (
@@ -99,110 +98,12 @@ export default function LoginPage() {
           Connexion à votre espace
         </h2>
         <p className="mt-2 text-center text-xs sm:text-sm text-slate-400">
-          Sélectionnez votre profil ou entrez vos identifiants pour accéder à votre espace dédié.
+          Entrez vos identifiants sécurisés pour accéder à votre espace de gestion.
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg px-4 relative z-10">
         <div className="bg-[#171b24] py-8 px-6 sm:px-10 shadow-2xl rounded-3xl border border-white/10 space-y-6">
-          {/* Quick Demo Login Cards */}
-          <div className="space-y-3">
-            <label className="text-[11px] font-black uppercase tracking-wider text-slate-400 block">
-              Connexion instantanée (Comptes Démo certifiés) :
-            </label>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              {/* Card Bailleur */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('bailleur')}
-                className="p-3 rounded-2xl bg-gradient-to-br from-brand-950/40 to-slate-900 border border-brand-500/30 hover:border-brand-500 text-left transition-all group hover:scale-[1.02] cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="p-1.5 rounded-xl bg-brand-500/20 text-brand-400 border border-brand-500/30">
-                    <Building2 className="w-4 h-4" />
-                  </span>
-                  <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-brand-500 text-white">
-                    Bailleur
-                  </span>
-                </div>
-                <div className="font-bold text-white text-xs truncate group-hover:text-brand-300">
-                  {DEMO_LANDLORD.name}
-                </div>
-                <div className="text-[9.5px] text-slate-400 truncate mt-0.5">
-                  Cabinet Diallo • Bénin 🇧🇯
-                </div>
-                <div className="mt-2 text-[9.5px] font-bold text-brand-400 flex items-center gap-1">
-                  <span>Dashboard</span>
-                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </button>
-
-              {/* Card Démarcheur */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('demarcheur')}
-                className="p-3 rounded-2xl bg-gradient-to-br from-amber-950/40 to-slate-900 border border-amber-500/30 hover:border-amber-500 text-left transition-all group hover:scale-[1.02] cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="p-1.5 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30">
-                    <Sparkles className="w-4 h-4" />
-                  </span>
-                  <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500 text-white">
-                    Démarcheur
-                  </span>
-                </div>
-                <div className="font-bold text-white text-xs truncate group-hover:text-amber-300">
-                  {DEMO_DEMARCHEUR.name}
-                </div>
-                <div className="text-[9.5px] text-slate-400 truncate mt-0.5">
-                  Agence Traoré • Bénin 🇧🇯
-                </div>
-                <div className="mt-2 text-[9.5px] font-bold text-amber-400 flex items-center gap-1">
-                  <span>Annonces</span>
-                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </button>
-
-              {/* Card Locataire */}
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('locataire')}
-                className="p-3 rounded-2xl bg-gradient-to-br from-emerald-950/40 to-slate-900 border border-emerald-500/30 hover:border-emerald-500 text-left transition-all group hover:scale-[1.02] cursor-pointer"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="p-1.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                    <Users className="w-4 h-4" />
-                  </span>
-                  <span className="text-[8.5px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-600 text-white">
-                    Locataire
-                  </span>
-                </div>
-                <div className="font-bold text-white text-xs truncate group-hover:text-emerald-300">
-                  {DEMO_TENANT.name}
-                </div>
-                <div className="text-[9.5px] text-slate-400 truncate mt-0.5">
-                  Résident • Bénin 🇧🇯
-                </div>
-                <div className="mt-2 text-[9.5px] font-bold text-emerald-400 flex items-center gap-1">
-                  <span>Portail</span>
-                  <ArrowRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
-                </div>
-              </button>
-            </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#171b24] px-3 text-slate-400 font-bold text-[10px]">
-                Ou se connecter avec vos identifiants
-              </span>
-            </div>
-          </div>
-
           {/* Error Message */}
           {errorMsg && (
             <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
@@ -227,7 +128,7 @@ export default function LoginPage() {
                   type="text"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  placeholder="ex: contact@diallo-patrimoine.bj ou +229 01 95 44 44 30"
+                  placeholder="ex: contact@domaine.com ou +229 01 95 44 44 30"
                   className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                   required
                 />
@@ -236,7 +137,7 @@ export default function LoginPage() {
                 </div>
               </div>
               <span className="text-[10px] text-slate-500 mt-1 block">
-                Connectez-vous indifféremment avec votre email ou votre numéro de téléphone certifié.
+                Connectez-vous indifféremment avec votre adresse email ou votre numéro de téléphone.
               </span>
             </div>
 
@@ -245,9 +146,6 @@ export default function LoginPage() {
                 <label className="text-xs font-bold text-slate-300 block">
                   Mot de passe
                 </label>
-                <span className="text-[10px] text-slate-400">
-                  Démo : <code className="text-brand-300 font-mono">demo1234</code>
-                </span>
               </div>
               <div className="relative">
                 <input

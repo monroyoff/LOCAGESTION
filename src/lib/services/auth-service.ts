@@ -71,7 +71,7 @@ export const DEMO_DEMARCHEUR: AuthUser = {
   password: 'demo',
 };
 
-const SEED_USERS: AuthUser[] = [DEMO_LANDLORD, DEMO_DEMARCHEUR, DEMO_TENANT];
+const SEED_USERS: AuthUser[] = [];
 
 function notifyAuthChange(user: AuthUser | null) {
   if (typeof window !== 'undefined') {
@@ -84,20 +84,19 @@ function notifyAuthChange(user: AuthUser | null) {
 
 export const AuthService = {
   getRegisteredUsers(): AuthUser[] {
-    if (typeof window === 'undefined') return SEED_USERS;
+    if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem(STORAGE_KEY_USERS);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
-      localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(SEED_USERS));
     } catch (e) {
       console.error('Erreur lecture utilisateurs:', e);
     }
-    return SEED_USERS;
+    return [];
   },
 
   saveRegisteredUsers(users: AuthUser[]): void {
@@ -110,32 +109,17 @@ export const AuthService = {
   },
 
   getCurrentUser(): AuthUser | null {
-    if (typeof window === 'undefined') return DEMO_LANDLORD;
+    if (typeof window === 'undefined') return null;
     try {
       const session = localStorage.getItem(STORAGE_KEY_SESSION);
       if (session) {
         const parsed = JSON.parse(session);
-        // Correction automatique si l'ancien avatar erroné est resté dans le cache local
-        if (
-          parsed &&
-          (parsed.role === 'bailleur' || parsed.name === 'Mamadou Diallo') &&
-          parsed.avatarUrl?.includes('photo-1534528741775-53994a69daeb')
-        ) {
-          parsed.avatarUrl =
-            'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80';
-          localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
-        }
-        return parsed;
+        return parsed || null;
       }
-
-      // Si aucune session explicite, initialiser selon l'espace actif existant
-      const savedSpace = localStorage.getItem('locagestion:active_space');
-      const initialUser = savedSpace === 'locataire' ? DEMO_TENANT : DEMO_LANDLORD;
-      localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(initialUser));
-      return initialUser;
+      return null;
     } catch (e) {
       console.error('Erreur lecture session:', e);
-      return DEMO_LANDLORD;
+      return null;
     }
   },
 
@@ -209,11 +193,11 @@ export const AuthService = {
       };
     }
 
-    // Validation mot de passe (si configuré)
-    if (found.password && password && found.password !== password && password !== 'demo1234' && password !== 'demo') {
+    // Validation mot de passe
+    if (found.password && password && found.password !== password) {
       return {
         success: false,
-        error: "Mot de passe incorrect. (Pour les comptes démo, utilisez 'demo1234')",
+        error: "Mot de passe incorrect.",
       };
     }
 

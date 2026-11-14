@@ -14,14 +14,38 @@ import { Property } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 
 interface HeroPropertyCardProps {
-  property: Property;
+  property?: Property | null;
   onViewDetails?: () => void;
 }
 
 export function HeroPropertyCard({ property, onViewDetails }: HeroPropertyCardProps) {
-  const occupancyPercentage = Math.round(
-    (property.occupiedUnits / property.totalUnits) * 100
-  );
+  if (!property) {
+    return (
+      <div className="bg-white rounded-3xl border border-slate-200/80 shadow-soft p-8 text-center space-y-3">
+        <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+          <Building2 className="w-7 h-7" />
+        </div>
+        <h3 className="font-extrabold text-base text-slate-800">
+          Aucun bien immobilier enregistré
+        </h3>
+        <p className="text-xs text-slate-400 max-w-md mx-auto">
+          Ajoutez votre première résidence, villa ou immeuble pour visualiser ici son taux de remplissage et ses performances locatives.
+        </p>
+        <button
+          type="button"
+          onClick={onViewDetails}
+          className="mt-2 inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all cursor-pointer"
+        >
+          <span>Gérer le patrimoine</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  const occupancyPercentage = property.totalUnits > 0
+    ? Math.round((property.occupiedUnits / property.totalUnits) * 100)
+    : 0;
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200/80 shadow-soft overflow-hidden flex flex-col lg:flex-row relative group">

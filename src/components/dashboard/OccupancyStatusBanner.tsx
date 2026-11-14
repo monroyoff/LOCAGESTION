@@ -20,12 +20,13 @@ export function OccupancyStatusBanner({
   occupancy,
   onFilterStatus,
 }: OccupancyStatusBannerProps) {
+  const total = occupancy.totalUnits || 0;
   const items = [
     {
       id: 'occupe',
       label: 'Lots Occupés',
       count: occupancy.occupiedUnits,
-      pct: Math.round((occupancy.occupiedUnits / occupancy.totalUnits) * 100),
+      pct: total > 0 ? Math.round((occupancy.occupiedUnits / total) * 100) : 0,
       color: 'bg-emerald-500',
       textColor: 'text-emerald-700',
       bgColor: 'bg-emerald-50',
@@ -36,7 +37,7 @@ export function OccupancyStatusBanner({
       id: 'vacant',
       label: 'Lots Vacants',
       count: occupancy.vacantUnits,
-      pct: Math.round((occupancy.vacantUnits / occupancy.totalUnits) * 100),
+      pct: total > 0 ? Math.round((occupancy.vacantUnits / total) * 100) : 0,
       color: 'bg-amber-500',
       textColor: 'text-amber-700',
       bgColor: 'bg-amber-50',
@@ -47,7 +48,7 @@ export function OccupancyStatusBanner({
       id: 'reserve',
       label: 'Réservés / Baux signés',
       count: occupancy.reservedUnits,
-      pct: Math.round((occupancy.reservedUnits / occupancy.totalUnits) * 100),
+      pct: total > 0 ? Math.round((occupancy.reservedUnits / total) * 100) : 0,
       color: 'bg-blue-500',
       textColor: 'text-blue-700',
       bgColor: 'bg-blue-50',
@@ -58,7 +59,7 @@ export function OccupancyStatusBanner({
       id: 'travaux',
       label: 'En Rénovation / Travaux',
       count: occupancy.inMaintenanceUnits,
-      pct: Math.round((occupancy.inMaintenanceUnits / occupancy.totalUnits) * 100),
+      pct: total > 0 ? Math.round((occupancy.inMaintenanceUnits / total) * 100) : 0,
       color: 'bg-slate-400',
       textColor: 'text-slate-600',
       bgColor: 'bg-slate-50',
@@ -84,7 +85,7 @@ export function OccupancyStatusBanner({
               <strong className="text-emerald-600 font-extrabold">
                 {occupancy.percentage}%
               </strong>{' '}
-              sur les 4 résidences
+              sur l’ensemble du parc
             </p>
           </div>
         </div>
@@ -93,17 +94,17 @@ export function OccupancyStatusBanner({
         <div className="sm:w-64">
           <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden flex">
             <div
-              style={{ width: `${(occupancy.occupiedUnits / occupancy.totalUnits) * 100}%` }}
+              style={{ width: `${total > 0 ? (occupancy.occupiedUnits / total) * 100 : 0}%` }}
               className="bg-emerald-500 h-full"
               title="Occupés"
             />
             <div
-              style={{ width: `${(occupancy.vacantUnits / occupancy.totalUnits) * 100}%` }}
+              style={{ width: `${total > 0 ? (occupancy.vacantUnits / total) * 100 : 0}%` }}
               className="bg-amber-500 h-full"
               title="Vacants"
             />
             <div
-              style={{ width: `${(occupancy.reservedUnits / occupancy.totalUnits) * 100}%` }}
+              style={{ width: `${total > 0 ? (occupancy.reservedUnits / total) * 100 : 0}%` }}
               className="bg-blue-500 h-full"
               title="Réservés"
             />
