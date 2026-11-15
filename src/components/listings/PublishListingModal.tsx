@@ -73,24 +73,19 @@ export function PublishListingModal({
   const [customCity, setCustomCity] = useState('');
   const [district, setDistrict] = useState('');
   const [landmark, setLandmark] = useState('');
-  const [monthlyRent, setMonthlyRent] = useState('250000');
-  const [charges, setCharges] = useState('25000');
+  const [monthlyRent, setMonthlyRent] = useState('');
+  const [charges, setCharges] = useState('');
   const [depositMonths, setDepositMonths] = useState(2);
   const [advanceMonths, setAdvanceMonths] = useState(1);
-  const [surface, setSurface] = useState('85');
-  const [bedrooms, setBedrooms] = useState(2);
-  const [bathrooms, setBathrooms] = useState(2);
+  const [surface, setSurface] = useState('');
+  const [bedrooms, setBedrooms] = useState(1);
+  const [bathrooms, setBathrooms] = useState(1);
 
-  // Description détaillée concernant le bien (cochée ligne par ligne dans l'annonce)
-  const [description, setDescription] = useState(
-    'Chambre spacieuse et lumineuse entièrement carrelée\nSalle d’eau privative avec douche à l’italienne et WC moderne\nCompteur électrique à prépaiement individuel (Cash Power)\nApprovisionnement régulier en eau avec suppresseur et réserve\nAccès sécurisé avec cour clôturée et gardiennage 24/7\nBalcon privé avec aération naturelle'
-  );
+  // Description détaillée concernant le bien (initialement vide, saisie manuelle libre)
+  const [description, setDescription] = useState('');
 
-  // Photos de l'annonce
-  const [images, setImages] = useState<string[]>([
-    'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80',
-  ]);
+  // Photos de l'annonce (initialement vide, import obligatoire ou facultatif par l'utilisateur)
+  const [images, setImages] = useState<string[]>([]);
   const [urlInput, setUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -189,10 +184,7 @@ export function PublishListingModal({
       'Tchad': 'TD',
     };
 
-    const finalImages = images.length > 0 ? images : [
-      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80',
-    ];
+    const finalImages = images;
 
     const descriptionLines = description
       .split('\n')
@@ -201,6 +193,9 @@ export function PublishListingModal({
 
     const finalCity = isCustomCity && customCity.trim() ? customCity.trim() : city;
     const coords = resolveLocationCoordinates(country, finalCity, district);
+
+    const parsedRent = parseInt(monthlyRent, 10) || 0;
+    const parsedCharges = parseInt(charges, 10) || 0;
 
     const newListing: RentalListing = {
       id: `list-${Date.now()}`,
@@ -214,27 +209,18 @@ export function PublishListingModal({
       landmark: landmark || 'Accès bitumé et sécurisé',
       latitude: coords.lat,
       longitude: coords.lng,
-      monthlyRent: parseInt(monthlyRent, 10) || 200000,
-      charges: parseInt(charges, 10) || 20000,
+      monthlyRent: parsedRent,
+      charges: parsedCharges,
       depositMonths,
       advanceMonths,
-      agencyFees: Math.round((parseInt(monthlyRent, 10) || 200000) * 0.5),
-      surface: parseInt(surface, 10) || 75,
+      agencyFees: Math.round(parsedRent * 0.5),
+      surface: parseInt(surface, 10) || 0,
       bedrooms,
       bathrooms,
       images: finalImages,
       description: description.trim(),
-      descriptionLines: descriptionLines.length > 0 ? descriptionLines : [
-        'Logement moderne et entretenu avec soin',
-        'Compteur individuel et approvisionnement en eau garanti',
-        'Accès sécurisé dans un quartier recherché',
-      ],
-      amenities: descriptionLines.length > 0 ? descriptionLines : [
-        'Compteur d’électricité individuel',
-        'Approvisionnement eau avec réserve',
-        'Gardiennage sécurisé 24/7',
-        'Climatisation split',
-      ],
+      descriptionLines: descriptionLines,
+      amenities: descriptionLines,
       isVerified: true,
       status: 'disponible',
     };
@@ -447,7 +433,8 @@ export function PublishListingModal({
                 required
                 value={monthlyRent}
                 onChange={(e) => setMonthlyRent(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-black text-brand-600"
+                placeholder="Ex: 150000"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-black text-brand-600 placeholder-slate-400"
               />
             </div>
 
@@ -459,7 +446,8 @@ export function PublishListingModal({
                 type="number"
                 value={charges}
                 onChange={(e) => setCharges(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900"
+                placeholder="Ex: 15000 (optionnel)"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 placeholder-slate-400"
               />
             </div>
           </div>
@@ -474,7 +462,8 @@ export function PublishListingModal({
                 type="number"
                 value={surface}
                 onChange={(e) => setSurface(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900"
+                placeholder="Ex: 45"
+                className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 placeholder-slate-400"
               />
             </div>
             <div>

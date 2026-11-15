@@ -83,9 +83,7 @@ function IncidentsPageContent() {
   const [issueCategory, setIssueCategory] = useState('Plomberie / Fuite d’eau');
   const [issueDesc, setIssueDesc] = useState('');
   const [issueUrgency, setIssueUrgency] = useState<IncidentUrgency>('normale');
-  const [issuePhotos, setIssuePhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-  ]);
+  const [issuePhotos, setIssuePhotos] = useState<string[]>([]);
   const [issueUrlInput, setIssueUrlInput] = useState('');
   const [showIssueUrlInput, setShowIssueUrlInput] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -160,9 +158,7 @@ function IncidentsPageContent() {
     setIssueDesc('');
     setIssueCategory('Plomberie / Fuite d’eau');
     setIssueUrgency('normale');
-    setIssuePhotos([
-      'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-    ]);
+    setIssuePhotos([]);
 
     const successMsg = `Panne signalée avec succès (${photoCount} photo${photoCount > 1 ? 's' : ''}) ! Votre bailleur et le gestionnaire ont été alertés.`;
     setToastMessage(`✅ ${successMsg}`);

@@ -57,13 +57,10 @@ export function NewPropertyModal({
   const [customCity, setCustomCity] = useState('');
   const [district, setDistrict] = useState('');
   const [address, setAddress] = useState('');
-  const [totalUnits, setTotalUnits] = useState(6);
-  const [monthlyRevenue, setMonthlyRevenue] = useState('1200000');
+  const [totalUnits, setTotalUnits] = useState(1);
+  const [monthlyRevenue, setMonthlyRevenue] = useState('');
   const [description, setDescription] = useState('');
-  const [images, setImages] = useState<string[]>([
-    'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
-  ]);
+  const [images, setImages] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -117,7 +114,7 @@ export function NewPropertyModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const finalImages = images.length > 0 ? images : PRESET_PROPERTY_PHOTOS.slice(0, 2);
+    const finalImages = images;
     const unitsCount = Math.max(1, totalUnits);
     const rev = parseInt(monthlyRevenue, 10) || 0;
     const rentPerUnit = unitsCount > 0 ? Math.round(rev / unitsCount) : rev;
@@ -145,9 +142,9 @@ export function NewPropertyModal({
       totalUnits: unitsCount,
       occupiedUnits: 0, // 0 lot occupé à l'enregistrement initial du bien
       monthlyRevenue: rev,
-      imageUrl: finalImages[0],
+      imageUrl: finalImages[0] || '',
       images: finalImages,
-      description: description || `Résidence moderne située à ${district || finalCity} (${country}). Gestion locative centralisée et sécurisée.`,
+      description: description.trim(),
       amenities: [
         'Compteurs d’électricité individuels',
         'Réserve d’eau et surpresseur',
@@ -350,7 +347,8 @@ export function NewPropertyModal({
                 required
                 value={monthlyRevenue}
                 onChange={(e) => setMonthlyRevenue(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-black text-brand-600"
+                placeholder="Ex: 250000"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-black text-brand-600 placeholder-slate-400"
               />
             </div>
           </div>

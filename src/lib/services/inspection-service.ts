@@ -27,13 +27,11 @@ const STORAGE_KEY = 'locagestion:inspections';
 export const DEFAULT_INSPECTION_KOFFI: InspectionData = {
   type: 'entree',
   date: new Date().toISOString().split('T')[0],
-  meterCashPower: 'Index prépayé individuel',
-  meterWater: 'Index compteur divisionnaire',
-  keysDelivered: 'Clés de sûreté remises',
+  meterCashPower: '',
+  meterWater: '',
+  keysDelivered: '',
   generalState: 'tres_bon',
-  notes: 'Logement réceptionné en bon état.',
-  landlordSignedBy: 'Le Bailleur',
-  landlordSignedAt: new Date().toLocaleDateString('fr-FR'),
+  notes: '',
   photos: [],
 };
 

@@ -126,10 +126,8 @@ function TenantPortalContent() {
   const [issueDesc, setIssueDesc] = useState('');
   const [issueUrgency, setIssueUrgency] = useState<'normale' | 'urgente' | 'critique'>('normale');
 
-  // Photos de la panne / incident
-  const [issuePhotos, setIssuePhotos] = useState<string[]>([
-    'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-  ]);
+  // Photos de la panne / incident (vide par défaut)
+  const [issuePhotos, setIssuePhotos] = useState<string[]>([]);
   const [issueUrlInput, setIssueUrlInput] = useState('');
   const [showIssueUrlInput, setShowIssueUrlInput] = useState(false);
   const issueFileInputRef = useRef<HTMLInputElement | null>(null);

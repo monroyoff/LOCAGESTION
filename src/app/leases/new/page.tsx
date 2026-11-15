@@ -299,13 +299,13 @@ export default function NewLeasePage() {
   );
 
   // Step 3 conditions financières
-  const [monthlyRent, setMonthlyRent] = useState('220000');
-  const [charges, setCharges] = useState('30000');
+  const [monthlyRent, setMonthlyRent] = useState('');
+  const [charges, setCharges] = useState('');
   const [includeFirstRent, setIncludeFirstRent] = useState(true);
   const [depositMonths, setDepositMonths] = useState('3');
   const [customDepositAmount, setCustomDepositAmount] = useState('');
-  const [hasUtilitiesDeposit, setHasUtilitiesDeposit] = useState(true);
-  const [utilitiesDepositAmount, setUtilitiesDepositAmount] = useState('50000');
+  const [hasUtilitiesDeposit, setHasUtilitiesDeposit] = useState(false);
+  const [utilitiesDepositAmount, setUtilitiesDepositAmount] = useState('');
   const [advanceMonths, setAdvanceMonths] = useState('0');
   const [paymentDay, setPaymentDay] = useState('5');
 
@@ -318,46 +318,17 @@ export default function NewLeasePage() {
   // Modal de prévisualisation du contrat complet
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
 
-  // État des Lieux & Constat Photos
+  // État des Lieux & Constat Photos (initialement vide, import libre par le bailleur)
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
   const [inspectionData, setInspectionData] = useState<InspectionData>({
     type: 'entree',
     date: new Date().toISOString().split('T')[0],
-    meterCashPower: '1 420 kWh (Cash Power individuel)',
-    meterWater: '384 m³ (SODECI / SONEB)',
-    keysDelivered: '3 clés de sûreté + 1 télécommande portail',
+    meterCashPower: '',
+    meterWater: '',
+    keysDelivered: '',
     generalState: 'tres_bon',
-    notes: 'Logement propre et prêt à emménager. Aucun dégât constaté lors de la visite contradictoire.',
-    photos: [
-      {
-        id: 'photo-1',
-        url: 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800&auto=format&fit=crop&q=80',
-        label: 'Salon & Espace de vie',
-        room: 'Salon / Séjour',
-        timestamp: '13/11/2026 à 10:15',
-      },
-      {
-        id: 'photo-2',
-        url: 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800&auto=format&fit=crop&q=80',
-        label: 'Chambre principale & Sol carrelé',
-        room: 'Chambre principale',
-        timestamp: '13/11/2026 à 10:20',
-      },
-      {
-        id: 'photo-3',
-        url: 'https://images.unsplash.com/photo-1556911220-e15b29be8c8f?w=800&auto=format&fit=crop&q=80',
-        label: 'Cuisine & Plomberie évier',
-        room: 'Cuisine',
-        timestamp: '13/11/2026 à 10:25',
-      },
-      {
-        id: 'photo-4',
-        url: 'https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=800&auto=format&fit=crop&q=80',
-        label: 'Salle de bain & Sanitaires neufs',
-        room: 'Salle d’eau / WC',
-        timestamp: '13/11/2026 à 10:30',
-      },
-    ],
+    notes: '',
+    photos: [],
   });
 
   // Calculs financiers dissociés
