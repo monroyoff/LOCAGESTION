@@ -202,10 +202,24 @@ export function UserProfileModal({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Sauvegarde du profil
-    saveUserProfile(profile);
+    // 1. Préservation stricte des identifiants d'inscription (non modifiables)
+    const immutableData = {
+      name: user?.name || profile.name,
+      firstName: user?.firstName || profile.firstName,
+      lastName: user?.lastName || profile.lastName,
+      email: user?.email || profile.email,
+      phone: user?.phone || profile.phone,
+    };
 
-    // 2. Synchronisation absolue dans la session active et les utilisateurs enregistrés
+    const finalProfile: UserProfile = {
+      ...profile,
+      ...immutableData,
+    };
+
+    // 2. Sauvegarde du profil
+    saveUserProfile(finalProfile);
+
+    // 3. Synchronisation absolue dans la session active et les utilisateurs enregistrés
     if (typeof window !== 'undefined') {
       try {
         const sessionStr = localStorage.getItem('locagestion:auth:session:v1');
@@ -213,7 +227,8 @@ export function UserProfileModal({
           const session = JSON.parse(sessionStr);
           const updatedUser = {
             ...session,
-            ...profile,
+            ...finalProfile,
+            ...immutableData,
             avatarUrl: profile.avatarUrl || session.avatarUrl,
           };
           localStorage.setItem('locagestion:auth:session:v1', JSON.stringify(updatedUser));
@@ -236,7 +251,7 @@ export function UserProfileModal({
           window.dispatchEvent(new CustomEvent('locagestion:auth_changed', { detail: { user: updatedUser } }));
         }
 
-        window.dispatchEvent(new CustomEvent('locagestion:profile_updated', { detail: profile }));
+        window.dispatchEvent(new CustomEvent('locagestion:profile_updated', { detail: finalProfile }));
         window.dispatchEvent(new Event('storage'));
       } catch (err) {
         console.error('Erreur mise à jour session:', err);
@@ -245,7 +260,7 @@ export function UserProfileModal({
 
     setSavedSuccess(true);
     notifySave(
-      `Photo et profil de ${profile.name} mis à jour avec succès !`,
+      `Photo et profil de ${finalProfile.name} mis à jour avec succès !`,
       'Profil enregistré'
     );
     setTimeout(() => {
@@ -426,47 +441,93 @@ export function UserProfileModal({
             </div>
           </div>
 
-          {/* Identité */}
+          {/* Bannière Identité Certifiée & Scellée */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 flex items-start gap-2.5">
+            <Lock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <strong className="text-slate-900">Identité certifiée à l'inscription :</strong> Votre nom, prénom, numéro de téléphone et adresse email sont définitivement scellés pour garantir la conformité juridique et la traçabilité des contrats et quittances.
+            </div>
+          </div>
+
+          {/* Identité scellée (Nom, Prénom, Email, Téléphone - Non modifiables) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {/* Nom de famille */}
             <div>
-              <label className="text-xs font-black text-slate-700 flex items-center gap-1.5 mb-1.5">
-                <User className="w-3.5 h-3.5 text-brand-500" />
-                <span>Nom complet</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Nom de famille</span>
+                </label>
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Scellé
+                </span>
+              </div>
               <input
                 type="text"
-                value={profile.name}
-                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                required
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                value={profile.lastName || (profile.name ? profile.name.split(' ').slice(1).join(' ') : '')}
+                disabled
+                readOnly
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
               />
             </div>
 
+            {/* Prénom(s) */}
             <div>
-              <label className="text-xs font-black text-slate-700 flex items-center gap-1.5 mb-1.5">
-                <Mail className="w-3.5 h-3.5 text-brand-500" />
-                <span>Email certifié</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Prénom(s)</span>
+                </label>
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Scellé
+                </span>
+              </div>
+              <input
+                type="text"
+                value={profile.firstName || (profile.name ? profile.name.split(' ')[0] : '')}
+                disabled
+                readOnly
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
+              />
+            </div>
+
+            {/* Email certifié */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                  <Mail className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Email certifié</span>
+                </label>
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Scellé
+                </span>
+              </div>
               <input
                 type="email"
                 value={profile.email}
-                onChange={(e) => setProfile({ ...profile, email: e.target.value })}
-                required
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                disabled
+                readOnly
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
               />
             </div>
 
-            <div className="sm:col-span-2">
-              <label className="text-xs font-black text-slate-700 flex items-center gap-1.5 mb-1.5">
-                <Phone className="w-3.5 h-3.5 text-brand-500" />
-                <span>Téléphone WhatsApp / Appels</span>
-              </label>
+            {/* Téléphone certifié */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Numéro de téléphone</span>
+                </label>
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Scellé
+                </span>
+              </div>
               <input
                 type="text"
                 value={profile.phone}
-                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                required
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                disabled
+                readOnly
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
               />
             </div>
           </div>
