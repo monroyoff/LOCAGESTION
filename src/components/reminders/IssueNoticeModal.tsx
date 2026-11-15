@@ -30,7 +30,7 @@ import {
   NOTICE_REASONS_CATALOG,
   NoticeService,
 } from '@/lib/services/notice-service';
-import { REGISTERED_TENANTS } from '@/lib/services/lease-service';
+import { LeaseService, RegisteredTenant } from '@/lib/services/lease-service';
 import { formatFCFA } from '@/lib/money/format';
 import { generateNoticePDF } from '@/lib/export/pdf-download';
 import { notifyAction } from '@/lib/notifications/action-notifier';
@@ -49,20 +49,25 @@ export function IssueNoticeModal({
   onNoticeCreated,
   preselectedTenantName,
 }: IssueNoticeModalProps) {
+  const [registeredTenants, setRegisteredTenants] = useState<RegisteredTenant[]>(() => {
+    if (typeof window !== 'undefined') {
+      return LeaseService.getRegisteredTenants();
+    }
+    return [];
+  });
+
   const [selectedTenantKey, setSelectedTenantKey] = useState<string>('');
   const [tenantName, setTenantName] = useState<string>('');
-  const [tenantPhone, setTenantPhone] = useState<string>('+229 97 12 34 56');
+  const [tenantPhone, setTenantPhone] = useState<string>('');
   const [tenantEmail, setTenantEmail] = useState<string>('');
-  const [propertyName, setPropertyName] = useState<string>('Résidence Les Cocotiers');
-  const [unitNumber, setUnitNumber] = useState<string>('Appt A3 (3 pièces)');
-  const [monthlyRent, setMonthlyRent] = useState<number>(220000);
+  const [propertyName, setPropertyName] = useState<string>('');
+  const [unitNumber, setUnitNumber] = useState<string>('');
+  const [monthlyRent, setMonthlyRent] = useState<number>(0);
 
   const [reasonType, setReasonType] = useState<NoticeReasonType>('reprise_personnelle');
-  const [reasonDetails, setReasonDetails] = useState<string>(
-    () => NOTICE_REASONS_CATALOG[0].defaultExpose
-  );
-  const [beneficiaryName, setBeneficiaryName] = useState<string>('M. Koffi Diallo (Propriétaire)');
-  const [salePrice, setSalePrice] = useState<number>(45000000);
+  const [reasonDetails, setReasonDetails] = useState<string>('');
+  const [beneficiaryName, setBeneficiaryName] = useState<string>('');
+  const [salePrice, setSalePrice] = useState<number>(0);
   const [noticeMonths, setNoticeMonths] = useState<number>(3);
   const [deliveryMethod, setDeliveryMethod] = useState<NoticeDeliveryMethod>('huissier');
 
@@ -105,10 +110,10 @@ export function IssueNoticeModal({
     }
   };
 
-  // Pré-remplissage si locataire pré-sélectionné
+  // Pré-remplissage uniquement si locataire pré-sélectionné
   useEffect(() => {
     if (preselectedTenantName) {
-      const match = REGISTERED_TENANTS.find(
+      const match = registeredTenants.find(
         (t) => t.name.toLowerCase() === preselectedTenantName.toLowerCase()
       );
       if (match) {
@@ -121,26 +126,20 @@ export function IssueNoticeModal({
       } else {
         setTenantName(preselectedTenantName);
       }
-    } else if (REGISTERED_TENANTS.length > 0 && !tenantName) {
-      const first = REGISTERED_TENANTS[0];
-      setSelectedTenantKey(first.id);
-      setTenantName(first.name);
-      setTenantPhone(first.phone);
-      setTenantEmail(first.email);
-      if (first.property) setPropertyName(first.property);
-      if (first.unit) setUnitNumber(first.unit);
     }
-  }, [preselectedTenantName]);
+  }, [preselectedTenantName, registeredTenants]);
 
   const handleSelectTenant = (tenantId: string) => {
     setSelectedTenantKey(tenantId);
-    if (tenantId === 'custom') {
+    if (tenantId === 'custom' || !tenantId) {
       setTenantName('');
       setTenantPhone('');
       setTenantEmail('');
+      setPropertyName('');
+      setUnitNumber('');
       return;
     }
-    const t = REGISTERED_TENANTS.find((item) => item.id === tenantId);
+    const t = registeredTenants.find((item) => item.id === tenantId);
     if (t) {
       setTenantName(t.name);
       setTenantPhone(t.phone);
@@ -295,9 +294,10 @@ export function IssueNoticeModal({
                     onChange={(e) => handleSelectTenant(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                   >
-                    {REGISTERED_TENANTS.map((t) => (
+                    <option value="">Sélectionner un locataire...</option>
+                    {registeredTenants.map((t) => (
                       <option key={t.id} value={t.id}>
-                        {t.name} • {t.property} ({t.unit})
+                        {t.name} {t.property ? `• ${t.property} (${t.unit || ''})` : ''}
                       </option>
                     ))}
                     <option value="custom">+ Autre locataire (saisie libre)</option>

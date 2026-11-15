@@ -120,15 +120,82 @@ export const INITIAL_NOTICES: Notice[] = [];
 
 const NOTICES_STORAGE_KEY = 'locagestion:notices:v2';
 
+/**
+ * Détecte si un préavis est un faux dossier de démo / mock hérité
+ */
+export function isFakeNotice(n?: Partial<Notice> | null): boolean {
+  if (!n) return true;
+  const id = (n.id || '').trim();
+  if (
+    id === 'PREAV-2026-001' ||
+    id === 'PREAV-2026-002' ||
+    id === 'PREAV-2026-003' ||
+    id === 'PREAV-2026-004' ||
+    id.startsWith('mock-') ||
+    id.startsWith('demo-')
+  ) {
+    return true;
+  }
+  const name = (n.tenantName || '').trim().toLowerCase();
+  if (
+    name === 'koffi mensah' ||
+    name === 'ibrahim touré' ||
+    name === 'ibrahim toure' ||
+    name === 'fatoumata traoré' ||
+    name === 'fatoumata traore' ||
+    name === 'amina diop' ||
+    name === 'mamadou diallo'
+  ) {
+    return true;
+  }
+  const prop = (n.propertyName || '').trim().toLowerCase();
+  if (
+    prop === 'résidence les cocotiers' ||
+    prop === 'residence les cocotiers' ||
+    prop === 'immeuble palmier royal' ||
+    prop === 'villa émeraude' ||
+    prop === 'villa emeraude'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+// Nettoyage immédiat côté client pour purger les anciens dossiers démo
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem('locagestion:notices:v1');
+    const raw = localStorage.getItem(NOTICES_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        const sanitized = parsed.filter((n) => !isFakeNotice(n));
+        if (sanitized.length !== parsed.length) {
+          localStorage.setItem(NOTICES_STORAGE_KEY, JSON.stringify(sanitized));
+        }
+      }
+    }
+  } catch {}
+}
+
 export class NoticeService {
   static getNotices(): Notice[] {
     if (typeof window === 'undefined') return [];
     try {
+      localStorage.removeItem('locagestion:notices:v1');
       const stored = localStorage.getItem(NOTICES_STORAGE_KEY);
       if (!stored) {
         return [];
       }
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) {
+        const sanitized = parsed.filter((n) => !isFakeNotice(n));
+        if (sanitized.length !== parsed.length) {
+          localStorage.setItem(NOTICES_STORAGE_KEY, JSON.stringify(sanitized));
+        }
+        return sanitized;
+      }
+      return [];
     } catch {
       return [];
     }
@@ -139,8 +206,10 @@ export class NoticeService {
     const notices = this.getNotices();
     return notices.filter(
       (n) =>
-        n.tenantName.toLowerCase().includes(tenantName.toLowerCase()) ||
-        tenantName.toLowerCase().includes(n.tenantName.toLowerCase())
+        !isFakeNotice(n) &&
+        (n.tenantName.toLowerCase().trim() === tenantName.toLowerCase().trim() ||
+          n.tenantName.toLowerCase().includes(tenantName.toLowerCase()) ||
+          tenantName.toLowerCase().includes(n.tenantName.toLowerCase()))
     );
   }
 

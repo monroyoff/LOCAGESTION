@@ -193,16 +193,40 @@ export const LeaseService = {
 
   // Récupérer la liste des locataires certifiés (avec persistance)
   getRegisteredTenants(): RegisteredTenant[] {
-    if (typeof window === 'undefined') return REGISTERED_TENANTS;
+    if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem('locagestion:registered_tenants');
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const sanitized = parsed.filter((t: RegisteredTenant) => {
+            if (!t) return false;
+            const name = (t.name || '').trim().toLowerCase();
+            if (
+              name === 'koffi mensah' ||
+              name === 'mamadou diallo' ||
+              name === 'ibrahim traoré' ||
+              name === 'ibrahim traore' ||
+              name === 'aïcha touré' ||
+              name === 'aicha toure' ||
+              name === 'fatoumata traoré' ||
+              name === 'fatoumata traore' ||
+              name === 'amina diop'
+            ) {
+              return false;
+            }
+            return true;
+          });
+          if (sanitized.length !== parsed.length) {
+            localStorage.setItem('locagestion:registered_tenants', JSON.stringify(sanitized));
+          }
+          return sanitized;
+        }
       }
     } catch (e) {
       console.error('Erreur lecture locataires enregistrés:', e);
     }
-    return REGISTERED_TENANTS;
+    return [];
   },
 
   // Enregistrer dynamiquement un nouveau locataire et lui générer un code d'accès

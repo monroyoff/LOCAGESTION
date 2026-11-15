@@ -279,7 +279,7 @@ function TenantPortalContent() {
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
   const [selectedInspectionPhoto, setSelectedInspectionPhoto] = useState<InspectionPhoto | null>(null);
   const [inspectionData, setInspectionData] = useState<InspectionData>(() =>
-    InspectionService.getInspectionByLeaseId('BAIL-2025-089')
+    InspectionService.getInspectionByLeaseId('')
   );
 
   const [dismissedLeaseIds, setDismissedLeaseIds] = useState<string[]>(() => {
@@ -379,13 +379,13 @@ function TenantPortalContent() {
   }, []);
 
   useEffect(() => {
-    const leaseId = currentLease?.id || pendingLease?.id || 'BAIL-2025-089';
+    const leaseId = currentLease?.id || pendingLease?.id || '';
     setInspectionData(InspectionService.getInspectionByLeaseId(leaseId));
   }, [currentLease, pendingLease]);
 
   useEffect(() => {
     const handleInspectionUpdate = () => {
-      const leaseId = currentLease?.id || pendingLease?.id || 'BAIL-2025-089';
+      const leaseId = currentLease?.id || pendingLease?.id || '';
       setInspectionData(InspectionService.getInspectionByLeaseId(leaseId));
     };
     window.addEventListener('locagestion:inspections_updated', handleInspectionUpdate);
@@ -2186,11 +2186,13 @@ function TenantPortalContent() {
                       Logement Titulaire
                     </span>
                     <span className="text-xs font-black text-white block">
-                      Résidence Les Cocotiers (Appt A3)
+                      {currentLease
+                        ? `${currentLease.property} (${currentLease.unit})`
+                        : 'Aucun logement rattaché'}
                     </span>
                     <div className="flex items-center gap-2 pt-1 text-[11px] text-emerald-300 font-bold">
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      <span>Bail BAIL-2025-089 en vigueur</span>
+                      <span>{currentLease ? `Bail ${currentLease.id} en vigueur` : 'Aucun bail actif'}</span>
                     </div>
                   </div>
                 </div>
@@ -3257,7 +3259,7 @@ function TenantPortalContent() {
       <InspectionModal
         isOpen={isInspectionModalOpen}
         onClose={() => setIsInspectionModalOpen(false)}
-        leaseId={currentLease?.id || pendingLease?.id || 'BAIL-2025-089'}
+        leaseId={currentLease?.id || pendingLease?.id || ''}
         propertyName={tenant.property}
         unitNumber={tenant.unit}
         tenantName={tenant.name}

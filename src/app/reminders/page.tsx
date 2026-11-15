@@ -70,7 +70,16 @@ export default function RemindersCenterPage() {
   const [selectedNoticeForEmail, setSelectedNoticeForEmail] = useState<Notice | null>(null);
 
   useEffect(() => {
-    setNotices(NoticeService.getNotices());
+    const handleUpdate = () => {
+      setNotices(NoticeService.getNotices());
+    };
+    handleUpdate();
+    window.addEventListener('locagestion:notices_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('locagestion:notices_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, []);
 
   const refreshNotices = () => {
@@ -621,10 +630,17 @@ export default function RemindersCenterPage() {
                 </div>
 
                 {filteredNotices.length === 0 ? (
-                  <div className="p-10 text-center rounded-2xl bg-slate-50 border border-slate-200/80">
+                  <div className="p-10 text-center rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
                     <Scale className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                    <p className="text-xs font-bold text-slate-600">
-                      Aucun préavis ne correspond à vos critères de recherche.
+                    <p className="text-xs font-bold text-slate-700">
+                      {notices.length === 0
+                        ? 'Aucun dossier de préavis enregistré'
+                        : 'Aucun préavis ne correspond à vos critères de recherche'}
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      {notices.length === 0
+                        ? 'Votre registre des congés et résiliations est vierge. Les préavis émis apparaîtront ici.'
+                        : 'Modifiez vos filtres ou réinitialisez votre recherche pour afficher vos dossiers.'}
                     </p>
                   </div>
                 ) : (

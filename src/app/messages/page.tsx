@@ -62,7 +62,35 @@ interface Conversation {
   messages: Message[];
 }
 
-const MOCK_CONVERSATIONS: Conversation[] = [];
+const STORAGE_KEY_CONVERSATIONS = 'locagestion:conversations:v1';
+
+function isFakeConversation(c?: Partial<Conversation> | null): boolean {
+  if (!c) return true;
+  const name = (c.tenantName || '').trim().toLowerCase();
+  if (
+    name === 'koffi mensah' ||
+    name === 'mamadou diallo' ||
+    name === 'ibrahim traoré' ||
+    name === 'ibrahim traore' ||
+    name === 'aïcha touré' ||
+    name === 'aicha toure' ||
+    name === 'fatoumata traoré' ||
+    name === 'fatoumata traore' ||
+    name === 'amina diop'
+  ) {
+    return true;
+  }
+  const prop = (c.propertyTitle || '').trim().toLowerCase();
+  if (
+    prop.includes('résidence les cocotiers') ||
+    prop.includes('residence les cocotiers') ||
+    prop.includes('immeuble palmier royal') ||
+    prop.includes('villa émeraude')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 export default function MessagesPage() {
   const router = useRouter();
@@ -70,11 +98,40 @@ export default function MessagesPage() {
   const { user, activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
   const [activeTab, setActiveTab] = useState<'general' | 'archive'>('general');
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Conversations réelles persistées — STRICTEMENT VIDE AU DÉPART
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_CONVERSATIONS);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const sanitized = parsed.filter((c) => !isFakeConversation(c));
+          if (sanitized.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(sanitized));
+          }
+          return sanitized;
+        }
+      }
+    } catch {}
+    return [];
+  });
+
   const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
   const [inputText, setInputText] = useState('');
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [optionsMenuOpen, setOptionsMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const saveConversations = (updated: Conversation[]) => {
+    setConversations(updated);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(updated));
+      } catch {}
+    }
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -82,7 +139,7 @@ export default function MessagesPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const filteredConversations = MOCK_CONVERSATIONS.filter((c) => {
+  const filteredConversations = conversations.filter((c) => {
     const matchesTab = activeTab === 'general' ? !c.isArchived : c.isArchived;
     const matchesSearch =
       c.tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -104,13 +161,15 @@ export default function MessagesPage() {
       status: 'sent',
     };
 
-    setSelectedConv((prev) => !prev ? null : ({
-      ...prev,
-      messages: [...prev.messages, newMessage],
+    const updatedConv: Conversation = {
+      ...selectedConv,
+      messages: [...selectedConv.messages, newMessage],
       lastMessage: inputText,
       lastMessageTime: 'À l’instant',
-    }));
+    };
 
+    setSelectedConv(updatedConv);
+    saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     setInputText('');
   };
 
@@ -120,17 +179,20 @@ export default function MessagesPage() {
       id: `m-doc-${Date.now()}`,
       sender: 'me',
       senderName: user?.name || 'Moi',
-      text: '📄 Pièce jointe : Quittance_Loyer_Certifiee_REC-2026-088.pdf (Transmis)',
+      text: '📄 Pièce jointe : Document_Officiel_Certifie.pdf (Transmis)',
       time: 'À l’instant',
       status: 'sent',
     };
 
-    setSelectedConv((prev) => !prev ? null : ({
-      ...prev,
-      messages: [...prev.messages, docMessage],
+    const updatedConv: Conversation = {
+      ...selectedConv,
+      messages: [...selectedConv.messages, docMessage],
       lastMessage: '📄 Quittance de loyer transmise',
       lastMessageTime: 'À l’instant',
-    }));
+    };
+
+    setSelectedConv(updatedConv);
+    saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     showToast('Document officiel attaché et transmis dans la conversation !');
   };
 
@@ -146,22 +208,27 @@ export default function MessagesPage() {
       imageUrl: selectedConv.propertyThumbnail,
     };
 
-    setSelectedConv((prev) => !prev ? null : ({
-      ...prev,
-      messages: [...prev.messages, photoMessage],
+    const updatedConv: Conversation = {
+      ...selectedConv,
+      messages: [...selectedConv.messages, photoMessage],
       lastMessage: '📷 Photo du logement envoyée',
       lastMessageTime: 'À l’instant',
-    }));
+    };
+
+    setSelectedConv(updatedConv);
+    saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     showToast('Photo du logement transmise dans la conversation !');
   };
 
   const handleToggleArchive = () => {
     if (!selectedConv) return;
     setOptionsMenuOpen(false);
-    setSelectedConv((prev) => !prev ? null : ({
-      ...prev,
-      isArchived: !prev.isArchived,
-    }));
+    const updatedConv: Conversation = {
+      ...selectedConv,
+      isArchived: !selectedConv.isArchived,
+    };
+    setSelectedConv(updatedConv);
+    saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     showToast(
       !selectedConv.isArchived
         ? 'Conversation archivée avec succès.'
@@ -228,7 +295,7 @@ export default function MessagesPage() {
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                     activeTab === 'general' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                   }`}>
-                    6
+                    {conversations.filter((c) => !c.isArchived).length}
                   </span>
                 </button>
                 <button
@@ -244,7 +311,7 @@ export default function MessagesPage() {
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                     activeTab === 'archive' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                   }`}>
-                    2
+                    {conversations.filter((c) => c.isArchived).length}
                   </span>
                 </button>
               </div>
@@ -264,7 +331,20 @@ export default function MessagesPage() {
 
             {/* Conversations Scrollable List */}
             <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-              {filteredConversations.map((conv) => {
+              {filteredConversations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-2 mt-8">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
+                    <MessageCircle className="w-6 h-6" />
+                  </div>
+                  <h4 className="text-xs font-bold text-slate-700">Aucun message</h4>
+                  <p className="text-[11px] text-slate-400 max-w-xs leading-relaxed">
+                    {activeTab === 'general'
+                      ? 'Votre boîte de réception est vide. Tous vos échanges apparaîtront ici.'
+                      : 'Aucune conversation archivée.'}
+                  </p>
+                </div>
+              ) : (
+                filteredConversations.map((conv) => {
                 const isSelected = selectedConv?.id === conv.id;
 
                 return (
@@ -332,7 +412,7 @@ export default function MessagesPage() {
                     </div>
                   </div>
                 );
-              })}
+              }))}
             </div>
           </div>
 

@@ -48,10 +48,8 @@ export function TenantDepartureModal({
   monthlyRent = 0,
 }: TenantDepartureModalProps) {
   const [noticeMonths, setNoticeMonths] = useState<number>(3);
-  const [selectedReason, setSelectedReason] = useState<string>(DEPARTURE_REASONS[0]);
-  const [reasonDetails, setReasonDetails] = useState<string>(
-    'Je vous notifie par la présente mon intention de libérer le logement loué suite à une nouvelle affectation professionnelle. Je reste disponible pour convenir de la date de l’état des lieux de sortie et de la remise des clés.'
-  );
+  const [selectedReason, setSelectedReason] = useState<string>('');
+  const [reasonDetails, setReasonDetails] = useState<string>('');
 
   // Date effective par défaut (Aujourd'hui + noticeMonths mois)
   const calculateDefaultEffectiveDate = (months: number) => {
