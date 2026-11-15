@@ -219,6 +219,8 @@ export interface RentalListing {
   status: 'disponible' | 'reserve' | 'loue' | 'en_pause';
   authorId?: string;
   authorName?: string;
+  authorEmail?: string;
+  authorPhone?: string;
   authorRole?: UserSpace;
   createdAt?: string;
   viewsCount?: number;

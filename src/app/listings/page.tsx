@@ -179,7 +179,12 @@ export default function ListingsPage() {
   };
 
   // Modals & Notifications
-  const [listings, setListings] = useState<RentalListing[]>(MOCK_RENTAL_LISTINGS);
+  const [listings, setListings] = useState<RentalListing[]>(() => {
+    if (typeof window !== 'undefined') {
+      return ListingsService.getAllListings();
+    }
+    return [];
+  });
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [selectedListingForDetail, setSelectedListingForDetail] = useState<RentalListing | null>(null);
   const [currentDetailPhotoIdx, setCurrentDetailPhotoIdx] = useState(0);
@@ -250,6 +255,8 @@ export default function ListingsPage() {
       ...newListing,
       authorId: user?.id,
       authorName: user?.name,
+      authorEmail: user?.email,
+      authorPhone: user?.phone,
       authorRole: activeSpace,
       createdAt: new Date().toLocaleDateString('fr-FR'),
       viewsCount: 0,
@@ -1065,7 +1072,7 @@ export default function ListingsPage() {
                     : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
                 }`}
               >
-                🌍 Tous ({MOCK_RENTAL_LISTINGS.length})
+                🌍 Tous ({listings.length})
               </button>
               {Object.entries(COUNTRIES_CITIES).map(([country, data]) => {
                 const count = countryCounts[country] || 0;

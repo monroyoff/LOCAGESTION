@@ -233,7 +233,7 @@ export const IncidentService = {
   getTotalArtisanExpenses(): number {
     const incidents = this.getIncidents();
     const sum = incidents.reduce((acc, curr) => acc + (curr.artisanFee || 0), 0);
-    return sum > 0 ? sum : 620000;
+    return sum;
   },
 
   // Attribution d'un artisan ou technicien
