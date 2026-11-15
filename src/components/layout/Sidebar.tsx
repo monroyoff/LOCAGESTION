@@ -106,9 +106,11 @@ export function Sidebar({
       setUserProfile(getUserProfile(activeSpace, true));
     };
     window.addEventListener('locagestion:profile_updated', handleProfileUpdate);
+    window.addEventListener('locagestion:auth_changed', handleProfileUpdate);
     window.addEventListener('locagestion:residence_updated', handleProfileUpdate);
     return () => {
       window.removeEventListener('locagestion:profile_updated', handleProfileUpdate);
+      window.removeEventListener('locagestion:auth_changed', handleProfileUpdate);
       window.removeEventListener('locagestion:residence_updated', handleProfileUpdate);
     };
   }, [activeSpace]);
@@ -227,7 +229,6 @@ export function Sidebar({
       href: '/properties',
       icon: Building2,
       active: pathname.startsWith('/properties'),
-      count: '4',
     },
     {
       name: 'Baux & Contrats',
@@ -259,16 +260,12 @@ export function Sidebar({
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
-      badgeCount: 3,
-      badgeColor: 'bg-brand-500',
     },
     {
       name: 'Relances & Préavis',
       href: '/reminders',
       icon: BellRing,
       active: pathname.startsWith('/reminders'),
-      badgeCount: landlordNoticesCount > 0 ? landlordNoticesCount : undefined,
-      badgeColor: 'bg-rose-500',
     },
     {
       name: 'Pannes & Interventions',
@@ -298,7 +295,6 @@ export function Sidebar({
       icon: Receipt,
       portalTab: 'quittances',
       active: pathname === '/portal' && effectivePortalTab === 'quittances',
-      count: '6',
       mobileOnly: true,
     },
     {
@@ -315,7 +311,6 @@ export function Sidebar({
       icon: ShieldCheck,
       portalTab: 'solvabilite',
       active: pathname === '/portal' && effectivePortalTab === 'solvabilite',
-      badge: '96/100',
       mobileOnly: true,
     },
     {
@@ -323,8 +318,6 @@ export function Sidebar({
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
-      badgeCount: 1,
-      badgeColor: 'bg-emerald-500',
     },
     {
       name: 'Publier une annonce',
@@ -353,8 +346,6 @@ export function Sidebar({
       icon: BellRing,
       portalTab: 'preavis',
       active: pathname === '/portal' && effectivePortalTab === 'preavis',
-      badgeCount: tenantNoticesCount > 0 ? tenantNoticesCount : undefined,
-      badgeColor: 'bg-rose-500',
     },
     {
       name: 'Pannes & Interventions',
@@ -396,8 +387,6 @@ export function Sidebar({
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
-      badgeCount: 3,
-      badgeColor: 'bg-amber-500',
     },
   ];
 
@@ -638,6 +627,7 @@ export function Sidebar({
               <div className="relative shrink-0">
                 <img
                   src={
+                    context?.user?.avatarUrl ||
                     userProfile.avatarUrl ||
                     (isDemarcheur
                       ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80'
@@ -645,7 +635,7 @@ export function Sidebar({
                       ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
                       : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')
                   }
-                  alt={userProfile.name}
+                  alt={context?.user?.name || userProfile.name}
                   className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 group-hover:ring-brand-400 group-hover:scale-105 transition-all"
                 />
                 <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-[#131720]" />

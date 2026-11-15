@@ -66,7 +66,12 @@ export function StatCards({ kpis, onCardClick }: StatCardsProps) {
       badgeBg: 'bg-blue-500/10 text-blue-700 border-blue-200',
       accentColor: 'text-blue-600',
       hoverRing: 'hover:border-blue-400/80 hover:ring-2 hover:ring-blue-500/15',
-      description: 'Calculé sur 28 lots loués',
+      description:
+        kpis.occupancyRate.occupiedUnits > 0
+          ? `Calculé sur ${kpis.occupancyRate.occupiedUnits} lot${
+              kpis.occupancyRate.occupiedUnits > 1 ? 's' : ''
+            } loué${kpis.occupancyRate.occupiedUnits > 1 ? 's' : ''}`
+          : 'Calculé sur les lots loués',
       href: '/properties',
       actionLabel: 'Voir le parc & lots',
     },

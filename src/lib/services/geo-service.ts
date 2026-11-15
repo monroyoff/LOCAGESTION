@@ -329,6 +329,24 @@ export function saveUserProfile(profile: UserProfile): void {
     if (profile.projectCountry) {
       localStorage.setItem('locagestion:user_project_country', profile.projectCountry);
     }
+
+    // Synchronisation directe avec la session utilisateur authentifié
+    const sessionStr = localStorage.getItem('locagestion:auth:session:v1');
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      const updatedUser = {
+        ...session,
+        avatarUrl: profile.avatarUrl || session.avatarUrl,
+        residenceCountry: profile.residenceCountry || session.residenceCountry,
+        residenceCity: profile.residenceCity || session.residenceCity,
+        residenceDistrict: profile.residenceDistrict || session.residenceDistrict,
+        projectCountry: profile.projectCountry || session.projectCountry,
+        name: profile.name || session.name,
+      };
+      localStorage.setItem('locagestion:auth:session:v1', JSON.stringify(updatedUser));
+      window.dispatchEvent(new CustomEvent('locagestion:auth_changed', { detail: { user: updatedUser } }));
+    }
+
     window.dispatchEvent(new CustomEvent('locagestion:profile_updated', { detail: profile }));
     window.dispatchEvent(
       new CustomEvent('locagestion:residence_updated', {

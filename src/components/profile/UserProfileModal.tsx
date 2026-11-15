@@ -73,7 +73,7 @@ export function UserProfileModal({
   onClose,
   activeSpace: initialActiveSpace = 'locataire',
 }: UserProfileModalProps) {
-  const { activeSpace, switchSpace, logout } = useSpace();
+  const { activeSpace, switchSpace, logout, user } = useSpace();
   const currentRole = activeSpace || initialActiveSpace;
 
   const [profile, setProfile] = useState<UserProfile>(() => getUserProfile(currentRole));
@@ -87,6 +87,9 @@ export function UserProfileModal({
   useEffect(() => {
     if (isOpen) {
       const p = getUserProfile(currentRole);
+      if (user && user.avatarUrl) {
+        p.avatarUrl = user.avatarUrl;
+      }
       setProfile(p);
       setSavedSuccess(false);
       setGpsFeedback(null);
@@ -94,7 +97,7 @@ export function UserProfileModal({
         .then((geo) => setUserLocation(geo))
         .catch(() => {});
     }
-  }, [isOpen, currentRole]);
+  }, [isOpen, currentRole, user]);
 
   // Fermeture par la touche Échap (Hook inconditionnel)
   useEffect(() => {
@@ -128,14 +131,49 @@ export function UserProfileModal({
   const handleAvatarFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Redimensionnement et compression intelligente pour éviter tout dépassement de quota localStorage
     const reader = new FileReader();
     reader.onload = (event) => {
-      if (event.target?.result) {
-        setProfile((prev) => ({
-          ...prev,
-          avatarUrl: event.target!.result as string,
-        }));
-      }
+      const rawDataUrl = event.target?.result as string;
+      if (!rawDataUrl) return;
+
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const targetSize = 320;
+          const minSide = Math.min(img.width, img.height);
+          const startX = (img.width - minSide) / 2;
+          const startY = (img.height - minSide) / 2;
+
+          canvas.width = targetSize;
+          canvas.height = targetSize;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, startX, startY, minSide, minSide, 0, 0, targetSize, targetSize);
+            const compressedUrl = canvas.toDataURL('image/jpeg', 0.85);
+
+            setProfile((prev) => ({
+              ...prev,
+              avatarUrl: compressedUrl,
+            }));
+          } else {
+            setProfile((prev) => ({
+              ...prev,
+              avatarUrl: rawDataUrl,
+            }));
+          }
+        } catch {
+          setProfile((prev) => ({
+            ...prev,
+            avatarUrl: rawDataUrl,
+          }));
+        }
+      };
+      img.src = rawDataUrl;
     };
     reader.readAsDataURL(file);
     e.target.value = '';
@@ -163,15 +201,56 @@ export function UserProfileModal({
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+
+    // 1. Sauvegarde du profil
     saveUserProfile(profile);
+
+    // 2. Synchronisation absolue dans la session active et les utilisateurs enregistrés
+    if (typeof window !== 'undefined') {
+      try {
+        const sessionStr = localStorage.getItem('locagestion:auth:session:v1');
+        if (sessionStr) {
+          const session = JSON.parse(sessionStr);
+          const updatedUser = {
+            ...session,
+            ...profile,
+            avatarUrl: profile.avatarUrl || session.avatarUrl,
+          };
+          localStorage.setItem('locagestion:auth:session:v1', JSON.stringify(updatedUser));
+
+          // Mettre à jour dans la liste permanente des utilisateurs
+          const usersStr = localStorage.getItem('locagestion:auth:users:v1');
+          if (usersStr) {
+            const users = JSON.parse(usersStr);
+            if (Array.isArray(users)) {
+              const updatedUsers = users.map((u: any) =>
+                u.id === updatedUser.id || u.email === updatedUser.email
+                  ? { ...u, ...updatedUser }
+                  : u
+              );
+              localStorage.setItem('locagestion:auth:users:v1', JSON.stringify(updatedUsers));
+            }
+          }
+
+          // Déclencher le re-render immédiat dans tous les composants React
+          window.dispatchEvent(new CustomEvent('locagestion:auth_changed', { detail: { user: updatedUser } }));
+        }
+
+        window.dispatchEvent(new CustomEvent('locagestion:profile_updated', { detail: profile }));
+        window.dispatchEvent(new Event('storage'));
+      } catch (err) {
+        console.error('Erreur mise à jour session:', err);
+      }
+    }
+
     setSavedSuccess(true);
     notifySave(
-      `Profil de ${profile.name} mis à jour avec succès ! Pays de résidence : ${profile.residenceCountry} (${profile.residenceCity}).`,
-      'Profil & Inscription enregistrés'
+      `Photo et profil de ${profile.name} mis à jour avec succès !`,
+      'Profil enregistré'
     );
     setTimeout(() => {
       onClose();
-    }, 1000);
+    }, 700);
   };
 
   return (

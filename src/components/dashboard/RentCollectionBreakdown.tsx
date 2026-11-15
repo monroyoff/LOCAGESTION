@@ -117,7 +117,7 @@ export function RentCollectionBreakdown({ breakdown }: RentCollectionBreakdownPr
                 Recouvré
               </span>
               <span className="text-[10px] text-slate-400 mt-0.5">
-                {breakdown.paidCount} / 28 locataires
+                {breakdown.paidCount} / {breakdown.paidCount + breakdown.partialCount + breakdown.overdueCount} locataires
               </span>
             </div>
           </div>
