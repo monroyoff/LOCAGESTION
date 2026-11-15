@@ -284,7 +284,7 @@ export function PropertyDetailModal({
               <div>
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
                   <Layers className="w-4 h-4 text-brand-500" />
-                  <span>Lots & Unités Disponibles ({property.unitsList ? property.unitsList.length : property.totalUnits})</span>
+                  <span>Lots & Unités ({property.unitsList ? property.unitsList.length : property.totalUnits})</span>
                 </h4>
                 <p className="text-[11px] text-slate-400">
                   Cliquez sur un lot occupé pour voir la fiche locataire ou sur un lot vacant pour rédiger un bail
@@ -305,50 +305,59 @@ export function PropertyDetailModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {(property.unitsList || []).map((l, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => {
-                    onClose();
-                    if (l.status === 'occupe') {
-                      router.push('/tenants');
-                    } else {
-                      router.push('/leases/new');
-                    }
-                  }}
-                  className="p-3.5 bg-slate-50 hover:bg-white hover:shadow-md hover:border-brand-300 rounded-2xl border border-slate-200/80 flex items-center justify-between transition-all cursor-pointer group"
-                >
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-black text-xs text-slate-900 group-hover:text-brand-600 transition-colors">
-                        {l.unit}
-                      </span>
-                      <span
-                        className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                          l.status === 'occupe'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-amber-100 text-amber-800'
-                        }`}
-                      >
-                        {l.status === 'occupe' ? 'Occupé' : 'Vacant'}
+              {(property.unitsList || []).map((l, idx) => {
+                const isOccupied =
+                  l.status === 'occupe' &&
+                  l.tenant &&
+                  !l.tenant.toLowerCase().includes('disponible') &&
+                  !l.tenant.startsWith('Locataire Lot') &&
+                  !l.tenant.toLowerCase().includes('fictif');
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      onClose();
+                      if (isOccupied) {
+                        router.push('/tenants');
+                      } else {
+                        router.push('/leases/new');
+                      }
+                    }}
+                    className="p-3.5 bg-slate-50 hover:bg-white hover:shadow-md hover:border-brand-300 rounded-2xl border border-slate-200/80 flex items-center justify-between transition-all cursor-pointer group"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black text-xs text-slate-900 group-hover:text-brand-600 transition-colors">
+                          {l.unit}
+                        </span>
+                        <span
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                            isOccupied
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : 'bg-amber-100 text-amber-800'
+                          }`}
+                        >
+                          {isOccupied ? 'Occupé' : 'Vacant (Disponible)'}
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 block mt-0.5">{l.type}</span>
+                      <span className="text-[10px] text-slate-400 block mt-0.5 truncate max-w-[140px]">
+                        {isOccupied ? `Locataire : ${l.tenant}` : 'Non loué (Disponible)'}
                       </span>
                     </div>
-                    <span className="text-[11px] text-slate-500 block mt-0.5">{l.type}</span>
-                    <span className="text-[10px] text-slate-400 block mt-0.5 truncate max-w-[140px]">
-                      {l.tenant}
-                    </span>
-                  </div>
 
-                  <div className="text-right shrink-0">
-                    <span className="text-xs font-black text-slate-900 block">
-                      {formatFCFA(l.rent)}
-                    </span>
-                    <span className="text-[10px] text-brand-600 font-bold block group-hover:underline">
-                      {l.status === 'occupe' ? 'Voir locataire ➔' : 'Créer bail ➔'}
-                    </span>
+                    <div className="text-right shrink-0">
+                      <span className="text-xs font-black text-slate-900 block">
+                        {formatFCFA(l.rent)}
+                      </span>
+                      <span className="text-[10px] text-brand-600 font-bold block group-hover:underline">
+                        {isOccupied ? 'Voir locataire ➔' : 'Créer bail ➔'}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>

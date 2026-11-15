@@ -119,16 +119,17 @@ export function NewPropertyModal({
 
     const finalImages = images.length > 0 ? images : PRESET_PROPERTY_PHOTOS.slice(0, 2);
     const unitsCount = Math.max(1, totalUnits);
-    const rev = parseInt(monthlyRevenue, 10) || 1200000;
-    const rentPerUnit = Math.round(rev / unitsCount);
+    const rev = parseInt(monthlyRevenue, 10) || 0;
+    const rentPerUnit = unitsCount > 0 ? Math.round(rev / unitsCount) : rev;
 
+    // À la création du bien, chaque lot est libre et vacant (pas de locataire fictif tant qu'aucun bail n'est conclu)
     const generatedUnits = Array.from({ length: unitsCount }).map((_, idx) => ({
       unit: `Lot ${idx + 1}`,
-      type: idx === 0 ? 'Chambre Salon Sanitaire • 45 m²' : `${idx + 1} Pièces • ${50 + idx * 15} m²`,
+      type: idx === 0 ? (type || 'Chambre Salon Sanitaire • 45 m²') : `${idx + 1} Pièces • ${50 + idx * 15} m²`,
       surface: 50 + idx * 10,
       rent: rentPerUnit,
-      tenant: idx < Math.ceil(unitsCount * 0.7) ? `Locataire Lot ${idx + 1}` : 'Disponible',
-      status: (idx < Math.ceil(unitsCount * 0.7) ? 'occupe' : 'vacant') as 'occupe' | 'vacant',
+      tenant: 'Disponible',
+      status: 'vacant' as const,
     }));
 
     const finalCity = isCustomCity && customCity.trim() ? customCity.trim() : city;
@@ -142,7 +143,7 @@ export function NewPropertyModal({
       district: district || 'Centre-ville',
       country,
       totalUnits: unitsCount,
-      occupiedUnits: Math.ceil(unitsCount * 0.7),
+      occupiedUnits: 0, // 0 lot occupé à l'enregistrement initial du bien
       monthlyRevenue: rev,
       imageUrl: finalImages[0],
       images: finalImages,

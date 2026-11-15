@@ -46,8 +46,44 @@ export default function PropertiesPage() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setProperties(parsed);
-          setSelectedProperty(parsed[0]);
+          // Nettoyage et assainissement des biens existants pour éliminer tout locataire fictif automatique ("Locataire Lot X")
+          let changed = false;
+          const sanitized = parsed.map((p: Property) => {
+            let propertyHasFakeTenant = false;
+            const updatedUnits = (p.unitsList || []).map((u) => {
+              if (
+                u.tenant &&
+                (u.tenant.startsWith('Locataire Lot') ||
+                  u.tenant.toLowerCase().includes('fictif') ||
+                  u.tenant.toLowerCase() === 'locataire lot 1')
+              ) {
+                propertyHasFakeTenant = true;
+                return {
+                  ...u,
+                  tenant: 'Disponible',
+                  status: 'vacant' as const,
+                };
+              }
+              return u;
+            });
+
+            if (propertyHasFakeTenant) {
+              changed = true;
+              const realOccupiedCount = updatedUnits.filter((u) => u.status === 'occupe').length;
+              return {
+                ...p,
+                occupiedUnits: realOccupiedCount,
+                unitsList: updatedUnits,
+              };
+            }
+            return p;
+          });
+
+          if (changed) {
+            localStorage.setItem('locagestion:properties:v1', JSON.stringify(sanitized));
+          }
+          setProperties(sanitized);
+          setSelectedProperty(sanitized[0]);
         }
       }
     } catch (e) {
@@ -356,7 +392,7 @@ export default function PropertiesPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    Lots & Unités Disponibles ({selectedProperty.unitsList ? selectedProperty.unitsList.length : selectedProperty.totalUnits})
+                    Lots & Unités ({selectedProperty.unitsList ? selectedProperty.unitsList.length : selectedProperty.totalUnits})
                   </h3>
                   <button
                     type="button"
@@ -369,47 +405,59 @@ export default function PropertiesPage() {
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {(selectedProperty.unitsList || []).map((l, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => {
-                        if (l.status === 'occupe') {
-                          router.push('/tenants');
-                        } else {
-                          router.push('/leases/new');
-                        }
-                      }}
-                      className="p-4 bg-slate-50 hover:bg-white hover:shadow-sm hover:border-slate-300 rounded-2xl border border-slate-200/80 flex items-center justify-between transition-all cursor-pointer group"
-                      title={l.status === 'occupe' ? 'Voir le dossier du locataire' : 'Attribuer / Rédiger un nouveau bail'}
-                    >
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <span className="font-black text-xs text-slate-900 group-hover:text-brand-600 transition-colors">{l.unit}</span>
-                          <span
-                            className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${l.status === 'occupe'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
+                  {(selectedProperty.unitsList || []).map((l, idx) => {
+                    const isOccupied =
+                      l.status === 'occupe' &&
+                      l.tenant &&
+                      !l.tenant.toLowerCase().includes('disponible') &&
+                      !l.tenant.startsWith('Locataire Lot') &&
+                      !l.tenant.toLowerCase().includes('fictif');
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          if (isOccupied) {
+                            router.push('/tenants');
+                          } else {
+                            router.push('/leases/new');
+                          }
+                        }}
+                        className="p-4 bg-slate-50 hover:bg-white hover:shadow-sm hover:border-slate-300 rounded-2xl border border-slate-200/80 flex items-center justify-between transition-all cursor-pointer group"
+                        title={isOccupied ? 'Voir le dossier du locataire' : 'Attribuer / Rédiger un nouveau bail'}
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-black text-xs text-slate-900 group-hover:text-brand-600 transition-colors">
+                              {l.unit}
+                            </span>
+                            <span
+                              className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                                isOccupied
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
                               }`}
-                          >
-                            {l.status === 'occupe' ? 'Occupé' : 'Vacant'}
+                            >
+                              {isOccupied ? 'Occupé' : 'Vacant (Disponible)'}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 block mt-0.5">{l.type}</span>
+                          <span className="text-[10px] text-slate-400 block mt-0.5">
+                            {isOccupied ? `Locataire : ${l.tenant}` : 'Non loué (Disponible)'}
                           </span>
                         </div>
-                        <span className="text-[11px] text-slate-500 block mt-0.5">{l.type}</span>
-                        <span className="text-[10px] text-slate-400 block mt-0.5">
-                          Locataire : {l.tenant}
-                        </span>
-                      </div>
 
-                      <div className="text-right">
-                        <span className="text-xs font-black text-slate-900 block">
-                          {formatFCFA(l.rent)}
-                        </span>
-                        <span className="text-[10px] text-brand-600 font-bold block group-hover:underline">
-                          {l.status === 'occupe' ? 'Voir locataire ➔' : 'Créer bail ➔'}
-                        </span>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-slate-900 block">
+                            {formatFCFA(l.rent)}
+                          </span>
+                          <span className="text-[10px] text-brand-600 font-bold block group-hover:underline">
+                            {isOccupied ? 'Voir locataire ➔' : 'Créer bail ➔'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

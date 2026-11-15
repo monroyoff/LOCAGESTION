@@ -56,7 +56,7 @@ import {
   buildLeaseInvitationTextMessage,
 } from '@/lib/services/notification-dispatch-service';
 import { formatFCFA } from '@/lib/money/format';
-import { UserSpace } from '@/lib/types';
+import { UserSpace, Property } from '@/lib/types';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { InspectionModal, InspectionData } from '@/components/leases/InspectionModal';
@@ -95,19 +95,16 @@ export default function NewLeasePage() {
   // Stepper state (1 to 5)
   const [currentStep, setCurrentStep] = useState(1);
 
+  // Propriétés du bailleur chargées dynamiquement
+  const [userProperties, setUserProperties] = useState<Property[]>([]);
+
   // Form state - Bien & Lot / Chambre
-  const [propertyMode, setPropertyMode] = useState<'portfolio' | 'manual'>(
-    MOCK_PROPERTIES.length > 0 ? 'portfolio' : 'manual'
-  );
+  const [propertyMode, setPropertyMode] = useState<'portfolio' | 'manual'>('portfolio');
 
   // Mode Patrimoine
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string>(
-    MOCK_PROPERTIES[0]?.id || ''
-  );
-  const [selectedProperty, setSelectedProperty] = useState(
-    MOCK_PROPERTIES[0]?.name || ''
-  );
-  const [selectedUnitMode, setSelectedUnitMode] = useState<'catalog' | 'custom'>('custom');
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>('');
+  const [selectedProperty, setSelectedProperty] = useState('');
+  const [selectedUnitMode, setSelectedUnitMode] = useState<'catalog' | 'custom'>('catalog');
   const [customUnitNumber, setCustomUnitNumber] = useState('');
 
   // Mode Saisie Directe
@@ -118,12 +115,46 @@ export default function NewLeasePage() {
   const [manualAddress, setManualAddress] = useState('');
 
   // Données communes
-  const [unitNumber, setUnitNumber] = useState('Appt 1 (2 pièces)');
+  const [unitNumber, setUnitNumber] = useState('Lot 1');
   const [surface, setSurface] = useState('50');
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('locagestion:properties:v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setUserProperties(parsed);
+          setSelectedPropertyId(parsed[0].id);
+          setSelectedProperty(parsed[0].name);
+          setPropertyMode('portfolio');
+          if (parsed[0].country) {
+            setSelectedCountryName(parsed[0].country);
+          }
+          const defaultUnit = parsed[0].unitsList?.find((u: any) => u.status === 'vacant') || parsed[0].unitsList?.[0];
+          if (defaultUnit) {
+            setUnitNumber(`${defaultUnit.unit} (${defaultUnit.type})`);
+            setSurface(String(defaultUnit.surface || '50'));
+            if (defaultUnit.rent) {
+              setMonthlyRent(String(defaultUnit.rent));
+            }
+          }
+        } else {
+          setPropertyMode('manual');
+        }
+      } else {
+        setPropertyMode(MOCK_PROPERTIES.length > 0 ? 'portfolio' : 'manual');
+      }
+    } catch (e) {
+      console.error('Erreur lecture propriétés pour bail:', e);
+    }
+  }, []);
+
+  const portfolioProperties = userProperties.length > 0 ? userProperties : MOCK_PROPERTIES;
 
   // Bien sélectionné dans le patrimoine
   const currentProperty =
-    MOCK_PROPERTIES.find((p) => p.id === selectedPropertyId) || MOCK_PROPERTIES[0] || null;
+    portfolioProperties.find((p) => p.id === selectedPropertyId) || portfolioProperties[0] || null;
 
   // Pays de juridiction & droit applicable
   const [selectedCountryName, setSelectedCountryName] = useState<string>(() => {
@@ -182,7 +213,7 @@ export default function NewLeasePage() {
 
   const handleSelectProperty = (propId: string) => {
     setSelectedPropertyId(propId);
-    const p = MOCK_PROPERTIES.find((item) => item.id === propId);
+    const p = portfolioProperties.find((item) => item.id === propId);
     if (p) {
       setSelectedProperty(p.name);
       if (p.country) {
@@ -654,7 +685,7 @@ export default function NewLeasePage() {
                           <span>Sélectionner le bien immobilier ou l’immeuble :</span>
                         </span>
                         <span className="text-[11px] text-slate-400 font-medium">
-                          {MOCK_PROPERTIES.length} biens répertoriés
+                          {portfolioProperties.length} biens répertoriés
                         </span>
                       </label>
                       <select
@@ -662,10 +693,10 @@ export default function NewLeasePage() {
                         onChange={(e) => handleSelectProperty(e.target.value)}
                         className="w-full px-4 py-3 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-none cursor-pointer"
                       >
-                        {MOCK_PROPERTIES.length === 0 ? (
+                        {portfolioProperties.length === 0 ? (
                           <option value="">Aucun bien dans le patrimoine (utilisez la saisie directe)</option>
                         ) : (
-                          MOCK_PROPERTIES.map((p) => {
+                          portfolioProperties.map((p) => {
                             const vacantCount =
                               p.unitsList?.filter((u) => u.status === 'vacant').length || 0;
                             return (
@@ -2362,6 +2393,44 @@ export default function NewLeasePage() {
           onClose={() => setIsTransmitModalOpen(false)}
           onTransmittedSuccess={(transmittedLease) => {
             setIsTransmitModalOpen(false);
+
+            // Mettre à jour le lot loué dans le patrimoine pour le marquer comme désormais occupé par ce locataire
+            try {
+              const stored = localStorage.getItem('locagestion:properties:v1');
+              if (stored) {
+                const props = JSON.parse(stored);
+                if (Array.isArray(props)) {
+                  const updated = props.map((p: Property) => {
+                    if (p.id === selectedPropertyId || p.name === transmittedLease.property) {
+                      const updatedUnits = (p.unitsList || []).map((u) => {
+                        if (
+                          transmittedLease.unit &&
+                          (transmittedLease.unit.includes(u.unit) || u.unit.includes(transmittedLease.unit))
+                        ) {
+                          return {
+                            ...u,
+                            status: 'occupe' as const,
+                            tenant: transmittedLease.tenant,
+                          };
+                        }
+                        return u;
+                      });
+                      const occupied = updatedUnits.filter((u) => u.status === 'occupe').length;
+                      return {
+                        ...p,
+                        occupiedUnits: occupied,
+                        unitsList: updatedUnits,
+                      };
+                    }
+                    return p;
+                  });
+                  localStorage.setItem('locagestion:properties:v1', JSON.stringify(updated));
+                }
+              }
+            } catch (e) {
+              console.error('Erreur mise à jour occupation bien:', e);
+            }
+
             notifySave(
               `Le contrat ${transmittedLease.id} a été validé et transmis à ${transmittedLease.tenant}.`,
               'Bail enregistré & transmis !'
