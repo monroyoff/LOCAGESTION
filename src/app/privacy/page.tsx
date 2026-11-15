@@ -76,9 +76,15 @@ export default function PrivacyPage() {
           </section>
 
           <section className="space-y-2">
-            <h2 className="text-base font-black text-slate-900">6. Vos droits</h2>
+            <h2 className="text-base font-black text-slate-900">6. Vos droits & Suppression de compte</h2>
             <p>
               Conformément à la réglementation applicable, vous disposez d'un droit d'accès, de rectification, de portabilité et de suppression de vos données personnelles. Vous pouvez exercer ces droits à tout moment en nous écrivant à : <strong>jobovog@gmail.com</strong> ou <strong>contact@locagestion.site</strong>.
+            </p>
+            <p className="pt-2">
+              Pour demander la suppression directe et définitive de votre compte et des données associées, vous pouvez utiliser notre guichet dédié :{' '}
+              <Link href="/delete-account" className="text-brand-600 font-bold underline">
+                Demande de suppression de compte LOCAGESTION (/delete-account)
+              </Link>.
             </p>
           </section>
 
@@ -96,3 +102,4 @@ export default function PrivacyPage() {
     </div>
   );
 }
+
