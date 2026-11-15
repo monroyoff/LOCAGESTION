@@ -653,7 +653,11 @@ export function Sidebar({
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
                   <h4 className="text-xs font-bold text-white truncate group-hover:text-brand-300 transition-colors">
-                    {userProfile.name}
+                    {context?.user?.firstName
+                      ? `${context.user.firstName} ${context.user.lastName || ''}`.trim()
+                      : (userProfile.firstName
+                          ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+                          : userProfile.name)}
                   </h4>
                   <ShieldCheck className="w-3.5 h-3.5 text-tealAccent-400 shrink-0" />
                 </div>

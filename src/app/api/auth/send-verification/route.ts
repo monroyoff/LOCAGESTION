@@ -4,17 +4,39 @@ import nodemailer from 'nodemailer';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { email, firstName, role, code } = body;
+    const { email, role, code } = body;
 
-    if (!email || !code) {
+    if (!email || typeof email !== 'string' || !email.includes('@')) {
       return NextResponse.json(
-        { success: false, error: 'Email et code requis.' },
+        { success: false, error: 'Une adresse email valide est obligatoire.' },
         { status: 400 }
       );
     }
 
-    const recipientEmail = email.trim();
-    const userFirstName = firstName?.trim() || 'Cher utilisateur';
+    if (!code || typeof code !== 'string') {
+      return NextResponse.json(
+        { success: false, error: 'Le code de vérification est obligatoire.' },
+        { status: 400 }
+      );
+    }
+
+    const recipientEmail = email.trim().toLowerCase();
+
+    // Extraction stricte et prioritaire du prénom saisi par l'utilisateur
+    const rawFirstName = (body.firstName || body.prenom || '').trim();
+    let userFirstName = rawFirstName;
+    if (!userFirstName && body.name) {
+      userFirstName = body.name.trim().split(' ')[0];
+    }
+    if (!userFirstName) {
+      userFirstName =
+        role === 'bailleur'
+          ? 'Propriétaire'
+          : role === 'demarcheur'
+          ? 'Partenaire'
+          : 'Résident';
+    }
+
     const roleLabel =
       role === 'bailleur'
         ? 'Propriétaire Bailleur'
@@ -169,8 +191,8 @@ export async function POST(req: NextRequest) {
 
       <div class="greeting">Bonjour ${userFirstName} 👋,</div>
       <div class="text">
-        Bienvenue sur <strong>LOCAGESTION</strong> ! Votre compte <strong>${roleLabel}</strong> a été pré-enregistré.
-        Pour finaliser votre inscription et confirmer votre adresse email, voici votre code de vérification à 6 chiffres :
+        Bienvenue sur <strong>LOCAGESTION</strong> ! Votre compte <strong>${roleLabel}</strong> associé à l'adresse <strong>${recipientEmail}</strong> a bien été pré-enregistré.
+        Pour finaliser votre inscription et confirmer votre compte, voici votre code officiel de vérification :
       </div>
 
       <div class="code-box">
@@ -201,7 +223,8 @@ export async function POST(req: NextRequest) {
 
 Bienvenue sur LOCAGESTION !
 
-Votre code de confirmation pour votre compte ${roleLabel} est : ${code}
+Votre compte ${roleLabel} associé à l'adresse ${recipientEmail} a bien été pré-enregistré.
+Votre code de confirmation officiel est : ${code}
 
 Vous pouvez également confirmer votre compte directement via ce lien :
 ${verifyLink}
@@ -215,7 +238,7 @@ https://locagestion.site
     await transporter.sendMail({
       from: smtpFrom,
       to: recipientEmail,
-      subject: `Votre code de confirmation LOCAGESTION : ${code}`,
+      subject: `${userFirstName}, voici votre code de confirmation LOCAGESTION : ${code}`,
       text: emailText,
       html: emailHtml,
     });

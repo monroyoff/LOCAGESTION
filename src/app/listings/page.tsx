@@ -556,7 +556,7 @@ export default function ListingsPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  Annonces & Visites de Logements
+                  Bonjour {user?.firstName || (user?.name ? user.name.split(' ')[0] : 'Cher Partenaire')} 👋 — Annonces & Visites
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand-50 text-brand-600 border border-brand-200">
                   Zone UEMOA & CEMAC

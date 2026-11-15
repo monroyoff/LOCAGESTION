@@ -62,8 +62,9 @@ export function buildLeaseInvitationTextMessage(data: LeaseInvitationData): stri
   const totalFormatted = data.totalDueAtEntry
     ? new Intl.NumberFormat('fr-FR').format(data.totalDueAtEntry)
     : null;
+  const recipientFirstName = data.recipientName ? data.recipientName.trim().split(' ')[0] : 'Locataire';
 
-  return `Bonjour ${data.recipientName},
+  return `Bonjour ${recipientFirstName},
 
 Votre contrat de bail pour le logement ${data.unitNumber} (${data.propertyName}) a été établi et signé par votre bailleur ${landlord}.
 
@@ -148,6 +149,8 @@ export function buildLeaseEmailHtml(data: LeaseInvitationData): string {
     ? new Intl.NumberFormat('fr-FR').format(data.totalDueAtEntry)
     : null;
 
+  const recipientFirstName = data.recipientName ? data.recipientName.trim().split(' ')[0] : 'Locataire';
+
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -184,7 +187,7 @@ export function buildLeaseEmailHtml(data: LeaseInvitationData): string {
       <p>Portail Résidentiel Certifié & Signature Électronique</p>
     </div>
     <div class="content">
-      <div class="greeting">Bonjour ${data.recipientName},</div>
+      <div class="greeting">Bonjour ${recipientFirstName},</div>
       <p style="font-size: 14px; line-height: 1.6; color: #334155;">
         Votre bailleur <strong>${landlord}</strong> a préparé et signé électroniquement votre contrat de bail.
         Il ne vous reste plus qu'à consulter le contrat et apposer votre contresignature en ligne.
