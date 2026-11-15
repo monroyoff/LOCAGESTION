@@ -11,6 +11,75 @@ import {
 const STORAGE_KEY_SESSION = 'locagestion:auth:session:v1';
 const STORAGE_KEY_USERS = 'locagestion:auth:users:v1';
 
+export function getRoleLabel(role?: UserSpace | string): string {
+  switch (role) {
+    case 'bailleur':
+      return 'Espace Propriétaire Bailleur';
+    case 'demarcheur':
+      return 'Espace Démarcheur & Agent';
+    case 'locataire':
+      return 'Espace Résident Locataire';
+    default:
+      return 'Espace Utilisateur';
+  }
+}
+
+/**
+ * Comparaison stricte et insensible à la casse/espaces des adresses emails.
+ */
+export function areEmailsEqual(emailA?: string | null, emailB?: string | null): boolean {
+  if (!emailA || !emailB) return false;
+  return emailA.trim().toLowerCase() === emailB.trim().toLowerCase();
+}
+
+/**
+ * Comparaison intelligente et universelle des numéros de téléphone africains (UEMOA/CEMAC)
+ * et internationaux (indicatifs pays +229, +225, 229, 01 préfixe Bénin, zéros initiaux, etc.).
+ */
+export function arePhoneNumbersEqual(phoneA?: string | null, phoneB?: string | null): boolean {
+  if (!phoneA || !phoneB) return false;
+  const a = phoneA.replace(/[^0-9]/g, '');
+  const b = phoneB.replace(/[^0-9]/g, '');
+  if (a.length < 6 || b.length < 6) return false;
+
+  // 1. Égalité stricte des chiffres
+  if (a === b) return true;
+
+  // 2. Inclusion par suffixe (ex: 22997000000 vs 97000000)
+  const minLen = Math.min(a.length, b.length);
+  if (minLen >= 8) {
+    if (a.endsWith(b) || b.endsWith(a)) return true;
+  }
+
+  // 3. Gestion des zéros initiaux (ex: 0612345678 vs 33612345678)
+  const aNoZero = a.replace(/^0+/, '');
+  const bNoZero = b.replace(/^0+/, '');
+  if (aNoZero.length >= 8 && bNoZero.length >= 8) {
+    if (a.endsWith(bNoZero) || b.endsWith(aNoZero)) return true;
+    if (aNoZero.endsWith(bNoZero) || bNoZero.endsWith(aNoZero)) return true;
+  }
+
+  // 4. Gestion du plan de numérotation ouest-africain (ex: préfixe '01' ajouté récemment au Bénin)
+  if (a.length >= 8 && b.length >= 8) {
+    const last8A = a.slice(-8);
+    const last8B = b.slice(-8);
+    if (last8A === last8B) {
+      const prefixA = a.slice(0, -8);
+      const prefixB = b.slice(0, -8);
+      // Préfixes identiques, ou l'un est vide (local sans indicatif)
+      if (!prefixA || !prefixB || prefixA === prefixB || prefixA.endsWith(prefixB) || prefixB.endsWith(prefixA)) {
+        return true;
+      }
+      // Préfixes différant uniquement par le '01' national
+      const cleanPrefA = prefixA.replace(/01$/, '');
+      const cleanPrefB = prefixB.replace(/01$/, '');
+      if (cleanPrefA === cleanPrefB) return true;
+    }
+  }
+
+  return false;
+}
+
 function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
   if (!u) return false;
   if (u.id === 'usr-bailleur-01' || u.id === 'usr-locataire-01' || u.id === 'usr-demarcheur-01') return true;
@@ -20,11 +89,6 @@ function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
     u.email.toLowerCase().includes('fintech-africa') ||
     u.email.toLowerCase().includes('ibrahim.demarcheur') ||
     u.email.toLowerCase().includes('demarcheur@locagestion')
-  )) return true;
-  if (u.phone && (
-    u.phone.includes('95 44 44 30') ||
-    u.phone.includes('97 12 34 56') ||
-    u.phone.includes('96 00 11 22')
   )) return true;
   return false;
 }
@@ -88,6 +152,74 @@ export const AuthService = {
     }
   },
 
+  /**
+   * Retourne l'ensemble de tous les utilisateurs enregistrés et connus,
+   * y compris la session active si elle n'est pas encore synchronisée dans la liste.
+   */
+  getAllKnownUsers(): AuthUser[] {
+    const registered = this.getRegisteredUsers();
+    const current = this.getCurrentUser();
+    if (current && !registered.some((u) => u.id === current.id || areEmailsEqual(u.email, current.email))) {
+      return [current, ...registered];
+    }
+    return registered;
+  },
+
+  /**
+   * Vérifie la disponibilité stricte d'un email et d'un numéro de téléphone
+   * sur TOUTE la plateforme LOCAGESTION, tous rôles / espaces confondus (Bailleur, Démarcheur, Locataire).
+   * Un seul compte par email et par numéro est autorisé.
+   */
+  checkIdentifierAvailability(
+    email?: string | null,
+    phone?: string | null,
+    excludeUserId?: string | null
+  ): {
+    available: boolean;
+    conflictType?: 'email' | 'phone';
+    existingRole?: UserSpace;
+    existingName?: string;
+    message?: string;
+  } {
+    const allUsers = this.getAllKnownUsers().filter(
+      (u) => !excludeUserId || u.id !== excludeUserId
+    );
+
+    // 1. Vérification stricte de l'Email
+    if (email && email.trim()) {
+      const cleanEmail = email.trim().toLowerCase();
+      const emailConflict = allUsers.find((u) => areEmailsEqual(u.email, cleanEmail));
+      if (emailConflict) {
+        const roleLabel = getRoleLabel(emailConflict.role);
+        return {
+          available: false,
+          conflictType: 'email',
+          existingRole: emailConflict.role,
+          existingName: emailConflict.firstName || emailConflict.name,
+          message: `Cette adresse email (${cleanEmail}) est déjà associée à un compte (${roleLabel}). Un seul compte par adresse email est autorisé sur toute la plateforme LOCAGESTION (tous espaces confondus).`,
+        };
+      }
+    }
+
+    // 2. Vérification stricte du Numéro de téléphone
+    if (phone && phone.trim()) {
+      const cleanPhone = phone.trim();
+      const phoneConflict = allUsers.find((u) => arePhoneNumbersEqual(u.phone, cleanPhone));
+      if (phoneConflict) {
+        const roleLabel = getRoleLabel(phoneConflict.role);
+        return {
+          available: false,
+          conflictType: 'phone',
+          existingRole: phoneConflict.role,
+          existingName: phoneConflict.firstName || phoneConflict.name,
+          message: `Ce numéro de téléphone (${cleanPhone}) est déjà associé à un compte (${roleLabel}). Un seul compte par numéro est autorisé sur toute la plateforme LOCAGESTION (tous espaces confondus).`,
+        };
+      }
+    }
+
+    return { available: true };
+  },
+
   setCurrentUser(user: AuthUser): void {
     if (typeof window === 'undefined') return;
     try {
@@ -131,22 +263,17 @@ export const AuthService = {
     emailOrPhone: string,
     password?: string
   ): { success: boolean; user?: AuthUser; error?: string } {
-    const cleanIdentifier = emailOrPhone.trim().toLowerCase();
-    const digitsOnly = emailOrPhone.replace(/[^0-9]/g, '');
-    const users = this.getRegisteredUsers();
+    const cleanIdentifier = emailOrPhone.trim();
+    const allUsers = this.getAllKnownUsers();
 
-    const found = users.find((u) => {
+    const found = allUsers.find((u) => {
       // 1. Correspondance par Email
-      if (u.email && u.email.toLowerCase() === cleanIdentifier) {
+      if (areEmailsEqual(u.email, cleanIdentifier)) {
         return true;
       }
-      // 2. Correspondance par Numéro de téléphone (avec ou sans indicatif pays, espaces ou tirets)
-      if (digitsOnly.length >= 8 && u.phone) {
-        const userPhoneDigits = u.phone.replace(/[^0-9]/g, '');
-        if (userPhoneDigits === digitsOnly) return true;
-        if (userPhoneDigits.endsWith(digitsOnly) || digitsOnly.endsWith(userPhoneDigits)) {
-          return true;
-        }
+      // 2. Correspondance par Numéro de téléphone universel
+      if (arePhoneNumbersEqual(u.phone, cleanIdentifier)) {
+        return true;
       }
       return false;
     });
@@ -203,7 +330,7 @@ export const AuthService = {
       };
     }
 
-    if (!cleanPhone || cleanPhoneDigits.length < 8) {
+    if (!cleanPhone || cleanPhoneDigits.length < 6) {
       return {
         success: false,
         error: 'Un numéro de téléphone valide est obligatoire.',
@@ -224,24 +351,14 @@ export const AuthService = {
       };
     }
 
-    // Vérification de l'unicité de l'email
-    if (users.some((u) => u.email.toLowerCase() === cleanEmail)) {
+    // VÉRIFICATION D'UNICITÉ GLOBALE STRICTE (EMAIL ET TÉLÉPHONE)
+    const availability = this.checkIdentifierAvailability(cleanEmail, cleanPhone);
+    if (!availability.available) {
       return {
         success: false,
-        error: 'Cette adresse email est déjà enregistrée. Veuillez vous connecter.',
-      };
-    }
-
-    // Vérification de l'unicité du numéro de téléphone
-    if (
-      users.some((u) => {
-        const uDigits = u.phone.replace(/[^0-9]/g, '');
-        return uDigits.length >= 8 && (uDigits === cleanPhoneDigits || uDigits.endsWith(cleanPhoneDigits) || cleanPhoneDigits.endsWith(uDigits));
-      })
-    ) {
-      return {
-        success: false,
-        error: 'Ce numéro de téléphone est déjà associé à un compte existant.',
+        error:
+          availability.message ||
+          'Ce compte ne peut être créé car ces coordonnées sont déjà utilisées sur la plateforme.',
       };
     }
 

@@ -32,6 +32,7 @@ import { useAuth } from '@/lib/context/space-context';
 import { UserSpace } from '@/lib/types';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { detectUserGeoLocation, UserGeoLocation } from '@/lib/services/geo-service';
+import { AuthService } from '@/lib/services/auth-service';
 
 // Les 14 pays officiels des zones UEMOA & CEMAC
 const UEMOA_CEMAC_COUNTRIES = [
@@ -259,7 +260,7 @@ export default function RegisterPage() {
       return true;
     }
 
-    // Question 3 : Coordonnées (Mail ET Numéro obligatoires)
+    // Question 3 : Coordonnées (Mail ET Numéro obligatoires avec vérification d'unicité stricte)
     if (currentStep === 3) {
       if (!email.trim() || !email.includes('@') || !email.includes('.')) {
         setErrorMsg('Une adresse email valide est obligatoire (ex: nom@domaine.com).');
@@ -270,6 +271,21 @@ export default function RegisterPage() {
         setErrorMsg('Un numéro de téléphone valide est obligatoire.');
         return false;
       }
+
+      // VÉRIFICATION D'UNICITÉ PLATEFORME STRICTE (EMAIL ET TÉLÉPHONE SUR TOUS LES ESPACES)
+      const fullPhoneNumber = `${dialCode} ${phoneDigits.trim()}`;
+      const availability = AuthService.checkIdentifierAvailability(
+        email.trim(),
+        fullPhoneNumber
+      );
+      if (!availability.available) {
+        setErrorMsg(
+          availability.message ||
+            'Ces coordonnées (email ou téléphone) sont déjà associées à un compte existant sur la plateforme.'
+        );
+        return false;
+      }
+
       return true;
     }
 
@@ -375,6 +391,20 @@ export default function RegisterPage() {
   // 1. Déclenchement de la vérification par email
   const handleInitiateVerification = async () => {
     if (!validateCurrentStep()) return;
+
+    // Double vérification d'unicité avant expédition du code
+    const fullPhoneNumber = `${dialCode} ${phoneDigits.trim()}`;
+    const availability = AuthService.checkIdentifierAvailability(
+      email.trim(),
+      fullPhoneNumber
+    );
+    if (!availability.available) {
+      setErrorMsg(
+        availability.message ||
+          'Ces coordonnées sont déjà associées à un compte existant sur la plateforme.'
+      );
+      return;
+    }
 
     setIsLoading(true);
     setErrorMsg(null);
@@ -516,9 +546,20 @@ export default function RegisterPage() {
 
           {/* Error Banner */}
           {errorMsg && (
-            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2.5 animate-in fade-in">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{errorMsg}</span>
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in">
+              <div className="flex items-center gap-2.5">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{errorMsg}</span>
+              </div>
+              {errorMsg.toLowerCase().includes('déjà') && (
+                <Link
+                  href="/auth/login"
+                  className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] transition-colors w-fit"
+                >
+                  <span>Se connecter</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              )}
             </div>
           )}
 
@@ -925,6 +966,15 @@ export default function RegisterPage() {
                   <span className="text-[10px] text-slate-500 mt-1 block">
                     Permet la connexion directe par numéro, les alertes par SMS et les prises de contact WhatsApp.
                   </span>
+                </div>
+
+                {/* Règle d'unicité absolue de la plateforme */}
+                <div className="p-3.5 rounded-2xl bg-brand-500/10 border border-brand-500/20 text-slate-300 text-[11px] flex items-start gap-2.5">
+                  <ShieldCheck className="w-4 h-4 text-brand-400 shrink-0 mt-0.5" />
+                  <div className="leading-relaxed">
+                    <span className="font-bold text-white block">Règle d&apos;intégrité & compte unique certifié :</span>
+                    Un email et un numéro de téléphone ne peuvent être associés qu&apos;à <strong>un seul et unique compte</strong> sur toute la plateforme LOCAGESTION (tous espaces confondus : Propriétaire, Démarcheur ou Locataire).
+                  </div>
                 </div>
               </div>
             </div>
