@@ -1,10 +1,11 @@
 import React from 'react';
+import Link from 'next/link';
 
 export function Footer() {
   return (
     <footer className="mt-6 pt-3 pb-5 border-t border-slate-200/50 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-slate-400">
       {/* En bas à gauche : Créée au Bénin pour l'Afrique */}
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 flex-wrap">
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/80 border border-slate-200/70 shadow-2xs text-[9px] font-medium text-slate-600">
           <span className="text-[10px] leading-none">🇧🇯</span>
           <span>Créée au Bénin pour l'Afrique</span>
@@ -12,6 +13,13 @@ export function Footer() {
         <span className="text-[9px] text-slate-400 font-normal hidden sm:inline">
           • Plateforme Immobilière & Gestion Locative UEMOA & CEMAC
         </span>
+        <div className="flex items-center gap-2 text-[9px] text-slate-500 font-medium ml-1">
+          <Link href="/terms" className="hover:underline">Conditions d'utilisation</Link>
+          <span>•</span>
+          <Link href="/privacy" className="hover:underline">Confidentialité</Link>
+          <span>•</span>
+          <Link href="/delete-account" className="hover:underline">Suppression de compte</Link>
+        </div>
       </div>
 
       {/* Droite : Copyright & Certification */}
