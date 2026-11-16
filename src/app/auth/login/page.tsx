@@ -221,6 +221,30 @@ export default function LoginPage() {
           <span>•</span>
           <span>Zone FCFA</span>
         </div>
+
+        {/* Public Legal Links (Google Play Compliance & Confidentiality) */}
+        <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-400 flex-wrap">
+          <Link
+            href="/privacy"
+            className="text-slate-400 hover:text-white underline transition-colors"
+          >
+            Politique de Confidentialité
+          </Link>
+          <span>•</span>
+          <Link
+            href="/terms"
+            className="text-slate-400 hover:text-white underline transition-colors"
+          >
+            Conditions d'Utilisation
+          </Link>
+          <span>•</span>
+          <Link
+            href="/delete-account"
+            className="text-slate-400 hover:text-white underline transition-colors"
+          >
+            Suppression de Compte
+          </Link>
+        </div>
       </div>
     </div>
   );

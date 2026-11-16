@@ -46,8 +46,17 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Routes publiques ne nécessitant pas de connexion
-  const isPublicRoute = pathname?.startsWith('/auth') || pathname?.startsWith('/verify');
+  // Routes publiques strictement accessibles sans authentification (Google Play, politique de confidentialité, vérifications)
+  const isPublicRoute =
+    pathname?.startsWith('/auth') ||
+    pathname?.startsWith('/verify') ||
+    pathname === '/privacy' ||
+    pathname?.startsWith('/privacy') ||
+    pathname === '/terms' ||
+    pathname?.startsWith('/terms') ||
+    pathname === '/delete-account' ||
+    pathname?.startsWith('/delete-account') ||
+    pathname?.startsWith('/.well-known');
 
   useEffect(() => {
     setMounted(true);

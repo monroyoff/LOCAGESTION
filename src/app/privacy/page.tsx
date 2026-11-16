@@ -23,10 +23,10 @@ export default function PrivacyPage() {
             </p>
           </div>
           <Link
-            href="/"
-            className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 px-3.5 py-2 rounded-xl"
+            href="/auth/login"
+            className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition-colors"
           >
-            ← Retour au site
+            ← Connexion / Espace
           </Link>
         </div>
 

@@ -25,10 +25,10 @@ export default function TermsPage() {
             </p>
           </div>
           <Link
-            href="/"
-            className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 px-3.5 py-2 rounded-xl transition"
+            href="/auth/login"
+            className="text-xs font-bold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-3.5 py-2 rounded-xl transition"
           >
-            ← Retour au site
+            ← Connexion / Espace
           </Link>
         </div>
 
