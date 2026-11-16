@@ -90,6 +90,7 @@ export default function ListingsPage() {
   const [activeView, setActiveView] = useState<'all' | 'my_listings'>('all');
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedListingForEdit, setSelectedListingForEdit] = useState<RentalListing | null>(null);
+  const [listingToDelete, setListingToDelete] = useState<RentalListing | null>(null);
   const [myListingsFilter, setMyListingsFilter] = useState<'all' | 'disponible' | 'en_pause' | 'reserve_loue'>('all');
 
   // Search & Filter States
@@ -290,6 +291,7 @@ export default function ListingsPage() {
   const handleTogglePause = (id: string) => {
     const updated = ListingsService.togglePause(id);
     if (updated) {
+      setListings((prev) => prev.map((l) => (l.id === id ? updated : l)));
       if (updated.status === 'en_pause') {
         showToast(`Annonce mise en pause : elle est temporairement masquée des recherches publiques.`);
       } else {
@@ -304,12 +306,22 @@ export default function ListingsPage() {
   };
 
   const handleSaveEdit = (id: string, updates: Partial<RentalListing>) => {
-    ListingsService.updateListing(id, updates);
+    const updated = ListingsService.updateListing(id, updates);
+    if (updated) {
+      setListings((prev) => prev.map((l) => (l.id === id ? updated : l)));
+    }
+    setEditModalOpen(false);
+    setSelectedListingForEdit(null);
     showToast(`Modifications enregistrées avec succès !`);
   };
 
   const handleDeleteListing = (id: string) => {
     ListingsService.deleteListing(id);
+    setListings((prev) => prev.filter((l) => l.id !== id));
+    if (selectedListingForEdit && selectedListingForEdit.id === id) {
+      setEditModalOpen(false);
+      setSelectedListingForEdit(null);
+    }
     showToast(`Annonce supprimée définitivement.`);
   };
 
@@ -793,8 +805,12 @@ export default function ListingsPage() {
                             : 'bg-white border-slate-200/90 hover:border-brand-500/40'
                         }`}
                       >
-                        {/* Photo avec badge de statut */}
-                        <div className="relative aspect-[16/10] overflow-hidden bg-slate-900">
+                        {/* Photo avec badge de statut - Cliquer pour ouvrir la gestion */}
+                        <div
+                          onClick={() => handleOpenEdit(listing)}
+                          className="relative aspect-[16/10] overflow-hidden bg-slate-900 cursor-pointer"
+                          title="Cliquez pour gérer et modifier cette annonce"
+                        >
                           <img
                             src={listing.images[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80'}
                             alt={listing.title}
@@ -846,7 +862,11 @@ export default function ListingsPage() {
                         {/* Contenu */}
                         <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
                           <div className="space-y-1.5">
-                            <h4 className="font-black text-sm text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1">
+                            <h4
+                              onClick={() => handleOpenEdit(listing)}
+                              className="font-black text-sm text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1 cursor-pointer"
+                              title="Cliquez pour gérer et modifier cette annonce"
+                            >
                               {listing.title}
                             </h4>
                             <div className="flex items-center gap-1 text-xs text-slate-500 font-medium">
@@ -884,7 +904,10 @@ export default function ListingsPage() {
                             {/* Bouton Mettre en pause / Réactiver */}
                             <button
                               type="button"
-                              onClick={() => handleTogglePause(listing.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTogglePause(listing.id);
+                              }}
                               className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${
                                 isPaused
                                   ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
@@ -905,30 +928,32 @@ export default function ListingsPage() {
                               )}
                             </button>
 
-                            {/* Bouton Modifier */}
+                            {/* Bouton Gérer / Modifier */}
                             <button
                               type="button"
-                              onClick={() => handleOpenEdit(listing)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenEdit(listing);
+                              }}
                               className="py-2 px-2 rounded-xl text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors flex items-center justify-center gap-1 cursor-pointer min-w-0"
-                              title="Modifier l'annonce"
+                              title="Gérer et modifier l'annonce"
                             >
                               <Pencil className="w-3.5 h-3.5 shrink-0 text-slate-600" />
-                              <span className="truncate">Modifier</span>
+                              <span className="truncate">Gérer</span>
                             </button>
 
                             {/* Bouton Supprimer */}
                             <button
                               type="button"
-                              onClick={() => {
-                                if (confirm(`Confirmez-vous la suppression définitive de votre publication « ${listing.title} » ?`)) {
-                                  handleDeleteListing(listing.id);
-                                }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setListingToDelete(listing);
                               }}
                               className="py-2 px-2 rounded-xl text-[11px] font-bold bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 transition-colors flex items-center justify-center gap-1 cursor-pointer min-w-0"
-                              title="Supprimer cette publication"
+                              title="Supprimer définitivement cette publication"
                             >
                               <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                              <span className="truncate">Effacer</span>
+                              <span className="truncate">Supprimer</span>
                             </button>
                           </div>
                         </div>
@@ -1782,12 +1807,66 @@ export default function ListingsPage() {
         </div>
       )}
 
-      {/* Assistant Publication Annonce Bailleur */}
+      {/* Assistant Publication Annonce */}
       <PublishListingModal
         isOpen={publishModalOpen}
         onClose={() => setPublishModalOpen(false)}
         onPublish={handlePublishListing}
       />
+
+      {/* Modale d'Édition et Gestion de l'Annonce */}
+      <EditListingModal
+        isOpen={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setSelectedListingForEdit(null);
+        }}
+        listing={selectedListingForEdit}
+        onSave={handleSaveEdit}
+        onDelete={(id) => {
+          handleDeleteListing(id);
+          setEditModalOpen(false);
+          setSelectedListingForEdit(null);
+        }}
+      />
+
+      {/* Boîte de Dialogue de Confirmation de Suppression Définitive */}
+      {listingToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto text-xl">
+              <Trash2 className="w-7 h-7" />
+            </div>
+            <div className="text-center space-y-1.5">
+              <h3 className="text-base font-black text-slate-900">
+                Supprimer cette annonce ?
+              </h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Êtes-vous sûr de vouloir supprimer définitivement votre publication « <strong className="text-slate-800">{listingToDelete.title}</strong> » ? Cette action est irréversible.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setListingToDelete(null)}
+                className="py-3 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeleteListing(listingToDelete.id);
+                  setListingToDelete(null);
+                }}
+                className="py-3 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black transition shadow-sm cursor-pointer"
+              >
+                Oui, supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast Notification */}
       {toastMessage && (
