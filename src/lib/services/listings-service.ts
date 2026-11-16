@@ -110,7 +110,9 @@ export const ListingsService = {
   },
 
   getPublicListings(): RentalListing[] {
-    return this.getAllListings().filter((l) => l.status !== 'en_pause');
+    return this.getAllListings().filter(
+      (l) => l.status !== 'en_pause' && l.status !== 'rejete' && l.moderationStatus !== 'rejete'
+    );
   },
 
   getUserListings(user?: AuthUser | null, _activeSpace?: UserSpace): RentalListing[] {

@@ -7,6 +7,7 @@ import {
   Building2,
   Users,
   ShieldCheck,
+  ShieldAlert,
   Lock,
   Mail,
   ArrowRight,
@@ -18,6 +19,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/space-context';
+import { AuthService } from '@/lib/services/auth-service';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -186,6 +188,24 @@ export default function LoginPage() {
               >
                 Créer un compte (Inscription)
               </Link>
+            </p>
+          </div>
+
+          {/* Accès Dédié Super-Admin Sécurité & Modération */}
+          <div className="pt-3 border-t border-white/10">
+            <button
+              type="button"
+              onClick={() => {
+                AuthService.loginAsAdmin();
+                router.push('/admin');
+              }}
+              className="w-full py-2.5 px-3 rounded-2xl bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/30 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm hover:border-rose-400 active:scale-98"
+            >
+              <ShieldAlert className="w-4 h-4 text-rose-400" />
+              <span>Accès Console Super-Admin (Modération & Sécurité)</span>
+            </button>
+            <p className="text-[10px] text-slate-500 text-center mt-1.5">
+              Identifiant : <strong>admin@locagestion.site</strong> • Mot de passe : <strong>Admin@Loca2026!</strong>
             </p>
           </div>
         </div>

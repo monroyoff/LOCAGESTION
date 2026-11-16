@@ -17,6 +17,7 @@
 9. [Technologies & Dépendances](#9-technologies--dépendances)
 10. [Design System & Principes UI/UX](#10-design-system--principes-uiux)
 11. [Instructions Strictes & Règles d'Or pour les Futurs Modèles IA](#11-instructions-strictes--règles-dor-pour-les-futurs-modèles-ia)
+12. [Règles de Sécurité Strictes & Modération IA Automatique](#12-règles-de-sécurité-strictes--modération-ia-automatique)
 
 ---
 
@@ -380,6 +381,41 @@ Tout modèle d'Intelligence Artificielle ou ingénieur reprenant ce projet **DOI
    - Toujours exécuter `npm run build` (ou `npx tsc --noEmit`) avant de considérer une tâche comme achevée afin de garantir l'absence totale de régressions TypeScript ou Next.js.
 7. **Formatage Monétaire :**
    - Les montants doivent toujours être formatés via `formatFCFA()` (`src/lib/money/format.ts`) pour afficher le symbole `FCFA` avec séparation fine des milliers.
+
+---
+
+## 12. Règles de Sécurité Strictes & Modération IA Automatique
+
+Pour garantir la sécurité, la moralité publique, la sérénité des familles et l'intégrité juridique de la plateforme sur les 14 pays des zones UEMOA & CEMAC, **un protocole de sécurité automatisé par IA (LOCAGESTION Shield)** régit l'ensemble de la plateforme :
+
+### 🛡️ 1. Vérification Automatique Obligatoire Avant Toute Publication
+- **Portée universelle :** S'applique à tous les espaces (Bailleurs, Démarcheurs, Particuliers) et à tous les modules d'annonces.
+- **Passage préalable par l'IA :** Aucune annonce ne peut être rendue publique sur la place de marché sans avoir validé l'analyse sémantique, textuelle et visuelle effectuée par le service `ModerationService` (`src/lib/services/moderation-service.ts`).
+
+### 📷 2. Règle Stricte des Deux (2) Visuels Minimum
+- **Obligation absolue :** Chaque annonce doit impérativement compter **au moins deux (2) photos ou vidéos représentatives** du bien immobilier (pièce de vie, chambre, sanitaires, cuisine ou façade).
+- **Blocage technique :** Le bouton de soumission est désactivé et toute tentative d'enregistrement comportant 0 ou 1 seule photo est immédiatement rejetée avec un message d'instruction explicite. Les annonces fantômes sans visuels vérifiables sont bannies.
+
+### 🚫 3. Tolérance Zéro Nudité & Propos à Caractère Sexuel
+- **Analyse lexicale et heuristique :** Détection automatique des termes explicites, des expressions suggestives, des sollicitations érotiques, du racolage, des chambres de passe, des offres de massages naturistes/sensuels et du libertinage.
+- **Analyse des fichiers médias :** Inspection des noms de fichiers, balises URL et descripteurs visuels pour interdire les photos dénudées, en lingerie provocante ou tout contenu NSFW/adulte.
+- **Sanction :** Blocage immédiat de la publication (`status: 'rejete'`, sévérité `CRITICAL`).
+
+### 🚨 4. Tolérance Zéro Rançonnement, Extorsion & Arnaques Financières
+- **Protection contre le chantage :** Blocage instantané de tout texte contenant des menaces, tentatives de rançonnement ou chantage à la divulgation d'informations privées.
+- **Interdiction formelle de paiement avant visite :** Détection et neutralisation des annonces exigeant un transfert d'argent (Wave, TMoney, MTN MoMo, Orange Money, virement bancaire) ou des "frais de réservation / visite" préalables à la visite physique des lieux.
+
+### 👑 5. Compte Super-Administrateur & Console de Gestion (`/admin`)
+- **Compte Super-Admin dédié :**  
+  - Email : `admin@locagestion.site`  
+  - Mot de passe : `Admin@Loca2026!`  
+  - Téléphone : `+229 97 00 00 99`  
+  - Rôle : `admin`
+- **Signalement automatique et horodaté :** Dès qu'une infraction est détectée lors d'une tentative de publication ou de modification, une **Alerte de Sécurité** est automatiquement générée et transmise dans la console Super-Admin (`/admin`).
+- **Pouvoirs de l'Administrateur :**  
+  - Consultation en direct du journal d'infractions (auteur, téléphone, email, extrait incriminé, date exacte).  
+  - Maintien du blocage, suppression définitive ou dérogation administrative exceptionnelle.  
+  - Supervision globale de toutes les annonces et mise en pause instantanée de toute publication suspecte.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

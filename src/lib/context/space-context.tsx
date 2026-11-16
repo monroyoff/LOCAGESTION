@@ -11,6 +11,7 @@ export interface SpaceContextType {
   isLandlord: boolean;
   isTenant: boolean;
   isDemarcheur: boolean;
+  isAdmin: boolean;
   landlordSubRole: LandlordSubRole;
   setLandlordSubRole: (role: LandlordSubRole) => void;
   user: AuthUser | null;
@@ -63,7 +64,9 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
 
     // 2. Si déjà connecté et sur une page d'authentification (/auth/login ou /auth/register)
     if (pathname?.startsWith('/auth')) {
-      if (current.role === 'locataire') {
+      if (current.role === 'admin') {
+        router.replace('/admin');
+      } else if (current.role === 'locataire') {
         router.replace('/portal');
       } else if (current.role === 'demarcheur') {
         router.replace('/listings');
@@ -71,6 +74,14 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
         router.replace('/');
       }
       return;
+    }
+
+    // 2.bis Protection stricte de l'Espace Super-Admin
+    if (pathname?.startsWith('/admin')) {
+      if (current.role !== 'admin') {
+        router.replace('/');
+        return;
+      }
     }
 
     // 3. Contrôle d'accès strict selon le rôle (3 espaces étanches)
@@ -112,6 +123,7 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const isLandlord = activeSpace === 'bailleur';
   const isTenant = activeSpace === 'locataire';
   const isDemarcheur = activeSpace === 'demarcheur';
+  const isAdmin = user?.role === 'admin' || activeSpace === 'admin';
   const landlordSubRole: LandlordSubRole = isDemarcheur ? 'demarcheur' : 'bailleur';
   const isAuthenticated = !!user;
 
@@ -123,7 +135,9 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     const res = AuthService.login(emailOrPhone, password);
     if (res.success && res.user) {
       setUser(res.user);
-      if (res.user.role === 'locataire') {
+      if (res.user.role === 'admin') {
+        router.push('/admin');
+      } else if (res.user.role === 'locataire') {
         router.push('/portal');
       } else if (res.user.role === 'demarcheur') {
         router.push('/listings');
@@ -138,7 +152,9 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     const res = AuthService.register(data);
     if (res.success && res.user) {
       setUser(res.user);
-      if (res.user.role === 'locataire') {
+      if (res.user.role === 'admin') {
+        router.push('/admin');
+      } else if (res.user.role === 'locataire') {
         router.push('/portal');
       } else if (res.user.role === 'demarcheur') {
         router.push('/listings');
@@ -169,7 +185,9 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     const updatedUser = { ...user, role: targetSpace };
     AuthService.setCurrentUser(updatedUser);
     setUser(updatedUser);
-    if (targetSpace === 'locataire') {
+    if (targetSpace === 'admin') {
+      router.push('/admin');
+    } else if (targetSpace === 'locataire') {
       router.push('/portal');
     } else if (targetSpace === 'demarcheur') {
       router.push('/listings');
@@ -198,6 +216,7 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
         isLandlord,
         isTenant,
         isDemarcheur,
+        isAdmin,
         landlordSubRole,
         setLandlordSubRole,
         user,

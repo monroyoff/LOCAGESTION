@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 import {
   Menu,
   Search,
@@ -20,10 +21,12 @@ import {
   X,
   ExternalLink,
   MessageSquare,
+  ShieldAlert,
 } from 'lucide-react';
 import { formatDateFR } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
+import { ModerationService } from '@/lib/services/moderation-service';
 import {
   LeaseService,
   LandlordNotification,
@@ -56,7 +59,7 @@ export function Header({
   useEffect(() => {
     setTodayFormatted(formatDateFR(new Date()));
   }, []);
-  const { isLandlord, isTenant, isDemarcheur, activeSpace } = useSpace();
+  const { isLandlord, isTenant, isDemarcheur, isAdmin, activeSpace } = useSpace();
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
@@ -64,6 +67,8 @@ export function Header({
   const [notifications, setNotifications] = useState<LandlordNotification[]>([]);
   // Notifications Locataire
   const [tenantNotifs, setTenantNotifs] = useState<TenantNotification[]>([]);
+  // Alertes Sécurité Super-Admin
+  const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
@@ -71,6 +76,7 @@ export function Header({
   const updateNotifications = () => {
     setNotifications(LeaseService.getLandlordNotifications());
     setTenantNotifs(TenantNotificationService.getNotifications());
+    setUnreadAlertsCount(ModerationService.getUnreadAlertsCount());
   };
 
   useEffect(() => {
@@ -79,11 +85,13 @@ export function Header({
     window.addEventListener('locagestion:leases_updated', handleStorage);
     window.addEventListener('locagestion:notices_updated', handleStorage);
     window.addEventListener('locagestion:tenant_notifs_updated', handleStorage);
+    window.addEventListener('locagestion:security_alerts_updated', handleStorage);
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('locagestion:leases_updated', handleStorage);
       window.removeEventListener('locagestion:notices_updated', handleStorage);
       window.removeEventListener('locagestion:tenant_notifs_updated', handleStorage);
+      window.removeEventListener('locagestion:security_alerts_updated', handleStorage);
       window.removeEventListener('storage', handleStorage);
     };
   }, []);
@@ -498,6 +506,25 @@ export function Header({
               </div>
             )}
           </div>
+
+          {/* ============================================================== */}
+          {/* ACCÈS DIRECT CONSOLE SUPER-ADMIN (SÉCURITÉ & MODÉRATION)       */}
+          {/* ============================================================== */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-black shadow-md shadow-rose-900/20 active:scale-95 transition-all shrink-0 cursor-pointer"
+            >
+              <ShieldAlert className="w-4 h-4" />
+              <span className="hidden sm:inline">Console Sécurité</span>
+              <span className="sm:hidden">Admin</span>
+              {unreadAlertsCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-white text-rose-700 text-[10px] font-black animate-pulse">
+                  {unreadAlertsCount}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* ============================================================== */}
           {/* ACTIONS STRICTEMENT RÉSERVÉES AU BAILLEUR                      */}

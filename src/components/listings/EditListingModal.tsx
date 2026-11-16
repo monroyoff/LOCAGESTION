@@ -18,6 +18,8 @@ import {
 import { RentalListing, RentalPropertyType } from '@/lib/types';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { formatFCFA, computeEntryCost } from '@/lib/money/format';
+import { ModerationService } from '@/lib/services/moderation-service';
+import { AuthService } from '@/lib/services/auth-service';
 
 interface EditListingModalProps {
   isOpen: boolean;
@@ -62,7 +64,7 @@ export function EditListingModal({
   const [bathrooms, setBathrooms] = useState(1);
   const [landmark, setLandmark] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<'disponible' | 'reserve' | 'loue' | 'en_pause'>('disponible');
+  const [status, setStatus] = useState<RentalListing['status']>('disponible');
   const [images, setImages] = useState<string[]>([]);
   const [newImageUrl, setNewImageUrl] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -139,8 +141,47 @@ export function EditListingModal({
       return;
     }
 
+    const finalImages = images.length > 0 ? images : listing.images;
+
+    // 1. RÈGLE STRICTE DES 2 VISUELS MINIMUM
+    if (finalImages.length < 2) {
+      setErrorMsg(
+        `Règle de sécurité stricte : Chaque annonce doit compter au moins deux (2) photos ou vidéos représentatives (actuellement : ${finalImages.length}/2).`
+      );
+      return;
+    }
+
+    // 2. MODÉRATION IA SYSTÈME AUTOMATIQUE (Nudité, Propos Sexuels, Rançonnement / Extorsion)
+    const proposedTitle = title.trim();
+    const moderation = ModerationService.validateListing({
+      title: proposedTitle,
+      propertyType,
+      description: description.trim(),
+      landmark: landmark.trim(),
+      images: finalImages,
+      city: listing.city,
+      district: listing.district,
+    });
+
+    if (!moderation.isValid) {
+      const currentUser = AuthService.getCurrentUser();
+      ModerationService.recordSecurityAlert({
+        listingId: listing.id,
+        listingTitle: proposedTitle,
+        author: currentUser,
+        country: listing.country,
+        city: listing.city,
+        violations: moderation.violations,
+      });
+
+      setErrorMsg(
+        `Modification bloquée par l'IA de Sécurité : ${moderation.violations.map((v) => v.message).join(' | ')} (Un signalement a été transmis à la direction)`
+      );
+      return;
+    }
+
     onSave(listing.id, {
-      title: title.trim(),
+      title: proposedTitle,
       propertyType,
       monthlyRent: rentNum,
       charges: parsedCharges,
@@ -157,7 +198,9 @@ export function EditListingModal({
       landmark: landmark.trim(),
       description: description.trim(),
       status,
-      images: images.length > 0 ? images : listing.images,
+      images: finalImages,
+      moderationStatus: 'valide',
+      moderatedAt: new Date().toISOString(),
     });
 
     onClose();

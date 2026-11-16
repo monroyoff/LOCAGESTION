@@ -19,10 +19,14 @@ import {
   Banknote,
   Zap,
   AlertCircle,
+  ShieldAlert,
+  AlertTriangle,
 } from 'lucide-react';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { RentalListing } from '@/lib/types';
 import { formatFCFA, computeEntryCost } from '@/lib/money/format';
+import { ModerationService, ModerationViolation } from '@/lib/services/moderation-service';
+import { AuthService } from '@/lib/services/auth-service';
 import {
   getUserResidenceCountry,
   getUserResidenceCity,
@@ -96,6 +100,11 @@ export function PublishListingModal({
   const [images, setImages] = useState<string[]>([]);
   const [urlInput, setUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [securityViolation, setSecurityViolation] = useState<{
+    title: string;
+    message: string;
+    violations: ModerationViolation[];
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -215,6 +224,24 @@ export function PublishListingModal({
 
     const finalImages = images;
 
+    setSecurityViolation(null);
+
+    // 1. RÈGLE STRICTE DES 2 VISUELS MINIMUM SUR TOUTE LA PLATEFORME
+    if (finalImages.length < 2) {
+      setSecurityViolation({
+        title: 'Photos ou Vidéos Insuffisantes (Règle Stricte)',
+        message: `Chaque annonce doit impérativement comporter au moins deux (2) photos ou vidéos représentatives du logement pour pouvoir être publiée sur toute la plateforme (actuellement : ${finalImages.length}/2).`,
+        violations: [
+          {
+            type: 'photos_insuffisantes',
+            severity: 'high',
+            message: `Minimum 2 photos ou vidéos requises. Vous n'avez importé que ${finalImages.length} fichier(s).`,
+          },
+        ],
+      });
+      return;
+    }
+
     const descriptionLines = description
       .split('\n')
       .map((line) => line.trim())
@@ -222,10 +249,40 @@ export function PublishListingModal({
 
     const finalCity = isCustomCity && customCity.trim() ? customCity.trim() : city;
     const coords = resolveLocationCoordinates(country, finalCity, district);
+    const proposedTitle = title || `${propertyType} Moderne à ${district || finalCity}`;
+
+    // 2. VÉRIFICATION AUTOMATIQUE PAR L'IA DU SYSTÈME (Nudité, Propos Sexuels, Rançonnement / Extorsion)
+    const moderation = ModerationService.validateListing({
+      title: proposedTitle,
+      propertyType,
+      description,
+      landmark,
+      images: finalImages,
+      city: finalCity,
+      district,
+    });
+
+    if (!moderation.isValid) {
+      const currentUser = AuthService.getCurrentUser();
+      ModerationService.recordSecurityAlert({
+        listingTitle: proposedTitle,
+        author: currentUser,
+        country,
+        city: finalCity,
+        violations: moderation.violations,
+      });
+
+      setSecurityViolation({
+        title: 'Publication Bloquée par l\'IA de Sécurité',
+        message: moderation.summary,
+        violations: moderation.violations,
+      });
+      return;
+    }
 
     const newListing: RentalListing = {
       id: `list-${Date.now()}`,
-      title: title || `${propertyType} Moderne à ${district || finalCity}`,
+      title: proposedTitle,
       propertyType,
       country,
       countryCode: countryCodeMap[country] || 'BJ',
@@ -253,6 +310,8 @@ export function PublishListingModal({
       amenities: descriptionLines,
       isVerified: true,
       status: 'disponible',
+      moderationStatus: 'valide',
+      moderatedAt: new Date().toISOString(),
     };
 
     onPublish(newListing);
@@ -694,17 +753,26 @@ export function PublishListingModal({
           </div>
 
           {/* ================================================================= */}
-          {/* SECTION AJOUT DE PHOTOS DU LOGEMENT                                */}
+          {/* SECTION AJOUT DE PHOTOS DU LOGEMENT (MINIMUM 2 OBLIGATOIRE)        */}
           {/* ================================================================= */}
           <div className="space-y-3 pt-3 border-t border-slate-200/80">
             <div className="flex items-center justify-between">
               <div>
-                <label className="font-black text-slate-900 block text-xs flex items-center gap-1.5">
+                <label className="font-black text-slate-900 block text-xs flex items-center gap-1.5 flex-wrap">
                   <Camera className="w-4 h-4 text-brand-500" />
                   <span>Photos du logement ({images.length}) *</span>
+                  <span
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      images.length >= 2
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                        : 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
+                    }`}
+                  >
+                    {images.length >= 2 ? '✓ Minimum 2 photos atteint' : `Obligatoire : au moins 2 photos (${images.length}/2)`}
+                  </span>
                 </label>
                 <span className="text-[11px] text-slate-500">
-                  La première photo est la couverture de votre annonce.
+                  Règle de sécurité stricte : Chaque annonce doit compter au moins 2 photos ou vidéos représentatives.
                 </span>
               </div>
 
@@ -883,12 +951,80 @@ export function PublishListingModal({
             </button>
             <button
               type="submit"
-              className="py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer"
+              disabled={images.length < 2}
+              className={`py-2.5 px-5 rounded-xl font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 ${
+                images.length < 2
+                  ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
+                  : 'bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white'
+              }`}
             >
-              Publier l’annonce ({images.length} {images.length > 1 ? 'photos' : 'photo'})
+              <ShieldCheck className="w-4 h-4" />
+              <span>
+                {images.length < 2
+                  ? `Ajoutez au moins 2 photos (${images.length}/2)`
+                  : `Publier l’annonce (${images.length} photos)`}
+              </span>
             </button>
           </div>
         </form>
+
+        {/* ================================================================= */}
+        {/* MODAL ALERTE SÉCURITÉ DE REJET AUTOMATIQUE PAR L'IA               */}
+        {/* ================================================================= */}
+        {securityViolation && (
+          <div className="absolute inset-0 z-50 bg-slate-950/90 backdrop-blur-md p-6 flex items-center justify-center animate-in fade-in duration-200">
+            <div className="bg-slate-900 border border-rose-600 rounded-3xl p-6 max-w-md w-full shadow-2xl text-white space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-rose-600/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+                  <ShieldAlert className="w-6 h-6 text-rose-500" />
+                </div>
+                <div>
+                  <h4 className="text-base font-black text-white">{securityViolation.title}</h4>
+                  <span className="text-[10px] font-bold uppercase text-rose-400 bg-rose-950 px-2 py-0.5 rounded-full border border-rose-800">
+                    Signalement transmis à l'Administration
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-rose-950/40 border border-rose-900/50 space-y-2 text-xs">
+                {securityViolation.violations.map((v, idx) => (
+                  <div key={idx} className="space-y-1">
+                    <div className="font-bold text-rose-200 flex items-start gap-1.5">
+                      <span className="text-rose-400">⛔</span>
+                      <span>{v.message}</span>
+                    </div>
+                    {v.triggerSnippet && (
+                      <div className="text-[11px] text-rose-300/80 font-mono pl-4 italic">
+                        {v.triggerSnippet}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-[11px] text-slate-400 space-y-1">
+                <p>
+                  <strong>Politique de Sécurité LOCAGESTION :</strong> Les propos à caractère sexuel,
+                  la nudité, les tentatives d'extorsion, le rançonnement ou les annonces avec moins de 2 photos
+                  sont strictement prohibés.
+                </p>
+                <p className="text-slate-500 italic">
+                  Un rapport de sécurité a été automatiquement enregistré dans la console d'administration.
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSecurityViolation(null)}
+                  className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-colors cursor-pointer"
+                >
+                  Corriger mon annonce
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

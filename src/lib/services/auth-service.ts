@@ -13,6 +13,8 @@ const STORAGE_KEY_USERS = 'locagestion:auth:users:v1';
 
 export function getRoleLabel(role?: UserSpace | string): string {
   switch (role) {
+    case 'admin':
+      return 'Super-Administrateur Sécurité & Plateforme';
     case 'bailleur':
       return 'Espace Propriétaire Bailleur';
     case 'demarcheur':
@@ -23,6 +25,26 @@ export function getRoleLabel(role?: UserSpace | string): string {
       return 'Espace Utilisateur';
   }
 }
+
+export const SYSTEM_ADMIN_USER: AuthUser = {
+  id: 'usr-admin-omega',
+  name: 'Direction Générale - Super Admin',
+  firstName: 'Admin',
+  lastName: 'Général',
+  email: 'admin@locagestion.site',
+  phone: '+229 97 00 00 99',
+  role: 'admin',
+  birthDate: '01/01/1985',
+  birthPlace: 'Cotonou',
+  residenceCountry: 'Bénin',
+  residenceCity: 'Cotonou',
+  residenceDistrict: 'Siège Central OMEGA',
+  projectCountry: 'Bénin',
+  avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+  companyName: 'OMEGA LOCAGESTION HQ',
+  registeredAt: '01/01/2026',
+  password: 'Admin@Loca2026!',
+};
 
 /**
  * Comparaison stricte et insensible à la casse/espaces des adresses emails.
@@ -154,15 +176,29 @@ export const AuthService = {
 
   /**
    * Retourne l'ensemble de tous les utilisateurs enregistrés et connus,
-   * y compris la session active si elle n'est pas encore synchronisée dans la liste.
+   * y compris la session active et le Super Administrateur système.
    */
   getAllKnownUsers(): AuthUser[] {
     const registered = this.getRegisteredUsers();
     const current = this.getCurrentUser();
-    if (current && !registered.some((u) => u.id === current.id || areEmailsEqual(u.email, current.email))) {
-      return [current, ...registered];
+    const list = [...registered];
+
+    if (!list.some((u) => u.id === SYSTEM_ADMIN_USER.id || areEmailsEqual(u.email, SYSTEM_ADMIN_USER.email))) {
+      list.push(SYSTEM_ADMIN_USER);
     }
-    return registered;
+
+    if (current && !list.some((u) => u.id === current.id || areEmailsEqual(u.email, current.email))) {
+      list.unshift(current);
+    }
+    return list;
+  },
+
+  /**
+   * Connexion instantanée avec le compte Super-Admin
+   */
+  loginAsAdmin(): { success: boolean; user: AuthUser } {
+    this.setCurrentUser(SYSTEM_ADMIN_USER);
+    return { success: true, user: SYSTEM_ADMIN_USER };
   },
 
   /**

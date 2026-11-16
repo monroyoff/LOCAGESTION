@@ -1,4 +1,4 @@
-export type UserSpace = 'bailleur' | 'locataire' | 'demarcheur';
+export type UserSpace = 'bailleur' | 'locataire' | 'demarcheur' | 'admin';
 export type LandlordSubRole = 'bailleur' | 'demarcheur';
 
 export type PaymentMethod =
@@ -220,7 +220,11 @@ export interface RentalListing {
   longitude?: number;
   distanceKm?: number; // Distance calculée par rapport à l'utilisateur
   isVerified: boolean;
-  status: 'disponible' | 'reserve' | 'loue' | 'en_pause';
+  status: 'disponible' | 'reserve' | 'loue' | 'en_pause' | 'rejete' | 'en_attente_moderation';
+  moderationStatus?: 'valide' | 'rejete' | 'en_attente';
+  moderationReason?: string;
+  moderationFlags?: ('nudite' | 'propos_sexuel' | 'extorsion_rancon' | 'photos_insuffisantes')[];
+  moderatedAt?: string;
   authorId?: string;
   authorName?: string;
   authorEmail?: string;
@@ -277,6 +281,28 @@ export interface AuthUser {
   registeredAt: string;
   password?: string;
 }
+
+export interface SecurityAlert {
+  id: string;
+  listingId?: string;
+  listingTitle: string;
+  authorName: string;
+  authorEmail: string;
+  authorPhone: string;
+  authorRole: string;
+  country: string;
+  city: string;
+  violations: {
+    type: 'photos_insuffisantes' | 'nudite' | 'propos_sexuel' | 'extorsion_rancon';
+    message: string;
+    triggerSnippet?: string;
+    severity: 'high' | 'critical' | 'medium';
+  }[];
+  detectedAt: string;
+  status: 'non_traite' | 'bloque' | 'autorise_par_admin' | 'supprime';
+  adminNotes?: string;
+}
+
 
 
 
