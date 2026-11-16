@@ -227,9 +227,11 @@ export interface RentalListing {
   moderatedAt?: string;
   authorId?: string;
   authorName?: string;
+  authorCompany?: string; // Nom de l'agence ou de la société mandataire
   authorEmail?: string;
   authorPhone?: string;
   authorRole?: UserSpace;
+  authorAvatar?: string;
   createdAt?: string;
   viewsCount?: number;
   inquiriesCount?: number;

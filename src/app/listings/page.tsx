@@ -62,6 +62,8 @@ import {
   PauseCircle,
   PlayCircle,
   AlertCircle,
+  User,
+  MessageSquare,
 } from 'lucide-react';
 
 const ALL_CITIES = Array.from(
@@ -254,11 +256,13 @@ export default function ListingsPage() {
   const handlePublishListing = (newListing: RentalListing) => {
     const enriched: RentalListing = {
       ...newListing,
-      authorId: user?.id,
-      authorName: user?.name,
-      authorEmail: user?.email,
-      authorPhone: user?.phone,
-      authorRole: activeSpace,
+      authorId: user?.id || newListing.authorId,
+      authorName: user?.name || newListing.authorName || 'Bailleur Certifié',
+      authorCompany: user?.companyName || newListing.authorCompany || undefined,
+      authorEmail: user?.email || newListing.authorEmail,
+      authorPhone: user?.phone || newListing.authorPhone,
+      authorRole: activeSpace || newListing.authorRole,
+      authorAvatar: user?.avatarUrl || newListing.authorAvatar,
       createdAt: new Date().toLocaleDateString('fr-FR'),
       viewsCount: 0,
       inquiriesCount: 0,
@@ -1411,6 +1415,41 @@ export default function ListingsPage() {
                             ))}
                           </div>
                         </div>
+
+                        {/* Identité de l'Annonceur / Agence (Visible sur toute la plateforme) */}
+                        <div
+                          onClick={() => {
+                            setSelectedListingForDetail(listing);
+                            setCurrentDetailPhotoIdx(0);
+                          }}
+                          className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs cursor-pointer group/pub hover:bg-slate-50/60 p-2 rounded-xl transition-colors"
+                          title="Cliquer pour afficher la fiche complète de l'annonceur"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-7 h-7 rounded-xl bg-slate-900 text-brand-400 flex items-center justify-center text-xs font-black shrink-0 shadow-sm group-hover/pub:bg-brand-500 group-hover/pub:text-white transition-colors">
+                              {listing.authorCompany ? (
+                                <Building2 className="w-4 h-4" />
+                              ) : (
+                                <User className="w-4 h-4" />
+                              )}
+                            </div>
+                            <div className="min-w-0 truncate">
+                              <span className="text-[10px] text-slate-400 block leading-tight font-medium">
+                                {listing.authorCompany ? 'Agence Mandataire' : 'Publié par'}
+                              </span>
+                              <span className="font-extrabold text-slate-900 text-[11px] truncate block group-hover/pub:text-brand-600 transition-colors">
+                                {listing.authorCompany || listing.authorName || 'Bailleur Certifié'}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
+                            {listing.authorRole === 'demarcheur'
+                              ? 'Démarcheur'
+                              : listing.authorRole === 'admin'
+                              ? 'Admin'
+                              : 'Bailleur'}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -1769,6 +1808,84 @@ export default function ListingsPage() {
                   <p className="text-[11px] text-slate-500 mt-0.5 italic">
                     Indication de repère local : « {selectedListingForDetail.landmark} »
                   </p>
+                </div>
+              </div>
+
+              {/* Fiche Annonceur / Agence Immobilière (Nom et Coordonnées sur toute la plateforme) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 text-white border border-slate-800 shadow-md">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-500 to-brand-600 flex items-center justify-center text-white font-black text-lg shadow-pink-glow shrink-0">
+                      {selectedListingForDetail.authorCompany ? (
+                        <Building2 className="w-6 h-6 text-white" />
+                      ) : (
+                        <User className="w-6 h-6 text-white" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-brand-300">
+                          {selectedListingForDetail.authorCompany ? 'Agence Immobilière Mandataire' : 'Annonceur Certifié'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                          <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                          Vérifié LOCAGESTION
+                        </span>
+                      </div>
+                      <h4 className="text-base font-black text-white mt-0.5">
+                        {selectedListingForDetail.authorCompany || selectedListingForDetail.authorName || 'Bailleur Certifié LOCAGESTION'}
+                      </h4>
+                      {selectedListingForDetail.authorCompany && selectedListingForDetail.authorName && (
+                        <p className="text-xs text-slate-300 font-medium mt-0.5">
+                          Agent responsable : <span className="text-white font-semibold">{selectedListingForDetail.authorName}</span>
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[11px] text-slate-300 font-medium">
+                          Statut : <strong className="text-white">
+                            {selectedListingForDetail.authorRole === 'demarcheur'
+                              ? 'Démarcheur & Agent Immobilier'
+                              : selectedListingForDetail.authorRole === 'admin'
+                              ? 'Super-Administrateur Plateforme'
+                              : 'Propriétaire Bailleur'}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Boutons d'action et contact direct avec l'annonceur */}
+                <div className="mt-3.5 pt-3 border-t border-white/10 flex items-center gap-2 flex-wrap">
+                  {selectedListingForDetail.authorPhone && (
+                    <a
+                      href={`tel:${selectedListingForDetail.authorPhone.replace(/\s+/g, '')}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all"
+                    >
+                      <Phone className="w-3.5 h-3.5 text-brand-300" />
+                      <span>{selectedListingForDetail.authorPhone}</span>
+                    </a>
+                  )}
+                  {selectedListingForDetail.authorPhone && (
+                    <a
+                      href={`https://wa.me/${selectedListingForDetail.authorPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                        `Bonjour, je vous contacte depuis la plateforme LOCAGESTION au sujet de votre annonce : "${selectedListingForDetail.title}" située à ${selectedListingForDetail.district}, ${selectedListingForDetail.city}. Le bien est-il toujours disponible ?`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-sm"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-white" />
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+                  <Link
+                    href="/messages"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-pink-glow"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5 text-white" />
+                    <span>Discuter en direct</span>
+                  </Link>
                 </div>
               </div>
             </div>

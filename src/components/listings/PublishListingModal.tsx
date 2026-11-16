@@ -280,6 +280,8 @@ export function PublishListingModal({
       return;
     }
 
+    const currentUser = AuthService.getCurrentUser();
+
     const newListing: RentalListing = {
       id: `list-${Date.now()}`,
       title: proposedTitle,
@@ -312,6 +314,13 @@ export function PublishListingModal({
       status: 'disponible',
       moderationStatus: 'valide',
       moderatedAt: new Date().toISOString(),
+      authorId: currentUser?.id,
+      authorName: currentUser?.name,
+      authorCompany: currentUser?.companyName || undefined,
+      authorEmail: currentUser?.email,
+      authorPhone: currentUser?.phone,
+      authorRole: currentUser?.role,
+      authorAvatar: currentUser?.avatarUrl,
     };
 
     onPublish(newListing);
