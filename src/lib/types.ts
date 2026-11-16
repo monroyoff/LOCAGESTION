@@ -205,6 +205,10 @@ export interface RentalListing {
   depositMonths: number;
   advanceMonths: number;
   agencyFees: number;
+  includeFirstRent?: boolean; // 1er loyer exigé à l'entrée (défaut true)
+  includeAgencyFees?: boolean; // Frais d'agence / démarcheur inclus (défaut true)
+  hasUtilitiesDeposit?: boolean; // Caution compteurs Eau & Électricité (défaut false)
+  utilitiesDeposit?: number; // Montant en FCFA de la caution eau & électricité
   surface: number; // m²
   bedrooms: number;
   bathrooms: number;

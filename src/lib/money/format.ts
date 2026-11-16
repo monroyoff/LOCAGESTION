@@ -61,3 +61,68 @@ export function getPaymentMethodLabel(method: string): string {
   }
 }
 
+/**
+ * Calcul détaillé du coût total à l'entrée pour une publication immobilière (Afrique UEMOA & CEMAC)
+ */
+export interface EntryCostBreakdown {
+  total: number;
+  firstRentAmount: number;
+  depositAmount: number;
+  advanceAmount: number;
+  utilitiesAmount: number;
+  agencyAmount: number;
+  formulaLabel: string;
+}
+
+export function computeEntryCost(listing: {
+  monthlyRent: number | string;
+  charges?: number | string;
+  depositMonths?: number;
+  advanceMonths?: number;
+  agencyFees?: number;
+  includeFirstRent?: boolean;
+  includeAgencyFees?: boolean;
+  hasUtilitiesDeposit?: boolean;
+  utilitiesDeposit?: number;
+}): EntryCostBreakdown {
+  const rent = Math.max(0, parseInt(String(listing.monthlyRent || 0), 10) || 0);
+  const charges = Math.max(0, parseInt(String(listing.charges || 0), 10) || 0);
+  const includeFirstRent = listing.includeFirstRent !== false;
+  const firstRentAmount = includeFirstRent ? rent + charges : 0;
+
+  const depositMonths = listing.depositMonths !== undefined ? Number(listing.depositMonths) : 3;
+  const depositAmount = depositMonths * rent;
+
+  const advanceMonths = listing.advanceMonths !== undefined ? Number(listing.advanceMonths) : 3;
+  const advanceAmount = advanceMonths * rent;
+
+  const hasUtilities = !!listing.hasUtilitiesDeposit;
+  const utilitiesAmount = hasUtilities ? Math.max(0, Number(listing.utilitiesDeposit) || 0) : 0;
+
+  const includeAgency = listing.includeAgencyFees !== false;
+  const agencyAmount = includeAgency
+    ? (listing.agencyFees !== undefined ? Number(listing.agencyFees) : Math.round(rent * 0.5))
+    : 0;
+
+  const total = firstRentAmount + depositAmount + advanceAmount + utilitiesAmount + agencyAmount;
+
+  const parts: string[] = [];
+  if (includeFirstRent) parts.push('1er loyer');
+  if (depositMonths > 0) parts.push(`${depositMonths}m caution`);
+  if (advanceMonths > 0) parts.push(`${advanceMonths}m avance`);
+  if (hasUtilities && utilitiesAmount > 0) parts.push(`caution eau/élec`);
+  if (includeAgency && agencyAmount > 0) parts.push('agence');
+
+  const formulaLabel = parts.length > 0 ? `(${parts.join(' + ')})` : '(Aucun frais exigé à l’entrée)';
+
+  return {
+    total,
+    firstRentAmount,
+    depositAmount,
+    advanceAmount,
+    utilitiesAmount,
+    agencyAmount,
+    formulaLabel,
+  };
+}
+

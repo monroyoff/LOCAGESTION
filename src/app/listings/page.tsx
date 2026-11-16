@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { useSpace } from '@/lib/context/space-context';
-import { formatFCFA } from '@/lib/money/format';
+import { formatFCFA, computeEntryCost } from '@/lib/money/format';
 import { RentalListing } from '@/lib/types';
 import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
@@ -536,11 +536,9 @@ export default function ListingsPage() {
     customMaxPrice !== '' ||
     selectedPropertyType !== 'Tous';
 
-  // Calculate total upfront move-in cost (Loyer + Caution + Avance + Agence)
+  // Calculate total upfront move-in cost (Loyer + Caution + Avance + Agence + Eau/Élec)
   const calculateTotalEntryCost = (l: RentalListing) => {
-    const depositTotal = l.monthlyRent * l.depositMonths;
-    const advanceTotal = l.monthlyRent * l.advanceMonths;
-    return l.monthlyRent + l.charges + depositTotal + advanceTotal + l.agencyFees;
+    return computeEntryCost(l).total;
   };
 
   const handleBookVisitSubmit = (e: React.FormEvent) => {
@@ -1259,7 +1257,7 @@ export default function ListingsPage() {
           {filteredListings.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredListings.map((listing) => {
-                const totalEntryCost = calculateTotalEntryCost(listing);
+                const entryCost = computeEntryCost(listing);
 
                 return (
                   <div
@@ -1372,10 +1370,10 @@ export default function ListingsPage() {
                             À Prévoir à l’Entrée (Coût Total) :
                           </span>
                           <div className="text-lg font-black text-emerald-900 mt-0.5">
-                            {formatFCFA(totalEntryCost)}
+                            {formatFCFA(entryCost.total)}
                           </div>
                           <span className="text-[10px] text-emerald-700 block mt-0.5">
-                            (1er loyer + {listing.depositMonths}m caution + {listing.advanceMonths}m avance + agence)
+                            {entryCost.formulaLabel}
                           </span>
                         </div>
 
@@ -1716,21 +1714,22 @@ export default function ListingsPage() {
                   </span>
                 </div>
 
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-tealAccent-50 border border-emerald-200 text-emerald-950">
-                  <span className="text-[10px] font-bold uppercase tracking-wider block text-emerald-800">
-                    Coût Total à l'Entrée
-                  </span>
-                  <div className="text-xl font-black text-emerald-900 mt-0.5">
-                    {formatFCFA(
-                      selectedListingForDetail.monthlyRent * (1 + selectedListingForDetail.depositMonths + selectedListingForDetail.advanceMonths) +
-                      selectedListingForDetail.charges +
-                      selectedListingForDetail.agencyFees
-                    )}
-                  </div>
-                  <span className="text-[10px] text-emerald-700 block mt-0.5">
-                    (1er loyer + {selectedListingForDetail.depositMonths}m caution + {selectedListingForDetail.advanceMonths}m avance + honoraires)
-                  </span>
-                </div>
+                {(() => {
+                  const modalCost = computeEntryCost(selectedListingForDetail);
+                  return (
+                    <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-tealAccent-50 border border-emerald-200 text-emerald-950">
+                      <span className="text-[10px] font-bold uppercase tracking-wider block text-emerald-800">
+                        Coût Total à l'Entrée
+                      </span>
+                      <div className="text-xl font-black text-emerald-900 mt-0.5">
+                        {formatFCFA(modalCost.total)}
+                      </div>
+                      <span className="text-[10px] text-emerald-700 block mt-0.5">
+                        {modalCost.formulaLabel}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Description Cochée Ligne par Ligne */}
