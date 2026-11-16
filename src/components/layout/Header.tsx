@@ -304,13 +304,7 @@ export function Header({
                 </div>
 
                 <div className="max-h-[30rem] overflow-y-auto divide-y divide-slate-100 p-1">
-                  {isDemarcheur ? (
-                    <div className="p-6 text-center text-slate-400 text-xs">
-                      <CheckCircle2 className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-50" />
-                      <span className="font-bold text-slate-800 block mb-1">Espace Annonces & Visites</span>
-                      <span>Aucune notification pour le moment</span>
-                    </div>
-                  ) : isLandlord ? (
+                  {(isLandlord || isDemarcheur) ? (
                     notifications.length === 0 ? (
                       <div className="p-6 text-center text-slate-400 text-xs">
                         <CheckCircle2 className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-50" />
@@ -322,8 +316,10 @@ export function Header({
                           key={n.id}
                           className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${
                             !n.read
-                              ? n.type === 'incident_reported'
+                              ? n.type === 'incident_reported' || n.type === 'listing_rejected'
                                 ? 'bg-rose-50/70 border border-rose-200/80'
+                                : n.type === 'listing_approved'
+                                ? 'bg-emerald-50/70 border border-emerald-200/80'
                                 : 'bg-amber-50/70 border border-amber-200/60'
                               : 'hover:bg-slate-50'
                           }`}
@@ -332,7 +328,11 @@ export function Header({
                             <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                               <span
                                 className={`w-2 h-2 rounded-full shrink-0 ${
-                                  n.type === 'incident_reported' ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'
+                                  n.type === 'incident_reported' || n.type === 'listing_rejected'
+                                    ? 'bg-rose-500 animate-pulse'
+                                    : n.type === 'listing_approved'
+                                    ? 'bg-emerald-500'
+                                    : 'bg-amber-500'
                                 }`}
                               />
                               {n.title}
@@ -354,7 +354,7 @@ export function Header({
 
                           <div className="pt-1 flex items-center justify-between">
                             <span className="text-[10px] font-mono font-bold text-slate-400">
-                              {n.incidentId || n.leaseId}
+                              {n.incidentId || n.leaseId || n.listingId}
                             </span>
                             {n.type === 'incident_reported' ? (
                               <button
@@ -366,6 +366,18 @@ export function Header({
                                 className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
                               >
                                 <span>Traiter la panne</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            ) : (n.type === 'listing_approved' || n.type === 'listing_rejected') ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsNotifOpen(false);
+                                  router.push('/listings?view=my_listings');
+                                }}
+                                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
+                              >
+                                <span>Gérer mon annonce</span>
                                 <ExternalLink className="w-3 h-3" />
                               </button>
                             ) : n.type === 'payment_declared' ? (

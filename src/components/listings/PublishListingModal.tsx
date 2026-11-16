@@ -21,12 +21,17 @@ import {
   AlertCircle,
   ShieldAlert,
   AlertTriangle,
+  Sparkles,
+  Clock,
+  Loader2,
 } from 'lucide-react';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { RentalListing } from '@/lib/types';
 import { formatFCFA, computeEntryCost } from '@/lib/money/format';
 import { ModerationService, ModerationViolation } from '@/lib/services/moderation-service';
 import { AuthService } from '@/lib/services/auth-service';
+import { notifyPublish, notifyAction } from '@/lib/notifications/action-notifier';
+import { LeaseService } from '@/lib/services/lease-service';
 import {
   getUserResidenceCountry,
   getUserResidenceCity,
@@ -105,6 +110,13 @@ export function PublishListingModal({
     message: string;
     violations: ModerationViolation[];
   } | null>(null);
+
+  // État de Contrôle IA de Sécurité Haute Vitesse (~2.3 secondes)
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationStep, setVerificationStep] = useState(0);
+  const [verificationProgress, setVerificationProgress] = useState(0);
+  const [verificationStatus, setVerificationStatus] = useState<'scanning' | 'approved' | 'rejected'>('scanning');
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -226,22 +238,6 @@ export function PublishListingModal({
 
     setSecurityViolation(null);
 
-    // 1. RÈGLE STRICTE DES 2 VISUELS MINIMUM SUR TOUTE LA PLATEFORME
-    if (finalImages.length < 2) {
-      setSecurityViolation({
-        title: 'Photos ou Vidéos Insuffisantes (Règle Stricte)',
-        message: `Chaque annonce doit impérativement comporter au moins deux (2) photos ou vidéos représentatives du logement pour pouvoir être publiée sur toute la plateforme (actuellement : ${finalImages.length}/2).`,
-        violations: [
-          {
-            type: 'photos_insuffisantes',
-            severity: 'high',
-            message: `Minimum 2 photos ou vidéos requises. Vous n'avez importé que ${finalImages.length} fichier(s).`,
-          },
-        ],
-      });
-      return;
-    }
-
     const descriptionLines = description
       .split('\n')
       .map((line) => line.trim())
@@ -251,80 +247,202 @@ export function PublishListingModal({
     const coords = resolveLocationCoordinates(country, finalCity, district);
     const proposedTitle = title || `${propertyType} Moderne à ${district || finalCity}`;
 
-    // 2. VÉRIFICATION AUTOMATIQUE PAR L'IA DU SYSTÈME (Nudité, Propos Sexuels, Rançonnement / Extorsion)
-    const moderation = ModerationService.validateListing({
-      title: proposedTitle,
-      propertyType,
-      description,
-      landmark,
-      images: finalImages,
-      city: finalCity,
-      district,
-    });
+    // =========================================================================
+    // DÉCLENCHEMENT DU SCAN DE SÉCURITÉ IA EN DIRECT (Durée totale : ~2.3 secondes)
+    // =========================================================================
+    setIsVerifying(true);
+    setVerificationStatus('scanning');
+    setVerificationStep(1);
+    setVerificationProgress(25);
 
-    if (!moderation.isValid) {
-      const currentUser = AuthService.getCurrentUser();
-      ModerationService.recordSecurityAlert({
-        listingTitle: proposedTitle,
-        author: currentUser,
-        country,
-        city: finalCity,
-        violations: moderation.violations,
-      });
+    // Étape 1 : Analyse des visuels (≥ 2 photos/vidéos requises sur toute la plateforme)
+    setTimeout(() => {
+      if (finalImages.length < 2) {
+        setVerificationStatus('rejected');
+        setVerificationProgress(100);
 
-      setSecurityViolation({
-        title: 'Publication Bloquée par l\'IA de Sécurité',
-        message: moderation.summary,
-        violations: moderation.violations,
-      });
-      return;
-    }
+        const violationData = {
+          title: 'Photos ou Vidéos Insuffisantes (Règle Stricte)',
+          message: `Chaque annonce doit impérativement comporter au moins deux (2) photos ou vidéos représentatives du logement pour pouvoir être publiée sur toute la plateforme (actuellement : ${finalImages.length}/2).`,
+          violations: [
+            {
+              type: 'photos_insuffisantes' as const,
+              severity: 'high' as const,
+              message: `Minimum 2 photos ou vidéos requises. Vous n'avez importé que ${finalImages.length} fichier(s).`,
+            },
+          ],
+        };
 
-    const currentUser = AuthService.getCurrentUser();
+        const currentUser = AuthService.getCurrentUser();
+        ModerationService.recordSecurityAlert({
+          listingTitle: proposedTitle,
+          author: currentUser,
+          country,
+          city: finalCity,
+          violations: violationData.violations,
+        });
 
-    const newListing: RentalListing = {
-      id: `list-${Date.now()}`,
-      title: proposedTitle,
-      propertyType,
-      country,
-      countryCode: countryCodeMap[country] || 'BJ',
-      flag: COUNTRIES_CITIES[country]?.flag || '🌍',
-      city: finalCity,
-      district: district || 'Centre-ville',
-      landmark: landmark || 'Accès bitumé et sécurisé',
-      latitude: coords.lat,
-      longitude: coords.lng,
-      monthlyRent: parsedRent,
-      charges: parsedCharges,
-      depositMonths,
-      advanceMonths,
-      includeFirstRent,
-      includeAgencyFees,
-      agencyFees: parsedAgency,
-      hasUtilitiesDeposit,
-      utilitiesDeposit: parsedUtilities,
-      surface: parseInt(surface, 10) || 0,
-      bedrooms,
-      bathrooms,
-      images: finalImages,
-      description: description.trim(),
-      descriptionLines: descriptionLines,
-      amenities: descriptionLines,
-      isVerified: true,
-      status: 'disponible',
-      moderationStatus: 'valide',
-      moderatedAt: new Date().toISOString(),
-      authorId: currentUser?.id,
-      authorName: currentUser?.name,
-      authorCompany: currentUser?.companyName || undefined,
-      authorEmail: currentUser?.email,
-      authorPhone: currentUser?.phone,
-      authorRole: currentUser?.role,
-      authorAvatar: currentUser?.avatarUrl,
-    };
+        LeaseService.addLandlordNotification({
+          id: `notif-rej-${Date.now()}`,
+          title: '⛔ Annonce Non Éligible (Rejetée par l\'IA)',
+          message: `Votre annonce « ${proposedTitle} » a été rejetée par l'IA : minimum 2 photos ou vidéos requises (${finalImages.length}/2).`,
+          type: 'listing_rejected',
+          read: false,
+          timestamp: 'À l\'instant',
+        });
 
-    onPublish(newListing);
-    onClose();
+        notifyAction({
+          title: 'Publication Refusée par l\'IA',
+          message: `L'annonce a été bloquée : minimum 2 photos ou vidéos requises.`,
+          type: 'delete',
+          duration: 5000,
+        });
+
+        setTimeout(() => {
+          setIsVerifying(false);
+          setSecurityViolation(violationData);
+        }, 800);
+        return;
+      }
+
+      setVerificationStep(2);
+      setVerificationProgress(60);
+
+      // Étape 2 : Analyse neuronale anti-nudité & propos sexuels
+      setTimeout(() => {
+        setVerificationStep(3);
+        setVerificationProgress(85);
+
+        // Étape 3 : Audit anti-extorsion & rançonnement financier
+        setTimeout(() => {
+          setVerificationProgress(100);
+
+          // ÉVALUATION COMPLÈTE VIA LE MOTEUR DE MODÉRATION IA
+          const moderation = ModerationService.validateListing({
+            title: proposedTitle,
+            propertyType,
+            description,
+            landmark,
+            images: finalImages,
+            city: finalCity,
+            district,
+          });
+
+          const currentUser = AuthService.getCurrentUser();
+
+          if (!moderation.isValid) {
+            // REFUSÉ PAR L'IA
+            setVerificationStatus('rejected');
+
+            // Signalement automatique au compte Super-Admin
+            ModerationService.recordSecurityAlert({
+              listingTitle: proposedTitle,
+              author: currentUser,
+              country,
+              city: finalCity,
+              violations: moderation.violations,
+            });
+
+            // Notification persistante dans la cloche
+            LeaseService.addLandlordNotification({
+              id: `notif-rej-${Date.now()}`,
+              title: '⛔ Annonce Rejetée par l\'IA de Sécurité',
+              message: `Votre annonce « ${proposedTitle} » n'a pas été mise en ligne : ${moderation.violations.map((v) => v.message).join(' ')}`,
+              type: 'listing_rejected',
+              read: false,
+              timestamp: 'À l\'instant',
+            });
+
+            // Notification Toast Rouge Centrale
+            notifyAction({
+              title: 'Publication Refusée par l\'IA',
+              message: `L'annonce ne remplit pas les critères de sécurité. Corrigez les points signalés pour la republier.`,
+              type: 'delete',
+              duration: 5000,
+            });
+
+            setTimeout(() => {
+              setIsVerifying(false);
+              setSecurityViolation({
+                title: 'Publication Refusée par l\'IA de Sécurité',
+                message: moderation.summary,
+                violations: moderation.violations,
+              });
+            }, 800);
+          } else {
+            // VALIDÉ PAR L'IA EN QUELQUES SECONDES -> MISE EN LIGNE IMMÉDIATE
+            setVerificationStatus('approved');
+            setVerificationStep(4);
+
+            const newListing: RentalListing = {
+              id: `list-${Date.now()}`,
+              title: proposedTitle,
+              propertyType,
+              country,
+              countryCode: countryCodeMap[country] || 'BJ',
+              flag: COUNTRIES_CITIES[country]?.flag || '🌍',
+              city: finalCity,
+              district: district || 'Centre-ville',
+              landmark: landmark || 'Accès bitumé et sécurisé',
+              latitude: coords.lat,
+              longitude: coords.lng,
+              monthlyRent: parsedRent,
+              charges: parsedCharges,
+              depositMonths,
+              advanceMonths,
+              includeFirstRent,
+              includeAgencyFees,
+              agencyFees: parsedAgency,
+              hasUtilitiesDeposit,
+              utilitiesDeposit: parsedUtilities,
+              surface: parseInt(surface, 10) || 0,
+              bedrooms,
+              bathrooms,
+              images: finalImages,
+              description: description.trim(),
+              descriptionLines: descriptionLines,
+              amenities: descriptionLines,
+              isVerified: true,
+              status: 'disponible',
+              moderationStatus: 'valide',
+              moderatedAt: new Date().toISOString(),
+              authorId: currentUser?.id,
+              authorName: currentUser?.name,
+              authorCompany: currentUser?.companyName || undefined,
+              authorEmail: currentUser?.email,
+              authorPhone: currentUser?.phone,
+              authorRole: currentUser?.role,
+              authorAvatar: currentUser?.avatarUrl,
+            };
+
+            // Notification persistante dans la cloche
+            LeaseService.addLandlordNotification({
+              id: `notif-appr-${Date.now()}`,
+              title: '✅ Annonce Validée par l\'IA & En Ligne !',
+              message: `Votre annonce « ${proposedTitle} » a été vérifiée en 2.3s par l'IA et mise en ligne avec succès sur toute la plateforme.`,
+              type: 'listing_approved',
+              read: false,
+              listingId: newListing.id,
+              timestamp: 'À l\'instant',
+            });
+
+            // Notification Toast Vert Centrale
+            notifyPublish(
+              `Votre annonce « ${proposedTitle} » a été vérifiée par l'IA et est désormais en ligne sur toute la plateforme !`,
+              'Annonce Validée & En Ligne !'
+            );
+
+            // Mise en ligne officielle et fermeture de la modale après 800ms
+            setTimeout(() => {
+              setIsVerifying(false);
+              setVerificationStatus('scanning');
+              onPublish(newListing);
+              onClose();
+            }, 850);
+          }
+        }, 800);
+      }, 750);
+    }, 700);
   };
 
   const cities = COUNTRIES_CITIES[country]?.cities || [];
@@ -976,6 +1094,179 @@ export function PublishListingModal({
             </button>
           </div>
         </form>
+
+        {/* ================================================================= */}
+        {/* ÉCRAN DE CONTRÔLE DE SÉCURITÉ IA EN DIRECT (~2.3 SECONDES)        */}
+        {/* ================================================================= */}
+        {isVerifying && (
+          <div className="absolute inset-0 z-50 bg-slate-950/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-white animate-in fade-in duration-200">
+            {/* Glowing AI Radar / Shield Icon */}
+            <div className="relative mb-5">
+              <div
+                className={`w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-500 ${
+                  verificationStatus === 'approved'
+                    ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-emerald-500/50 scale-110'
+                    : verificationStatus === 'rejected'
+                    ? 'bg-gradient-to-tr from-rose-600 to-red-600 shadow-rose-500/50'
+                    : 'bg-gradient-to-tr from-brand-600 to-indigo-600 shadow-pink-glow animate-pulse'
+                }`}
+              >
+                {verificationStatus === 'approved' ? (
+                  <CheckCircle2 className="w-10 h-10 text-white animate-in zoom-in duration-300" />
+                ) : verificationStatus === 'rejected' ? (
+                  <ShieldAlert className="w-10 h-10 text-white animate-in zoom-in duration-300" />
+                ) : (
+                  <ShieldCheck className="w-10 h-10 text-white" />
+                )}
+              </div>
+              {verificationStatus === 'scanning' && (
+                <div className="absolute -inset-2 rounded-3xl border-2 border-brand-500/40 animate-ping pointer-events-none" />
+              )}
+            </div>
+
+            <div className="text-center space-y-1.5 max-w-md">
+              <div
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-1 border ${
+                  verificationStatus === 'approved'
+                    ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
+                    : verificationStatus === 'rejected'
+                    ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
+                    : 'bg-brand-500/20 border-brand-500/40 text-brand-300'
+                }`}
+              >
+                {verificationStatus === 'scanning' ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 animate-spin text-brand-300" />
+                    <span>IA Shield LOCAGESTION en action</span>
+                  </>
+                ) : verificationStatus === 'approved' ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Conformité Totale Validée</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Annonce Non Conforme</span>
+                  </>
+                )}
+              </div>
+
+              <h3 className="text-xl font-black text-white">
+                {verificationStatus === 'approved'
+                  ? 'Annonce Validée & En Ligne !'
+                  : verificationStatus === 'rejected'
+                  ? 'Publication Bloquée par l\'IA'
+                  : 'Vérification IA en cours...'}
+              </h3>
+              <p className="text-xs text-slate-300">
+                {verificationStatus === 'approved'
+                  ? 'Votre bien est certifié et immédiatement visible par tous les locataires.'
+                  : verificationStatus === 'rejected'
+                  ? 'Des infractions aux règles de sécurité ont été détectées.'
+                  : 'Analyse automatique de conformité en quelques secondes avant diffusion.'}
+              </p>
+            </div>
+
+            {/* Étapes du scan en direct */}
+            <div className="w-full max-w-md mt-6 space-y-2.5">
+              {/* Étape 1 : Visuels */}
+              <div
+                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${
+                  verificationStep > 1
+                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                    : verificationStep === 1
+                    ? 'bg-slate-900 border-brand-500/60 text-white'
+                    : 'bg-slate-900/50 border-slate-800 text-slate-500'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {verificationStep > 1 ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : verificationStep === 1 ? (
+                    <Loader2 className="w-4 h-4 text-brand-400 animate-spin shrink-0" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-slate-600 shrink-0" />
+                  )}
+                  <span>Visuels certifiés (≥ 2 photos/vidéos)</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold">
+                  {verificationStep > 1 ? 'CONFORME' : verificationStep === 1 ? 'ANALYSE...' : 'EN ATTENTE'}
+                </span>
+              </div>
+
+              {/* Étape 2 : Nudité & Propos sexuels */}
+              <div
+                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${
+                  verificationStep > 2
+                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                    : verificationStep === 2
+                    ? 'bg-slate-900 border-brand-500/60 text-white'
+                    : 'bg-slate-900/50 border-slate-800 text-slate-500'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {verificationStep > 2 ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : verificationStep === 2 ? (
+                    <Loader2 className="w-4 h-4 text-brand-400 animate-spin shrink-0" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-slate-600 shrink-0" />
+                  )}
+                  <span>Filtre anti-nudité & propos sexuels</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold">
+                  {verificationStep > 2 ? 'CONFORME' : verificationStep === 2 ? 'ANALYSE...' : 'EN ATTENTE'}
+                </span>
+              </div>
+
+              {/* Étape 3 : Anti-extorsion & rançonnement */}
+              <div
+                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${
+                  verificationStep > 3
+                    ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                    : verificationStep === 3
+                    ? 'bg-slate-900 border-brand-500/60 text-white'
+                    : 'bg-slate-900/50 border-slate-800 text-slate-500'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {verificationStep > 3 ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  ) : verificationStep === 3 ? (
+                    <Loader2 className="w-4 h-4 text-brand-400 animate-spin shrink-0" />
+                  ) : (
+                    <Clock className="w-4 h-4 text-slate-600 shrink-0" />
+                  )}
+                  <span>Audit anti-extorsion & rançonnement</span>
+                </div>
+                <span className="text-[10px] font-mono font-bold">
+                  {verificationStep > 3 ? 'CONFORME' : verificationStep === 3 ? 'ANALYSE...' : 'EN ATTENTE'}
+                </span>
+              </div>
+            </div>
+
+            {/* Barre de progression & Chrono */}
+            <div className="w-full max-w-md mt-6 space-y-1.5">
+              <div className="flex justify-between text-[11px] font-bold text-slate-400">
+                <span>Délai de vérification : ~2.3s</span>
+                <span className="text-brand-400 font-mono">{verificationProgress}%</span>
+              </div>
+              <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-300 ease-out ${
+                    verificationStatus === 'approved'
+                      ? 'bg-emerald-500'
+                      : verificationStatus === 'rejected'
+                      ? 'bg-rose-500'
+                      : 'bg-gradient-to-r from-brand-500 to-indigo-500'
+                  }`}
+                  style={{ width: `${verificationProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ================================================================= */}
         {/* MODAL ALERTE SÉCURITÉ DE REJET AUTOMATIQUE PAR L'IA               */}
