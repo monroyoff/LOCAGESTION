@@ -409,7 +409,7 @@ Pour garantir la sécurité, la moralité publique, la sérénité des familles 
 - **Compte Super-Admin dédié :**  
   - Email : `admin@locagestion.site`  
   - Mot de passe : `Admin@Loca2026!`  
-  - Téléphone : `+229 97 00 00 99`  
+  - Téléphone : `+229 01 96 68 92 77`  
   - Rôle : `admin`
 - **Signalement automatique et horodaté :** Dès qu'une infraction est détectée lors d'une tentative de publication ou de modification, une **Alerte de Sécurité** est automatiquement générée et transmise dans la console Super-Admin (`/admin`).
 - **Pouvoirs de l'Administrateur :**  

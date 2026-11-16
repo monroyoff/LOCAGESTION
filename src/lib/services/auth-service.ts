@@ -32,7 +32,7 @@ export const SYSTEM_ADMIN_USER: AuthUser = {
   firstName: 'Admin',
   lastName: 'Général',
   email: 'admin@locagestion.site',
-  phone: '+229 97 00 00 99',
+  phone: '+229 01 96 68 92 77',
   role: 'admin',
   birthDate: '01/01/1985',
   birthPlace: 'Cotonou',
@@ -165,6 +165,9 @@ export const AuthService = {
           localStorage.removeItem(STORAGE_KEY_SESSION);
           return null;
         }
+        if (parsed && (parsed.role === 'admin' || areEmailsEqual(parsed.email, SYSTEM_ADMIN_USER.email))) {
+          parsed.phone = SYSTEM_ADMIN_USER.phone;
+        }
         return parsed || null;
       }
       return null;
@@ -183,7 +186,12 @@ export const AuthService = {
     const current = this.getCurrentUser();
     const list = [...registered];
 
-    if (!list.some((u) => u.id === SYSTEM_ADMIN_USER.id || areEmailsEqual(u.email, SYSTEM_ADMIN_USER.email))) {
+    const adminIndex = list.findIndex(
+      (u) => u.id === SYSTEM_ADMIN_USER.id || areEmailsEqual(u.email, SYSTEM_ADMIN_USER.email)
+    );
+    if (adminIndex >= 0) {
+      list[adminIndex] = { ...list[adminIndex], phone: SYSTEM_ADMIN_USER.phone };
+    } else {
       list.push(SYSTEM_ADMIN_USER);
     }
 
