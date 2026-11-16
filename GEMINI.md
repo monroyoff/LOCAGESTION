@@ -390,6 +390,10 @@ Pour garantir la sécurité, la moralité publique, la sérénité des familles 
 
 ### 🛡️ 1. Vérification Automatique Obligatoire Avant Toute Publication
 - **Portée universelle :** S'applique à tous les espaces (Bailleurs, Démarcheurs, Particuliers) et à tous les modules d'annonces.
+- **Délai d'analyse IA ultra-rapide (~2.3 secondes) :** Le contrôle de conformité ne dépasse pas quelques secondes. L'utilisateur visualise un écran de scan interactif en direct (étape 1 : visuels, étape 2 : anti-nudité/sexuel, étape 3 : anti-extorsion/rançon) avec chronomètre et barre de progression.
+- **Mise en ligne ou rejet immédiats :**
+  - **Si éligible :** L'annonce est validée avec le sceau de certification IA, immédiatement publiée sur toute la plateforme (catalogue public et "Mes publications") et l'utilisateur reçoit une notification instantanée (toast central géant et notification persistante dans la cloche).
+  - **Si non éligible :** La publication est immédiatement bloquée avec affichage précis des infractions, une alerte haute priorité est transmise au Super-Admin (`/admin`) et l'utilisateur est notifié du motif pour correction.
 - **Passage préalable par l'IA :** Aucune annonce ne peut être rendue publique sur la place de marché sans avoir validé l'analyse sémantique, textuelle et visuelle effectuée par le service `ModerationService` (`src/lib/services/moderation-service.ts`).
 
 ### 📷 2. Règle Stricte des Deux (2) Visuels Minimum
