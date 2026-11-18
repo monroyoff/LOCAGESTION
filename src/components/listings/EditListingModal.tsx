@@ -234,6 +234,7 @@ export function EditListingModal({
         const currentUser = AuthService.getCurrentUser();
         ModerationService.recordSecurityAlert({
           listingId: listing.id,
+          listingReference: listing.referenceCode || listing.id,
           listingTitle: proposedTitle,
           author: currentUser,
           country: listing.country,
@@ -291,6 +292,7 @@ export function EditListingModal({
 
             ModerationService.recordSecurityAlert({
               listingId: listing.id,
+              listingReference: listing.referenceCode || listing.id,
               listingTitle: proposedTitle,
               author: currentUser,
               country: listing.country,

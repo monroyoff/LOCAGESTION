@@ -1,6 +1,7 @@
 'use client';
 
 import { RentalListing, SecurityAlert, AuthUser } from '../types';
+import { generateListingReference } from './listings-service';
 
 const STORAGE_KEY_ALERTS = 'locagestion:security_alerts:v1';
 
@@ -237,7 +238,14 @@ export const ModerationService = {
             );
             return !hasLegacyFalsePositive;
           });
-          if (cleaned.length !== parsed.length) {
+          let hasMutated = false;
+          cleaned.forEach((alert: SecurityAlert) => {
+            if (!alert.listingReference) {
+              alert.listingReference = generateListingReference(alert.listingId || alert.id, alert.country);
+              hasMutated = true;
+            }
+          });
+          if (hasMutated || cleaned.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(cleaned));
           }
           return cleaned;
@@ -269,6 +277,7 @@ export const ModerationService = {
    */
   recordSecurityAlert(params: {
     listingId?: string;
+    listingReference?: string;
     listingTitle: string;
     author: Partial<AuthUser> | null;
     country?: string;
@@ -276,10 +285,14 @@ export const ModerationService = {
     violations: ModerationViolation[];
   }): SecurityAlert {
     const existing = this.getSecurityAlerts();
+    const reference =
+      params.listingReference ||
+      generateListingReference(params.listingId, params.country);
 
     const newAlert: SecurityAlert = {
       id: `alert-sec-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`,
       listingId: params.listingId,
+      listingReference: reference,
       listingTitle: params.listingTitle || 'Annonce sans titre',
       authorName: params.author?.name || 'Auteur inconnu',
       authorEmail: params.author?.email || 'Non renseigné',

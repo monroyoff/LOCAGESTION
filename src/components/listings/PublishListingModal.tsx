@@ -264,6 +264,9 @@ export function PublishListingModal({
     const finalCity = isCustomCity && customCity.trim() ? customCity.trim() : city;
     const coords = resolveLocationCoordinates(country, finalCity, district);
     const proposedTitle = title || `${propertyType} Moderne à ${district || finalCity}`;
+    const candidateId = `list-${Date.now()}`;
+    const targetCountryCode = countryCodeMap[country] || 'BJ';
+    const candidateReference = generateListingReference(candidateId, targetCountryCode);
 
     // =========================================================================
     // DÉCLENCHEMENT DU SCAN DE SÉCURITÉ IA EN DIRECT (Durée totale : ~2.3 secondes)
@@ -293,6 +296,8 @@ export function PublishListingModal({
 
         const currentUser = AuthService.getCurrentUser();
         ModerationService.recordSecurityAlert({
+          listingId: candidateId,
+          listingReference: candidateReference,
           listingTitle: proposedTitle,
           author: currentUser,
           country,
@@ -352,8 +357,10 @@ export function PublishListingModal({
             // REFUSÉ PAR L'IA
             setVerificationStatus('rejected');
 
-            // Signalement automatique au compte Super-Admin
+            // Signalement automatique au compte Super-Admin avec référence scellée
             ModerationService.recordSecurityAlert({
+              listingId: candidateId,
+              listingReference: candidateReference,
               listingTitle: proposedTitle,
               author: currentUser,
               country,
@@ -392,12 +399,11 @@ export function PublishListingModal({
             setVerificationStatus('approved');
             setVerificationStep(4);
 
-            const newId = `list-${Date.now()}`;
-            const targetCountryCode = countryCodeMap[country] || 'BJ';
+            const newId = candidateId;
 
             const newListing: RentalListing = {
               id: newId,
-              referenceCode: generateListingReference(newId, targetCountryCode),
+              referenceCode: candidateReference,
               title: proposedTitle,
               propertyType,
               country,

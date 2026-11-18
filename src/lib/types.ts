@@ -291,6 +291,7 @@ export interface AuthUser {
 export interface SecurityAlert {
   id: string;
   listingId?: string;
+  listingReference?: string; // Référence unique plateforme de l'annonce (ex: LOCA-BJ-17635)
   listingTitle: string;
   authorName: string;
   authorEmail: string;
