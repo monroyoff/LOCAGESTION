@@ -28,6 +28,7 @@ import { ModerationService } from '@/lib/services/moderation-service';
 import { AuthService } from '@/lib/services/auth-service';
 import { notifyUpdate, notifyAction } from '@/lib/notifications/action-notifier';
 import { LeaseService } from '@/lib/services/lease-service';
+import { resolveListingAuthorCompany } from '@/lib/services/listings-service';
 
 interface EditListingModalProps {
   isOpen: boolean;
@@ -86,7 +87,7 @@ export function EditListingModal({
 
   useEffect(() => {
     if (listing) {
-      setAuthorCompany(listing.authorCompany || '');
+      setAuthorCompany(listing.authorCompany || resolveListingAuthorCompany(listing) || '');
       setTitle(listing.title || '');
       setPropertyType(listing.propertyType || 'Appartement');
       setMonthlyRent(listing.monthlyRent?.toString() || '');

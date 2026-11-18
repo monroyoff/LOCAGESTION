@@ -33,6 +33,7 @@ import { UserSpace } from '@/lib/types';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { detectUserGeoLocation, UserGeoLocation } from '@/lib/services/geo-service';
 import { AuthService } from '@/lib/services/auth-service';
+import { ListingsService } from '@/lib/services/listings-service';
 
 // Les 14 pays officiels des zones UEMOA & CEMAC
 const UEMOA_CEMAC_COUNTRIES = [
@@ -458,6 +459,12 @@ export default function RegisterPage() {
         ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
         password: password || 'demo1234',
       });
+
+      if (res.success && res.user && companyName.trim()) {
+        ListingsService.syncAuthorCompany(res.user.id, companyName.trim());
+        ListingsService.syncAuthorCompany(res.user.name, companyName.trim());
+        ListingsService.syncAuthorCompany(res.user.email, companyName.trim());
+      }
 
       if (!res.success) {
         setErrorMsg(res.error || 'Erreur lors de la création de votre compte.');
@@ -1239,6 +1246,15 @@ export default function RegisterPage() {
                       {lastName} {firstName}
                     </span>
                   </div>
+
+                  {companyName.trim() && (
+                    <div>
+                      <span className="text-slate-400 block text-[10px]">Entreprise / Agence :</span>
+                      <span className="font-bold text-brand-300 truncate block mt-0.5">
+                        {companyName}
+                      </span>
+                    </div>
+                  )}
 
                   <div>
                     <span className="text-slate-400 block text-[10px]">Email :</span>

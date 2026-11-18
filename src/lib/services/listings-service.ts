@@ -78,6 +78,87 @@ function notifyListingsChange() {
   }
 }
 
+/**
+ * Résout le nom d'entreprise ou d'agence d'une annonce :
+ * 1. Sur l'annonce directement (listing.authorCompany)
+ * 2. Via l'utilisateur connecté s'il est l'auteur (AuthUser)
+ * 3. Via la base des utilisateurs inscrits (locagestion:auth:users:v1)
+ * 4. Via les profils utilisateurs sauvegardés (locagestion:user_profile:v1)
+ */
+export function resolveListingAuthorCompany(listing?: Partial<RentalListing> | null): string | undefined {
+  if (!listing) return undefined;
+
+  // 1. Déjà présent et non vide sur l'annonce
+  if (listing.authorCompany && listing.authorCompany.trim()) {
+    return listing.authorCompany.trim();
+  }
+
+  if (typeof window === 'undefined') return undefined;
+
+  try {
+    const cleanAuthorName = (listing.authorName || '').trim().toLowerCase();
+    const cleanAuthorEmail = (listing.authorEmail || '').trim().toLowerCase();
+    const cleanAuthorPhone = (listing.authorPhone || '').replace(/\s+/g, '');
+    const authorId = listing.authorId;
+
+    // 2. Vérifier l'utilisateur actuellement connecté
+    const sessionStr = localStorage.getItem('locagestion:auth:session:v1');
+    if (sessionStr) {
+      const session = JSON.parse(sessionStr);
+      if (session && session.companyName && session.companyName.trim()) {
+        const isSessionAuthor =
+          (authorId && session.id === authorId) ||
+          (cleanAuthorEmail && session.email && session.email.trim().toLowerCase() === cleanAuthorEmail) ||
+          (cleanAuthorPhone && session.phone && session.phone.replace(/\s+/g, '') === cleanAuthorPhone) ||
+          (cleanAuthorName && session.name && session.name.trim().toLowerCase() === cleanAuthorName);
+        if (isSessionAuthor) {
+          return session.companyName.trim();
+        }
+      }
+    }
+
+    // 3. Vérifier dans la liste de tous les utilisateurs enregistrés
+    const usersStr = localStorage.getItem('locagestion:auth:users:v1');
+    if (usersStr) {
+      const users = JSON.parse(usersStr);
+      if (Array.isArray(users)) {
+        const matched = users.find((u: any) => {
+          if (authorId && u.id === authorId) return true;
+          if (cleanAuthorEmail && u.email && u.email.trim().toLowerCase() === cleanAuthorEmail) return true;
+          if (cleanAuthorPhone && u.phone && u.phone.replace(/\s+/g, '') === cleanAuthorPhone) return true;
+          if (cleanAuthorName && u.name && u.name.trim().toLowerCase() === cleanAuthorName) return true;
+          return false;
+        });
+        if (matched && matched.companyName && matched.companyName.trim()) {
+          return matched.companyName.trim();
+        }
+      }
+    }
+
+    // 4. Vérifier dans les profils locaux (bailleur, démarcheur, locataire)
+    const roleKeys = ['bailleur', 'demarcheur', 'locataire'];
+    for (const roleKey of roleKeys) {
+      const profileStr = localStorage.getItem(`locagestion:user_profile:v1:${roleKey}`);
+      if (profileStr) {
+        const prof = JSON.parse(profileStr);
+        if (prof && prof.companyName && prof.companyName.trim()) {
+          const isProfileAuthor =
+            (authorId && prof.id === authorId) ||
+            (cleanAuthorName && prof.name && prof.name.trim().toLowerCase() === cleanAuthorName) ||
+            (cleanAuthorEmail && prof.email && prof.email.trim().toLowerCase() === cleanAuthorEmail);
+          if (isProfileAuthor) {
+            return prof.companyName.trim();
+          }
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Erreur résolution entreprise annonceur:', err);
+  }
+
+  return undefined;
+}
+
 export const ListingsService = {
   getCustomListings(): RentalListing[] {
     if (typeof window === 'undefined') return SEED_CUSTOM_LISTINGS;
@@ -86,8 +167,18 @@ export const ListingsService = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          const sanitized = parsed.filter((l) => !isFakeListing(l));
-          if (sanitized.length !== parsed.length) {
+          let hasUpdated = false;
+          const sanitized = parsed.filter((l) => !isFakeListing(l)).map((l) => {
+            if (!l.authorCompany || !l.authorCompany.trim()) {
+              const resolved = resolveListingAuthorCompany(l);
+              if (resolved) {
+                hasUpdated = true;
+                return { ...l, authorCompany: resolved };
+              }
+            }
+            return l;
+          });
+          if (hasUpdated || sanitized.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
           }
           return sanitized;
@@ -213,14 +304,17 @@ export const ListingsService = {
   /**
    * Synchronise le nom d'entreprise ou d'agence sur toutes les annonces publiées par cet auteur
    */
-  syncAuthorCompany(authorIdOrName: string, companyName?: string): void {
+  syncAuthorCompany(identifier: string, companyName?: string): void {
     const current = this.getCustomListings().filter((l) => !isFakeListing(l));
     let changed = false;
-    const target = (authorIdOrName || '').trim().toLowerCase();
+    const target = (identifier || '').trim().toLowerCase();
+    const cleanPhone = (identifier || '').replace(/\s+/g, '');
     const updated = current.map((item) => {
       const matchId = item.authorId && item.authorId.toLowerCase() === target;
       const matchName = item.authorName && item.authorName.trim().toLowerCase() === target;
-      if (matchId || matchName) {
+      const matchEmail = item.authorEmail && item.authorEmail.trim().toLowerCase() === target;
+      const matchPhone = item.authorPhone && item.authorPhone.replace(/\s+/g, '') === cleanPhone;
+      if (matchId || matchName || matchEmail || matchPhone) {
         changed = true;
         return {
           ...item,

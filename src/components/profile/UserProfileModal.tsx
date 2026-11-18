@@ -227,6 +227,12 @@ export function UserProfileModal({
     if (finalProfile.name) {
       ListingsService.syncAuthorCompany(finalProfile.name, finalProfile.companyName);
     }
+    if (finalProfile.email) {
+      ListingsService.syncAuthorCompany(finalProfile.email, finalProfile.companyName);
+    }
+    if (finalProfile.phone) {
+      ListingsService.syncAuthorCompany(finalProfile.phone, finalProfile.companyName);
+    }
 
     // 3. Synchronisation absolue dans la session active et les utilisateurs enregistrés
     if (typeof window !== 'undefined') {
