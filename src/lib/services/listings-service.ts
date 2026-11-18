@@ -162,6 +162,77 @@ export function resolveListingAuthorCompany(listing?: Partial<RentalListing> | n
 }
 
 /**
+ * Résout le rôle / statut de l'auteur d'une annonce :
+ * - 'Locataire' si le compte est locataire
+ * - 'Démarcheur' si le compte est démarcheur
+ * - 'Bailleur' si le compte est bailleur (propriétaire)
+ * - 'Admin' si le compte est administrateur
+ */
+export function resolveListingAuthorRole(listing?: Partial<RentalListing> | null): 'Bailleur' | 'Démarcheur' | 'Locataire' | 'Admin' {
+  if (!listing) return 'Bailleur';
+
+  const role = (listing.authorRole || '').toLowerCase().trim();
+  if (role === 'locataire') return 'Locataire';
+  if (role === 'demarcheur') return 'Démarcheur';
+  if (role === 'admin') return 'Admin';
+  if (role === 'bailleur') return 'Bailleur';
+
+  // Si non défini ou ambigu sur l'annonce, résoudre via la base des utilisateurs
+  if (typeof window !== 'undefined') {
+    try {
+      const cleanAuthorName = (listing.authorName || '').trim().toLowerCase();
+      const cleanAuthorEmail = (listing.authorEmail || '').trim().toLowerCase();
+      const cleanAuthorPhone = (listing.authorPhone || '').replace(/\D/g, '');
+      const authorId = listing.authorId;
+
+      // 1. Session active
+      const sessionStr = localStorage.getItem('locagestion:auth:session:v1');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session) {
+          const isSession =
+            (authorId && session.id === authorId) ||
+            (cleanAuthorEmail && session.email && session.email.trim().toLowerCase() === cleanAuthorEmail) ||
+            (cleanAuthorPhone && session.phone && session.phone.replace(/\D/g, '') === cleanAuthorPhone) ||
+            (cleanAuthorName && session.name && session.name.trim().toLowerCase() === cleanAuthorName);
+          if (isSession && session.role) {
+            const sRole = session.role.toLowerCase().trim();
+            if (sRole === 'locataire') return 'Locataire';
+            if (sRole === 'demarcheur') return 'Démarcheur';
+            if (sRole === 'admin') return 'Admin';
+            if (sRole === 'bailleur') return 'Bailleur';
+          }
+        }
+      }
+
+      // 2. Base complète des utilisateurs inscrits
+      const usersStr = localStorage.getItem('locagestion:auth:users:v1');
+      if (usersStr) {
+        const users = JSON.parse(usersStr);
+        if (Array.isArray(users)) {
+          const matched = users.find((u: any) => {
+            if (authorId && u.id === authorId) return true;
+            if (cleanAuthorEmail && u.email && u.email.trim().toLowerCase() === cleanAuthorEmail) return true;
+            if (cleanAuthorPhone && u.phone && u.phone.replace(/\D/g, '') === cleanAuthorPhone) return true;
+            if (cleanAuthorName && u.name && u.name.trim().toLowerCase() === cleanAuthorName) return true;
+            return false;
+          });
+          if (matched && matched.role) {
+            const mRole = matched.role.toLowerCase().trim();
+            if (mRole === 'locataire') return 'Locataire';
+            if (mRole === 'demarcheur') return 'Démarcheur';
+            if (mRole === 'admin') return 'Admin';
+            if (mRole === 'bailleur') return 'Bailleur';
+          }
+        }
+      }
+    } catch {}
+  }
+
+  return 'Bailleur';
+}
+
+/**
  * Génère une référence officielle d'annonce unique et facilement lisible
  * Format: LOCA-ANN-XXXXX ou LOCA-BJ-XXXXX
  */

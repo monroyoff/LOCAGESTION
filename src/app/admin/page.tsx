@@ -49,7 +49,7 @@ import {
 } from 'lucide-react';
 import { useSpace } from '@/lib/context/space-context';
 import { ModerationService } from '@/lib/services/moderation-service';
-import { ListingsService, getListingAgeInDays } from '@/lib/services/listings-service';
+import { ListingsService, getListingAgeInDays, resolveListingAuthorRole } from '@/lib/services/listings-service';
 import { AuthService, SYSTEM_ADMIN_USER, getRoleLabel, areEmailsEqual } from '@/lib/services/auth-service';
 import { SecurityAlert, RentalListing, AuthUser, UserSpace, TrashListing } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
@@ -1183,7 +1183,7 @@ export default function AdminDashboardPage() {
                                 <span className="text-slate-200 font-semibold">
                                   {l.authorCompany ? `${l.authorCompany} (${l.authorName})` : l.authorName}
                                 </span>
-                                <span className="text-slate-500"> • Rôle : {l.authorRole}</span>
+                                <span className="text-slate-500"> • Statut : {resolveListingAuthorRole(l)}</span>
                               </div>
                             </div>
                           </div>
@@ -1863,7 +1863,7 @@ export default function AdminDashboardPage() {
                   <div className="font-bold text-white text-sm">
                     {selectedListingForDetail.authorCompany ? `${selectedListingForDetail.authorCompany} (${selectedListingForDetail.authorName})` : selectedListingForDetail.authorName}
                   </div>
-                  <div className="text-slate-400 text-xs">Rôle : {selectedListingForDetail.authorRole}</div>
+                  <div className="text-slate-400 text-xs">Statut : {resolveListingAuthorRole(selectedListingForDetail)}</div>
                 </div>
                 <div className="flex items-center gap-3 text-xs text-slate-300">
                   <span className="flex items-center gap-1 font-mono">

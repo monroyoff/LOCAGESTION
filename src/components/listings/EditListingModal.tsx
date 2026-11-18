@@ -64,7 +64,7 @@ export function EditListingModal({
   const [monthlyRent, setMonthlyRent] = useState('');
   const [charges, setCharges] = useState('');
   const [depositMonths, setDepositMonths] = useState(3);
-  const [advanceMonths, setAdvanceMonths] = useState(3);
+  const [advanceMonths, setAdvanceMonths] = useState(0);
   const [includeFirstRent, setIncludeFirstRent] = useState(true);
   const [includeAgencyFees, setIncludeAgencyFees] = useState(true);
   const [agencyFeesAmount, setAgencyFeesAmount] = useState('');
@@ -94,7 +94,7 @@ export function EditListingModal({
       setMonthlyRent(listing.monthlyRent?.toString() || '');
       setCharges(listing.charges?.toString() || '0');
       setDepositMonths(listing.depositMonths !== undefined ? listing.depositMonths : 3);
-      setAdvanceMonths(listing.advanceMonths !== undefined ? listing.advanceMonths : 3);
+      setAdvanceMonths(listing.advanceMonths !== undefined ? listing.advanceMonths : 0);
       setIncludeFirstRent(listing.includeFirstRent !== false);
       setIncludeAgencyFees(listing.includeAgencyFees !== false);
       setAgencyFeesAmount(listing.agencyFees ? listing.agencyFees.toString() : '');
@@ -690,14 +690,16 @@ export function EditListingModal({
               <div className="p-3 bg-white rounded-xl border border-emerald-100 space-y-1.5">
                 <label className="text-[11px] font-bold text-slate-700 block flex items-center justify-between">
                   <span>Avance sur Loyer</span>
-                  <span className="text-[10px] text-emerald-700 font-bold">Standard : 3 mois</span>
+                  <span className="text-[10px] text-slate-500 font-bold">
+                    {advanceMonths === 0 ? '0 mois (Par défaut)' : `${advanceMonths} mois sélectionné${advanceMonths > 1 ? 's' : ''}`}
+                  </span>
                 </label>
                 <select
                   value={advanceMonths}
                   onChange={(e) => setAdvanceMonths(parseInt(e.target.value, 10))}
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold"
                 >
-                  <option value={0}>0 mois — Aucune avance</option>
+                  <option value={0}>0 mois — Aucune avance (Par défaut)</option>
                   <option value={1}>1 mois ({formatFCFA(parsedRent * 1)})</option>
                   <option value={2}>2 mois ({formatFCFA(parsedRent * 2)})</option>
                   <option value={3}>3 mois ({formatFCFA(parsedRent * 3)}) — ★ Standard Afrique</option>

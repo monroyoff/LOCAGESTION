@@ -93,7 +93,7 @@ export function computeEntryCost(listing: {
   const depositMonths = listing.depositMonths !== undefined ? Number(listing.depositMonths) : 3;
   const depositAmount = depositMonths * rent;
 
-  const advanceMonths = listing.advanceMonths !== undefined ? Number(listing.advanceMonths) : 3;
+  const advanceMonths = listing.advanceMonths !== undefined ? Number(listing.advanceMonths) : 0;
   const advanceAmount = advanceMonths * rent;
 
   const hasUtilities = !!listing.hasUtilitiesDeposit;

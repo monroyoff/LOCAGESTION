@@ -11,7 +11,7 @@ import { RentalListing } from '@/lib/types';
 import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
 import { EditListingModal } from '@/components/listings/EditListingModal';
-import { ListingsService, resolveListingAuthorCompany } from '@/lib/services/listings-service';
+import { ListingsService, resolveListingAuthorCompany, resolveListingAuthorRole } from '@/lib/services/listings-service';
 import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier';
 import {
   getUserResidenceCountry,
@@ -263,7 +263,7 @@ export default function ListingsPage() {
       authorCompany: newListing.authorCompany?.trim() || user?.companyName?.trim() || undefined,
       authorEmail: user?.email || newListing.authorEmail,
       authorPhone: user?.phone || newListing.authorPhone,
-      authorRole: activeSpace || newListing.authorRole,
+      authorRole: user?.role || activeSpace || newListing.authorRole || 'bailleur',
       authorAvatar: user?.avatarUrl || newListing.authorAvatar,
       createdAt: new Date().toLocaleDateString('fr-FR'),
       viewsCount: 0,
@@ -919,9 +919,14 @@ export default function ListingsPage() {
                                 </span>
                                 <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500" />
                               </div>
-                              <span className="text-[10px] font-bold text-slate-400">
-                                {listing.propertyType}
-                              </span>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                  Statut: {resolveListingAuthorRole(listing)}
+                                </span>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                  {listing.propertyType}
+                                </span>
+                              </div>
                             </div>
 
                             <h4
@@ -1534,12 +1539,8 @@ export default function ListingsPage() {
                                   </span>
                                 </div>
                               </div>
-                              <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 border border-slate-200">
-                                {listing.authorRole === 'demarcheur'
-                                  ? 'Démarcheur'
-                                  : listing.authorRole === 'admin'
-                                  ? 'Admin'
-                                  : 'Bailleur'}
+                              <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                Statut: {resolveListingAuthorRole(listing)}
                               </span>
                             </div>
                           );
@@ -1945,11 +1946,7 @@ export default function ListingsPage() {
                           <div className="flex items-center gap-2 mt-1">
                             <span className="text-[11px] text-slate-300 font-medium">
                               Statut : <strong className="text-white">
-                                {selectedListingForDetail.authorRole === 'demarcheur'
-                                  ? 'Démarcheur & Agent Immobilier'
-                                  : selectedListingForDetail.authorRole === 'admin'
-                                  ? 'Super-Administrateur Plateforme'
-                                  : 'Propriétaire Bailleur'}
+                                {resolveListingAuthorRole(selectedListingForDetail)}
                               </strong>
                             </span>
                           </div>
