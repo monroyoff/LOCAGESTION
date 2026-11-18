@@ -256,6 +256,7 @@ export interface UserProfile {
   registrationDate?: string;
   companyName?: string;
   ifuNumber?: string;
+  matricule?: string;       // Matricule officiel unique attribué à l'utilisateur (ex: LOCA-MAT-BJ-84291 ou LOCA-MAT-ADMIN-00001)
   currentLocation?: {
     latitude: number;
     longitude: number;
@@ -281,6 +282,7 @@ export interface AuthUser {
   avatarUrl?: string;
   companyName?: string;     // Nom d'entreprise / Agence (Bailleur / Démarcheur)
   ifuNumber?: string;       // IFU fiscal (Bailleur)
+  matricule?: string;       // Matricule officiel plateforme (ex: LOCA-MAT-BJ-84291 ou LOCA-MAT-ADMIN-00001)
   registeredAt: string;
   password?: string;
   adminSessionVersion?: string; // Version de session pour invalidation et déconnexion globale

@@ -28,8 +28,68 @@ export function getRoleLabel(role?: UserSpace | string): string {
 
 export const ADMIN_CURRENT_SESSION_VERSION = 'sec_v2_20261118_revoked_all';
 
+/**
+ * Extrait le code pays ISO-2 officiel pour le matricule (ex: BJ, CI, SN, TG, CM...)
+ */
+export function getCountryMatriculeCode(country?: string): string {
+  if (!country) return 'BJ';
+  const c = country.trim().toLowerCase();
+  if (c.includes('bénin') || c.includes('benin')) return 'BJ';
+  if (c.includes('côte') || c.includes('cote') || c.includes('ivoire')) return 'CI';
+  if (c.includes('sénégal') || c.includes('senegal')) return 'SN';
+  if (c.includes('togo')) return 'TG';
+  if (c.includes('cameroun') || c.includes('cameroon')) return 'CM';
+  if (c.includes('burkina')) return 'BF';
+  if (c.includes('mali')) return 'ML';
+  if (c.includes('niger') && !c.includes('nigeria')) return 'NE';
+  if (c.includes('gabon')) return 'GA';
+  if (c.includes('congo')) return 'CG';
+  if (c.includes('centrafrique') || c.includes('centrafricaine')) return 'CF';
+  if (c.includes('guinée-bissau') || c.includes('guinee-bissau')) return 'GW';
+  if (c.includes('équatoriale') || c.includes('equatoriale')) return 'GQ';
+  if (c.includes('tchad')) return 'TD';
+  if (c.includes('france')) return 'FR';
+  if (c.includes('belgique')) return 'BE';
+  if (c.includes('canada')) return 'CA';
+  if (c.includes('suisse')) return 'CH';
+  if (c.includes('états-unis') || c.includes('etats-unis') || c.includes('usa')) return 'US';
+  if (c.includes('royaume-uni') || c.includes('uk')) return 'GB';
+  if (c.includes('allemagne')) return 'DE';
+  if (c.includes('italie')) return 'IT';
+  if (c.includes('espagne')) return 'ES';
+  if (c.includes('maroc')) return 'MA';
+  return 'INT';
+}
+
+/**
+ * Génère un matricule officiel unique certifié pour tout utilisateur créé sur la plateforme.
+ * Format standard : LOCA-MAT-{CODE_PAYS}-{NUMERO_5_CHIFFRES} (ex: LOCA-MAT-BJ-84291)
+ * Pour le Super-Admin : LOCA-MAT-ADMIN-00001
+ */
+export function generateUserMatricule(country?: string, role?: string, seed?: string): string {
+  if (role === 'admin') return 'LOCA-MAT-ADMIN-00001';
+  const code = getCountryMatriculeCode(country);
+
+  let numStr = '';
+  if (seed) {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash << 5) - hash + seed.charCodeAt(i);
+      hash |= 0;
+    }
+    const num = (Math.abs(hash) % 90000) + 10000;
+    numStr = num.toString();
+  } else {
+    const num = Math.floor(10000 + Math.random() * 90000);
+    numStr = num.toString();
+  }
+
+  return `LOCA-MAT-${code}-${numStr}`;
+}
+
 export const SYSTEM_ADMIN_USER: AuthUser = {
   id: 'usr-admin-omega',
+  matricule: 'LOCA-MAT-ADMIN-00001',
   name: 'Direction Générale - Super Admin',
   firstName: 'Admin',
   lastName: 'Général',
@@ -143,7 +203,20 @@ export const AuthService = {
               u.id !== SYSTEM_ADMIN_USER.id &&
               u.role !== 'admin'
           );
-          if (sanitized.length !== parsed.length) {
+
+          let hasMutated = false;
+          sanitized.forEach((u) => {
+            if (!u.matricule) {
+              u.matricule = generateUserMatricule(
+                u.projectCountry || u.residenceCountry,
+                u.role,
+                u.id || u.email
+              );
+              hasMutated = true;
+            }
+          });
+
+          if (hasMutated || sanitized.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(sanitized));
           }
           return sanitized;
@@ -185,6 +258,16 @@ export const AuthService = {
             return null;
           }
           parsed.phone = SYSTEM_ADMIN_USER.phone;
+          parsed.matricule = SYSTEM_ADMIN_USER.matricule;
+        } else if (parsed && !parsed.matricule) {
+          parsed.matricule = generateUserMatricule(
+            parsed.projectCountry || parsed.residenceCountry,
+            parsed.role,
+            parsed.id || parsed.email
+          );
+          try {
+            localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
+          } catch (e) {}
         }
         return parsed || null;
       }
@@ -291,6 +374,7 @@ export const AuthService = {
         email: user.email,
         phone: user.phone,
         role: user.role,
+        matricule: user.matricule,
         birthDate: user.birthDate,
         birthPlace: user.birthPlace,
         residenceCountry: user.residenceCountry,
@@ -536,9 +620,12 @@ export const AuthService = {
     });
 
     const fullName = data.name?.trim() || `${data.firstName.trim()} ${data.lastName.trim()}`;
+    const targetCountry = data.projectCountry || data.residenceCountry || 'Bénin';
+    const userMatricule = generateUserMatricule(targetCountry, data.role);
 
     const newUser: AuthUser = {
       id: `usr-${data.role}-${Date.now().toString(36)}`,
+      matricule: userMatricule,
       name: fullName,
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),

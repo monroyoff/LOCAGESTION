@@ -59,7 +59,7 @@ export function Header({
   useEffect(() => {
     setTodayFormatted(formatDateFR(new Date()));
   }, []);
-  const { isLandlord, isTenant, isDemarcheur, isAdmin, activeSpace } = useSpace();
+  const { isLandlord, isTenant, isDemarcheur, isAdmin, activeSpace, user } = useSpace();
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
 
@@ -211,6 +211,16 @@ export function Header({
                   ? 'Espace Bailleur • UEMOA & CEMAC'
                   : 'Locataire Titulaire'}
               </span>
+
+              {user?.matricule && (
+                <span
+                  className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-900 text-indigo-300 border border-slate-700 shrink-0 shadow-xs"
+                  title="Votre Matricule Officiel Plateforme"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span>Matricule : {user.matricule}</span>
+                </span>
+              )}
             </div>
 
             <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 font-medium">

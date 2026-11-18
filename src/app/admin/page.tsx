@@ -41,6 +41,8 @@ import {
   PlayCircle,
   AlertCircle,
   FileText,
+  Copy,
+  Fingerprint,
 } from 'lucide-react';
 import { useSpace } from '@/lib/context/space-context';
 import { ModerationService } from '@/lib/services/moderation-service';
@@ -59,6 +61,7 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<'alerts' | 'listings' | 'users' | 'rules'>('alerts');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
+  const [copiedItem, setCopiedItem] = useState<string | null>(null);
 
   // Filtres et recherche Annonces
   const [searchListingRef, setSearchListingRef] = useState<string>('');
@@ -271,7 +274,8 @@ export default function AdminDashboardPage() {
       const phoneMatch = (u.phone || '').toLowerCase().includes(q);
       const companyMatch = (u.companyName || '').toLowerCase().includes(q);
       const cityMatch = (u.residenceCity || '').toLowerCase().includes(q);
-      return nameMatch || emailMatch || phoneMatch || companyMatch || cityMatch;
+      const matriculeMatch = (u.matricule || '').toLowerCase().includes(q);
+      return nameMatch || emailMatch || phoneMatch || companyMatch || cityMatch || matriculeMatch;
     }
     return true;
   });
@@ -857,7 +861,7 @@ export default function AdminDashboardPage() {
                   <span>Recherche & Modération des Comptes Utilisateurs ({users.length})</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Recherchez par nom, prénom, email, téléphone ou raison sociale. Modifiez les rôles ou supprimez des comptes non conformes.
+                  Recherchez par matricule officiel, nom, prénom, email, téléphone ou raison sociale. Modifiez les rôles ou supprimez des comptes non conformes.
                 </p>
               </div>
 
@@ -868,7 +872,7 @@ export default function AdminDashboardPage() {
                   type="text"
                   value={searchUserName}
                   onChange={(e) => setSearchUserName(e.target.value)}
-                  placeholder="Rechercher par nom, prénom, email, téléphone (+229...), entreprise ou ville..."
+                  placeholder="Rechercher par matricule (ex: LOCA-MAT-BJ-...), nom, prénom, email, téléphone, entreprise ou ville..."
                   className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
                 {searchUserName && (
@@ -944,6 +948,31 @@ export default function AdminDashboardPage() {
                         <div className="space-y-1.5 flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="text-sm font-black text-white">{u.name}</h4>
+
+                            {/* Badge Matricule officiel avec copie 1-clic */}
+                            {u.matricule && (
+                              <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5 shadow-xs">
+                                <Fingerprint className="w-3 h-3 text-indigo-400" />
+                                <span>{u.matricule}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard?.writeText(u.matricule!);
+                                    setCopiedItem(u.matricule!);
+                                    setTimeout(() => setCopiedItem(null), 1500);
+                                  }}
+                                  className="text-slate-400 hover:text-white transition-colors cursor-pointer ml-0.5 p-0.5"
+                                  title="Copier le matricule"
+                                >
+                                  {copiedItem === u.matricule ? (
+                                    <Check className="w-3 h-3 text-emerald-400" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                </button>
+                              </span>
+                            )}
 
                             {/* Badge Entreprise si renseignée */}
                             {u.companyName && (
@@ -1338,6 +1367,46 @@ export default function AdminDashboardPage() {
                 Données d'Identité & État Civil :
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* Matricule Officiel */}
+                <div className="col-span-1 sm:col-span-2 p-3.5 rounded-2xl bg-slate-950 border border-indigo-500/40 flex items-center justify-between gap-3 shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                      <Fingerprint className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider block">
+                        Matricule Officiel Unique Plateforme
+                      </span>
+                      <span className="font-mono font-black text-white text-sm block mt-0.5">
+                        {selectedUserForDetail.matricule || 'Non attribué'}
+                      </span>
+                    </div>
+                  </div>
+                  {selectedUserForDetail.matricule && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(selectedUserForDetail.matricule!);
+                        setCopiedItem(selectedUserForDetail.matricule!);
+                        setTimeout(() => setCopiedItem(null), 1500);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 text-xs font-bold transition-all flex items-center gap-1.5 border border-indigo-500/30 cursor-pointer shrink-0"
+                    >
+                      {copiedItem === selectedUserForDetail.matricule ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">Copié</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>Copier</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+
                 <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
                   <span className="text-[10px] font-bold text-slate-500 uppercase block">Nom complet</span>
                   <span className="font-bold text-white">{selectedUserForDetail.name}</span>

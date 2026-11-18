@@ -162,6 +162,13 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     const res = AuthService.register(data);
     if (res.success && res.user) {
       setUser(res.user);
+      if (res.user.matricule) {
+        notifyAction(
+          `Compte créé avec succès ! Votre matricule officiel unique est : ${res.user.matricule}`,
+          'Matricule Officiel Attribué',
+          'success'
+        );
+      }
       if (res.user.role === 'admin') {
         router.push('/admin');
       } else if (res.user.role === 'locataire') {

@@ -21,6 +21,8 @@ import {
   LogOut,
   Users,
   Repeat,
+  Copy,
+  Fingerprint,
 } from 'lucide-react';
 import { UserProfile, UserSpace } from '@/lib/types';
 import {
@@ -81,8 +83,16 @@ export function UserProfileModal({
   const [userLocation, setUserLocation] = useState<UserGeoLocation | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [copiedMatricule, setCopiedMatricule] = useState(false);
   const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleCopyMatricule = (matricule: string) => {
+    if (!matricule) return;
+    navigator.clipboard?.writeText(matricule);
+    setCopiedMatricule(true);
+    setTimeout(() => setCopiedMatricule(false), 2000);
+  };
 
   // Synchronisation des données à l'ouverture de la modale
   useEffect(() => {
@@ -454,6 +464,47 @@ export function UserProfileModal({
               <strong>Pays d'inscription :</strong> Définit automatiquement votre pays par défaut
               pour la <strong>recherche de logements</strong> (annonces de ce pays affichées en exclusivité et par proximité) et la <strong>création d'annonces</strong>.
             </div>
+          </div>
+
+          {/* Matricule Officiel Certifié */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 flex items-center justify-between gap-3 shadow-md">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
+                <Fingerprint className="w-5 h-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300">
+                    Matricule Officiel Unique
+                  </span>
+                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-indigo-500/30 text-indigo-200 border border-indigo-400/40">
+                    Certifié Plateforme
+                  </span>
+                </div>
+                <div className="text-sm sm:text-base font-black font-mono tracking-wider text-white mt-0.5 truncate">
+                  {user?.matricule || profile.matricule || 'LOCA-MAT-BJ-00000'}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => handleCopyMatricule(user?.matricule || profile.matricule || '')}
+              className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+              title="Copier le matricule"
+            >
+              {copiedMatricule ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="text-emerald-400">Copié !</span>
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copier</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Bannière Identité Certifiée & Scellée */}

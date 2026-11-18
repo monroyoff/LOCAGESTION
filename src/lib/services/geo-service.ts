@@ -254,6 +254,7 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
             avatarUrl: u.avatarUrl,
             companyName: u.companyName,
             ifuNumber: u.ifuNumber,
+            matricule: u.matricule,
             registrationDate: u.registeredAt || new Date().toLocaleDateString('fr-FR'),
           };
         }
@@ -341,6 +342,7 @@ export function saveUserProfile(profile: UserProfile): void {
         residenceCity: profile.residenceCity || session.residenceCity,
         residenceDistrict: profile.residenceDistrict || session.residenceDistrict,
         projectCountry: profile.projectCountry || session.projectCountry,
+        matricule: session.matricule || profile.matricule,
         name: profile.name || session.name,
       };
       localStorage.setItem('locagestion:auth:session:v1', JSON.stringify(updatedUser));

@@ -651,6 +651,12 @@ export function Sidebar({
                   </h4>
                   <ShieldCheck className="w-3.5 h-3.5 text-tealAccent-400 shrink-0" />
                 </div>
+                {(context?.user?.matricule || userProfile.matricule) && (
+                  <p className="text-[9px] font-mono font-bold text-indigo-300/90 truncate flex items-center gap-1 mt-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                    <span>{context?.user?.matricule || userProfile.matricule}</span>
+                  </p>
+                )}
                 <p className="text-[10px] text-slate-400 truncate flex items-center gap-1 mt-0.5">
                   <span>{COUNTRIES_CITIES[userProfile.residenceCountry]?.flag || '🇧🇯'}</span>
                   <span className="font-semibold text-slate-300">{userProfile.residenceCountry}</span>

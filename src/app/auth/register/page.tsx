@@ -27,12 +27,13 @@ import {
   RefreshCw,
   Briefcase,
   Layers,
+  Fingerprint,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/space-context';
 import { UserSpace } from '@/lib/types';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { detectUserGeoLocation, UserGeoLocation } from '@/lib/services/geo-service';
-import { AuthService } from '@/lib/services/auth-service';
+import { AuthService, getCountryMatriculeCode } from '@/lib/services/auth-service';
 import { ListingsService } from '@/lib/services/listings-service';
 
 // Les 14 pays officiels des zones UEMOA & CEMAC
@@ -1292,6 +1293,21 @@ export default function RegisterPage() {
                       </span>
                     </div>
                   )}
+
+                  <div className="col-span-2 pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold text-indigo-300 uppercase tracking-wider block">
+                        Attribution Officielle :
+                      </span>
+                      <span className="text-xs text-slate-300 flex items-center gap-1.5 mt-0.5">
+                        <Fingerprint className="w-3.5 h-3.5 text-indigo-400" />
+                        Matricule unique généré dès validation
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono font-black px-2.5 py-1 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 shrink-0">
+                      LOCA-MAT-{getCountryMatriculeCode(isOutsideUEMOACEMAC ? projectCountry : residenceCountry)}-•••••
+                    </span>
+                  </div>
                 </div>
               </div>
 
