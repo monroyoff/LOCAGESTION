@@ -5,6 +5,7 @@ import {
   X,
   Plus,
   Building,
+  Building2,
   Globe,
   MapPin,
   Coins,
@@ -76,6 +77,8 @@ export function PublishListingModal({
   onClose,
   onPublish,
 }: PublishListingModalProps) {
+  const [currentUser, setCurrentUser] = useState(() => AuthService.getCurrentUser());
+  const [companyName, setCompanyName] = useState(() => AuthService.getCurrentUser()?.companyName || '');
   const [title, setTitle] = useState('');
   const [propertyType, setPropertyType] = useState<RentalListing['propertyType']>('Chambre salon sanitaire');
   // Pays de résidence renseigné lors de l'inscription / géolocalisation par défaut
@@ -125,6 +128,11 @@ export function PublishListingModal({
       const defaultCity = getUserResidenceCity();
       setCountry(defaultCountry);
       setCity(defaultCity);
+      const u = AuthService.getCurrentUser();
+      setCurrentUser(u);
+      if (u?.companyName && !companyName) {
+        setCompanyName(u.companyName);
+      }
     }
   }, [isOpen]);
 
@@ -408,12 +416,16 @@ export function PublishListingModal({
               moderatedAt: new Date().toISOString(),
               authorId: currentUser?.id,
               authorName: currentUser?.name,
-              authorCompany: currentUser?.companyName || undefined,
+              authorCompany: companyName.trim() ? companyName.trim() : (currentUser?.companyName || undefined),
               authorEmail: currentUser?.email,
               authorPhone: currentUser?.phone,
               authorRole: currentUser?.role,
               authorAvatar: currentUser?.avatarUrl,
             };
+
+            if (currentUser && companyName.trim() && currentUser.companyName !== companyName.trim()) {
+              AuthService.updateCurrentUser({ companyName: companyName.trim() });
+            }
 
             // Notification persistante dans la cloche
             LeaseService.addLandlordNotification({
@@ -491,6 +503,29 @@ export function PublishListingModal({
               </span>
             </div>
           </div>
+          {/* Identité Entreprise / Agence (Optionnel) */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-brand-600" />
+                <span>Nom de l&apos;entreprise ou agence (Optionnel)</span>
+              </label>
+              <span className="text-[10px] text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full font-bold border border-brand-200">
+                Prioritaire sous « Publié par »
+              </span>
+            </div>
+            <input
+              type="text"
+              value={companyName}
+              onChange={(e) => setCompanyName(e.target.value)}
+              placeholder="Ex: Agence Immobilière Prestige, Omega Immo SARL..."
+              className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+            />
+            <p className="text-[10px] text-slate-500 leading-snug">
+              💡 Si renseigné, ce nom d&apos;entreprise apparaîtra sous <strong>« Publié par »</strong> sur toute la plateforme. Sinon, votre nom et prénom civil (<strong>{currentUser?.name || 'Nom civil'}</strong>) seront affichés par défaut.
+            </p>
+          </div>
+
           {/* Titre */}
           <div>
             <label className="font-bold text-slate-700 block mb-1">

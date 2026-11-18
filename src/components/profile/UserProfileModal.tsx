@@ -33,6 +33,7 @@ import {
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { useSpace } from '@/lib/context/space-context';
+import { ListingsService } from '@/lib/services/listings-service';
 
 interface UserProfileModalProps {
   isOpen: boolean;
@@ -218,6 +219,14 @@ export function UserProfileModal({
 
     // 2. Sauvegarde du profil
     saveUserProfile(finalProfile);
+
+    // Synchronisation sur toutes les annonces publiées par cet utilisateur
+    if (finalProfile.id) {
+      ListingsService.syncAuthorCompany(finalProfile.id, finalProfile.companyName);
+    }
+    if (finalProfile.name) {
+      ListingsService.syncAuthorCompany(finalProfile.name, finalProfile.companyName);
+    }
 
     // 3. Synchronisation absolue dans la session active et les utilisateurs enregistrés
     if (typeof window !== 'undefined') {
@@ -530,6 +539,29 @@ export function UserProfileModal({
                 className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
               />
             </div>
+          </div>
+
+          {/* Entreprise / Agence Immobilière (Optionnel) */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-brand-500" />
+                <span>Nom de l&apos;entreprise ou agence (Optionnel)</span>
+              </label>
+              <span className="text-[10px] text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full font-bold border border-brand-200">
+                Prioritaire sous « Publié par »
+              </span>
+            </div>
+            <input
+              type="text"
+              value={profile.companyName || ''}
+              onChange={(e) => setProfile({ ...profile, companyName: e.target.value })}
+              placeholder="Ex: Agence Immobilière Prestige, SCI Le Phénix..."
+              className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <p className="text-[10px] text-slate-500 leading-snug">
+              💡 <strong>Règle d&apos;affichage :</strong> Si vous renseignez le nom de votre entreprise ou agence, celui-ci s&apos;affichera en priorité sous <em>« Publié par »</em> sur vos annonces. Si non renseigné, votre nom et prénom civil (<strong>{profile.name}</strong>) apparaîtront par défaut.
+            </p>
           </div>
 
           {/* Pays & Localité de résidence d'inscription (Obligatoire) */}

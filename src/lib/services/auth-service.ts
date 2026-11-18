@@ -315,6 +315,26 @@ export const AuthService = {
     }
   },
 
+  updateCurrentUser(updates: Partial<AuthUser>): AuthUser | null {
+    const user = this.getCurrentUser();
+    if (!user) return null;
+    const updatedUser: AuthUser = {
+      ...user,
+      ...updates,
+    };
+    this.setCurrentUser(updatedUser);
+
+    const list = this.getRegisteredUsers();
+    const idx = list.findIndex(
+      (u) => u.id === user.id || (u.email && user.email && areEmailsEqual(u.email, user.email))
+    );
+    if (idx !== -1) {
+      list[idx] = { ...list[idx], ...updates };
+      this.saveRegisteredUsers(list);
+    }
+    return updatedUser;
+  },
+
   login(
     emailOrPhone: string,
     password?: string

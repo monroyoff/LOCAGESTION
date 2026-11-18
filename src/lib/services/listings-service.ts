@@ -209,4 +209,34 @@ export const ListingsService = {
     }
     return false;
   },
+
+  /**
+   * Synchronise le nom d'entreprise ou d'agence sur toutes les annonces publiées par cet auteur
+   */
+  syncAuthorCompany(authorIdOrName: string, companyName?: string): void {
+    const current = this.getCustomListings().filter((l) => !isFakeListing(l));
+    let changed = false;
+    const target = (authorIdOrName || '').trim().toLowerCase();
+    const updated = current.map((item) => {
+      const matchId = item.authorId && item.authorId.toLowerCase() === target;
+      const matchName = item.authorName && item.authorName.trim().toLowerCase() === target;
+      if (matchId || matchName) {
+        changed = true;
+        return {
+          ...item,
+          authorCompany: companyName?.trim() ? companyName.trim() : undefined,
+        };
+      }
+      return item;
+    });
+
+    if (changed && typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        notifyListingsChange();
+      } catch (e) {
+        console.error('Erreur synchronisation entreprise annonces:', e);
+      }
+    }
+  },
 };

@@ -56,6 +56,7 @@ export function EditListingModal({
   onSave,
   onDelete,
 }: EditListingModalProps) {
+  const [authorCompany, setAuthorCompany] = useState('');
   const [title, setTitle] = useState('');
   const [propertyType, setPropertyType] = useState<RentalPropertyType>('Appartement');
   const [monthlyRent, setMonthlyRent] = useState('');
@@ -85,6 +86,7 @@ export function EditListingModal({
 
   useEffect(() => {
     if (listing) {
+      setAuthorCompany(listing.authorCompany || '');
       setTitle(listing.title || '');
       setPropertyType(listing.propertyType || 'Appartement');
       setMonthlyRent(listing.monthlyRent?.toString() || '');
@@ -275,6 +277,7 @@ export function EditListingModal({
             onSave(listing.id, {
               title: proposedTitle,
               propertyType,
+              authorCompany: authorCompany.trim() ? authorCompany.trim() : undefined,
               monthlyRent: rentNum,
               charges: parsedCharges,
               depositMonths,
@@ -294,6 +297,11 @@ export function EditListingModal({
               moderationStatus: 'valide',
               moderatedAt: new Date().toISOString(),
             });
+
+            const currentUser = AuthService.getCurrentUser();
+            if (currentUser && authorCompany.trim() && currentUser.companyName !== authorCompany.trim()) {
+              AuthService.updateCurrentUser({ companyName: authorCompany.trim() });
+            }
 
             LeaseService.addLandlordNotification({
               id: `notif-appr-${Date.now()}`,
@@ -422,6 +430,29 @@ export function EditListingModal({
                 : status === 'disponible'
                 ? '🟢 En ligne : annonce visible et ouverte aux visites et prises de contact.'
                 : 'Indique aux visiteurs que le bien n’est plus disponible.'}
+            </p>
+          </div>
+
+          {/* Identité Entreprise / Agence sous « Publié par » */}
+          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4 text-brand-600" />
+                <span>Nom de l&apos;entreprise ou agence (Optionnel)</span>
+              </label>
+              <span className="text-[10px] text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full font-bold border border-brand-200">
+                Prioritaire sous « Publié par »
+              </span>
+            </div>
+            <input
+              type="text"
+              value={authorCompany}
+              onChange={(e) => setAuthorCompany(e.target.value)}
+              placeholder="Ex: Agence Immobilière Prestige, Omega Immo SARL..."
+              className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500"
+            />
+            <p className="text-[10px] text-slate-500 leading-snug">
+              💡 <strong>Règle d&apos;affichage :</strong> Si renseigné, ce nom d&apos;entreprise apparaîtra sous <strong>« Publié par »</strong> sur toute la plateforme. Si laissé vide, votre nom civil (<strong>{listing.authorName || 'Nom civil'}</strong>) sera affiché par défaut.
             </p>
           </div>
 

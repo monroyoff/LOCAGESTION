@@ -258,7 +258,7 @@ export default function ListingsPage() {
       ...newListing,
       authorId: user?.id || newListing.authorId,
       authorName: user?.name || newListing.authorName || 'Bailleur Certifié',
-      authorCompany: user?.companyName || newListing.authorCompany || undefined,
+      authorCompany: newListing.authorCompany?.trim() || user?.companyName?.trim() || undefined,
       authorEmail: user?.email || newListing.authorEmail,
       authorPhone: user?.phone || newListing.authorPhone,
       authorRole: activeSpace || newListing.authorRole,
@@ -313,6 +313,9 @@ export default function ListingsPage() {
     const updated = ListingsService.updateListing(id, updates);
     if (updated) {
       setListings((prev) => prev.map((l) => (l.id === id ? updated : l)));
+      if (selectedListingForDetail && selectedListingForDetail.id === id) {
+        setSelectedListingForDetail(updated);
+      }
     }
     setEditModalOpen(false);
     setSelectedListingForEdit(null);
@@ -1427,7 +1430,7 @@ export default function ListingsPage() {
                         >
                           <div className="flex items-center gap-2 min-w-0">
                             <div className="w-7 h-7 rounded-xl bg-slate-900 text-brand-400 flex items-center justify-center text-xs font-black shrink-0 shadow-sm group-hover/pub:bg-brand-500 group-hover/pub:text-white transition-colors">
-                              {listing.authorCompany ? (
+                              {listing.authorCompany?.trim() ? (
                                 <Building2 className="w-4 h-4" />
                               ) : (
                                 <User className="w-4 h-4" />
@@ -1435,10 +1438,10 @@ export default function ListingsPage() {
                             </div>
                             <div className="min-w-0 truncate">
                               <span className="text-[10px] text-slate-400 block leading-tight font-medium">
-                                {listing.authorCompany ? 'Agence Mandataire' : 'Publié par'}
+                                Publié par
                               </span>
                               <span className="font-extrabold text-slate-900 text-[11px] truncate block group-hover/pub:text-brand-600 transition-colors">
-                                {listing.authorCompany || listing.authorName || 'Bailleur Certifié'}
+                                {listing.authorCompany?.trim() ? listing.authorCompany.trim() : (listing.authorName || 'Bailleur Certifié')}
                               </span>
                             </div>
                           </div>
@@ -1816,7 +1819,7 @@ export default function ListingsPage() {
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-500 to-brand-600 flex items-center justify-center text-white font-black text-lg shadow-pink-glow shrink-0">
-                      {selectedListingForDetail.authorCompany ? (
+                      {selectedListingForDetail.authorCompany?.trim() ? (
                         <Building2 className="w-6 h-6 text-white" />
                       ) : (
                         <User className="w-6 h-6 text-white" />
@@ -1825,7 +1828,7 @@ export default function ListingsPage() {
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] font-bold uppercase tracking-wider text-brand-300">
-                          {selectedListingForDetail.authorCompany ? 'Agence Immobilière Mandataire' : 'Annonceur Certifié'}
+                          Publié par
                         </span>
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
                           <ShieldCheck className="w-3 h-3 text-emerald-400" />
@@ -1833,11 +1836,11 @@ export default function ListingsPage() {
                         </span>
                       </div>
                       <h4 className="text-base font-black text-white mt-0.5">
-                        {selectedListingForDetail.authorCompany || selectedListingForDetail.authorName || 'Bailleur Certifié LOCAGESTION'}
+                        {selectedListingForDetail.authorCompany?.trim() || selectedListingForDetail.authorName || 'Bailleur Certifié LOCAGESTION'}
                       </h4>
-                      {selectedListingForDetail.authorCompany && selectedListingForDetail.authorName && (
+                      {selectedListingForDetail.authorCompany?.trim() && selectedListingForDetail.authorName && (
                         <p className="text-xs text-slate-300 font-medium mt-0.5">
-                          Agent responsable : <span className="text-white font-semibold">{selectedListingForDetail.authorName}</span>
+                          Nom civil / Représentant : <span className="text-white font-semibold">{selectedListingForDetail.authorName}</span>
                         </p>
                       )}
                       <div className="flex items-center gap-2 mt-1">
