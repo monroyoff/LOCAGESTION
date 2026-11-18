@@ -282,6 +282,7 @@ export interface AuthUser {
   ifuNumber?: string;       // IFU fiscal (Bailleur)
   registeredAt: string;
   password?: string;
+  adminSessionVersion?: string; // Version de session pour invalidation et déconnexion globale
 }
 
 export interface SecurityAlert {

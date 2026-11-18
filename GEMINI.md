@@ -410,11 +410,13 @@ Pour garantir la sécurité, la moralité publique, la sérénité des familles 
 - **Interdiction formelle de paiement avant visite :** Détection et neutralisation des annonces exigeant un transfert d'argent (Wave, TMoney, MTN MoMo, Orange Money, virement bancaire) ou des "frais de réservation / visite" préalables à la visite physique des lieux.
 
 ### 👑 5. Compte Super-Administrateur & Console de Gestion (`/admin`)
-- **Compte Super-Admin dédié :**  
+- **Compte Super-Admin dédié (Sécurisé & Cloisonné) :**  
   - Email : `admin@locagestion.site`  
-  - Mot de passe : `Admin@Loca2026!`  
+  - Nouveau Mot de passe : `Omega#Admin2027!LocaSecurity`  
   - Téléphone : `+229 01 96 68 92 77`  
   - Rôle : `admin`
+  - Invalidation globale : `adminSessionVersion = 'sec_v2_20261118_revoked_all'` déconnecte automatiquement tout appareil ayant conservé l'ancienne session.
+  - RLS PostgreSQL & Applicatif : Matrice complète définie dans `supabase/migrations/20261118_rls_compartments_policies.sql`.
 - **Signalement automatique et horodaté :** Dès qu'une infraction est détectée lors d'une tentative de publication ou de modification, une **Alerte de Sécurité** est automatiquement générée et transmise dans la console Super-Admin (`/admin`).
 - **Pouvoirs de l'Administrateur :**  
   - Consultation en direct du journal d'infractions (auteur, téléphone, email, extrait incriminé, date exacte).  

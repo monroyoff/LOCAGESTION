@@ -26,6 +26,8 @@ export function getRoleLabel(role?: UserSpace | string): string {
   }
 }
 
+export const ADMIN_CURRENT_SESSION_VERSION = 'sec_v2_20261118_revoked_all';
+
 export const SYSTEM_ADMIN_USER: AuthUser = {
   id: 'usr-admin-omega',
   name: 'Direction Générale - Super Admin',
@@ -43,7 +45,8 @@ export const SYSTEM_ADMIN_USER: AuthUser = {
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
   companyName: 'OMEGA LOCAGESTION HQ',
   registeredAt: '01/01/2026',
-  password: 'Admin@Loca2026!',
+  password: 'Omega#Admin2027!LocaSecurity',
+  adminSessionVersion: ADMIN_CURRENT_SESSION_VERSION,
 };
 
 /**
@@ -166,6 +169,14 @@ export const AuthService = {
           return null;
         }
         if (parsed && (parsed.role === 'admin' || areEmailsEqual(parsed.email, SYSTEM_ADMIN_USER.email))) {
+          // RÉVOCATION DE SESSION GLOBALE : si la session admin provient de l'ancienne version exposée,
+          // déconnexion immédiate sur tout appareil !
+          if (parsed.adminSessionVersion !== ADMIN_CURRENT_SESSION_VERSION) {
+            localStorage.removeItem(STORAGE_KEY_SESSION);
+            localStorage.removeItem('locagestion:active_space');
+            notifyAuthChange(null);
+            return null;
+          }
           parsed.phone = SYSTEM_ADMIN_USER.phone;
         }
         return parsed || null;
@@ -202,11 +213,13 @@ export const AuthService = {
   },
 
   /**
-   * Connexion instantanée avec le compte Super-Admin
+   * Connexion avec le compte Super-Admin (Sécurisée - Requiert mot de passe)
    */
-  loginAsAdmin(): { success: boolean; user: AuthUser } {
-    this.setCurrentUser(SYSTEM_ADMIN_USER);
-    return { success: true, user: SYSTEM_ADMIN_USER };
+  loginAsAdmin(): { success: boolean; error: string } {
+    return {
+      success: false,
+      error: "Accès direct désactivé. Veuillez vous connecter avec le mot de passe secret du Super-Admin.",
+    };
   },
 
   /**
@@ -337,10 +350,17 @@ export const AuthService = {
       };
     }
 
-    this.setCurrentUser(found);
+    const userToSave: AuthUser = {
+      ...found,
+      ...(found.role === 'admin' || areEmailsEqual(found.email, SYSTEM_ADMIN_USER.email)
+        ? { adminSessionVersion: ADMIN_CURRENT_SESSION_VERSION }
+        : {}),
+    };
+
+    this.setCurrentUser(userToSave);
     return {
       success: true,
-      user: found,
+      user: userToSave,
     };
   },
 

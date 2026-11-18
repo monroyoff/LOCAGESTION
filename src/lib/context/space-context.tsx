@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { UserSpace, AuthUser, LandlordSubRole } from '../types';
-import { AuthService } from '../services/auth-service';
+import { AuthService, SYSTEM_ADMIN_USER, areEmailsEqual } from '../services/auth-service';
 import { notifyAction } from '../notifications/action-notifier';
 
 export interface SpaceContextType {
@@ -85,18 +85,19 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // 2.bis Protection stricte de l'Espace Super-Admin
+    // 2.bis Protection stricte de l'Espace Super-Admin (Isolation Étanche)
     if (pathname?.startsWith('/admin')) {
-      if (current.role !== 'admin') {
+      if (current.role !== 'admin' || !areEmailsEqual(current.email, SYSTEM_ADMIN_USER.email)) {
         router.replace('/');
         return;
       }
     }
 
-    // 3. Contrôle d'accès strict selon le rôle (3 espaces étanches)
+    // 3. Contrôle d'accès strict selon le rôle (3 espaces étanches / RLS Applicatif)
     if (pathname.startsWith('/portal')) {
       if (current.role !== 'locataire') {
-        // Un bailleur ou démarcheur accédant au portail bascule ou est redirigé
+        router.replace(current.role === 'demarcheur' ? '/listings' : '/');
+        return;
       }
     } else if (
       pathname === '/' ||
@@ -189,6 +190,11 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const switchSpace = (targetSpace: UserSpace) => {
     if (!user) {
       router.push('/auth/login');
+      return;
+    }
+    // RLS Applicatif : Seul le compte vérifié Super-Admin a le droit d'accéder au rôle 'admin'
+    if (targetSpace === 'admin' && !areEmailsEqual(user.email, SYSTEM_ADMIN_USER.email)) {
+      console.warn("Tentative d'accès non autorisé à l'espace Super-Admin bloquée.");
       return;
     }
     const updatedUser = { ...user, role: targetSpace };
