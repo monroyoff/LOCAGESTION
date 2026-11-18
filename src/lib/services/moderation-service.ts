@@ -42,18 +42,52 @@ const EXTORTION_PATTERNS: { regex: RegExp; label: string }[] = [
   { regex: /\b(virement\s*urgent\s*sans\s*visite|bloquer\s*l['’]appartement\s*à\s*distance\s*par\s*d[eé]p[oô]t)\b/i, label: 'Arnaque de réservation à distance' },
 ];
 
-const SUSPICIOUS_IMAGE_PATTERNS: RegExp[] = [
-  /nude/i,
-  /naked/i,
-  /nsfw/i,
-  /erotic/i,
-  /sex/i,
-  /xxx/i,
-  /porn/i,
-  /boobs/i,
-  /lingerie_sexy/i,
-  /escort/i,
-];
+// Regex stricte de détection des noms de fichiers ou chemins suspects
+export const BANNED_IMAGE_NAME_REGEX =
+  /(?:^|[\/_\-.])(nude|naked|nsfw|erotic|porn|porno|xxx|boobs|escort|sexe)(?:$|[\/_\-.])/i;
+
+/**
+ * Vérifie si le nom d'un fichier sélectionné (ex: "salon.jpg", "nude_photo.png") est suspect.
+ */
+export function isSuspiciousImageFileName(fileName: string): boolean {
+  if (!fileName) return false;
+  return BANNED_IMAGE_NAME_REGEX.test(fileName);
+}
+
+/**
+ * Vérifie si une source d'image (URL web, chemin relatif ou data URI) est suspecte.
+ * 
+ * RÈGLE FONDAMENTALE DE SÉCURITÉ IA :
+ * Ne JAMAIS exécuter de regex textuelles sur le contenu binaire brut Base64 (data:image/...;base64,...),
+ * car un flux Base64 de plusieurs centaines de milliers de caractères contient mathématiquement
+ * des séquences de caractères aléatoires fortuites ('sex', 'xxx', 'nsfw') qui déclenchent
+ * des faux positifs à 100% sur des photos légitimes de salons, chambres ou cuisines.
+ */
+export function isSuspiciousImageSource(img: string): boolean {
+  if (!img) return false;
+
+  // 1. Pour les Data URIs Base64 : on ne scanne pas le corps binaire
+  if (img.startsWith('data:')) {
+    const commaIdx = img.indexOf(',');
+    const header = commaIdx !== -1 ? img.substring(0, commaIdx) : '';
+    const nameMatch = header.match(/name=([^;]+)/i);
+    if (nameMatch && nameMatch[1]) {
+      return BANNED_IMAGE_NAME_REGEX.test(nameMatch[1]);
+    }
+    return false;
+  }
+
+  // 2. Pour les URLs HTTP/HTTPS : inspecter uniquement le chemin (pathname) du fichier
+  try {
+    let pathToCheck = img;
+    if (img.startsWith('http://') || img.startsWith('https://')) {
+      pathToCheck = new URL(img).pathname;
+    }
+    return BANNED_IMAGE_NAME_REGEX.test(pathToCheck);
+  } catch {
+    return BANNED_IMAGE_NAME_REGEX.test(img);
+  }
+}
 
 /**
  * Normalisation de chaîne pour neutraliser les contournements courants
@@ -74,6 +108,9 @@ function normalizeContent(text: string): string {
 }
 
 export const ModerationService = {
+  isSuspiciousFileName: isSuspiciousImageFileName,
+  isSuspiciousImageSource,
+
   /**
    * Analyse exhaustive et instantanée d'une annonce par l'IA de sécurité.
    */
@@ -128,14 +165,13 @@ export const ModerationService = {
       }
     }
 
-    // Analyse des métadonnées et noms des photos
+    // Analyse des métadonnées, URLs et noms des photos (exclut le binaire base64 pour éviter tout faux positif)
     for (const img of images) {
-      const isSuspiciousImage = SUSPICIOUS_IMAGE_PATTERNS.some((pat) => pat.test(img));
-      if (isSuspiciousImage) {
+      if (isSuspiciousImageSource(img)) {
         violations.push({
           type: 'nudite',
           severity: 'critical',
-          message: `Fichier visuel suspect bloqué : L'analyseur d'images de l'IA a détecté des métadonnées ou descripteurs de nudité/contenu non conforme.`,
+          message: `Fichier visuel suspect bloqué : L'analyseur d'images de l'IA a détecté un nom de fichier ou descripteur de contenu non conforme.`,
         });
         break;
       }
@@ -191,7 +227,21 @@ export const ModerationService = {
       const stored = localStorage.getItem(STORAGE_KEY_ALERTS);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          // Nettoyage automatique des faux positifs historiques liés au bug du scan Base64
+          const cleaned = parsed.filter((alert: SecurityAlert) => {
+            const hasLegacyFalsePositive = alert.violations.some(
+              (v) =>
+                v.message.includes('descripteurs de nudité/contenu non conforme') &&
+                !v.triggerSnippet
+            );
+            return !hasLegacyFalsePositive;
+          });
+          if (cleaned.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(cleaned));
+          }
+          return cleaned;
+        }
       }
     } catch (e) {
       console.error('Erreur lecture alertes sécurité:', e);

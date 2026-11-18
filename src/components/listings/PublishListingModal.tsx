@@ -164,6 +164,10 @@ export function PublishListingModal({
     if (!files || files.length === 0) return;
 
     Array.from(files).forEach((file) => {
+      if (ModerationService.isSuspiciousFileName(file.name)) {
+        alert(`Le fichier « ${file.name} » a été rejeté : son nom évoque un contenu non autorisé.`);
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (uploadEvent) => {
         if (uploadEvent.target?.result) {
@@ -179,8 +183,13 @@ export function PublishListingModal({
 
   // Ajout par lien web
   const handleAddImageUrl = () => {
-    if (!urlInput.trim()) return;
-    setImages((prev) => [...prev, urlInput.trim()]);
+    const cleanUrl = urlInput.trim();
+    if (!cleanUrl) return;
+    if (ModerationService.isSuspiciousImageSource(cleanUrl)) {
+      alert('Cette URL d\'image a été rejetée : descripteur ou contenu non conforme détecté.');
+      return;
+    }
+    setImages((prev) => [...prev, cleanUrl]);
     setUrlInput('');
     setShowUrlInput(false);
   };

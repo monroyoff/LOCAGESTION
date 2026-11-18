@@ -129,6 +129,12 @@ export function EditListingModal({
     const filesToRead = Array.from(files).slice(0, remainingSlots);
 
     filesToRead.forEach((file) => {
+      // Vérification immédiate du nom du fichier sélectionné
+      if (ModerationService.isSuspiciousFileName(file.name)) {
+        alert(`Le fichier « ${file.name} » a été rejeté : son nom évoque un contenu non autorisé.`);
+        return;
+      }
+
       const reader = new FileReader();
       reader.onload = (uploadEvent) => {
         if (uploadEvent.target?.result) {
@@ -147,12 +153,17 @@ export function EditListingModal({
   };
 
   const handleAddImage = () => {
-    if (newImageUrl.trim()) {
+    const cleanUrl = newImageUrl.trim();
+    if (cleanUrl) {
       if (images.length >= MAX_PHOTOS) {
         alert('Limite maximale de 8 photos atteinte.');
         return;
       }
-      setImages((prev) => [...prev, newImageUrl.trim()].slice(0, MAX_PHOTOS));
+      if (ModerationService.isSuspiciousImageSource(cleanUrl)) {
+        alert('Cette URL d\'image a été rejetée : descripteur ou contenu non conforme détecté.');
+        return;
+      }
+      setImages((prev) => [...prev, cleanUrl].slice(0, MAX_PHOTOS));
       setNewImageUrl('');
     }
   };
