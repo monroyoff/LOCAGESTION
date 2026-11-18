@@ -135,7 +135,14 @@ export const AuthService = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          const sanitized = parsed.filter((u) => !isFakeDemoUser(u));
+          // Élimination des faux utilisateurs démo ET de tout ancien snapshot admin périmé
+          const sanitized = parsed.filter(
+            (u) =>
+              !isFakeDemoUser(u) &&
+              !areEmailsEqual(u.email, SYSTEM_ADMIN_USER.email) &&
+              u.id !== SYSTEM_ADMIN_USER.id &&
+              u.role !== 'admin'
+          );
           if (sanitized.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(sanitized));
           }
@@ -195,16 +202,8 @@ export const AuthService = {
   getAllKnownUsers(): AuthUser[] {
     const registered = this.getRegisteredUsers();
     const current = this.getCurrentUser();
-    const list = [...registered];
-
-    const adminIndex = list.findIndex(
-      (u) => u.id === SYSTEM_ADMIN_USER.id || areEmailsEqual(u.email, SYSTEM_ADMIN_USER.email)
-    );
-    if (adminIndex >= 0) {
-      list[adminIndex] = { ...list[adminIndex], phone: SYSTEM_ADMIN_USER.phone };
-    } else {
-      list.push(SYSTEM_ADMIN_USER);
-    }
+    // Le Super-Admin système est toujours présent avec ses identifiants officiels à jour
+    const list = [...registered, SYSTEM_ADMIN_USER];
 
     if (current && !list.some((u) => u.id === current.id || areEmailsEqual(u.email, current.email))) {
       list.unshift(current);
@@ -321,14 +320,38 @@ export const AuthService = {
     password?: string
   ): { success: boolean; user?: AuthUser; error?: string } {
     const cleanIdentifier = emailOrPhone.trim();
+
+    // 1. VÉRIFICATION STRICTE & PRIORITAIRE DU SUPER-ADMINISTRATEUR SYSTÈME
+    if (
+      areEmailsEqual(cleanIdentifier, SYSTEM_ADMIN_USER.email) ||
+      arePhoneNumbersEqual(cleanIdentifier, SYSTEM_ADMIN_USER.phone)
+    ) {
+      if (!password || password.trim() !== SYSTEM_ADMIN_USER.password) {
+        return {
+          success: false,
+          error: "Mot de passe incorrect.",
+        };
+      }
+      const adminSession: AuthUser = {
+        ...SYSTEM_ADMIN_USER,
+        adminSessionVersion: ADMIN_CURRENT_SESSION_VERSION,
+      };
+      this.setCurrentUser(adminSession);
+      return {
+        success: true,
+        user: adminSession,
+      };
+    }
+
+    // 2. RECHERCHE PARMI LES UTILISATEURS ENREGISTRÉS
     const allUsers = this.getAllKnownUsers();
 
     const found = allUsers.find((u) => {
-      // 1. Correspondance par Email
+      // Correspondance par Email
       if (areEmailsEqual(u.email, cleanIdentifier)) {
         return true;
       }
-      // 2. Correspondance par Numéro de téléphone universel
+      // Correspondance par Numéro de téléphone universel
       if (arePhoneNumbersEqual(u.phone, cleanIdentifier)) {
         return true;
       }

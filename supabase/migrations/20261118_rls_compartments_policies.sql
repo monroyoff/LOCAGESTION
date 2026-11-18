@@ -338,3 +338,4 @@ CREATE INDEX IF NOT EXISTS idx_listings_author_id ON public.rental_listings(auth
 CREATE INDEX IF NOT EXISTS idx_listings_status_moderation ON public.rental_listings(status, moderation_status);
 CREATE INDEX IF NOT EXISTS idx_security_alerts_status ON public.security_alerts(status);
 CREATE INDEX IF NOT EXISTS idx_messages_participants ON public.messages(sender_id, receiver_id);
+
