@@ -111,14 +111,14 @@ export const SYSTEM_ADMIN_USER: AuthUser = {
 
 export const INITIAL_REGISTERED_USERS: AuthUser[] = [
   {
-    id: 'usr-bailleur-jojovog',
+    id: 'usr-tenant-jojovog',
     matricule: 'LOCA-MAT-BJ-17635',
     name: 'VOGLOSSOU JOHANE',
     firstName: 'Johane',
     lastName: 'Voglossou',
     email: 'jojovog007@gmail.com',
     phone: '+229 01 97 00 11 22',
-    role: 'bailleur',
+    role: 'locataire',
     birthDate: '15/06/1990',
     birthPlace: 'Allada',
     residenceCountry: 'Bénin',
@@ -126,7 +126,6 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     residenceDistrict: 'Dogoudo',
     projectCountry: 'Bénin',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160',
-    companyName: 'Omega Immobilier Allada',
     registeredAt: '18/11/2026',
     password: 'Jesus1122',
     accountStatus: 'active',
@@ -240,10 +239,14 @@ export const AuthService = {
             }
           });
 
-          // Assurer que les comptes officiels pré-enregistrés sont toujours présents
+          // Assurer que les comptes officiels pré-enregistrés sont toujours présents et synchronisés
           INITIAL_REGISTERED_USERS.forEach((initU) => {
-            if (!sanitized.some((u) => areEmailsEqual(u.email, initU.email))) {
+            const idx = sanitized.findIndex((u) => areEmailsEqual(u.email, initU.email));
+            if (idx === -1) {
               sanitized.push(initU);
+              hasMutated = true;
+            } else if (sanitized[idx].role !== initU.role || sanitized[idx].id !== initU.id) {
+              sanitized[idx] = { ...sanitized[idx], role: initU.role, id: initU.id };
               hasMutated = true;
             }
           });
@@ -305,15 +308,26 @@ export const AuthService = {
           }
           parsed.phone = SYSTEM_ADMIN_USER.phone;
           parsed.matricule = SYSTEM_ADMIN_USER.matricule;
-        } else if (parsed && !parsed.matricule) {
-          parsed.matricule = generateUserMatricule(
-            parsed.projectCountry || parsed.residenceCountry,
-            parsed.role,
-            parsed.id || parsed.email
-          );
-          try {
-            localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
-          } catch (e) {}
+        } else if (parsed) {
+          const matchingInit = INITIAL_REGISTERED_USERS.find((initU) => areEmailsEqual(initU.email, parsed.email));
+          if (matchingInit && (parsed.role !== matchingInit.role || parsed.id !== matchingInit.id)) {
+            parsed.role = matchingInit.role;
+            parsed.id = matchingInit.id;
+            try {
+              localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
+              localStorage.setItem('locagestion:active_space', matchingInit.role);
+            } catch (e) {}
+          }
+          if (!parsed.matricule) {
+            parsed.matricule = generateUserMatricule(
+              parsed.projectCountry || parsed.residenceCountry,
+              parsed.role,
+              parsed.id || parsed.email
+            );
+            try {
+              localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
+            } catch (e) {}
+          }
         }
         return parsed || null;
       }
@@ -335,8 +349,11 @@ export const AuthService = {
     const list = [...registered];
 
     INITIAL_REGISTERED_USERS.forEach((initU) => {
-      if (!list.some((u) => areEmailsEqual(u.email, initU.email))) {
+      const idx = list.findIndex((u) => areEmailsEqual(u.email, initU.email));
+      if (idx === -1) {
         list.push(initU);
+      } else if (list[idx].role !== initU.role || list[idx].id !== initU.id) {
+        list[idx] = { ...list[idx], role: initU.role, id: initU.id };
       }
     });
 
@@ -671,6 +688,16 @@ export const AuthService = {
         success: false,
         error: "Aucun compte trouvé avec cet email ou numéro de téléphone.",
       };
+    }
+
+    // Synchronisation stricte du rôle et de l'id si modifié dans INITIAL_REGISTERED_USERS
+    const matchingInit = INITIAL_REGISTERED_USERS.find((initU) => areEmailsEqual(initU.email, found?.email));
+    if (matchingInit && found && (found.role !== matchingInit.role || found.id !== matchingInit.id)) {
+      found = { ...found, role: matchingInit.role, id: matchingInit.id };
+      const currentList = this.getRegisteredUsers().map((u) =>
+        areEmailsEqual(u.email, found!.email) ? { ...u, role: matchingInit.role, id: matchingInit.id } : u
+      );
+      this.saveRegisteredUsers(currentList);
     }
 
     // 3. VÉRIFICATION DU STATUT DE MODÉRATION DU COMPTE (BLOCAGE TEMPORAIRE OU DÉFINITIF)

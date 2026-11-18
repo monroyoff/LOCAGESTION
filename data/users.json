@@ -1,13 +1,13 @@
 [
   {
-    "id": "usr-bailleur-jojovog",
+    "id": "usr-tenant-jojovog",
     "matricule": "LOCA-MAT-BJ-17635",
     "name": "VOGLOSSOU JOHANE",
     "firstName": "Johane",
     "lastName": "Voglossou",
     "email": "jojovog007@gmail.com",
     "phone": "+229 01 97 00 11 22",
-    "role": "bailleur",
+    "role": "locataire",
     "birthDate": "15/06/1990",
     "birthPlace": "Allada",
     "residenceCountry": "Bénin",
@@ -15,10 +15,8 @@
     "residenceDistrict": "Dogoudo",
     "projectCountry": "Bénin",
     "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160",
-    "companyName": "Omega Immobilier Allada",
     "registeredAt": "18/11/2026",
     "password": "Jesus1122",
     "accountStatus": "active"
   }
 ]
-
