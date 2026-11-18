@@ -572,11 +572,10 @@ export function PublishListingModal({
                   key={t}
                   type="button"
                   onClick={() => setPropertyType(t)}
-                  className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
-                    propertyType === t
+                  className={`px-3 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${propertyType === t
                       ? 'bg-slate-900 text-white shadow-sm'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
+                    }`}
                 >
                   {t}
                 </button>
@@ -944,11 +943,10 @@ export function PublishListingModal({
                   <Camera className="w-4 h-4 text-brand-500" />
                   <span>Photos du logement ({images.length}) *</span>
                   <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                      images.length >= 2
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${images.length >= 2
                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                         : 'bg-rose-100 text-rose-800 border border-rose-200 animate-pulse'
-                    }`}
+                      }`}
                   >
                     {images.length >= 2 ? '✓ Minimum 2 photos atteint' : `Obligatoire : au moins 2 photos (${images.length}/2)`}
                   </span>
@@ -1134,11 +1132,10 @@ export function PublishListingModal({
             <button
               type="submit"
               disabled={images.length < 2}
-              className={`py-2.5 px-5 rounded-xl font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 ${
-                images.length < 2
+              className={`py-2.5 px-5 rounded-xl font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer flex items-center gap-1.5 ${images.length < 2
                   ? 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
                   : 'bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white'
-              }`}
+                }`}
             >
               <ShieldCheck className="w-4 h-4" />
               <span>
@@ -1158,13 +1155,12 @@ export function PublishListingModal({
             {/* Glowing AI Radar / Shield Icon */}
             <div className="relative mb-5">
               <div
-                className={`w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-500 ${
-                  verificationStatus === 'approved'
+                className={`w-20 h-20 rounded-3xl flex items-center justify-center shadow-2xl transition-all duration-500 ${verificationStatus === 'approved'
                     ? 'bg-gradient-to-tr from-emerald-600 to-teal-500 shadow-emerald-500/50 scale-110'
                     : verificationStatus === 'rejected'
-                    ? 'bg-gradient-to-tr from-rose-600 to-red-600 shadow-rose-500/50'
-                    : 'bg-gradient-to-tr from-brand-600 to-indigo-600 shadow-pink-glow animate-pulse'
-                }`}
+                      ? 'bg-gradient-to-tr from-rose-600 to-red-600 shadow-rose-500/50'
+                      : 'bg-gradient-to-tr from-brand-600 to-indigo-600 shadow-pink-glow animate-pulse'
+                  }`}
               >
                 {verificationStatus === 'approved' ? (
                   <CheckCircle2 className="w-10 h-10 text-white animate-in zoom-in duration-300" />
@@ -1181,13 +1177,12 @@ export function PublishListingModal({
 
             <div className="text-center space-y-1.5 max-w-md">
               <div
-                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-1 border ${
-                  verificationStatus === 'approved'
+                className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold mb-1 border ${verificationStatus === 'approved'
                     ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300'
                     : verificationStatus === 'rejected'
-                    ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
-                    : 'bg-brand-500/20 border-brand-500/40 text-brand-300'
-                }`}
+                      ? 'bg-rose-500/20 border-rose-500/40 text-rose-300'
+                      : 'bg-brand-500/20 border-brand-500/40 text-brand-300'
+                  }`}
               >
                 {verificationStatus === 'scanning' ? (
                   <>
@@ -1211,15 +1206,15 @@ export function PublishListingModal({
                 {verificationStatus === 'approved'
                   ? 'Annonce Validée & En Ligne !'
                   : verificationStatus === 'rejected'
-                  ? 'Publication Bloquée par l\'IA'
-                  : 'Vérification IA en cours...'}
+                    ? 'Publication Bloquée par l\'IA'
+                    : 'Vérification IA en cours...'}
               </h3>
               <p className="text-xs text-slate-300">
                 {verificationStatus === 'approved'
                   ? 'Votre bien est certifié et immédiatement visible par tous les locataires.'
                   : verificationStatus === 'rejected'
-                  ? 'Des infractions aux règles de sécurité ont été détectées.'
-                  : 'Analyse automatique de conformité en quelques secondes avant diffusion.'}
+                    ? 'Des infractions aux règles de sécurité ont été détectées.'
+                    : 'Analyse automatique de conformité en quelques secondes avant diffusion.'}
               </p>
             </div>
 
@@ -1227,13 +1222,12 @@ export function PublishListingModal({
             <div className="w-full max-w-md mt-6 space-y-2.5">
               {/* Étape 1 : Visuels */}
               <div
-                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${
-                  verificationStep > 1
+                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${verificationStep > 1
                     ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
                     : verificationStep === 1
-                    ? 'bg-slate-900 border-brand-500/60 text-white'
-                    : 'bg-slate-900/50 border-slate-800 text-slate-500'
-                }`}
+                      ? 'bg-slate-900 border-brand-500/60 text-white'
+                      : 'bg-slate-900/50 border-slate-800 text-slate-500'
+                  }`}
               >
                 <div className="flex items-center gap-2.5">
                   {verificationStep > 1 ? (
@@ -1252,13 +1246,12 @@ export function PublishListingModal({
 
               {/* Étape 2 : Nudité & Propos sexuels */}
               <div
-                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${
-                  verificationStep > 2
+                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${verificationStep > 2
                     ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
                     : verificationStep === 2
-                    ? 'bg-slate-900 border-brand-500/60 text-white'
-                    : 'bg-slate-900/50 border-slate-800 text-slate-500'
-                }`}
+                      ? 'bg-slate-900 border-brand-500/60 text-white'
+                      : 'bg-slate-900/50 border-slate-800 text-slate-500'
+                  }`}
               >
                 <div className="flex items-center gap-2.5">
                   {verificationStep > 2 ? (
@@ -1277,13 +1270,12 @@ export function PublishListingModal({
 
               {/* Étape 3 : Anti-extorsion & rançonnement */}
               <div
-                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${
-                  verificationStep > 3
+                className={`p-3 rounded-2xl border transition-all flex items-center justify-between text-xs font-bold ${verificationStep > 3
                     ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
                     : verificationStep === 3
-                    ? 'bg-slate-900 border-brand-500/60 text-white'
-                    : 'bg-slate-900/50 border-slate-800 text-slate-500'
-                }`}
+                      ? 'bg-slate-900 border-brand-500/60 text-white'
+                      : 'bg-slate-900/50 border-slate-800 text-slate-500'
+                  }`}
               >
                 <div className="flex items-center gap-2.5">
                   {verificationStep > 3 ? (
@@ -1309,13 +1301,12 @@ export function PublishListingModal({
               </div>
               <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden">
                 <div
-                  className={`h-full transition-all duration-300 ease-out ${
-                    verificationStatus === 'approved'
+                  className={`h-full transition-all duration-300 ease-out ${verificationStatus === 'approved'
                       ? 'bg-emerald-500'
                       : verificationStatus === 'rejected'
-                      ? 'bg-rose-500'
-                      : 'bg-gradient-to-r from-brand-500 to-indigo-500'
-                  }`}
+                        ? 'bg-rose-500'
+                        : 'bg-gradient-to-r from-brand-500 to-indigo-500'
+                    }`}
                   style={{ width: `${verificationProgress}%` }}
                 />
               </div>

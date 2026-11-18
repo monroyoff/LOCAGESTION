@@ -129,8 +129,8 @@ export function TransmitLeaseModal({
   const portalUrl =
     typeof window !== 'undefined'
       ? `${window.location.origin}/portal?tab=bail&leaseId=${activeLease.id}&code=${activeLease.invitationCode || 'LOCA-INV-7842'}&tenant=${encodeURIComponent(
-          activeLease.tenant
-        )}`
+        activeLease.tenant
+      )}`
       : `https://locagestion.site/portal?tab=bail&leaseId=${activeLease.id}&code=${activeLease.invitationCode || 'LOCA-INV-7842'}`;
 
   const invitationData = {

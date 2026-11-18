@@ -109,6 +109,30 @@ export const SYSTEM_ADMIN_USER: AuthUser = {
   adminSessionVersion: ADMIN_CURRENT_SESSION_VERSION,
 };
 
+export const INITIAL_REGISTERED_USERS: AuthUser[] = [
+  {
+    id: 'usr-bailleur-jojovog',
+    matricule: 'LOCA-MAT-BJ-17635',
+    name: 'VOGLOSSOU JOHANE',
+    firstName: 'Johane',
+    lastName: 'Voglossou',
+    email: 'jojovog007@gmail.com',
+    phone: '+229 01 97 00 11 22',
+    role: 'bailleur',
+    birthDate: '15/06/1990',
+    birthPlace: 'Allada',
+    residenceCountry: 'Bénin',
+    residenceCity: 'Allada',
+    residenceDistrict: 'Dogoudo',
+    projectCountry: 'Bénin',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160',
+    companyName: 'Omega Immobilier Allada',
+    registeredAt: '18/11/2026',
+    password: 'Jesus1122',
+    accountStatus: 'active',
+  },
+];
+
 /**
  * Comparaison stricte et insensible à la casse/espaces des adresses emails.
  */
@@ -189,7 +213,7 @@ function notifyAuthChange(user: AuthUser | null) {
 
 export const AuthService = {
   getRegisteredUsers(): AuthUser[] {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return INITIAL_REGISTERED_USERS;
     try {
       const stored = localStorage.getItem(STORAGE_KEY_USERS);
       if (stored) {
@@ -216,16 +240,27 @@ export const AuthService = {
             }
           });
 
+          // Assurer que les comptes officiels pré-enregistrés sont toujours présents
+          INITIAL_REGISTERED_USERS.forEach((initU) => {
+            if (!sanitized.some((u) => areEmailsEqual(u.email, initU.email))) {
+              sanitized.push(initU);
+              hasMutated = true;
+            }
+          });
+
           if (hasMutated || sanitized.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(sanitized));
           }
           return sanitized;
         }
+      } else {
+        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(INITIAL_REGISTERED_USERS));
+        return INITIAL_REGISTERED_USERS;
       }
     } catch (e) {
       console.error('Erreur lecture utilisateurs:', e);
     }
-    return [];
+    return INITIAL_REGISTERED_USERS;
   },
 
   saveRegisteredUsers(users: AuthUser[]): void {
@@ -233,6 +268,17 @@ export const AuthService = {
     try {
       const sanitized = users.filter((u) => !isFakeDemoUser(u));
       localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(sanitized));
+
+      // Synchronisation asynchrone sécurisée avec le serveur de production
+      if (sanitized.length > 0) {
+        sanitized.forEach((usr) => {
+          fetch('/api/auth/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(usr),
+          }).catch(() => {});
+        });
+      }
     } catch (e) {
       console.error('Erreur sauvegarde utilisateurs:', e);
     }
@@ -286,7 +332,15 @@ export const AuthService = {
     const registered = this.getRegisteredUsers();
     const current = this.getCurrentUser();
     // Le Super-Admin système est toujours présent avec ses identifiants officiels à jour
-    const list = [...registered, SYSTEM_ADMIN_USER];
+    const list = [...registered];
+
+    INITIAL_REGISTERED_USERS.forEach((initU) => {
+      if (!list.some((u) => areEmailsEqual(u.email, initU.email))) {
+        list.push(initU);
+      }
+    });
+
+    list.push(SYSTEM_ADMIN_USER);
 
     if (current && !list.some((u) => u.id === current.id || areEmailsEqual(u.email, current.email))) {
       list.unshift(current);
@@ -585,7 +639,7 @@ export const AuthService = {
     // 2. RECHERCHE PARMI LES UTILISATEURS ENREGISTRÉS
     const allUsers = this.getAllKnownUsers();
 
-    const found = allUsers.find((u) => {
+    let found = allUsers.find((u) => {
       // Correspondance par Email
       if (areEmailsEqual(u.email, cleanIdentifier)) {
         return true;
@@ -596,6 +650,21 @@ export const AuthService = {
       }
       return false;
     });
+
+    // Secours immédiat sur les utilisateurs pré-enregistrés
+    if (!found) {
+      found = INITIAL_REGISTERED_USERS.find((u) => {
+        if (areEmailsEqual(u.email, cleanIdentifier)) return true;
+        if (arePhoneNumbersEqual(u.phone, cleanIdentifier)) return true;
+        return false;
+      });
+      if (found) {
+        const currentList = this.getRegisteredUsers();
+        if (!currentList.some((u) => areEmailsEqual(u.email, found!.email))) {
+          this.saveRegisteredUsers([found, ...currentList]);
+        }
+      }
+    }
 
     if (!found) {
       return {

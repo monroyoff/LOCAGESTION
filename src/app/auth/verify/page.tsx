@@ -27,13 +27,13 @@ function VerifyEmailContent() {
 
     try {
       // Vérifier le code dans la session ou l'enregistrement local
-      const pendingUsers = AuthService.getRegisteredUsers();
-      const targetUser = pendingUsers.find(
+      const pendingUsers = AuthService.getAllKnownUsers();
+      let targetUser = pendingUsers.find(
         (u) => u.email.toLowerCase() === email.trim().toLowerCase()
       );
 
       if (targetUser) {
-        // Marquer comme vérifié
+        // Marquer comme vérifié et connecter automatiquement
         const updated = {
           ...targetUser,
           emailVerified: true,
@@ -44,7 +44,7 @@ function VerifyEmailContent() {
         AuthService.setCurrentUser(updated);
 
         setStatus('success');
-        setMessage(`Votre adresse email ${email} a été confirmée avec succès ! Redirection en cours...`);
+        setMessage(`Votre adresse email ${email} a été confirmée avec succès ! Redirection vers votre espace...`);
 
         setTimeout(() => {
           if (updated.role === 'locataire') {
@@ -54,7 +54,7 @@ function VerifyEmailContent() {
           } else {
             router.push('/');
           }
-        }, 1800);
+        }, 1500);
       } else {
         // Si le compte est en attente
         setStatus('success');

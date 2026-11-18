@@ -105,6 +105,11 @@ export default function LeasesPage() {
     notifySave(msg, 'Bail réactivé avec succès !');
   };
 
+  const handleSwitchToTenantToSign = (tenantName: string, leaseId?: string) => {
+    spaceCtx.switchSpace('locataire');
+    router.push(`/portal?tab=bail${leaseId ? `&leaseId=${leaseId}` : ''}&tenant=${encodeURIComponent(tenantName)}`);
+  };
+
   const handleDownloadLeasePDF = (lease: Lease) => {
     generateLeasePDF({
       id: lease.id,
@@ -700,6 +705,16 @@ export default function LeasesPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           {isPending ? (
                             <>
+                              <button
+                                type="button"
+                                onClick={() => handleSwitchToTenantToSign(lease.tenant, lease.id)}
+                                className="py-2.5 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 transition-all cursor-pointer"
+                                title="Basculer sur l'Espace Locataire pour tester la contresignature"
+                              >
+                                <PenTool className="w-3.5 h-3.5" />
+                                <span>Signer (Côté Locataire)</span>
+                              </button>
+
                               <button
                                 type="button"
                                 onClick={() => {

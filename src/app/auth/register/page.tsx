@@ -411,6 +411,31 @@ export default function RegisterPage() {
     setIsLoading(true);
     setErrorMsg(null);
 
+    // Pré-enregistrement immédiat et garanti du compte pour éviter toute perte
+    const targetProjectCountry = isOutsideUEMOACEMAC ? projectCountry : residenceCountry;
+    const fullName = `${firstName.trim()} ${lastName.trim()}`;
+    try {
+      register({
+        role,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        name: fullName,
+        email: email.trim(),
+        phone: fullPhoneNumber,
+        birthDate: birthDate.trim(),
+        birthPlace: birthPlace.trim(),
+        residenceCountry,
+        residenceCity,
+        residenceDistrict: residenceDistrict.trim() || undefined,
+        projectCountry: targetProjectCountry,
+        companyName: companyName.trim() ? companyName.trim() : undefined,
+        ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
+        password: password || 'demo1234',
+      });
+    } catch (e) {
+      console.warn('Pré-enregistrement compte:', e);
+    }
+
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     setVerificationCode(code);
     await sendEmailCode(code);
