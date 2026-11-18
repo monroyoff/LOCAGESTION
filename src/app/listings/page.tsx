@@ -1248,11 +1248,22 @@ export default function ListingsPage() {
           </div>
 
           {/* Results Summary Bar */}
-          <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1">
-            <span>
-              {filteredListings.length}{' '}
-              {filteredListings.length > 1 ? 'logements trouvés' : 'logement trouvé'}
-            </span>
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1 flex-wrap gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span>
+                {filteredListings.length}{' '}
+                {filteredListings.length > 1 ? 'logements trouvés' : 'logement trouvé'}
+              </span>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="text-[11px] font-bold text-brand-600 hover:text-brand-700 underline cursor-pointer ml-1"
+                >
+                  (Filtres actifs : Cliquer ici pour réinitialiser et voir toutes les annonces)
+                </button>
+              )}
+            </div>
             <span className="text-[11px] text-slate-400">
               Devise officielle : <strong>FCFA (XOF / XAF)</strong>
             </span>
