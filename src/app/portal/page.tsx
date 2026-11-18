@@ -342,16 +342,17 @@ function TenantPortalContent() {
         pl = tenantMatch;
       }
     }
-    // Si aucun paramètre explicite, chercher le bail en attente le plus récent non encore signé/rejeté
-    if (!pl) {
-      pl = allLeases.find((l) => l.status === 'en_attente_signature' && !l.signedByTenant && !dismissed.includes(l.id));
-    }
-    // Chercher le bail du locataire connecté
-    if (!pl && user?.name) {
-      const userMatch = LeaseService.getPendingLeaseForTenant(user.name);
-      if (userMatch && !userMatch.signedByTenant && !dismissed.includes(userMatch.id)) {
-        pl = userMatch;
-      }
+    // Recherche stricte liée au locataire connecté (jamais de fuite sur le bail d'un tiers)
+    if (!pl && user) {
+      pl = allLeases.find(
+        (l) =>
+          l.status === 'en_attente_signature' &&
+          !l.signedByTenant &&
+          !dismissed.includes(l.id) &&
+          ((user.email && l.tenantEmail && l.tenantEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) ||
+            (user.phone && l.tenantPhone && l.tenantPhone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) ||
+            (user.name && l.tenant && l.tenant.trim().toLowerCase() === user.name.trim().toLowerCase()))
+      );
     }
 
     setPendingLease(pl || null);
@@ -360,9 +361,9 @@ function TenantPortalContent() {
       (l) =>
         (pl && l.id === pl.id) ||
         (queryLeaseId && l.id === queryLeaseId) ||
-        (user?.email && l.tenantEmail?.toLowerCase() === user.email.toLowerCase()) ||
-        (user?.phone && l.tenantPhone === user.phone) ||
-        (user?.name && l.tenant.toLowerCase() === user.name.toLowerCase())
+        (user?.email && l.tenantEmail && l.tenantEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) ||
+        (user?.phone && l.tenantPhone && l.tenantPhone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) ||
+        (user?.name && l.tenant && l.tenant.trim().toLowerCase() === user.name.trim().toLowerCase())
     );
     setCurrentLease(myLease || null);
   };
@@ -415,11 +416,17 @@ function TenantPortalContent() {
 
   // Mode de déclaration de loyer (Mois en cours, Loyers d'avance seuls, ou Groupé en cours + avance)
   const [paymentType, setPaymentType] = useState<'current' | 'advance' | 'both'>('current');
-  const [selectedAdvanceMonths, setSelectedAdvanceMonths] = useState<string[]>(['Décembre 2026']);
+  const [selectedAdvanceMonths, setSelectedAdvanceMonths] = useState<string[]>([]);
   const [declaredPeriod, setDeclaredPeriod] = useState('Novembre 2026');
-  const [declaredAmount, setDeclaredAmount] = useState('220000');
+  const [declaredAmount, setDeclaredAmount] = useState('');
   const [declaredMethod, setDeclaredMethod] = useState('wave');
-  const [declaredRef, setDeclaredRef] = useState('WAVE-TX-984210');
+  const [declaredRef, setDeclaredRef] = useState('');
+
+  useEffect(() => {
+    if (currentLease && currentLease.rent) {
+      setDeclaredAmount(String(currentLease.rent));
+    }
+  }, [currentLease]);
 
   // Notifications en temps réel dans l'espace locataire
   const [portalNotifs, setPortalNotifs] = useState<TenantNotification[]>([]);
@@ -561,24 +568,21 @@ function TenantPortalContent() {
     },
   };
 
-  const DEFAULT_TENANT_RECEIPTS: PaymentTransaction[] = [];
-
-  const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>(DEFAULT_TENANT_RECEIPTS);
+  const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>([]);
 
   useEffect(() => {
     const syncReceipts = () => {
       try {
         const declared = PaymentService.getDeclaredPayments();
-        const tenantDeclared = declared.filter(
-          (p) => !p.tenantName || p.tenantName.toLowerCase().includes('koffi')
-        );
-        const combined = [...tenantDeclared];
-        for (const def of DEFAULT_TENANT_RECEIPTS) {
-          if (!combined.some((p) => p.id === def.id || p.receiptNumber === def.receiptNumber)) {
-            combined.push(def);
-          }
-        }
-        setReceiptsList(combined);
+        const tenantDeclared = declared.filter((p) => {
+          if (!user && !currentLease) return false;
+          if (user?.email && p.tenantEmail && p.tenantEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) return true;
+          if (user?.phone && p.tenantPhone && p.tenantPhone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) return true;
+          if (user?.name && p.tenantName && p.tenantName.trim().toLowerCase() === user.name.trim().toLowerCase()) return true;
+          if (currentLease && ((p.propertyName === currentLease.property && p.unitNumber === currentLease.unit) || (p.tenantName && p.tenantName.trim().toLowerCase() === currentLease.tenant.trim().toLowerCase()))) return true;
+          return false;
+        });
+        setReceiptsList(tenantDeclared);
       } catch (err) {
         console.error('Erreur synchronisation quittances:', err);
       }
@@ -591,7 +595,7 @@ function TenantPortalContent() {
       window.removeEventListener('locagestion:payments_updated', syncReceipts);
       window.removeEventListener('storage', syncReceipts);
     };
-  }, []);
+  }, [user, currentLease]);
 
   // Filtres de date & tri pour "Mes Quittances & Reçus de Loyer"
   const [receiptDatePreset, setReceiptDatePreset] = useState<'all' | '2026' | 'this_month' | 'last_month' | 'last_3_months'>('all');
@@ -954,20 +958,30 @@ function TenantPortalContent() {
                 <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
                   <div>
                     <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-white shadow-xs flex items-center gap-1">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs flex items-center gap-1 ${
+                        currentLease
+                          ? (receiptsList.length > 0 && receiptsList[0]?.isVerified ? 'bg-emerald-500 text-white' : 'bg-brand-500 text-white')
+                          : 'bg-slate-700 text-slate-200'
+                      }`}>
                         <CheckCircle2 className="w-3 h-3" />
-                        Loyer d’Octobre Soldé
+                        {currentLease
+                          ? (receiptsList.length > 0 ? (receiptsList[0]?.isVerified ? 'Loyer à jour' : 'Règlement en attente') : 'Bail actif • En attente 1er loyer')
+                          : 'En attente d’assignation'}
                       </span>
                       <span className="text-[11px] text-slate-300 font-medium">
-                        {tenant.property} • {tenant.unit}
+                        {currentLease ? `${tenant.property} • ${tenant.unit}` : 'Aucun logement lié'}
                       </span>
                     </div>
 
                     <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-snug">
-                      Bonjour {user?.firstName || (user?.name ? user.name.split(' ')[0] : 'Locataire')} 👋, votre espace est parfaitement à jour
+                      Bonjour {user?.firstName || (user?.name ? user.name.split(' ')[0] : 'Locataire')} 👋{currentLease ? ', votre espace est parfaitement à jour' : ', bienvenue dans votre espace résident'}
                     </h1>
                     <p className="text-xs text-slate-400 mt-1.5 max-w-lg leading-relaxed">
-                      Prochaine exigibilité de loyer : <strong className="text-slate-200">{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).
+                      {currentLease ? (
+                        <>Prochaine exigibilité de loyer : <strong className="text-slate-200">{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).</>
+                      ) : (
+                        <>Bienvenue dans votre Espace Résident. Vos quittances certifiées et informations contractuelles apparaîtront ici dès que votre bailleur vous aura assigné votre logement.</>
+                      )}
                     </p>
                   </div>
 
@@ -997,48 +1011,60 @@ function TenantPortalContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Dernier Règlement Récent */}
                 <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft flex flex-col justify-between space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
-                          <Receipt className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <h4 className="text-xs font-black text-slate-900">Dernière Quittance Émise</h4>
-                            {receiptsList[0]?.isAdvance && (
-                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
-                                Loyer d'avance ({receiptsList[0]?.advanceMonthsCount || 1} m)
-                              </span>
-                            )}
+                  {receiptsList.length > 0 ? (
+                    <div>
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-black">
+                            <Receipt className="w-5 h-5" />
                           </div>
-                          <span className="text-[10px] text-slate-400">Réf : {receiptsList[0]?.receiptNumber || 'QUITT-2026-1048'}</span>
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <h4 className="text-xs font-black text-slate-900">Dernière Quittance Émise</h4>
+                              {receiptsList[0]?.isAdvance && (
+                                <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
+                                  Loyer d'avance ({receiptsList[0]?.advanceMonthsCount || 1} m)
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono">Réf : {receiptsList[0]?.receiptNumber}</span>
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          receiptsList[0]?.isVerified
+                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                            : 'text-amber-700 bg-amber-50 border-amber-200'
+                        }`}>
+                          {receiptsList[0]?.isVerified ? 'Soldé ✓' : 'En validation ⏳'}
+                        </span>
+                      </div>
+
+                      <div className="pt-3 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Période concernée :</span>
+                          <strong className="text-slate-900">{receiptsList[0]?.period}</strong>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Montant réglé :</span>
+                          <strong className="text-emerald-700 font-black">{formatFCFA(receiptsList[0]?.amount)}</strong>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Moyen de paiement :</span>
+                          <span className="text-slate-700 font-medium">{receiptsList[0]?.method ? receiptsList[0].method.toUpperCase() : 'Mobile Money'}</span>
                         </div>
                       </div>
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                        receiptsList[0]?.isVerified
-                          ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
-                          : 'text-amber-700 bg-amber-50 border-amber-200'
-                      }`}>
-                        {receiptsList[0]?.isVerified ? 'Soldé ✓' : 'En validation ⏳'}
-                      </span>
                     </div>
-
-                    <div className="pt-3 space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Période concernée :</span>
-                        <strong className="text-slate-900">{receiptsList[0]?.period || 'Octobre 2026'}</strong>
+                  ) : (
+                    <div className="py-5 text-center space-y-2">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                        <Receipt className="w-5 h-5" />
                       </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Montant réglé :</span>
-                        <strong className="text-emerald-700 font-black">{formatFCFA(receiptsList[0]?.amount || 220000)}</strong>
-                      </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-slate-500">Moyen de paiement :</span>
-                        <span className="text-slate-700 font-medium">{receiptsList[0]?.method ? receiptsList[0].method.toUpperCase() : 'WAVE'} Mobile Money</span>
-                      </div>
+                      <h4 className="text-xs font-black text-slate-800">Aucune quittance émise</h4>
+                      <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                        Vos quittances officielles avec QR Code scellé apparaîtront ici dès l'enregistrement et la validation de vos règlements.
+                      </p>
                     </div>
-                  </div>
+                  )}
 
                   <button
                     type="button"
@@ -1052,49 +1078,73 @@ function TenantPortalContent() {
 
                 {/* Mon Bailleur & Contact Rapide */}
                 <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft flex flex-col justify-between space-y-4">
-                  <div>
-                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black">
-                          <Building2 className="w-5 h-5 text-brand-400" />
+                  {currentLease ? (
+                    <div>
+                      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <div className="flex items-center gap-2">
+                          <div className="w-9 h-9 rounded-xl bg-slate-900 text-white flex items-center justify-center font-black">
+                            <Building2 className="w-5 h-5 text-brand-400" />
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-slate-900">{tenant.landlord.name || 'Bailleur Propriétaire'}</h4>
+                            <span className="text-[10px] text-slate-400">Bailleur & Gestionnaire Dédié</span>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-black text-slate-900">{tenant.landlord.name}</h4>
-                          <span className="text-[10px] text-slate-400">Bailleur & Gestionnaire Dédié</span>
+                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                          {tenant.landlord.contactPerson || 'Gestion'}
+                        </span>
+                      </div>
+
+                      <div className="pt-3 space-y-1.5 text-xs">
+                        {tenant.landlord.phone && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Téléphone :</span>
+                            <a href={`tel:${tenant.landlord.phone}`} className="font-bold text-slate-800 hover:text-brand-600">
+                              {tenant.landlord.phone}
+                            </a>
+                          </div>
+                        )}
+                        {tenant.landlord.email && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500">Email :</span>
+                            <span className="text-slate-700 font-medium truncate max-w-[180px]">{tenant.landlord.email}</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Contrat :</span>
+                          <span className="text-slate-800 font-mono font-bold">{tenant.leaseRef}</span>
                         </div>
                       </div>
-                      <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                        {tenant.landlord.contactPerson}
-                      </span>
                     </div>
-
-                    <div className="pt-3 space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Téléphone :</span>
-                        <a href={`tel:${tenant.landlord.phone}`} className="font-bold text-slate-800 hover:text-brand-600">
-                          {tenant.landlord.phone}
-                        </a>
+                  ) : (
+                    <div className="py-5 text-center space-y-2">
+                      <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                        <Building2 className="w-5 h-5" />
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Email :</span>
-                        <span className="text-slate-700 font-medium truncate max-w-[180px]">{tenant.landlord.email}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-500">Contrat :</span>
-                        <span className="text-slate-800 font-mono font-bold">{tenant.leaseRef}</span>
-                      </div>
+                      <h4 className="text-xs font-black text-slate-800">Aucun bailleur assigné</h4>
+                      <p className="text-[11px] text-slate-400 max-w-xs mx-auto">
+                        Les coordonnées et le contact WhatsApp de votre bailleur apparaîtront dès que votre contrat de bail sera actif.
+                      </p>
                     </div>
-                  </div>
+                  )}
 
-                  <a
-                    href={`https://wa.me/${tenant.landlord.whatsapp}?text=Bonjour%20M.%20Diallo,%20je%20suis%20Koffi%20Mensah%20(Appt%20A3).`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                    <span>Écrire sur WhatsApp au Bailleur</span>
-                  </a>
+                  {currentLease && (tenant.landlord.whatsapp || tenant.landlord.phone) ? (
+                    <a
+                      href={`https://wa.me/${(tenant.landlord.whatsapp || tenant.landlord.phone).replace(/\D/g, '')}?text=${encodeURIComponent(
+                        `Bonjour, je suis ${tenant.name} (${tenant.unit}). Je vous contacte depuis mon espace locataire LOCAGESTION.`
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      <span>Écrire sur WhatsApp au Bailleur</span>
+                    </a>
+                  ) : (
+                    <div className="w-full py-2.5 px-4 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold text-center">
+                      Contact bailleur disponible après assignation
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1108,48 +1158,67 @@ function TenantPortalContent() {
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      type="button"
-                      onClick={() => setIsInspectionModalOpen(true)}
-                      className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
-                    >
-                      <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>État des lieux ({inspectionData.photos.length} photos)</span>
-                    </button>
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 self-start sm:self-auto shrink-0">
-                      Bail en cours d'exécution
+                    {currentLease && inspectionData.photos.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setIsInspectionModalOpen(true)}
+                        className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>État des lieux ({inspectionData.photos.length} photos)</span>
+                      </button>
+                    )}
+                    <span className={`text-xs font-bold px-3 py-1 rounded-full border self-start sm:self-auto shrink-0 ${
+                      currentLease
+                        ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                        : 'text-slate-600 bg-slate-100 border-slate-200'
+                    }`}>
+                      {currentLease ? "Bail en cours d'exécution" : 'En attente de bail'}
                     </span>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Loyer Mensuel Net</span>
-                    <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.monthlyRent)}</span>
-                    <span className="text-[10px] text-slate-500">Hors charges</span>
+                {currentLease ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Loyer Mensuel Net</span>
+                      <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.monthlyRent)}</span>
+                      <span className="text-[10px] text-slate-500">Hors charges</span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Charges Locatives</span>
+                      <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.charges)}</span>
+                      <span className="text-[10px] text-slate-500">Gardiennage & entretien</span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Dépôt de Garantie</span>
+                      <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.deposit)}</span>
+                      <span className="text-[10px] text-slate-500">Caution consignée</span>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Échéance Mensuelle</span>
+                      <span className="text-base font-black text-emerald-700 mt-0.5 block">{tenant.dueDate}</span>
+                      <span className="text-[10px] text-slate-500">Au plus tard</span>
+                    </div>
                   </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Charges Locatives</span>
-                    <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.charges)}</span>
-                    <span className="text-[10px] text-slate-500">Gardiennage & groupe</span>
+                ) : (
+                  <div className="py-6 text-center space-y-2">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                      <Home className="w-5 h-5" />
+                    </div>
+                    <h4 className="text-xs font-black text-slate-800">Aucun logement assigné pour le moment</h4>
+                    <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                      Les caractéristiques, compteurs et états des lieux apparaîtront ici automatiquement dès qu'un bail vous sera transmis.
+                    </p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Dépôt de Garantie</span>
-                    <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.deposit)}</span>
-                    <span className="text-[10px] text-slate-500">2 mois consignés</span>
-                  </div>
-                  <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Échéance Mensuelle</span>
-                    <span className="text-base font-black text-emerald-700 mt-0.5 block">5 du mois</span>
-                    <span className="text-[10px] text-slate-500">Au plus tard</span>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* ==================================================================== */}
               {/* SECTION : ÉTAT DES LIEUX & CONSTAT PHOTOS DU LOGEMENT (Lecture Seule) */}
               {/* ==================================================================== */}
-              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5 animate-in fade-in duration-200">
+              {currentLease && inspectionData.photos.length > 0 && (
+                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5 animate-in fade-in duration-200">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                   <div className="flex items-start sm:items-center gap-3 min-w-0">
                     <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 shadow-xs">
@@ -1327,8 +1396,9 @@ function TenantPortalContent() {
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Artisans mandatés actifs pour le locataire */}
+            {/* Artisans mandatés actifs pour le locataire */}
               {reportedIncidents.filter((i) => i.status !== 'resolu' && i.assignedTechnician).length > 0 && (
                 <div className="space-y-3">
                   {reportedIncidents
@@ -1815,11 +1885,22 @@ function TenantPortalContent() {
                   )}
 
                   {/* Contrat de Bail Card */}
-                  <div className={`rounded-3xl p-6 sm:p-7 border shadow-soft space-y-5 ${
-                    currentLease?.status === 'resilie'
-                      ? 'bg-rose-50/30 border-rose-200'
-                      : 'bg-white border-slate-200/80'
-                  }`}>
+                  {!currentLease ? (
+                    <div className="rounded-3xl p-8 sm:p-12 border border-slate-200/80 bg-white shadow-soft text-center space-y-3">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                      <h3 className="text-sm font-black text-slate-800">Aucun contrat de bail actif</h3>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto">
+                        Vous n'avez pas encore de contrat de bail assigné. Dès que votre bailleur aura généré et signé votre contrat officiel, vous serez notifié pour le contresigner ici.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className={`rounded-3xl p-6 sm:p-7 border shadow-soft space-y-5 ${
+                      currentLease?.status === 'resilie'
+                        ? 'bg-rose-50/30 border-rose-200'
+                        : 'bg-white border-slate-200/80'
+                    }`}>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-100">
                       <div className="flex items-start sm:items-center gap-2.5 min-w-0">
                         <FileText className={`w-5 h-5 mt-0.5 sm:mt-0 shrink-0 ${currentLease?.status === 'resilie' ? 'text-rose-600' : 'text-brand-600'}`} />
@@ -1922,82 +2003,88 @@ function TenantPortalContent() {
                       </span>
                     </div>
                   </div>
+                )}
                 </div>
               )}
 
               {/* SOUS-SECTION 2 : MON BAILLEUR & GESTIONNAIRE */}
               {(bailSubTab === 'tout' || bailSubTab === 'bailleur') && (
-                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-6">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black">
-                        <Building2 className="w-6 h-6 text-brand-400" />
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-black text-lg text-slate-900">
-                            {tenant.landlord.name}
-                          </h3>
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Bailleur Officiel
-                          </span>
+                currentLease ? (
+                  <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black">
+                          <Building2 className="w-6 h-6 text-brand-400" />
                         </div>
-                        <p className="text-xs text-slate-500">
-                          Représenté par <strong>{tenant.landlord.contactPerson}</strong> ({tenant.landlord.role})
-                        </p>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-black text-lg text-slate-900">
+                              {tenant.landlord.name || 'Bailleur Propriétaire'}
+                            </h3>
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Bailleur Officiel
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-500">
+                            Représenté par <strong>{tenant.landlord.contactPerson || 'Gestion'}</strong> ({tenant.landlord.role})
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Direct WhatsApp CTA Button */}
+                      {(tenant.landlord.whatsapp || tenant.landlord.phone) && (
+                        <a
+                          href={`https://wa.me/${(tenant.landlord.whatsapp || tenant.landlord.phone).replace(/\D/g, '')}?text=${encodeURIComponent(
+                            `Bonjour, je suis ${tenant.name} (${tenant.unit}). Je vous contacte depuis mon espace locataire LOCAGESTION.`
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-md shadow-emerald-500/25 active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
+                        >
+                          <MessageCircle className="w-4 h-4" />
+                          <span>Contacter sur WhatsApp</span>
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Coordonnées & IFU */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Téléphone Direct
+                        </span>
+                        <a
+                          href={`tel:${tenant.landlord.phone}`}
+                          className="text-xs font-black text-slate-900 hover:text-brand-600 mt-1 flex items-center gap-1.5"
+                        >
+                          <Phone className="w-3.5 h-3.5 text-slate-400" />
+                          <span>{tenant.landlord.phone || 'Non renseigné'}</span>
+                        </a>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Email Professionnel
+                        </span>
+                        <a
+                          href={`mailto:${tenant.landlord.email}`}
+                          className="text-xs font-black text-slate-900 hover:text-brand-600 mt-1 flex items-center gap-1.5 truncate"
+                        >
+                          <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{tenant.landlord.email || 'Non renseigné'}</span>
+                        </a>
+                      </div>
+
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                          Numéro IFU Fiscal
+                        </span>
+                        <span className="text-xs font-mono font-black text-slate-900 mt-1 flex items-center gap-1.5">
+                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>{tenant.landlord.ifu || 'Non communiqué'}</span>
+                        </span>
                       </div>
                     </div>
-
-                    {/* Direct WhatsApp CTA Button */}
-                    <a
-                      href={`https://wa.me/${tenant.landlord.whatsapp}?text=Bonjour%20M.%20Diallo,%20je%20suis%20Koffi%20Mensah%20de%20la%20Résidence%20Les%20Cocotiers%20(Appt%20A3).`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold shadow-md shadow-emerald-500/25 active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                      <span>Contacter sur WhatsApp</span>
-                    </a>
-                  </div>
-
-                  {/* Coordonnées & IFU */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Téléphone Direct
-                      </span>
-                      <a
-                        href={`tel:${tenant.landlord.phone}`}
-                        className="text-xs font-black text-slate-900 hover:text-brand-600 mt-1 flex items-center gap-1.5"
-                      >
-                        <Phone className="w-3.5 h-3.5 text-slate-400" />
-                        <span>{tenant.landlord.phone}</span>
-                      </a>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Email Professionnel
-                      </span>
-                      <a
-                        href={`mailto:${tenant.landlord.email}`}
-                        className="text-xs font-black text-slate-900 hover:text-brand-600 mt-1 flex items-center gap-1.5 truncate"
-                      >
-                        <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{tenant.landlord.email}</span>
-                      </a>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Numéro IFU Fiscal
-                      </span>
-                      <span className="text-xs font-mono font-black text-slate-900 mt-1 flex items-center gap-1.5">
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>{tenant.landlord.ifu}</span>
-                      </span>
-                    </div>
-                  </div>
 
                   {/* Payment Accounts Guide */}
                   <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
@@ -2026,7 +2113,17 @@ function TenantPortalContent() {
                     </div>
                   </div>
                 </div>
-              )}
+              ) : (
+                <div className="rounded-3xl p-8 sm:p-12 border border-slate-200/80 bg-white shadow-soft text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Building2 className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-800">Aucun bailleur assigné</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    Les coordonnées, contacts et informations fiscales de votre bailleur apparaîtront automatiquement dès la validation de votre bail.
+                  </p>
+                </div>
+              ))}
             </div>
           )}
 
@@ -2066,15 +2163,17 @@ function TenantPortalContent() {
                     Score de Ponctualité Global
                   </span>
                   <div className="text-5xl font-black mt-1">
-                    96 <span className="text-base text-emerald-100 font-bold">/ 100</span>
+                    {receiptsList.length === 0 ? 100 : Math.round(100 * (receiptsList.filter((r) => r.isVerified).length / receiptsList.length))} <span className="text-base text-emerald-100 font-bold">/ 100</span>
                   </div>
                   <p className="text-xs text-emerald-100 mt-1.5">
-                    100% de vos loyers ont été réglés dans les délais sur 22 mois consécutifs.
+                    {receiptsList.length === 0
+                      ? 'Nouveau Résident : Votre historique débutera dès la validation de votre premier loyer.'
+                      : `${receiptsList.filter((r) => r.isVerified).length} quittance(s) validée(s) sur ${receiptsList.length} règlement(s) enregistré(s).`}
                   </p>
                 </div>
 
                 <div className="px-5 py-2.5 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs font-black border border-white/20 self-start sm:self-auto">
-                  Badge Officiel : EXCELLENT PAYEUR
+                  Badge Officiel : {receiptsList.length === 0 ? 'NOUVEAU LOCATAIRE' : receiptsList.length >= 6 ? 'EXCELLENT PAYEUR' : 'RÉSIDENT ACTIF'}
                 </div>
               </div>
 
@@ -2452,8 +2551,8 @@ function TenantPortalContent() {
 
                             <div className="flex items-center gap-2 flex-wrap">
                               <a
-                                href={`https://wa.me/2290195444430?text=${encodeURIComponent(
-                                  `Bonjour Cabinet Diallo Patrimoine,\nJ'accuse réception du préavis ${notice.id} pour le logement ${notice.propertyName} (${notice.unitNumber}). Je vous contacte pour convenir de l'état des lieux de sortie prévu vers le ${notice.effectiveDate}.\nCordialement,\n${notice.tenantName}`
+                                href={`https://wa.me/${(tenant.landlord.whatsapp || tenant.landlord.phone || '2290197000000').replace(/\D/g, '')}?text=${encodeURIComponent(
+                                  `Bonjour,\nJ'accuse réception du préavis ${notice.id} pour le logement ${notice.propertyName} (${notice.unitNumber}). Je vous contacte pour convenir de l'état des lieux de sortie prévu vers le ${notice.effectiveDate}.\nCordialement,\n${notice.tenantName}`
                                 )}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -2464,7 +2563,7 @@ function TenantPortalContent() {
                               </a>
 
                               <a
-                                href={`mailto:contact@diallopatrimoine.com?subject=${encodeURIComponent(
+                                href={`mailto:${tenant.landlord.email || 'contact@locagestion.site'}?subject=${encodeURIComponent(
                                   `Accusé de réception - Préavis ${notice.id} - ${notice.tenantName}`
                                 )}&body=${encodeURIComponent(
                                   `Bonjour,\n\nJe fais suite à la notification du préavis ${notice.id} concernant le logement ${notice.propertyName} (${notice.unitNumber}).\n\nDate de libération : ${notice.effectiveDate}.\n\nBien cordialement,\n${notice.tenantName}`
