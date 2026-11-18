@@ -2,6 +2,7 @@
 
 import { RentalListing, UserSpace, AuthUser } from '../types';
 import { MOCK_RENTAL_LISTINGS } from '../data/mock-data';
+import { LeaseService } from './lease-service';
 
 const STORAGE_KEY = 'locagestion:custom_listings';
 
@@ -159,7 +160,112 @@ export function resolveListingAuthorCompany(listing?: Partial<RentalListing> | n
   return undefined;
 }
 
+/**
+ * Génère une référence officielle d'annonce unique et facilement lisible
+ * Format: LOCA-ANN-XXXXX ou LOCA-BJ-XXXXX
+ */
+export function generateListingReference(id?: string, countryCode?: string): string {
+  const cc = (countryCode || 'ANN').toUpperCase();
+  let numPart = '';
+  if (id) {
+    const digitsOnly = id.replace(/[^0-9]/g, '');
+    if (digitsOnly.length >= 4) {
+      numPart = digitsOnly.slice(-5);
+    }
+  }
+  if (!numPart || numPart.length < 4) {
+    numPart = Math.floor(10000 + Math.random() * 90000).toString();
+  }
+  return `LOCA-${cc}-${numPart}`;
+}
+
+/**
+ * Calcule l'âge d'une annonce en jours depuis sa date de publication
+ */
+export function getListingAgeInDays(listing: RentalListing): number {
+  let createdTime: number | null = null;
+
+  // 1. Essayer depuis l'ID si list-<timestamp>
+  if (listing.id && listing.id.startsWith('list-')) {
+    const rawTs = parseInt(listing.id.replace('list-', ''), 10);
+    if (!isNaN(rawTs) && rawTs > 1600000000000 && rawTs < 2500000000000) {
+      createdTime = rawTs;
+    }
+  }
+
+  // 2. Essayer depuis listing.createdAt
+  if (!createdTime && listing.createdAt) {
+    if (listing.createdAt.includes('/')) {
+      const parts = listing.createdAt.split('/');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        createdTime = new Date(y, m, d).getTime();
+      }
+    } else {
+      const parsed = Date.parse(listing.createdAt);
+      if (!isNaN(parsed)) {
+        createdTime = parsed;
+      }
+    }
+  }
+
+  if (!createdTime) return 0;
+  const diffMs = Date.now() - createdTime;
+  return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+}
+
 export const ListingsService = {
+  /**
+   * Purge automatique de toutes les annonces de plus de 30 jours
+   * Alerte l'utilisateur et libère immédiatement l'espace de stockage
+   */
+  purgeExpiredListings(): { purgedCount: number; purgedListings: RentalListing[] } {
+    if (typeof window === 'undefined') return { purgedCount: 0, purgedListings: [] };
+
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (!stored) return { purgedCount: 0, purgedListings: [] };
+
+      const parsed = JSON.parse(stored);
+      if (!Array.isArray(parsed)) return { purgedCount: 0, purgedListings: [] };
+
+      const activeListings: RentalListing[] = [];
+      const expiredListings: RentalListing[] = [];
+
+      parsed.forEach((l: RentalListing) => {
+        if (isFakeListing(l)) return;
+        const age = getListingAgeInDays(l);
+        if (age >= 30) {
+          expiredListings.push(l);
+
+          // Avertissement utilisateur dans son espace
+          LeaseService.addLandlordNotification({
+            id: `notif-exp-${l.id}-${Date.now()}`,
+            title: '⚠️ Annonce Expirée & Archivée (+30 jours)',
+            message: `Votre annonce « ${l.title} » (Réf: ${l.referenceCode || l.id}) a été automatiquement retirée après 30 jours de diffusion pour optimiser le stockage de la plateforme. Vous pouvez la republier à tout moment.`,
+            type: 'listing_rejected',
+            read: false,
+            timestamp: 'À l\'instant',
+          });
+        } else {
+          activeListings.push(l);
+        }
+      });
+
+      if (expiredListings.length > 0) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(activeListings));
+        notifyListingsChange();
+      }
+
+      return { purgedCount: expiredListings.length, purgedListings: expiredListings };
+    } catch (e) {
+      console.error('Erreur purge annonces expirées (+30j):', e);
+      return { purgedCount: 0, purgedListings: [] };
+    }
+  },
+
   getCustomListings(): RentalListing[] {
     if (typeof window === 'undefined') return SEED_CUSTOM_LISTINGS;
     try {
@@ -168,20 +274,48 @@ export const ListingsService = {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           let hasUpdated = false;
-          const sanitized = parsed.filter((l) => !isFakeListing(l)).map((l) => {
-            if (!l.authorCompany || !l.authorCompany.trim()) {
-              const resolved = resolveListingAuthorCompany(l);
+          const activeListings: RentalListing[] = [];
+
+          parsed.filter((l) => !isFakeListing(l)).forEach((l) => {
+            // RÈGLE STRICTE : Purge automatique après 30 jours pour libérer le stockage
+            const age = getListingAgeInDays(l);
+            if (age >= 30) {
+              hasUpdated = true;
+              LeaseService.addLandlordNotification({
+                id: `notif-exp-${l.id}-${Date.now()}`,
+                title: '⚠️ Annonce Expirée & Archivée (+30 jours)',
+                message: `Votre annonce « ${l.title} » (Réf: ${l.referenceCode || l.id}) a été automatiquement retirée après 30 jours de diffusion pour économiser l'espace de stockage.`,
+                type: 'listing_rejected',
+                read: false,
+                timestamp: 'À l\'instant',
+              });
+              return; // Non conservé
+            }
+
+            let item = { ...l };
+
+            // 1. Auto-résolution du nom d'entreprise
+            if (!item.authorCompany || !item.authorCompany.trim()) {
+              const resolved = resolveListingAuthorCompany(item);
               if (resolved) {
                 hasUpdated = true;
-                return { ...l, authorCompany: resolved };
+                item.authorCompany = resolved;
               }
             }
-            return l;
+
+            // 2. Attribution d'une référence unique plateforme
+            if (!item.referenceCode || !item.referenceCode.trim()) {
+              hasUpdated = true;
+              item.referenceCode = generateListingReference(item.id, item.countryCode);
+            }
+
+            activeListings.push(item);
           });
-          if (hasUpdated || sanitized.length !== parsed.length) {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
+
+          if (hasUpdated || activeListings.length !== parsed.length) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(activeListings));
           }
-          return sanitized;
+          return activeListings;
         }
       }
       return [];
@@ -238,8 +372,12 @@ export const ListingsService = {
   },
 
   createListing(newListing: RentalListing): RentalListing {
+    const itemWithRef: RentalListing = {
+      ...newListing,
+      referenceCode: newListing.referenceCode || generateListingReference(newListing.id, newListing.countryCode),
+    };
     const current = this.getCustomListings().filter((l) => !isFakeListing(l));
-    const updated = [newListing, ...current.filter((l) => l.id !== newListing.id)];
+    const updated = [itemWithRef, ...current.filter((l) => l.id !== itemWithRef.id)];
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -248,7 +386,7 @@ export const ListingsService = {
         console.error('Erreur sauvegarde nouvelle annonce:', e);
       }
     }
-    return newListing;
+    return itemWithRef;
   },
 
   updateListing(id: string, updates: Partial<RentalListing>): RentalListing | null {

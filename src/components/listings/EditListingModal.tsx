@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Building2,
@@ -8,6 +8,7 @@ import {
   Banknote,
   FileText,
   Camera,
+  UploadCloud,
   CheckCircle2,
   Trash2,
   PauseCircle,
@@ -110,11 +111,48 @@ export function EditListingModal({
     }
   }, [listing]);
 
+  const MAX_PHOTOS = 8;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   if (!isOpen || !listing) return null;
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const remainingSlots = MAX_PHOTOS - images.length;
+    if (remainingSlots <= 0) {
+      alert('Vous avez déjà atteint la limite maximale de 8 photos.');
+      return;
+    }
+
+    const filesToRead = Array.from(files).slice(0, remainingSlots);
+
+    filesToRead.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        if (uploadEvent.target?.result) {
+          setImages((prev) => {
+            if (prev.length >= MAX_PHOTOS) return prev;
+            return [...prev, uploadEvent.target!.result as string];
+          });
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+
+    if (e.target) {
+      e.target.value = '';
+    }
+  };
 
   const handleAddImage = () => {
     if (newImageUrl.trim()) {
-      setImages([...images, newImageUrl.trim()]);
+      if (images.length >= MAX_PHOTOS) {
+        alert('Limite maximale de 8 photos atteinte.');
+        return;
+      }
+      setImages((prev) => [...prev, newImageUrl.trim()].slice(0, MAX_PHOTOS));
       setNewImageUrl('');
     }
   };
@@ -340,10 +378,10 @@ export function EditListingModal({
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-black tracking-tight text-white flex items-center gap-2">
+              <h3 className="text-base font-black tracking-tight text-white flex items-center gap-2 flex-wrap">
                 <span>Modifier votre publication</span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/10 text-slate-300">
-                  ID: {listing.id}
+                <span className="text-[10px] font-mono font-black px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                  Réf: {listing.referenceCode || listing.id}
                 </span>
               </h3>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -765,43 +803,110 @@ export function EditListingModal({
             />
           </div>
 
-          {/* 6. Photos */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 block">
-              Photos de l'annonce ({images.length})
-            </label>
-            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+          {/* 6. Photos (Max 8 au total) */}
+          <div className="space-y-3 pt-2 border-t border-slate-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Camera className="w-4 h-4 text-brand-600" />
+                  <span>Photos du logement ({images.length} / {MAX_PHOTOS} max)</span>
+                </label>
+                <span className="text-[10px] text-slate-500 block mt-0.5">
+                  Ajoutez jusqu&apos;à 8 photos de qualité pour valoriser votre annonce (min. 2 requises).
+                </span>
+              </div>
+              <span className={`text-[11px] font-black px-2.5 py-1 rounded-full border ${
+                images.length >= MAX_PHOTOS
+                  ? 'bg-amber-50 text-amber-700 border-amber-300'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}>
+                {images.length >= MAX_PHOTOS ? '8 / 8 (Max atteint)' : `${images.length} / 8 photos`}
+              </span>
+            </div>
+
+            {/* Grille des photos */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               {images.map((img, idx) => (
-                <div key={idx} className="relative aspect-video rounded-xl overflow-hidden group border border-slate-200">
-                  <img src={img} alt="" className="w-full h-full object-cover" />
+                <div key={idx} className="relative aspect-video rounded-2xl overflow-hidden group border-2 border-slate-200 bg-slate-900 shadow-sm">
+                  <img src={img} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                  <span className="absolute bottom-1.5 left-1.5 text-[9px] font-black px-1.5 py-0.5 rounded-md bg-black/70 text-white backdrop-blur-sm">
+                    #{idx + 1}
+                  </span>
                   <button
                     type="button"
                     onClick={() => handleRemoveImage(idx)}
-                    className="absolute top-1 right-1 p-1 bg-black/70 hover:bg-rose-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Supprimer la photo"
+                    className="absolute top-1.5 right-1.5 p-1.5 bg-rose-600/90 hover:bg-rose-700 text-white rounded-xl shadow-md transition-transform active:scale-90 cursor-pointer"
+                    title="Supprimer cette photo"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
+
+              {/* Slot d'ajout si moins de 8 photos */}
+              {images.length < MAX_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-video rounded-2xl border-2 border-dashed border-brand-300 bg-brand-50/50 hover:bg-brand-50 text-brand-700 flex flex-col items-center justify-center gap-1 transition-all cursor-pointer group"
+                >
+                  <UploadCloud className="w-5 h-5 group-hover:scale-110 transition-transform text-brand-600" />
+                  <span className="text-[11px] font-bold">+ Ajouter photo</span>
+                  <span className="text-[9px] text-brand-500 font-medium">({MAX_PHOTOS - images.length} restante{MAX_PHOTOS - images.length > 1 ? 's' : ''})</span>
+                </button>
+              )}
             </div>
 
-            <div className="flex gap-2">
-              <input
-                type="url"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
-                placeholder="Ajouter une URL d'image (ex: https://images.unsplash.com/...)"
-                className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
-              />
-              <button
-                type="button"
-                onClick={handleAddImage}
-                className="px-3.5 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
-              >
-                Ajouter
-              </button>
-            </div>
+            {/* Input d'upload de fichiers caché */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+
+            {/* Boutons d'ajout */}
+            {images.length < MAX_PHOTOS ? (
+              <div className="space-y-2 pt-1">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex-1 py-2.5 px-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm active:scale-95"
+                  >
+                    <Camera className="w-4 h-4 text-brand-400" />
+                    <span>Importer des photos depuis l&apos;appareil ({MAX_PHOTOS - images.length} slot{MAX_PHOTOS - images.length > 1 ? 's' : ''} libre{MAX_PHOTOS - images.length > 1 ? 's' : ''})</span>
+                  </button>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={newImageUrl}
+                    onChange={(e) => setNewImageUrl(e.target.value)}
+                    placeholder="Ou coller une URL d'image web (https://...)"
+                    className="flex-1 px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500 text-slate-800"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddImage}
+                    disabled={!newImageUrl.trim()}
+                    className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 disabled:opacity-50 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Ajouter URL
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>
+                  <strong>Limite de 8 photos atteinte :</strong> Vous avez atteint le nombre maximal de 8 photos pour cette annonce. Supprimez-en une si vous souhaitez la remplacer.
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Footer Actions */}

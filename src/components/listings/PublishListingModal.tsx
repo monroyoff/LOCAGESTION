@@ -33,6 +33,7 @@ import { ModerationService, ModerationViolation } from '@/lib/services/moderatio
 import { AuthService } from '@/lib/services/auth-service';
 import { notifyPublish, notifyAction } from '@/lib/notifications/action-notifier';
 import { LeaseService } from '@/lib/services/lease-service';
+import { generateListingReference } from '@/lib/services/listings-service';
 import {
   getUserResidenceCountry,
   getUserResidenceCity,
@@ -382,12 +383,16 @@ export function PublishListingModal({
             setVerificationStatus('approved');
             setVerificationStep(4);
 
+            const newId = `list-${Date.now()}`;
+            const targetCountryCode = countryCodeMap[country] || 'BJ';
+
             const newListing: RentalListing = {
-              id: `list-${Date.now()}`,
+              id: newId,
+              referenceCode: generateListingReference(newId, targetCountryCode),
               title: proposedTitle,
               propertyType,
               country,
-              countryCode: countryCodeMap[country] || 'BJ',
+              countryCode: targetCountryCode,
               flag: COUNTRIES_CITIES[country]?.flag || '🌍',
               city: finalCity,
               district: district || 'Centre-ville',

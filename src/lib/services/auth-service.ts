@@ -335,6 +335,59 @@ export const AuthService = {
     return updatedUser;
   },
 
+  updateUser(userId: string, updates: Partial<AuthUser>): { success: boolean; error?: string } {
+    if (typeof window === 'undefined') return { success: false, error: 'Environnement non supporté.' };
+    
+    // Protection Super-Admin système
+    if (userId === SYSTEM_ADMIN_USER.id) {
+      if (updates.role && updates.role !== 'admin') {
+        return { success: false, error: 'Impossible de modifier le rôle du Super-Administrateur système.' };
+      }
+    }
+
+    const list = this.getRegisteredUsers();
+    const idx = list.findIndex((u) => u.id === userId);
+    if (idx === -1) {
+      return { success: false, error: 'Utilisateur introuvable.' };
+    }
+
+    list[idx] = { ...list[idx], ...updates };
+    this.saveRegisteredUsers(list);
+
+    const current = this.getCurrentUser();
+    if (current && current.id === userId) {
+      this.setCurrentUser({ ...current, ...updates });
+    }
+
+    return { success: true };
+  },
+
+  deleteUser(userId: string): { success: boolean; error?: string } {
+    if (typeof window === 'undefined') return { success: false, error: 'Environnement non supporté.' };
+    
+    // Protection absolue du compte Super-Admin système
+    if (userId === SYSTEM_ADMIN_USER.id) {
+      return { success: false, error: 'Impossible de supprimer le compte Super-Administrateur système.' };
+    }
+
+    const list = this.getRegisteredUsers();
+    const userToDelete = list.find((u) => u.id === userId);
+    if (userToDelete && areEmailsEqual(userToDelete.email, SYSTEM_ADMIN_USER.email)) {
+      return { success: false, error: 'Action interdite sur le Super-Administrateur.' };
+    }
+
+    const filtered = list.filter((u) => u.id !== userId);
+    this.saveRegisteredUsers(filtered);
+
+    // Supprimer aussi de la session active si ce n'est pas le Super-Admin
+    const current = this.getCurrentUser();
+    if (current && current.id === userId) {
+      this.logout();
+    }
+
+    return { success: true };
+  },
+
   login(
     emailOrPhone: string,
     password?: string

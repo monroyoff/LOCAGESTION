@@ -233,6 +233,7 @@ export interface RentalListing {
   authorRole?: UserSpace;
   authorAvatar?: string;
   createdAt?: string;
+  referenceCode?: string; // Référence unique plateforme (ex: LOCA-ANN-84291)
   viewsCount?: number;
   inquiriesCount?: number;
 }

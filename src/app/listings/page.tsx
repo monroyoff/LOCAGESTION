@@ -1314,13 +1314,18 @@ export default function ListingsPage() {
                           )}
                         </div>
 
-                        {/* Photos count pill */}
-                        {listing.images.length > 1 && (
-                          <div className="absolute top-3 right-3 px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 flex items-center gap-1">
-                            <ImageIcon className="w-3 h-3" />
-                            <span>{listing.images.length} photos</span>
-                          </div>
-                        )}
+                        {/* Photos count & Reference code pill */}
+                        <div className="absolute top-3 right-3 flex items-center gap-1.5 flex-wrap justify-end">
+                          <span className="px-2.5 py-0.5 rounded-full bg-slate-950/85 backdrop-blur-md text-brand-300 font-mono text-[10px] font-black border border-white/10 shadow-sm">
+                            {listing.referenceCode || listing.id}
+                          </span>
+                          {listing.images.length > 1 && (
+                            <div className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 flex items-center gap-1">
+                              <ImageIcon className="w-3 h-3" />
+                              <span>{listing.images.length} photos</span>
+                            </div>
+                          )}
+                        </div>
 
                         {/* Bottom rent overlay */}
                         <div className="absolute bottom-3 left-4 right-4 text-white flex items-baseline justify-between">
@@ -1653,8 +1658,11 @@ export default function ListingsPage() {
                   <Compass className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-sm line-clamp-1 text-white">
-                    {selectedListingForDetail.title}
+                  <h3 className="font-extrabold text-sm line-clamp-1 text-white flex items-center gap-2 flex-wrap">
+                    <span>{selectedListingForDetail.title}</span>
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                      Réf: {selectedListingForDetail.referenceCode || selectedListingForDetail.id}
+                    </span>
                   </h3>
                   <p className="text-[11px] text-slate-300">
                     {selectedListingForDetail.propertyType} • {selectedListingForDetail.district}, {selectedListingForDetail.city} ({selectedListingForDetail.country})
