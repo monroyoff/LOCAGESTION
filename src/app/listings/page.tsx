@@ -64,6 +64,7 @@ import {
   AlertCircle,
   User,
   MessageSquare,
+  Copy,
 } from 'lucide-react';
 
 const ALL_CITIES = Array.from(
@@ -866,7 +867,31 @@ export default function ListingsPage() {
 
                         {/* Contenu */}
                         <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
-                          <div className="space-y-1.5">
+                          <div className="space-y-2">
+                            {/* Ligne Référence Officielle */}
+                            <div className="flex items-center justify-between gap-2">
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                    navigator.clipboard.writeText(listing.referenceCode || listing.id);
+                                    showToast(`Référence ${listing.referenceCode || listing.id} copiée !`);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-black border border-slate-200 cursor-pointer group/ref"
+                                title="Cliquer pour copier la référence"
+                              >
+                                <span className="text-[9px] font-sans font-bold text-slate-400 uppercase">Réf</span>
+                                <span className="group-hover/ref:text-brand-600 transition-colors">
+                                  {listing.referenceCode || listing.id}
+                                </span>
+                                <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500" />
+                              </div>
+                              <span className="text-[10px] font-bold text-slate-400">
+                                {listing.propertyType}
+                              </span>
+                            </div>
+
                             <h4
                               onClick={() => handleOpenEdit(listing)}
                               className="font-black text-sm text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1 cursor-pointer"
@@ -1299,8 +1324,8 @@ export default function ListingsPage() {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
 
-                        {/* Top Badges */}
-                        <div className="absolute top-3 left-3 flex items-center gap-2 flex-wrap">
+                        {/* Top Badges (Left) */}
+                        <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[70%]">
                           <span className="px-2.5 py-1 rounded-full bg-brand-500 text-white text-[10px] font-black shadow-md flex items-center gap-1">
                             <span>{listing.flag}</span>
                             <span>{listing.country}</span>
@@ -1309,34 +1334,15 @@ export default function ListingsPage() {
                           <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10">
                             {listing.propertyType}
                           </span>
-
-                          {listing.distanceKm !== undefined && listing.distanceKm <= 10 && (
-                            <span className="px-2.5 py-1 rounded-full bg-emerald-600/95 backdrop-blur-md text-white text-[10px] font-black border border-white/20 flex items-center gap-1 shadow-sm">
-                              <MapPin className="w-3 h-3 text-white" />
-                              <span>{listing.distanceKm < 1 ? '< 1 km' : `~${listing.distanceKm} km`}</span>
-                            </span>
-                          )}
-
-                          {listing.isVerified && (
-                            <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-emerald-400 text-[10px] font-bold border border-white/10 flex items-center gap-1">
-                              <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                              Bailleur Vérifié
-                            </span>
-                          )}
                         </div>
 
-                        {/* Photos count & Reference code pill */}
-                        <div className="absolute top-3 right-3 flex items-center gap-1.5 flex-wrap justify-end">
-                          <span className="px-2.5 py-0.5 rounded-full bg-slate-950/85 backdrop-blur-md text-brand-300 font-mono text-[10px] font-black border border-white/10 shadow-sm">
-                            {listing.referenceCode || listing.id}
-                          </span>
-                          {listing.images.length > 1 && (
-                            <div className="px-2 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 flex items-center gap-1">
-                              <ImageIcon className="w-3 h-3" />
-                              <span>{listing.images.length} photos</span>
-                            </div>
-                          )}
-                        </div>
+                        {/* Top Badges (Right - Photos count) */}
+                        {listing.images.length > 1 && (
+                          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 flex items-center gap-1 shadow-sm">
+                            <ImageIcon className="w-3 h-3" />
+                            <span>{listing.images.length} photos</span>
+                          </div>
+                        )}
 
                         {/* Bottom rent overlay */}
                         <div className="absolute bottom-3 left-4 right-4 text-white flex items-baseline justify-between">
@@ -1356,12 +1362,40 @@ export default function ListingsPage() {
 
                       {/* Listing Content */}
                       <div className="p-5 space-y-3">
+                        {/* Ligne Référence Officielle & Certification Bailleur */}
+                        <div className="flex items-center justify-between gap-2">
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                navigator.clipboard.writeText(listing.referenceCode || listing.id);
+                                showToast(`Référence ${listing.referenceCode || listing.id} copiée !`);
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-black border border-slate-200/90 shadow-2xs transition-all cursor-pointer group/ref"
+                            title="Cliquer pour copier la référence officielle"
+                          >
+                            <span className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Réf</span>
+                            <span className="text-slate-900 group-hover/ref:text-brand-600 transition-colors">
+                              {listing.referenceCode || listing.id}
+                            </span>
+                            <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500 transition-colors" />
+                          </div>
+
+                          {listing.isVerified && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200/70">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              <span>Bailleur Vérifié</span>
+                            </span>
+                          )}
+                        </div>
+
                         <h3
                           onClick={() => {
                             setSelectedListingForDetail(listing);
                             setCurrentDetailPhotoIdx(0);
                           }}
-                          className="font-extrabold text-sm text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1 cursor-pointer"
+                          className="font-extrabold text-base text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1 cursor-pointer"
                           title="Cliquer pour voir la description complète"
                         >
                           {listing.title}
