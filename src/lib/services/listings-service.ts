@@ -1,10 +1,11 @@
 'use client';
 
-import { RentalListing, UserSpace, AuthUser } from '../types';
+import { RentalListing, UserSpace, AuthUser, TrashListing } from '../types';
 import { MOCK_RENTAL_LISTINGS } from '../data/mock-data';
 import { LeaseService } from './lease-service';
 
 const STORAGE_KEY = 'locagestion:custom_listings';
+const TRASH_STORAGE_KEY = 'locagestion:trash_listings';
 
 // Annonces enregistrées par les utilisateurs — STRICTEMENT VIDE AU DÉPART
 const SEED_CUSTOM_LISTINGS: RentalListing[] = [];
@@ -424,8 +425,50 @@ export const ListingsService = {
     return this.updateListing(id, { status: nextStatus });
   },
 
-  deleteListing(id: string): boolean {
+  /**
+   * Récupère la liste de toutes les annonces supprimées (Corbeille système)
+   */
+  getTrashListings(): TrashListing[] {
+    if (typeof window === 'undefined') return [];
+    try {
+      const stored = localStorage.getItem(TRASH_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((l) => !isFakeListing(l));
+        }
+      }
+      return [];
+    } catch (e) {
+      console.error('Erreur lecture corbeille annonces:', e);
+      return [];
+    }
+  },
+
+  /**
+   * Déplace une annonce vers la corbeille au lieu d'une suppression irréversible.
+   * Permet au Super Admin de restaurer l'annonce à tout moment pour l'utilisateur.
+   */
+  deleteListing(id: string, deletedBy: 'Utilisateur' | 'Super Admin' = 'Utilisateur', reason?: string): boolean {
     const current = this.getCustomListings().filter((l) => !isFakeListing(l));
+    const target = current.find((l) => l.id === id);
+
+    if (target && typeof window !== 'undefined') {
+      try {
+        const trashItem: TrashListing = {
+          ...target,
+          deletedAt: new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          deletedBy,
+          deletedReason: reason || (deletedBy === 'Super Admin' ? 'Suppression administrative' : 'Supprimé par l’auteur'),
+        };
+        const existingTrash = this.getTrashListings();
+        const updatedTrash = [trashItem, ...existingTrash.filter((t) => t.id !== id)];
+        localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(updatedTrash));
+      } catch (e) {
+        console.error('Erreur mise en corbeille annonce:', e);
+      }
+    }
+
     const filtered = current.filter((l) => l.id !== id);
     if (typeof window !== 'undefined') {
       try {
@@ -437,6 +480,72 @@ export const ListingsService = {
       }
     }
     return false;
+  },
+
+  /**
+   * Restaure une annonce supprimée pour son utilisateur depuis le compte Super Admin
+   */
+  restoreListing(id: string): { success: boolean; listing?: RentalListing; error?: string } {
+    if (typeof window === 'undefined') return { success: false, error: 'Environnement non supporté.' };
+
+    const trash = this.getTrashListings();
+    const target = trash.find((l) => l.id === id);
+
+    if (!target) {
+      return { success: false, error: 'Annonce introuvable dans la corbeille.' };
+    }
+
+    // 1. Retirer de la corbeille
+    const updatedTrash = trash.filter((l) => l.id !== id);
+    localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(updatedTrash));
+
+    // 2. Réintégrer dans les annonces actives
+    const restoredItem: RentalListing = {
+      ...target,
+      status: target.status === 'rejete' || target.moderationStatus === 'rejete' ? 'rejete' : 'disponible',
+    };
+    const current = this.getCustomListings().filter((l) => !isFakeListing(l));
+    const updatedListings = [restoredItem, ...current.filter((l) => l.id !== id)];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedListings));
+
+    // 3. Notifier l'auteur dans son espace
+    try {
+      LeaseService.addLandlordNotification({
+        id: `notif-restore-${target.id}-${Date.now()}`,
+        title: '✅ Annonce Restaurée par l’Administration',
+        message: `Votre annonce « ${target.title} » (Réf: ${target.referenceCode || target.id}) a été restaurée avec succès par le Super Admin. Elle est de nouveau visible et active sur la plateforme.`,
+        type: 'listing_approved',
+        read: false,
+        timestamp: "À l'instant",
+      });
+    } catch (e) {
+      console.error('Erreur notification restauration:', e);
+    }
+
+    notifyListingsChange();
+    return { success: true, listing: restoredItem };
+  },
+
+  /**
+   * Suppression définitive et irréversible depuis la corbeille
+   */
+  permanentDeleteTrashListing(id: string): boolean {
+    if (typeof window === 'undefined') return false;
+    const trash = this.getTrashListings();
+    const updated = trash.filter((l) => l.id !== id);
+    localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify(updated));
+    notifyListingsChange();
+    return true;
+  },
+
+  /**
+   * Vider complètement la corbeille d'annonces
+   */
+  emptyTrash(): boolean {
+    if (typeof window === 'undefined') return false;
+    localStorage.setItem(TRASH_STORAGE_KEY, JSON.stringify([]));
+    notifyListingsChange();
+    return true;
   },
 
   /**

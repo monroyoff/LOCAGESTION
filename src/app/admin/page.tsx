@@ -43,12 +43,15 @@ import {
   FileText,
   Copy,
   Fingerprint,
+  RotateCcw,
+  ArchiveRestore,
+  ShieldX,
 } from 'lucide-react';
 import { useSpace } from '@/lib/context/space-context';
 import { ModerationService } from '@/lib/services/moderation-service';
 import { ListingsService, getListingAgeInDays } from '@/lib/services/listings-service';
 import { AuthService, SYSTEM_ADMIN_USER, getRoleLabel, areEmailsEqual } from '@/lib/services/auth-service';
-import { SecurityAlert, RentalListing, AuthUser, UserSpace } from '@/lib/types';
+import { SecurityAlert, RentalListing, AuthUser, UserSpace, TrashListing } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 
 export default function AdminDashboardPage() {
@@ -57,12 +60,21 @@ export default function AdminDashboardPage() {
 
   const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
   const [listings, setListings] = useState<RentalListing[]>([]);
+  const [trashListings, setTrashListings] = useState<TrashListing[]>([]);
+  const [listingSubView, setListingSubView] = useState<'active' | 'trash'>('active');
+  const [searchTrashQuery, setSearchTrashQuery] = useState<string>('');
+
   const [users, setUsers] = useState<AuthUser[]>([]);
   const [activeTab, setActiveTab] = useState<'alerts' | 'listings' | 'users' | 'rules'>('alerts');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [searchAlertQuery, setSearchAlertQuery] = useState<string>('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
+
+  // État Modale de blocage utilisateur
+  const [blockingUser, setBlockingUser] = useState<AuthUser | null>(null);
+  const [blockType, setBlockType] = useState<'temporary' | 'permanent'>('temporary');
+  const [blockReasonInput, setBlockReasonInput] = useState<string>('');
 
   // Filtres et recherche Annonces
   const [searchListingRef, setSearchListingRef] = useState<string>('');
@@ -78,6 +90,7 @@ export default function AdminDashboardPage() {
   const refreshData = () => {
     setAlerts(ModerationService.getSecurityAlerts());
     setListings(ListingsService.getAllListings());
+    setTrashListings(ListingsService.getTrashListings());
     setUsers(AuthService.getAllKnownUsers());
   };
 
@@ -126,14 +139,43 @@ export default function AdminDashboardPage() {
 
   // --- Actions Annonces ---
   const handleDeleteListing = (id: string) => {
-    if (confirm('Voulez-vous supprimer définitivement cette annonce de la plateforme ?')) {
-      ListingsService.deleteListing(id);
+    if (confirm('Voulez-vous supprimer cette annonce et la placer dans la corbeille ? Elle pourra être restaurée à tout moment.')) {
+      ListingsService.deleteListing(id, 'Super Admin', 'Supprimée depuis la console Super-Admin');
       refreshData();
       if (selectedListingForDetail?.id === id) {
         setSelectedListingForDetail(null);
       }
-      setActionSuccessMsg('Annonce supprimée définitivement.');
+      setActionSuccessMsg('Annonce déplacée dans la corbeille. Vous pouvez la restaurer à tout moment.');
       setTimeout(() => setActionSuccessMsg(null), 4000);
+    }
+  };
+
+  const handleRestoreListing = (id: string, title?: string, authorName?: string) => {
+    const res = ListingsService.restoreListing(id);
+    if (res.success) {
+      refreshData();
+      setActionSuccessMsg(`L'annonce « ${title || id} » a été restaurée avec succès pour ${authorName || "l'utilisateur"}. Elle est de nouveau active.`);
+      setTimeout(() => setActionSuccessMsg(null), 4500);
+    } else {
+      alert(res.error || 'Erreur lors de la restauration de l\'annonce.');
+    }
+  };
+
+  const handlePermanentDeleteFromTrash = (id: string) => {
+    if (confirm('Voulez-vous purger DÉFINITIVEMENT cette annonce du stockage ? Cette action est irréversible.')) {
+      ListingsService.permanentDeleteTrashListing(id);
+      refreshData();
+      setActionSuccessMsg('Annonce définitivement purgée du stockage.');
+      setTimeout(() => setActionSuccessMsg(null), 3500);
+    }
+  };
+
+  const handleEmptyTrash = () => {
+    if (confirm('Êtes-vous sûr de vouloir vider complètement la corbeille ? Toutes les annonces supprimées seront définitivement détruites pour libérer le stockage.')) {
+      ListingsService.emptyTrash();
+      refreshData();
+      setActionSuccessMsg('La corbeille d\'annonces a été vidée avec succès.');
+      setTimeout(() => setActionSuccessMsg(null), 3500);
     }
   };
 
@@ -205,6 +247,72 @@ export default function AdminDashboardPage() {
       } else {
         alert(res.error || 'Erreur lors de la suppression.');
       }
+    }
+  };
+
+  const handleOpenBlockModal = (targetUser: AuthUser, defaultType: 'temporary' | 'permanent' = 'temporary') => {
+    if (targetUser.id === SYSTEM_ADMIN_USER.id || targetUser.email === SYSTEM_ADMIN_USER.email || targetUser.role === 'admin') {
+      alert('Action proscrite : Le compte Super-Administrateur système ne peut pas être bloqué.');
+      return;
+    }
+    setBlockingUser(targetUser);
+    setBlockType(defaultType);
+    setBlockReasonInput(
+      defaultType === 'temporary'
+        ? "Suspension temporaire pour vérifications de conformité et audit des pièces justificatives."
+        : "Blocage définitif suite à des infractions graves aux règles et conditions de la plateforme."
+    );
+  };
+
+  const handleConfirmBlockUser = () => {
+    if (!blockingUser) return;
+    const res = AuthService.blockUser(blockingUser.id, blockType, blockReasonInput);
+    if (res.success) {
+      refreshData();
+      if (selectedUserForDetail?.id === blockingUser.id) {
+        setSelectedUserForDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                accountStatus: blockType === 'temporary' ? 'blocked_temporary' : 'blocked_permanent',
+                blockReason: blockReasonInput,
+              }
+            : null
+        );
+      }
+      setActionSuccessMsg(
+        blockType === 'temporary'
+          ? `Le compte de « ${blockingUser.name} » a été suspendu temporairement.`
+          : `Le compte de « ${blockingUser.name} » a été bloqué définitivement.`
+      );
+      setBlockingUser(null);
+      setTimeout(() => setActionSuccessMsg(null), 4500);
+    } else {
+      alert(res.error || 'Erreur lors du blocage du compte.');
+    }
+  };
+
+  const handleReactivateUser = (targetUser: AuthUser) => {
+    const res = AuthService.reactivateUser(targetUser.id);
+    if (res.success) {
+      refreshData();
+      if (selectedUserForDetail?.id === targetUser.id) {
+        setSelectedUserForDetail((prev) =>
+          prev
+            ? {
+                ...prev,
+                accountStatus: 'active',
+                blockReason: undefined,
+              }
+            : null
+        );
+      }
+      setActionSuccessMsg(
+        `Le compte de « ${targetUser.name} » a été réactivé avec succès. L'utilisateur peut à nouveau se connecter.`
+      );
+      setTimeout(() => setActionSuccessMsg(null), 4500);
+    } else {
+      alert(res.error || 'Erreur lors de la réactivation du compte.');
     }
   };
 
@@ -326,9 +434,31 @@ export default function AdminDashboardPage() {
     return true;
   });
 
-  // Filtrage des utilisateurs par nom, email, téléphone, entreprise et rôle
+  // Filtrage des annonces de la corbeille
+  const filteredTrashListings = trashListings.filter((l) => {
+    if (!searchTrashQuery.trim()) return true;
+    const q = searchTrashQuery.trim().toLowerCase();
+    const refCode = (l.referenceCode || '').toLowerCase();
+    const idMatch = l.id.toLowerCase().includes(q);
+    const refMatch = refCode.includes(q);
+    const titleMatch = l.title.toLowerCase().includes(q);
+    const cityMatch = l.city.toLowerCase().includes(q);
+    const authorMatch =
+      (l.authorName || '').toLowerCase().includes(q) ||
+      (l.authorCompany || '').toLowerCase().includes(q) ||
+      (l.deletedBy || '').toLowerCase().includes(q);
+    return refMatch || idMatch || titleMatch || cityMatch || authorMatch;
+  });
+
+  // Filtrage des utilisateurs par nom, email, téléphone, entreprise et rôle/statut
   const filteredUsers = users.filter((u) => {
-    if (filterUserRole !== 'all' && u.role !== filterUserRole) return false;
+    if (filterUserRole === 'blocked_temporary') {
+      if (u.accountStatus !== 'blocked_temporary') return false;
+    } else if (filterUserRole === 'blocked_permanent') {
+      if (u.accountStatus !== 'blocked_permanent') return false;
+    } else if (filterUserRole !== 'all' && u.role !== filterUserRole) {
+      return false;
+    }
 
     if (searchUserName.trim()) {
       const q = searchUserName.trim().toLowerCase();
@@ -862,203 +992,364 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
-        {/* TAB 2: GESTION & SUPERVISION DES ANNONCES (AVEC RECHERCHE PAR RÉFÉRENCE & PURGE 30J) */}
+        {/* TAB 2: GESTION & SUPERVISION DES ANNONCES (AVEC RECHERCHE PAR RÉFÉRENCE, PURGE 30J & CORBEILLE DE RESTAURATION) */}
         {activeTab === 'listings' && (
           <div className="space-y-4">
-            {/* Barre d'outils et recherche par référence */}
-            <div className="p-4 sm:p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-3.5">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <h3 className="text-sm font-black text-white flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-brand-400" />
-                    <span>Recherche d'Annonce par Référence Unique</span>
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Trouvez instantanément n'importe quelle annonce grâce à sa référence certifiée (ex: <code className="text-brand-300 font-mono">LOCA-BJ-2026-XXXXX</code>)
-                  </p>
-                </div>
+            {/* Sous-onglets : Annonces Actives VS Corbeille */}
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-3 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setListingSubView('active')}
+                className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  listingSubView === 'active'
+                    ? 'bg-brand-500 text-white shadow-pink-glow'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <Building2 className="w-4 h-4" />
+                <span>Annonces Actives ({listings.length})</span>
+              </button>
 
-                {/* Bouton de Purge manuelle 30 jours */}
-                <button
-                  type="button"
-                  onClick={handleManualPurgeExpired}
-                  className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
-                >
-                  <Clock className="w-4 h-4 text-amber-400" />
-                  <span>Purger les annonces expirées (+30 jours)</span>
-                </button>
-              </div>
-
-              {/* Champ de recherche */}
-              <div className="relative">
-                <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
-                <input
-                  type="text"
-                  value={searchListingRef}
-                  onChange={(e) => setSearchListingRef(e.target.value)}
-                  placeholder="Saisissez la référence (ex: LOCA-BJ-2026-...), le titre, la ville, le quartier ou l'auteur..."
-                  className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                />
-                {searchListingRef && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchListingRef('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* Filtres de statut */}
-              <div className="flex items-center gap-2 flex-wrap pt-1">
-                <span className="text-[11px] font-bold text-slate-400">Filtrer par statut :</span>
-                {[
-                  { id: 'all', label: `Toutes (${listings.length})` },
-                  { id: 'disponible', label: `Disponibles (${listings.filter(l => l.status !== 'en_pause' && l.status !== 'rejete' && l.moderationStatus !== 'rejete').length})` },
-                  { id: 'en_pause', label: `En pause (${listings.filter(l => l.status === 'en_pause').length})` },
-                  { id: 'rejete', label: `Rejetées IA (${listings.filter(l => l.status === 'rejete' || l.moderationStatus === 'rejete').length})` },
-                ].map((st) => (
-                  <button
-                    key={st.id}
-                    type="button"
-                    onClick={() => setFilterListingStatus(st.id)}
-                    className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      filterListingStatus === st.id
-                        ? 'bg-brand-500/20 text-brand-300 border border-brand-500/40'
-                        : 'bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-800'
-                    }`}
-                  >
-                    {st.label}
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                onClick={() => setListingSubView('trash')}
+                className={`px-4 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer ${
+                  listingSubView === 'trash'
+                    ? 'bg-rose-600 text-white shadow-md shadow-rose-900/40'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <RotateCcw className="w-4 h-4 text-rose-300" />
+                <span>Corbeille & Annonces Supprimées ({trashListings.length})</span>
+              </button>
             </div>
 
-            {/* Liste des annonces filtrées */}
-            {filteredListings.length === 0 ? (
-              <div className="p-12 text-center bg-slate-900 rounded-3xl border border-slate-800 space-y-2">
-                <Building2 className="w-10 h-10 text-slate-600 mx-auto" />
-                <h4 className="text-sm font-bold text-slate-200">Aucune annonce trouvée</h4>
-                <p className="text-xs text-slate-400">
-                  Aucune publication ne correspond à votre référence ou critère de recherche.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredListings.map((l) => {
-                  const age = getListingAgeInDays(l);
-                  const daysRemaining = Math.max(0, 30 - age);
-                  const isExpiringSoon = daysRemaining <= 5;
+            {/* VUE 1 : ANNONCES ACTIVES */}
+            {listingSubView === 'active' && (
+              <div className="space-y-4">
+                {/* Barre d'outils et recherche par référence */}
+                <div className="p-4 sm:p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-3.5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <h3 className="text-sm font-black text-white flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-brand-400" />
+                        <span>Recherche d'Annonce par Référence Unique</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Trouvez instantanément n'importe quelle annonce grâce à sa référence certifiée (ex: <code className="text-brand-300 font-mono">LOCA-BJ-2026-XXXXX</code>)
+                      </p>
+                    </div>
 
-                  return (
-                    <div
-                      key={l.id}
-                      className="p-4 sm:p-5 rounded-3xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                    {/* Bouton de Purge manuelle 30 jours */}
+                    <button
+                      type="button"
+                      onClick={handleManualPurgeExpired}
+                      className="px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm active:scale-95"
                     >
-                      <div className="flex items-start gap-4 flex-1">
-                        <img
-                          src={l.images[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=200'}
-                          alt={l.title}
-                          className="w-20 h-20 rounded-2xl object-cover border border-slate-800 shrink-0 bg-slate-950"
-                        />
-                        <div className="space-y-1.5 flex-1 min-w-0">
-                          {/* En-tête : Référence + Statut + Rétention 30j */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-[11px] font-mono font-black px-2.5 py-0.5 rounded-lg bg-brand-500/20 text-brand-300 border border-brand-500/30">
-                              Réf: {l.referenceCode || l.id}
-                            </span>
+                      <Clock className="w-4 h-4 text-amber-400" />
+                      <span>Purger les annonces expirées (+30 jours)</span>
+                    </button>
+                  </div>
 
-                            {l.status === 'rejete' || l.moderationStatus === 'rejete' ? (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                                Rejeté IA
-                              </span>
-                            ) : l.status === 'en_pause' ? (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
-                                En pause
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
-                                <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                                <span>Conforme</span>
-                              </span>
-                            )}
+                  {/* Champ de recherche */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      value={searchListingRef}
+                      onChange={(e) => setSearchListingRef(e.target.value)}
+                      placeholder="Saisissez la référence (ex: LOCA-BJ-2026-...), le titre, la ville, le quartier ou l'auteur..."
+                      className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
+                    />
+                    {searchListingRef && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchListingRef('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
 
-                            {/* Badge d'âge et règle de rétention 30 jours */}
-                            <span
-                              className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1 ${
-                                isExpiringSoon
-                                  ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
-                                  : 'bg-slate-800 text-slate-300'
-                              }`}
-                              title="Règle d'auto-suppression après 30 jours pour économiser l'espace"
+                  {/* Filtres de statut */}
+                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                    <span className="text-[11px] font-bold text-slate-400">Filtrer par statut :</span>
+                    {[
+                      { id: 'all', label: `Toutes (${listings.length})` },
+                      { id: 'disponible', label: `Disponibles (${listings.filter(l => l.status !== 'en_pause' && l.status !== 'rejete' && l.moderationStatus !== 'rejete').length})` },
+                      { id: 'en_pause', label: `En pause (${listings.filter(l => l.status === 'en_pause').length})` },
+                      { id: 'rejete', label: `Rejetées IA (${listings.filter(l => l.status === 'rejete' || l.moderationStatus === 'rejete').length})` },
+                    ].map((st) => (
+                      <button
+                        key={st.id}
+                        type="button"
+                        onClick={() => setFilterListingStatus(st.id)}
+                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          filterListingStatus === st.id
+                            ? 'bg-brand-500/20 text-brand-300 border border-brand-500/40'
+                            : 'bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-800'
+                        }`}
+                      >
+                        {st.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Liste des annonces filtrées */}
+                {filteredListings.length === 0 ? (
+                  <div className="p-12 text-center bg-slate-900 rounded-3xl border border-slate-800 space-y-2">
+                    <Building2 className="w-10 h-10 text-slate-600 mx-auto" />
+                    <h4 className="text-sm font-bold text-slate-200">Aucune annonce trouvée</h4>
+                    <p className="text-xs text-slate-400">
+                      Aucune publication ne correspond à votre référence ou critère de recherche.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredListings.map((l) => {
+                      const age = getListingAgeInDays(l);
+                      const daysRemaining = Math.max(0, 30 - age);
+                      const isExpiringSoon = daysRemaining <= 5;
+
+                      return (
+                        <div
+                          key={l.id}
+                          className="p-4 sm:p-5 rounded-3xl bg-slate-900 border border-slate-800 hover:border-slate-700 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                        >
+                          <div className="flex items-start gap-4 flex-1">
+                            <img
+                              src={l.images[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=200'}
+                              alt={l.title}
+                              className="w-20 h-20 rounded-2xl object-cover border border-slate-800 shrink-0 bg-slate-950"
+                            />
+                            <div className="space-y-1.5 flex-1 min-w-0">
+                              {/* En-tête : Référence + Statut + Rétention 30j */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="text-[11px] font-mono font-black px-2.5 py-0.5 rounded-lg bg-brand-500/20 text-brand-300 border border-brand-500/30">
+                                  Réf: {l.referenceCode || l.id}
+                                </span>
+
+                                {l.status === 'rejete' || l.moderationStatus === 'rejete' ? (
+                                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                                    Rejeté IA
+                                  </span>
+                                ) : l.status === 'en_pause' ? (
+                                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300">
+                                    En pause
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
+                                    <span>Conforme</span>
+                                  </span>
+                                )}
+
+                                {/* Badge d'âge et règle de rétention 30 jours */}
+                                <span
+                                  className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1 ${
+                                    isExpiringSoon
+                                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                      : 'bg-slate-800 text-slate-300'
+                                  }`}
+                                  title="Règle d'auto-suppression après 30 jours pour économiser l'espace"
+                                >
+                                  <Clock className="w-3 h-3" />
+                                  <span>
+                                    Jour {age}/30 • {daysRemaining === 0 ? 'Expirée' : `Expire dans ${daysRemaining}j`}
+                                  </span>
+                                </span>
+                              </div>
+
+                              {/* Titre & Localisation */}
+                              <h4 className="text-sm font-black text-white truncate">{l.title}</h4>
+                              <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                                <span className="flex items-center gap-1">
+                                  <MapPin className="w-3 h-3 text-slate-500" />
+                                  <span>{l.city}{l.district ? `, ${l.district}` : ''} ({l.country})</span>
+                                </span>
+                                <span>•</span>
+                                <span className="text-slate-200 font-bold">
+                                  Loyer : {formatFCFA(l.monthlyRent)}/mois
+                                </span>
+                                <span>•</span>
+                                <span>{l.images.length} / 8 photo{l.images.length > 1 ? 's' : ''}</span>
+                              </div>
+
+                              {/* Auteur & Entreprise */}
+                              <div className="text-[11px] text-slate-400 pt-0.5">
+                                <span className="text-slate-500 font-bold">Auteur : </span>
+                                <span className="text-slate-200 font-semibold">
+                                  {l.authorCompany ? `${l.authorCompany} (${l.authorName})` : l.authorName}
+                                </span>
+                                <span className="text-slate-500"> • Rôle : {l.authorRole}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Actions Admin */}
+                          <div className="flex items-center gap-2 self-end md:self-center shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedListingForDetail(l)}
+                              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                             >
-                              <Clock className="w-3 h-3" />
-                              <span>
-                                Jour {age}/30 • {daysRemaining === 0 ? 'Expirée' : `Expire dans ${daysRemaining}j`}
-                              </span>
-                            </span>
-                          </div>
-
-                          {/* Titre & Localisation */}
-                          <h4 className="text-sm font-black text-white truncate">{l.title}</h4>
-                          <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3 text-slate-500" />
-                              <span>{l.city}{l.district ? `, ${l.district}` : ''} ({l.country})</span>
-                            </span>
-                            <span>•</span>
-                            <span className="text-slate-200 font-bold">
-                              Loyer : {formatFCFA(l.monthlyRent)}/mois
-                            </span>
-                            <span>•</span>
-                            <span>{l.images.length} / 8 photo{l.images.length > 1 ? 's' : ''}</span>
-                          </div>
-
-                          {/* Auteur & Entreprise */}
-                          <div className="text-[11px] text-slate-400 pt-0.5">
-                            <span className="text-slate-500 font-bold">Auteur : </span>
-                            <span className="text-slate-200 font-semibold">
-                              {l.authorCompany ? `${l.authorCompany} (${l.authorName})` : l.authorName}
-                            </span>
-                            <span className="text-slate-500"> • Rôle : {l.authorRole}</span>
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Fiche</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleTogglePauseListing(l.id)}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                l.status === 'en_pause'
+                                  ? 'bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800'
+                                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                              }`}
+                            >
+                              {l.status === 'en_pause' ? 'Activer' : 'Mettre en pause'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteListing(l.id)}
+                              className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
+                              title="Déplacer dans la corbeille"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
-                      {/* Actions Admin */}
-                      <div className="flex items-center gap-2 self-end md:self-center shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedListingForDetail(l)}
-                          className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Fiche</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleTogglePauseListing(l.id)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                            l.status === 'en_pause'
-                              ? 'bg-emerald-950/60 hover:bg-emerald-900 text-emerald-300 border border-emerald-800'
-                              : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
-                          }`}
-                        >
-                          {l.status === 'en_pause' ? 'Activer' : 'Mettre en pause'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteListing(l.id)}
-                          className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
-                          title="Supprimer définitivement l'annonce"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
+            {/* VUE 2 : CORBEILLE & RESTAURATION D'ANNONCES SUPPRIMÉES */}
+            {listingSubView === 'trash' && (
+              <div className="space-y-4 animate-in fade-in duration-150">
+                <div className="p-4 sm:p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-3.5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <h3 className="text-sm font-black text-white flex items-center gap-2">
+                        <RotateCcw className="w-4 h-4 text-rose-400" />
+                        <span>Corbeille & Restauration des Annonces ({trashListings.length})</span>
+                      </h3>
+                      <p className="text-xs text-slate-400 mt-0.5">
+                        Toutes les annonces supprimées par erreur par les utilisateurs ou l'administration sont conservées ici et restaurables en 1 clic.
+                      </p>
                     </div>
-                  );
-                })}
+
+                    {trashListings.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleEmptyTrash}
+                        className="px-3.5 py-2 rounded-xl bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800 text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Vider la corbeille ({trashListings.length})</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Champ de recherche dans la corbeille */}
+                  <div className="relative">
+                    <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      value={searchTrashQuery}
+                      onChange={(e) => setSearchTrashQuery(e.target.value)}
+                      placeholder="Rechercher dans la corbeille par référence (ex: LOCA-BJ-...), titre, ville ou auteur..."
+                      className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500"
+                    />
+                    {searchTrashQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchTrashQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {filteredTrashListings.length === 0 ? (
+                  <div className="p-12 text-center bg-slate-900 rounded-3xl border border-slate-800 space-y-2">
+                    <ArchiveRestore className="w-10 h-10 text-slate-600 mx-auto" />
+                    <h4 className="text-sm font-bold text-slate-200">La corbeille d'annonces est vide</h4>
+                    <p className="text-xs text-slate-400">
+                      Aucune annonce supprimée n'est en attente de restauration.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredTrashListings.map((l) => (
+                      <div
+                        key={l.id}
+                        className="p-4 sm:p-5 rounded-3xl bg-slate-900 border border-rose-950/60 hover:border-rose-900/80 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4"
+                      >
+                        <div className="flex items-start gap-4 flex-1">
+                          <img
+                            src={l.images[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=200'}
+                            alt={l.title}
+                            className="w-20 h-20 rounded-2xl object-cover border border-slate-800 shrink-0 bg-slate-950 opacity-80"
+                          />
+                          <div className="space-y-1.5 flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[11px] font-mono font-black px-2.5 py-0.5 rounded-lg bg-slate-800 text-slate-300 border border-slate-700">
+                                Réf: {l.referenceCode || l.id}
+                              </span>
+
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30 flex items-center gap-1">
+                                <Trash2 className="w-3 h-3 text-rose-400" />
+                                <span>Supprimée le {l.deletedAt || 'Récemment'} par {l.deletedBy || 'Utilisateur'}</span>
+                              </span>
+                            </div>
+
+                            <h4 className="text-sm font-black text-white truncate">{l.title}</h4>
+                            <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                              <span>{l.city}{l.district ? `, ${l.district}` : ''} ({l.country})</span>
+                              <span>•</span>
+                              <span className="text-slate-200 font-bold">Loyer : {formatFCFA(l.monthlyRent)}/mois</span>
+                              <span>•</span>
+                              <span>Auteur : {l.authorCompany ? `${l.authorCompany} (${l.authorName})` : l.authorName}</span>
+                            </div>
+
+                            {l.deletedReason && (
+                              <p className="text-[11px] text-rose-300/80 italic">
+                                Motif : {l.deletedReason}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Boutons d'action Corbeille */}
+                        <div className="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => handleRestoreListing(l.id, l.title, l.authorName)}
+                            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-950/40 flex items-center gap-2 transition-all cursor-pointer active:scale-95"
+                            title="Restaurer cette annonce pour l'utilisateur"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Restaurer l'annonce</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handlePermanentDeleteFromTrash(l.id)}
+                            className="p-2 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
+                            title="Purger définitivement cette annonce"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1100,14 +1391,16 @@ export default function AdminDashboardPage() {
                 )}
               </div>
 
-              {/* Filtre par rôle */}
+              {/* Filtre par rôle et statut */}
               <div className="flex items-center gap-2 flex-wrap pt-1">
-                <span className="text-[11px] font-bold text-slate-400">Filtrer par rôle :</span>
+                <span className="text-[11px] font-bold text-slate-400">Filtrer les comptes :</span>
                 {[
-                  { id: 'all', label: `Tous les comptes (${users.length})` },
+                  { id: 'all', label: `Tous (${users.length})` },
                   { id: 'bailleur', label: `Bailleurs (${users.filter(u => u.role === 'bailleur').length})` },
                   { id: 'demarcheur', label: `Démarcheurs (${users.filter(u => u.role === 'demarcheur').length})` },
                   { id: 'locataire', label: `Locataires (${users.filter(u => u.role === 'locataire').length})` },
+                  { id: 'blocked_temporary', label: `🟡 Suspendus Temp. (${users.filter(u => u.accountStatus === 'blocked_temporary').length})` },
+                  { id: 'blocked_permanent', label: `🔴 Bloqués Définitif (${users.filter(u => u.accountStatus === 'blocked_permanent').length})` },
                   { id: 'admin', label: `Super Admin (${users.filter(u => u.role === 'admin').length})` },
                 ].map((rf) => (
                   <button
@@ -1211,6 +1504,24 @@ export default function AdminDashboardPage() {
                               {u.role}
                             </span>
 
+                            {/* Badge Statut du Compte (Actif / Suspendu / Bloqué) */}
+                            {u.accountStatus === 'blocked_temporary' ? (
+                              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/40 flex items-center gap-1 shadow-xs">
+                                <AlertTriangle className="w-2.5 h-2.5 text-amber-400" />
+                                <span>Suspendu Temporaire</span>
+                              </span>
+                            ) : u.accountStatus === 'blocked_permanent' ? (
+                              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-600/30 text-rose-300 border border-rose-500/50 flex items-center gap-1 shadow-xs">
+                                <Ban className="w-2.5 h-2.5 text-rose-400" />
+                                <span>Bloqué Définitif</span>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                                <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                                <span>Actif</span>
+                              </span>
+                            )}
+
                             {isSuperAdminAccount && (
                               <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-950 text-rose-400 border border-rose-800 flex items-center gap-1">
                                 <Shield className="w-2.5 h-2.5" />
@@ -1251,6 +1562,22 @@ export default function AdminDashboardPage() {
                               </>
                             )}
                           </div>
+
+                          {/* Bandeau d'information si le compte est bloqué */}
+                          {(u.accountStatus === 'blocked_temporary' || u.accountStatus === 'blocked_permanent') && (
+                            <div className="p-2.5 rounded-xl bg-slate-950 border border-amber-900/40 text-[11px] text-amber-200/90 flex items-start gap-2 mt-1">
+                              <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                              <div className="leading-tight">
+                                <span className="font-bold text-amber-300">
+                                  {u.accountStatus === 'blocked_temporary' ? 'Suspension temporaire :' : 'Blocage définitif :'}
+                                </span>{' '}
+                                <span>{u.blockReason || 'Vérifications de sécurité administratives en cours.'}</span>
+                                {u.blockedAt && (
+                                  <span className="text-slate-400 text-[10px] block mt-0.5">Appliqué le {u.blockedAt}</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -1265,6 +1592,42 @@ export default function AdminDashboardPage() {
                           <Eye className="w-3.5 h-3.5" />
                           <span>Fiche</span>
                         </button>
+
+                        {/* Boutons Blocage / Réactivation (Hors Super-Admin) */}
+                        {!isSuperAdminAccount && (
+                          u.accountStatus === 'blocked_temporary' || u.accountStatus === 'blocked_permanent' ? (
+                            <button
+                              type="button"
+                              onClick={() => handleReactivateUser(u)}
+                              className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md shadow-emerald-950/40 flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                              title="Réactiver ce compte utilisateur après vérifications"
+                            >
+                              <UserCheck className="w-3.5 h-3.5" />
+                              <span>Réactiver</span>
+                            </button>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenBlockModal(u, 'temporary')}
+                                className="px-2.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                title="Suspendre temporairement ce compte pour audit"
+                              >
+                                <Clock className="w-3.5 h-3.5" />
+                                <span>Suspendre</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenBlockModal(u, 'permanent')}
+                                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                                title="Bloquer définitivement ce compte"
+                              >
+                                <Ban className="w-3.5 h-3.5" />
+                                <span>Bloquer</span>
+                              </button>
+                            </div>
+                          )
+                        )}
 
                         {/* Sélecteur de rôle (Désactivé pour le Super Admin système) */}
                         {!isSuperAdminAccount ? (
@@ -1581,6 +1944,88 @@ export default function AdminDashboardPage() {
               </button>
             </div>
 
+            {/* Statut de Modération du Compte */}
+            <div
+              className={`p-4 rounded-2xl border flex items-center justify-between gap-3 flex-wrap ${
+                selectedUserForDetail.accountStatus === 'blocked_temporary'
+                  ? 'bg-amber-950/40 border-amber-500/40 text-amber-200'
+                  : selectedUserForDetail.accountStatus === 'blocked_permanent'
+                  ? 'bg-rose-950/40 border-rose-500/40 text-rose-200'
+                  : 'bg-emerald-950/30 border-emerald-500/30 text-emerald-200'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                    selectedUserForDetail.accountStatus === 'blocked_temporary'
+                      ? 'bg-amber-500/20 text-amber-400'
+                      : selectedUserForDetail.accountStatus === 'blocked_permanent'
+                      ? 'bg-rose-500/20 text-rose-400'
+                      : 'bg-emerald-500/20 text-emerald-400'
+                  }`}
+                >
+                  {selectedUserForDetail.accountStatus === 'blocked_temporary' ? (
+                    <AlertTriangle className="w-5 h-5" />
+                  ) : selectedUserForDetail.accountStatus === 'blocked_permanent' ? (
+                    <Ban className="w-5 h-5" />
+                  ) : (
+                    <CheckCircle2 className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider block">
+                    Statut Actuel du Compte
+                  </span>
+                  <h4 className="text-sm font-black text-white">
+                    {selectedUserForDetail.accountStatus === 'blocked_temporary'
+                      ? 'Compte Suspendu Temporairement'
+                      : selectedUserForDetail.accountStatus === 'blocked_permanent'
+                      ? 'Compte Bloqué Définitivement (Banni)'
+                      : 'Compte Actif & Autorisé'}
+                  </h4>
+                  {selectedUserForDetail.blockReason && (
+                    <p className="text-xs text-slate-300 mt-0.5">
+                      <strong>Motif :</strong> {selectedUserForDetail.blockReason}{' '}
+                      {selectedUserForDetail.blockedAt ? `(${selectedUserForDetail.blockedAt})` : ''}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Bouton direct réactiver ou bloquer */}
+              {selectedUserForDetail.id !== SYSTEM_ADMIN_USER.id && !areEmailsEqual(selectedUserForDetail.email, SYSTEM_ADMIN_USER.email) && (
+                selectedUserForDetail.accountStatus === 'blocked_temporary' || selectedUserForDetail.accountStatus === 'blocked_permanent' ? (
+                  <button
+                    type="button"
+                    onClick={() => handleReactivateUser(selectedUserForDetail)}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md flex items-center gap-1.5 cursor-pointer transition-all"
+                  >
+                    <UserCheck className="w-4 h-4" />
+                    <span>Réactiver le compte</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBlockModal(selectedUserForDetail, 'temporary')}
+                      className="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Clock className="w-3.5 h-3.5" />
+                      <span>Suspendre (Temp.)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBlockModal(selectedUserForDetail, 'permanent')}
+                      className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/40 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Ban className="w-3.5 h-3.5" />
+                      <span>Bloquer (Déf.)</span>
+                    </button>
+                  </div>
+                )
+              )}
+            </div>
+
             {/* Fiche d'identité complète */}
             <div className="space-y-3">
               <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
@@ -1761,6 +2206,104 @@ export default function AdminDashboardPage() {
                   Fermer
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL 3 : DIALOGUE DE BLOCAGE UTILISATEUR (TEMPORAIRE OU DÉFINITIF) --- */}
+      {blockingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold ${
+                  blockType === 'temporary'
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                }`}
+              >
+                <Ban className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white">
+                  {blockType === 'temporary' ? 'Suspension Temporaire' : 'Blocage Définitif'} de Compte
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Cible : <span className="text-white font-bold">{blockingUser.name}</span> ({blockingUser.matricule || blockingUser.email})
+                </p>
+              </div>
+            </div>
+
+            {/* Sélecteur de type */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setBlockType('temporary');
+                  setBlockReasonInput("Suspension temporaire pour audit de sécurité et vérification des pièces justificatives.");
+                }}
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                  blockType === 'temporary'
+                    ? 'bg-amber-500/20 border-amber-500/50 text-amber-200 ring-2 ring-amber-500/30'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
+                }`}
+              >
+                <span className="text-xs font-black block">⏳ Temporaire</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Audit, pièces à vérifier</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setBlockType('permanent');
+                  setBlockReasonInput("Blocage définitif suite à des infractions graves répétées aux règles de la plateforme.");
+                }}
+                className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
+                  blockType === 'permanent'
+                    ? 'bg-rose-500/20 border-rose-500/50 text-rose-200 ring-2 ring-rose-500/30'
+                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
+                }`}
+              >
+                <span className="text-xs font-black block">🚫 Définitif</span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">Bannissement irréversible</span>
+              </button>
+            </div>
+
+            {/* Saisie du motif */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 block">
+                Motif officiel du blocage (affiché lors de la tentative de connexion) :
+              </label>
+              <textarea
+                rows={3}
+                value={blockReasonInput}
+                onChange={(e) => setBlockReasonInput(e.target.value)}
+                placeholder="Indiquez la raison officielle de la décision..."
+                className="w-full p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-rose-500"
+              />
+            </div>
+
+            {/* Boutons d'action */}
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setBlockingUser(null)}
+                className="flex-1 py-2.5 px-4 rounded-xl border border-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-800 cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBlockUser}
+                className={`flex-1 py-2.5 px-4 rounded-xl text-white text-xs font-black transition-all cursor-pointer shadow-md ${
+                  blockType === 'temporary'
+                    ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-900/30'
+                    : 'bg-rose-600 hover:bg-rose-700 shadow-rose-900/30'
+                }`}
+              >
+                Confirmer le {blockType === 'temporary' ? 'gel' : 'bannissement'}
+              </button>
             </div>
           </div>
         </div>

@@ -472,6 +472,88 @@ export const AuthService = {
     return { success: true };
   },
 
+  /**
+   * Bloque un compte utilisateur temporairement ou définitivement
+   */
+  blockUser(
+    userId: string,
+    type: 'temporary' | 'permanent',
+    reason?: string
+  ): { success: boolean; error?: string } {
+    if (typeof window === 'undefined') return { success: false, error: 'Environnement non supporté.' };
+
+    if (userId === SYSTEM_ADMIN_USER.id) {
+      return { success: false, error: 'Action interdite sur le Super-Administrateur système.' };
+    }
+
+    const list = this.getRegisteredUsers();
+    const idx = list.findIndex((u) => u.id === userId);
+    if (idx === -1) {
+      return { success: false, error: 'Utilisateur introuvable.' };
+    }
+
+    const targetUser = list[idx];
+    if (targetUser.role === 'admin' || areEmailsEqual(targetUser.email, SYSTEM_ADMIN_USER.email)) {
+      return { success: false, error: 'Action interdite sur un compte Administrateur.' };
+    }
+
+    const nowFormatted = new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const defaultReason =
+      type === 'temporary'
+        ? 'Suspension temporaire pour vérifications de conformité et audit de sécurité.'
+        : 'Blocage définitif suite à des infractions graves répétées aux règles de la plateforme.';
+
+    const updatedUser: AuthUser = {
+      ...targetUser,
+      accountStatus: type === 'temporary' ? 'blocked_temporary' : 'blocked_permanent',
+      blockReason: (reason && reason.trim()) ? reason.trim() : defaultReason,
+      blockedAt: nowFormatted,
+    };
+
+    list[idx] = updatedUser;
+    this.saveRegisteredUsers(list);
+
+    // Si cet utilisateur est connecté actuellement, déconnexion immédiate
+    const current = this.getCurrentUser();
+    if (current && current.id === userId) {
+      this.setCurrentUser(updatedUser);
+    }
+
+    notifyAuthChange(updatedUser);
+    return { success: true };
+  },
+
+  /**
+   * Réactive un compte précédemment bloqué après vérifications administratives
+   */
+  reactivateUser(userId: string): { success: boolean; error?: string } {
+    if (typeof window === 'undefined') return { success: false, error: 'Environnement non supporté.' };
+
+    const list = this.getRegisteredUsers();
+    const idx = list.findIndex((u) => u.id === userId);
+    if (idx === -1) {
+      return { success: false, error: 'Utilisateur introuvable.' };
+    }
+
+    const targetUser = list[idx];
+    const updatedUser: AuthUser = {
+      ...targetUser,
+      accountStatus: 'active',
+      blockReason: undefined,
+    };
+
+    list[idx] = updatedUser;
+    this.saveRegisteredUsers(list);
+
+    const current = this.getCurrentUser();
+    if (current && current.id === userId) {
+      this.setCurrentUser(updatedUser);
+    }
+
+    notifyAuthChange(updatedUser);
+    return { success: true };
+  },
+
   login(
     emailOrPhone: string,
     password?: string
@@ -519,6 +601,27 @@ export const AuthService = {
       return {
         success: false,
         error: "Aucun compte trouvé avec cet email ou numéro de téléphone.",
+      };
+    }
+
+    // 3. VÉRIFICATION DU STATUT DE MODÉRATION DU COMPTE (BLOCAGE TEMPORAIRE OU DÉFINITIF)
+    if (found.accountStatus === 'blocked_temporary') {
+      return {
+        success: false,
+        error: `⛔ Compte Suspendu Temporairement : ${
+          found.blockReason ||
+          "Votre compte fait l'objet d'un audit de sécurité. Veuillez contacter le support à contact@locagestion.site pour réactivation."
+        }`,
+      };
+    }
+
+    if (found.accountStatus === 'blocked_permanent') {
+      return {
+        success: false,
+        error: `⛔ Compte Bloqué Définitivement : ${
+          found.blockReason ||
+          "Ce compte a été définitivement banni de la plateforme LOCAGESTION pour non-respect des règles."
+        }`,
       };
     }
 

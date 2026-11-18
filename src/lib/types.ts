@@ -294,6 +294,15 @@ export interface AuthUser {
   registeredAt: string;
   password?: string;
   adminSessionVersion?: string; // Version de session pour invalidation et déconnexion globale
+  accountStatus?: 'active' | 'blocked_temporary' | 'blocked_permanent'; // Statut de modération du compte
+  blockReason?: string;     // Motif du blocage temporaire ou définitif par le Super Admin
+  blockedAt?: string;       // Date et heure de suspension du compte
+}
+
+export interface TrashListing extends RentalListing {
+  deletedAt: string;        // Date et heure de suppression (ex: '18/11/2026 à 20:00')
+  deletedBy?: string;       // 'Utilisateur' ou 'Super Admin'
+  deletedReason?: string;   // Motif ou contexte de suppression
 }
 
 export interface SecurityAlert {
