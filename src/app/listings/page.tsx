@@ -65,6 +65,7 @@ import {
   User,
   MessageSquare,
   Copy,
+  Tag,
 } from 'lucide-react';
 
 const ALL_CITIES = Array.from(
@@ -428,6 +429,31 @@ export default function ListingsPage() {
         return false;
       }
 
+      const q = searchQuery.trim().toLowerCase();
+
+      // PRIORITÉ ABSOLUE : RECHERCHE PAR RÉFÉRENCE UNIQUE OU ID
+      // Si la recherche correspond à la référence d'une annonce (ex: LOCA-BJ-17635) ou à son ID,
+      // on l'affiche IMMÉDIATEMENT sur toute la plateforme, sans restriction de pays, de ville, de type ou de budget !
+      if (q) {
+        const refCode = (l.referenceCode || '').toLowerCase();
+        const idLower = (l.id || '').toLowerCase();
+        const cleanQ = q.replace(/[^a-z0-9]/gi, '');
+        const cleanRef = refCode.replace(/[^a-z0-9]/gi, '');
+        const cleanId = idLower.replace(/[^a-z0-9]/gi, '');
+
+        const isRefMatch =
+          refCode === q ||
+          idLower === q ||
+          refCode.includes(q) ||
+          idLower.includes(q) ||
+          (cleanQ.length >= 3 && cleanRef.includes(cleanQ)) ||
+          (cleanQ.length >= 3 && cleanId.includes(cleanQ));
+
+        if (isRefMatch) {
+          return true; // Trouvé instantanément sur toute la plateforme, sans aucune barrière de pays ou de ville !
+        }
+      }
+
       // 1. Country Filter (Par défaut strict Bénin selon le profil utilisateur)
       if (selectedCountry !== 'all' && l.country !== selectedCountry) {
         return false;
@@ -451,15 +477,19 @@ export default function ListingsPage() {
         return false;
       }
 
-      // 5. Text Search (title, district, landmark, amenities, city, country)
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+      // 5. Text Search (title, district, landmark, amenities, city, country, author, reference)
+      if (q) {
         const matchesTitle = l.title.toLowerCase().includes(q);
-        const matchesDistrict = l.district.toLowerCase().includes(q);
-        const matchesLandmark = l.landmark.toLowerCase().includes(q);
-        const matchesCity = l.city.toLowerCase().includes(q);
-        const matchesCountry = l.country.toLowerCase().includes(q);
-        const matchesAmenities = l.amenities.some((a) => a.toLowerCase().includes(q));
+        const matchesDistrict = (l.district || '').toLowerCase().includes(q);
+        const matchesLandmark = (l.landmark || '').toLowerCase().includes(q);
+        const matchesCity = (l.city || '').toLowerCase().includes(q);
+        const matchesCountry = (l.country || '').toLowerCase().includes(q);
+        const matchesAmenities = l.amenities?.some((a) => a.toLowerCase().includes(q));
+        const matchesAuthor =
+          (l.authorName || '').toLowerCase().includes(q) ||
+          (l.authorCompany || '').toLowerCase().includes(q);
+        const matchesRef =
+          (l.referenceCode || '').toLowerCase().includes(q) || l.id.toLowerCase().includes(q);
 
         if (
           !matchesTitle &&
@@ -467,7 +497,9 @@ export default function ListingsPage() {
           !matchesLandmark &&
           !matchesCity &&
           !matchesCountry &&
-          !matchesAmenities
+          !matchesAmenities &&
+          !matchesAuthor &&
+          !matchesRef
         ) {
           return false;
         }
@@ -1098,7 +1130,7 @@ export default function ListingsPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Quartier, repère, piscine, meublé..."
+                    placeholder="Référence (ex: LOCA-BJ-...), quartier, repère, meublé..."
                     className="w-full pl-9 pr-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                   />
                   {searchQuery && (
@@ -1261,9 +1293,10 @@ export default function ListingsPage() {
                 )}
 
                 {searchQuery && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
-                    <span>Recherche : « {searchQuery} »</span>
-                    <button onClick={() => setSearchQuery('')} className="hover:text-rose-500">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-900 text-[11px] font-bold border border-brand-200">
+                    <Tag className="w-3 h-3 text-brand-600" />
+                    <span>Recherche : « {searchQuery} » (Tous pays et villes)</span>
+                    <button onClick={() => setSearchQuery('')} className="hover:text-rose-500 ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>

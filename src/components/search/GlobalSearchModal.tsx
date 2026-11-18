@@ -130,6 +130,31 @@ export function GlobalSearchModal({
   // Real-time matching listings calculation
   const matchingListings = useMemo(() => {
     return ListingsService.getAllListings().filter((l) => {
+      const q = query.toLowerCase().trim();
+
+      // PRIORITÉ ABSOLUE : RECHERCHE PAR RÉFÉRENCE UNIQUE OU ID
+      // Si la recherche correspond à la référence (ex: LOCA-BJ-17635) ou à l'ID,
+      // on l'affiche IMMÉDIATEMENT sur toute la plateforme, sans restriction de pays ou de ville !
+      if (q) {
+        const refCode = (l.referenceCode || '').toLowerCase();
+        const idLower = (l.id || '').toLowerCase();
+        const cleanQ = q.replace(/[^a-z0-9]/gi, '');
+        const cleanRef = refCode.replace(/[^a-z0-9]/gi, '');
+        const cleanId = idLower.replace(/[^a-z0-9]/gi, '');
+
+        const isRefMatch =
+          refCode === q ||
+          idLower === q ||
+          refCode.includes(q) ||
+          idLower.includes(q) ||
+          (cleanQ.length >= 3 && cleanRef.includes(cleanQ)) ||
+          (cleanQ.length >= 3 && cleanId.includes(cleanQ));
+
+        if (isRefMatch) {
+          return true; // Trouvé partout sur toute la plateforme !
+        }
+      }
+
       // Country
       if (selectedCountry !== 'all' && l.country !== selectedCountry) {
         return false;
@@ -150,14 +175,18 @@ export function GlobalSearchModal({
         return false;
       }
       // Query text
-      if (query.trim()) {
-        const q = query.toLowerCase().trim();
+      if (q) {
         const matchesTitle = l.title.toLowerCase().includes(q);
-        const matchesDistrict = l.district.toLowerCase().includes(q);
-        const matchesLandmark = l.landmark.toLowerCase().includes(q);
-        const matchesCity = l.city.toLowerCase().includes(q);
-        const matchesCountry = l.country.toLowerCase().includes(q);
-        const matchesAmenities = l.amenities.some((a) => a.toLowerCase().includes(q));
+        const matchesDistrict = (l.district || '').toLowerCase().includes(q);
+        const matchesLandmark = (l.landmark || '').toLowerCase().includes(q);
+        const matchesCity = (l.city || '').toLowerCase().includes(q);
+        const matchesCountry = (l.country || '').toLowerCase().includes(q);
+        const matchesAmenities = l.amenities?.some((a) => a.toLowerCase().includes(q));
+        const matchesAuthor =
+          (l.authorName || '').toLowerCase().includes(q) ||
+          (l.authorCompany || '').toLowerCase().includes(q);
+        const matchesRef =
+          (l.referenceCode || '').toLowerCase().includes(q) || l.id.toLowerCase().includes(q);
 
         if (
           !matchesTitle &&
@@ -165,7 +194,9 @@ export function GlobalSearchModal({
           !matchesLandmark &&
           !matchesCity &&
           !matchesCountry &&
-          !matchesAmenities
+          !matchesAmenities &&
+          !matchesAuthor &&
+          !matchesRef
         ) {
           return false;
         }
