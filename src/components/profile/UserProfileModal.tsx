@@ -213,35 +213,40 @@ export function UserProfileModal({
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // 1. Préservation stricte des identifiants d'inscription (non modifiables)
-    const immutableData = {
-      name: user?.name || profile.name,
-      firstName: user?.firstName || profile.firstName,
-      lastName: user?.lastName || profile.lastName,
-      email: user?.email || profile.email,
-      phone: user?.phone || profile.phone,
-    };
+    // 1. Calcul des données d'identité saisies par l'utilisateur
+    const fullName =
+      `${profile.firstName || ''} ${profile.lastName || ''}`.trim() ||
+      profile.name ||
+      user?.name ||
+      '';
 
     const finalProfile: UserProfile = {
       ...profile,
-      ...immutableData,
+      name: fullName,
+      firstName: profile.firstName?.trim() || '',
+      lastName: profile.lastName?.trim() || '',
+      phone: profile.phone?.trim() || '',
+      email: user?.email || profile.email,
+      companyName: profile.role === 'locataire' ? undefined : (profile.companyName?.trim() || undefined),
     };
 
     // 2. Sauvegarde du profil
     saveUserProfile(finalProfile);
 
-    // Synchronisation sur toutes les annonces publiées par cet utilisateur
-    if (finalProfile.id) {
-      ListingsService.syncAuthorCompany(finalProfile.id, finalProfile.companyName);
-    }
-    if (finalProfile.name) {
-      ListingsService.syncAuthorCompany(finalProfile.name, finalProfile.companyName);
-    }
-    if (finalProfile.email) {
-      ListingsService.syncAuthorCompany(finalProfile.email, finalProfile.companyName);
-    }
-    if (finalProfile.phone) {
-      ListingsService.syncAuthorCompany(finalProfile.phone, finalProfile.companyName);
+    // Synchronisation sur toutes les annonces publiées par cet utilisateur si bailleur/démarcheur
+    if (finalProfile.role !== 'locataire') {
+      if (finalProfile.id) {
+        ListingsService.syncAuthorCompany(finalProfile.id, finalProfile.companyName);
+      }
+      if (finalProfile.name) {
+        ListingsService.syncAuthorCompany(finalProfile.name, finalProfile.companyName);
+      }
+      if (finalProfile.email) {
+        ListingsService.syncAuthorCompany(finalProfile.email, finalProfile.companyName);
+      }
+      if (finalProfile.phone) {
+        ListingsService.syncAuthorCompany(finalProfile.phone, finalProfile.companyName);
+      }
     }
 
     // 3. Synchronisation absolue dans la session active et les utilisateurs enregistrés
@@ -253,7 +258,6 @@ export function UserProfileModal({
           const updatedUser = {
             ...session,
             ...finalProfile,
-            ...immutableData,
             avatarUrl: profile.avatarUrl || session.avatarUrl,
           };
           localStorage.setItem('locagestion:auth:session:v1', JSON.stringify(updatedUser));
@@ -264,7 +268,7 @@ export function UserProfileModal({
             const users = JSON.parse(usersStr);
             if (Array.isArray(users)) {
               const updatedUsers = users.map((u: any) =>
-                u.id === updatedUser.id || u.email === updatedUser.email
+                u.id === updatedUser.id || (u.email && u.email.toLowerCase() === updatedUser.email.toLowerCase())
                   ? { ...u, ...updatedUser }
                   : u
               );
@@ -276,6 +280,13 @@ export function UserProfileModal({
           window.dispatchEvent(new CustomEvent('locagestion:auth_changed', { detail: { user: updatedUser } }));
         }
 
+        // Sauvegarde sur le serveur Next.js en arrière-plan
+        fetch('/api/auth/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(finalProfile),
+        }).catch(() => {});
+
         window.dispatchEvent(new CustomEvent('locagestion:profile_updated', { detail: finalProfile }));
         window.dispatchEvent(new Event('storage'));
       } catch (err) {
@@ -285,7 +296,7 @@ export function UserProfileModal({
 
     setSavedSuccess(true);
     notifySave(
-      `Photo et profil de ${finalProfile.name} mis à jour avec succès !`,
+      `Profil de ${finalProfile.name || 'votre compte'} mis à jour avec succès !`,
       'Profil enregistré'
     );
     setTimeout(() => {
@@ -507,33 +518,37 @@ export function UserProfileModal({
             </button>
           </div>
 
-          {/* Bannière Identité Certifiée & Scellée */}
+          {/* Bannière Informations Personnelles & Coordonnées */}
           <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-700 flex items-start gap-2.5">
-            <Lock className="w-4 h-4 text-slate-500 shrink-0 mt-0.5" />
+            <User className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
             <div className="leading-relaxed">
-              <strong className="text-slate-900">Identité certifiée à l'inscription :</strong> Votre nom, prénom, numéro de téléphone et adresse email sont définitivement scellés pour garantir la conformité juridique et la traçabilité des contrats et quittances.
+              <strong className="text-slate-900">Données personnelles & identité :</strong> Vous pouvez renseigner et modifier librement votre nom, prénom, numéro de téléphone et localité pour que vos quittances et contrats reflètent fidèlement votre identité.
             </div>
           </div>
 
-          {/* Identité scellée (Nom, Prénom, Email, Téléphone - Non modifiables) */}
+          {/* Identité Personnelle (Nom, Prénom, Téléphone modifiables & Email certifié) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Nom de famille */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
+                  <User className="w-3.5 h-3.5 text-brand-500" />
                   <span>Nom de famille</span>
                 </label>
-                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
-                  <Lock className="w-2.5 h-2.5" /> Scellé
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                  Modifiable
                 </span>
               </div>
               <input
                 type="text"
-                value={profile.lastName || (profile.name ? profile.name.split(' ').slice(1).join(' ') : '')}
-                disabled
-                readOnly
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
+                value={profile.lastName || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const fullName = `${profile.firstName || ''} ${val}`.trim();
+                  setProfile({ ...profile, lastName: val, name: fullName });
+                }}
+                placeholder="Votre nom de famille"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
               />
             </div>
 
@@ -541,28 +556,32 @@ export function UserProfileModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-slate-400" />
+                  <User className="w-3.5 h-3.5 text-brand-500" />
                   <span>Prénom(s)</span>
                 </label>
-                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
-                  <Lock className="w-2.5 h-2.5" /> Scellé
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                  Modifiable
                 </span>
               </div>
               <input
                 type="text"
-                value={profile.firstName || (profile.name ? profile.name.split(' ')[0] : '')}
-                disabled
-                readOnly
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
+                value={profile.firstName || ''}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const fullName = `${val} ${profile.lastName || ''}`.trim();
+                  setProfile({ ...profile, firstName: val, name: fullName });
+                }}
+                placeholder="Votre prénom"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
               />
             </div>
 
-            {/* Email certifié */}
+            {/* Email certifié (Identifiant unique) */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Email certifié</span>
+                  <span>Email certifié (Identifiant)</span>
                 </label>
                 <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" /> Scellé
@@ -577,49 +596,51 @@ export function UserProfileModal({
               />
             </div>
 
-            {/* Téléphone certifié */}
+            {/* Téléphone */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                  <Phone className="w-3.5 h-3.5 text-brand-500" />
                   <span>Numéro de téléphone</span>
                 </label>
-                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
-                  <Lock className="w-2.5 h-2.5" /> Scellé
+                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                  Modifiable
                 </span>
               </div>
               <input
-                type="text"
-                value={profile.phone}
-                disabled
-                readOnly
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
+                type="tel"
+                value={profile.phone || ''}
+                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
+                placeholder="+229 01 00 00 00"
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
               />
             </div>
           </div>
 
-          {/* Entreprise / Agence Immobilière (Optionnel) */}
-          <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-                <Building2 className="w-3.5 h-3.5 text-brand-500" />
-                <span>Nom de l&apos;entreprise ou agence (Optionnel)</span>
-              </label>
-              <span className="text-[10px] text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full font-bold border border-brand-200">
-                Prioritaire sous « Publié par »
-              </span>
+          {/* Entreprise / Agence Immobilière (Optionnel - Pour Bailleur et Démarcheur uniquement) */}
+          {profile.role !== 'locataire' && (
+            <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-brand-500" />
+                  <span>Nom de l&apos;entreprise ou agence (Optionnel)</span>
+                </label>
+                <span className="text-[10px] text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full font-bold border border-brand-200">
+                  Prioritaire sous « Publié par »
+                </span>
+              </div>
+              <input
+                type="text"
+                value={profile.companyName || ''}
+                onChange={(e) => setProfile({ ...profile, companyName: e.target.value })}
+                placeholder="Ex: Agence Immobilière Prestige, SCI Le Phénix..."
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
+              />
+              <p className="text-[10px] text-slate-500 leading-snug">
+                💡 <strong>Règle d&apos;affichage :</strong> Si vous renseignez le nom de votre entreprise ou agence, celui-ci s&apos;affichera en priorité sous <em>« Publié par »</em> sur vos annonces. Si non renseigné, votre nom et prénom civil (<strong>{profile.name}</strong>) apparaîtront par défaut.
+              </p>
             </div>
-            <input
-              type="text"
-              value={profile.companyName || ''}
-              onChange={(e) => setProfile({ ...profile, companyName: e.target.value })}
-              placeholder="Ex: Agence Immobilière Prestige, SCI Le Phénix..."
-              className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
-            />
-            <p className="text-[10px] text-slate-500 leading-snug">
-              💡 <strong>Règle d&apos;affichage :</strong> Si vous renseignez le nom de votre entreprise ou agence, celui-ci s&apos;affichera en priorité sous <em>« Publié par »</em> sur vos annonces. Si non renseigné, votre nom et prénom civil (<strong>{profile.name}</strong>) apparaîtront par défaut.
-            </p>
-          </div>
+          )}
 
           {/* Pays & Localité de résidence d'inscription (Obligatoire) */}
           <div className="pt-3 border-t border-slate-100 space-y-3.5">

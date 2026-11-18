@@ -113,19 +113,19 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
   {
     id: 'usr-tenant-jojovog',
     matricule: 'LOCA-MAT-BJ-17635',
-    name: 'VOGLOSSOU JOHANE',
-    firstName: 'Johane',
-    lastName: 'Voglossou',
+    name: 'Locataire Résident',
+    firstName: 'Locataire',
+    lastName: '',
     email: 'jojovog007@gmail.com',
-    phone: '+229 01 97 00 11 22',
+    phone: '',
     role: 'locataire',
-    birthDate: '15/06/1990',
-    birthPlace: 'Allada',
+    birthDate: '',
+    birthPlace: '',
     residenceCountry: 'Bénin',
-    residenceCity: 'Allada',
-    residenceDistrict: 'Dogoudo',
+    residenceCity: 'Cotonou',
+    residenceDistrict: '',
     projectCountry: 'Bénin',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160',
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
     registeredAt: '18/11/2026',
     password: 'Jesus1122',
     accountStatus: 'active',
@@ -245,8 +245,26 @@ export const AuthService = {
             if (idx === -1) {
               sanitized.push(initU);
               hasMutated = true;
-            } else if (sanitized[idx].role !== initU.role || sanitized[idx].id !== initU.id) {
-              sanitized[idx] = { ...sanitized[idx], role: initU.role, id: initU.id };
+            } else if (
+              sanitized[idx].role !== initU.role ||
+              sanitized[idx].id !== initU.id ||
+              sanitized[idx].name?.toUpperCase().includes('VOGLOSSOU')
+            ) {
+              sanitized[idx] = {
+                ...sanitized[idx],
+                role: initU.role,
+                id: initU.id,
+                ...(sanitized[idx].name?.toUpperCase().includes('VOGLOSSOU')
+                  ? {
+                      name: initU.name,
+                      firstName: initU.firstName,
+                      lastName: initU.lastName,
+                      companyName: undefined,
+                      phone: initU.phone,
+                      residenceDistrict: initU.residenceDistrict,
+                    }
+                  : {}),
+              };
               hasMutated = true;
             }
           });
@@ -310,13 +328,31 @@ export const AuthService = {
           parsed.matricule = SYSTEM_ADMIN_USER.matricule;
         } else if (parsed) {
           const matchingInit = INITIAL_REGISTERED_USERS.find((initU) => areEmailsEqual(initU.email, parsed.email));
-          if (matchingInit && (parsed.role !== matchingInit.role || parsed.id !== matchingInit.id)) {
-            parsed.role = matchingInit.role;
-            parsed.id = matchingInit.id;
-            try {
-              localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
-              localStorage.setItem('locagestion:active_space', matchingInit.role);
-            } catch (e) {}
+          if (matchingInit) {
+            let sessionMutated = false;
+            if (parsed.role !== matchingInit.role || parsed.id !== matchingInit.id) {
+              parsed.role = matchingInit.role;
+              parsed.id = matchingInit.id;
+              sessionMutated = true;
+            }
+            if (parsed.name && typeof parsed.name === 'string' && parsed.name.toUpperCase().includes('VOGLOSSOU')) {
+              parsed.name = matchingInit.name;
+              parsed.firstName = matchingInit.firstName;
+              parsed.lastName = matchingInit.lastName;
+              parsed.companyName = undefined;
+              parsed.phone = matchingInit.phone;
+              parsed.residenceCity = matchingInit.residenceCity;
+              parsed.residenceDistrict = matchingInit.residenceDistrict;
+              sessionMutated = true;
+            }
+            if (sessionMutated) {
+              try {
+                localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
+                localStorage.setItem('locagestion:active_space', matchingInit.role);
+                localStorage.removeItem('locagestion:profile:bailleur');
+                localStorage.removeItem('locagestion:profile:locataire');
+              } catch (e) {}
+            }
           }
           if (!parsed.matricule) {
             parsed.matricule = generateUserMatricule(

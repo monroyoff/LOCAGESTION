@@ -237,24 +237,26 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
           u.name !== 'Koffi Mensah' &&
           u.name !== 'Ibrahim Traoré'
         ) {
+          const isJojoVog = u.email && u.email.trim().toLowerCase() === 'jojovog007@gmail.com';
+          const hasFakeName = isJojoVog && u.name && u.name.toUpperCase().includes('VOGLOSSOU');
           return {
-            id: u.id,
-            name: u.name,
-            firstName: u.firstName,
-            lastName: u.lastName,
+            id: isJojoVog ? 'usr-tenant-jojovog' : u.id,
+            name: hasFakeName ? 'Locataire Résident' : u.name,
+            firstName: hasFakeName ? 'Locataire' : u.firstName,
+            lastName: hasFakeName ? '' : u.lastName,
             email: u.email,
-            phone: u.phone,
-            role: u.role || role,
-            birthDate: u.birthDate,
-            birthPlace: u.birthPlace,
+            phone: hasFakeName ? '' : u.phone,
+            role: isJojoVog ? 'locataire' : (u.role || role),
+            birthDate: hasFakeName ? '' : u.birthDate,
+            birthPlace: hasFakeName ? '' : u.birthPlace,
             residenceCountry: u.residenceCountry || country,
-            residenceCity: u.residenceCity || city,
-            residenceDistrict: u.residenceDistrict || district,
+            residenceCity: hasFakeName ? 'Cotonou' : (u.residenceCity || city),
+            residenceDistrict: hasFakeName ? '' : (u.residenceDistrict || district),
             projectCountry: u.projectCountry,
-            avatarUrl: u.avatarUrl,
-            companyName: u.companyName,
-            ifuNumber: u.ifuNumber,
-            matricule: u.matricule,
+            avatarUrl: hasFakeName ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80' : u.avatarUrl,
+            companyName: isJojoVog ? undefined : u.companyName,
+            ifuNumber: isJojoVog ? undefined : u.ifuNumber,
+            matricule: u.matricule || 'LOCA-MAT-BJ-17635',
             registrationDate: u.registeredAt || new Date().toLocaleDateString('fr-FR'),
           };
         }
