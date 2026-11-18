@@ -21,6 +21,12 @@ import {
   Layers,
   ArrowRight,
   ExternalLink,
+  User,
+  Mail,
+  Phone,
+  Fingerprint,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { Property } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
@@ -41,6 +47,7 @@ export function PropertyDetailModal({
   const router = useRouter();
   const [activeImageIdx, setActiveImageIdx] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [copiedAuthorMatricule, setCopiedAuthorMatricule] = useState(false);
 
   if (!isOpen || !property) return null;
 
@@ -234,6 +241,85 @@ export function PropertyDetailModal({
               <span className="text-[10px] text-slate-500">
                 Par lot occupé
               </span>
+            </div>
+          </div>
+
+          {/* ==================================================================== */}
+          {/* UTILISATEUR & BAILLEUR QUI A AJOUTÉ CE BIEN                          */}
+          {/* ==================================================================== */}
+          <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 space-y-3 shadow-md">
+            <div className="flex items-center justify-between gap-3 flex-wrap border-b border-indigo-500/20 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
+                  <User className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300 block">
+                    Ajouté par l'utilisateur (Propriétaire Bailleur)
+                  </span>
+                  <h4 className="text-sm sm:text-base font-black text-white">
+                    {property.authorName || 'Bailleur Non Renseigné'}
+                  </h4>
+                </div>
+              </div>
+
+              {property.authorMatricule && (
+                <div className="flex items-center gap-1.5 bg-slate-950 border border-indigo-500/40 px-2.5 py-1 rounded-xl shadow-xs">
+                  <Fingerprint className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="text-xs font-mono font-black text-indigo-200">
+                    {property.authorMatricule}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(property.authorMatricule!);
+                      setCopiedAuthorMatricule(true);
+                      setTimeout(() => setCopiedAuthorMatricule(false), 2000);
+                    }}
+                    className="p-0.5 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title="Copier le matricule"
+                  >
+                    {copiedAuthorMatricule ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-slate-300 pt-1">
+              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 space-y-0.5">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Entreprise / Agence</span>
+                <span className="font-bold text-white flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="truncate">{property.authorCompany || 'Particulier'}</span>
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 space-y-0.5">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Adresse Email</span>
+                <span className="font-bold text-white flex items-center gap-1.5 truncate">
+                  <Mail className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="truncate">{property.authorEmail || 'Non renseigné'}</span>
+                </span>
+              </div>
+
+              <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 space-y-0.5">
+                <span className="text-[10px] text-slate-400 uppercase font-bold block">Téléphone</span>
+                <span className="font-bold text-white font-mono flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span>{property.authorPhone || 'Non renseigné'}</span>
+                </span>
+              </div>
+
+              {property.createdAt && (
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 space-y-0.5 sm:col-span-3">
+                  <span className="text-[10px] text-slate-400 uppercase font-bold block">Date d'enregistrement</span>
+                  <span className="text-slate-200">Ce bien a été enregistré dans le patrimoine le {property.createdAt}</span>
+                </div>
+              )}
             </div>
           </div>
 

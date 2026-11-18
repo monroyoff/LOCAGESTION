@@ -61,6 +61,14 @@ export interface Property {
     status: 'occupe' | 'vacant';
   }[];
   featured?: boolean;
+  authorId?: string;
+  authorName?: string;
+  authorEmail?: string;
+  authorPhone?: string;
+  authorCompany?: string;
+  authorMatricule?: string;
+  authorRole?: UserSpace;
+  createdAt?: string;
 }
 
 export interface Unit {

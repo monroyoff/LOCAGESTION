@@ -17,6 +17,7 @@ import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { Property } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 import { getUserResidenceCountry, getUserResidenceCity } from '@/lib/services/geo-service';
+import { AuthService } from '@/lib/services/auth-service';
 
 interface NewPropertyModalProps {
   isOpen: boolean;
@@ -131,6 +132,8 @@ export function NewPropertyModal({
 
     const finalCity = isCustomCity && customCity.trim() ? customCity.trim() : city;
 
+    const currentUser = AuthService.getCurrentUser();
+
     const newProperty: Property = {
       id: `prop-${Date.now()}`,
       name: name || `Résidence ${district || finalCity}`,
@@ -152,6 +155,14 @@ export function NewPropertyModal({
         'Parking clôturé',
       ],
       unitsList: generatedUnits,
+      authorId: currentUser?.id,
+      authorName: currentUser?.name || 'Bailleur Propriétaire',
+      authorEmail: currentUser?.email || 'bailleur@locagestion.site',
+      authorPhone: currentUser?.phone || '+229 01 00 00 00',
+      authorCompany: currentUser?.companyName,
+      authorMatricule: currentUser?.matricule,
+      authorRole: currentUser?.role || 'bailleur',
+      createdAt: new Date().toLocaleDateString('fr-FR'),
     };
 
     onAddProperty(newProperty);

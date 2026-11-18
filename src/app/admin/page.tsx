@@ -747,24 +747,64 @@ export default function AdminDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Liste des violations constatées */}
-                    <div className="p-3.5 rounded-2xl bg-rose-950/20 border border-rose-900/30 space-y-2">
-                      <span className="text-[10px] font-black uppercase text-rose-400 tracking-wider block">
-                        Motifs de Rejet Automatique Constatés par l'IA :
-                      </span>
-                      {alert.violations.map((v, idx) => (
-                        <div key={idx} className="text-xs text-rose-200 space-y-1">
-                          <div className="flex items-start gap-1.5 font-bold">
-                            <span className="text-rose-400 shrink-0">⚠️</span>
-                            <span>{v.message}</span>
-                          </div>
-                          {v.triggerSnippet && (
-                            <div className="pl-5 text-[11px] text-rose-300/80 font-mono italic">
-                              {v.triggerSnippet}
+                    {/* Bloc Explicatif : Motif Détaillé du Blocage IA */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-rose-950/40 via-red-950/20 to-rose-950/40 border border-rose-900/50 space-y-3">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-[11px] font-black uppercase text-rose-400 tracking-wider flex items-center gap-1.5">
+                          <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+                          <span>Motif du Blocage par l'IA :</span>
+                        </span>
+                        <span className="text-[10px] font-bold text-rose-300 bg-rose-950 px-2 py-0.5 rounded-full border border-rose-800">
+                          {alert.violations.length} violation{alert.violations.length > 1 ? 's' : ''} constatée{alert.violations.length > 1 ? 's' : ''}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {alert.violations.map((v, idx) => {
+                          const categoryLabel =
+                            v.type === 'photos_insuffisantes'
+                              ? 'Visuels insuffisants (< 2 médias requis)'
+                              : v.type === 'nudite' || v.type === 'propos_sexuel'
+                              ? 'Nudité ou contenu explicite / sexuel'
+                              : 'Tentative d’extorsion ou paiement avant visite';
+
+                          const categoryBadgeColor =
+                            v.type === 'photos_insuffisantes'
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                              : 'bg-rose-500/20 text-rose-300 border-rose-500/30';
+
+                          return (
+                            <div
+                              key={idx}
+                              className="p-3 rounded-xl bg-slate-950/70 border border-rose-900/40 space-y-2 text-xs"
+                            >
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span
+                                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${categoryBadgeColor}`}
+                                >
+                                  {categoryLabel}
+                                </span>
+                                {v.severity && (
+                                  <span className="text-[10px] text-slate-400 font-mono">
+                                    Sévérité : <strong className="text-rose-400 uppercase">{v.severity}</strong>
+                                  </span>
+                                )}
+                              </div>
+
+                              <p className="text-xs text-rose-200 font-semibold leading-relaxed">
+                                <strong>Règle enfreinte :</strong> {v.message}
+                              </p>
+
+                              {v.triggerSnippet && (
+                                <div className="p-2 rounded-lg bg-black/60 border border-rose-950 text-[11px] font-mono text-rose-300 flex items-start gap-1.5">
+                                  <span className="text-rose-500 font-bold shrink-0">Élément intercepté :</span>
+                                  <span className="break-all italic">« {v.triggerSnippet} »</span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
+                          );
+                        })}
+                      </div>
                     </div>
 
                     {/* Actions de l'administrateur */}

@@ -21,10 +21,15 @@ import {
   Trash2,
   Eye,
   Camera,
+  User,
+  ShieldAlert,
+  Users,
 } from 'lucide-react';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
 import { formatFCFA } from '@/lib/money/format';
 import { Property, UserSpace } from '@/lib/types';
+import { useSpace } from '@/lib/context/space-context';
+import { AuthService } from '@/lib/services/auth-service';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { PropertyDetailModal } from '@/components/properties/PropertyDetailModal';
 import { NewPropertyModal } from '@/components/properties/NewPropertyModal';
@@ -33,12 +38,14 @@ import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/acti
 
 export default function PropertiesPage() {
   const router = useRouter();
+  const { user, isAdmin } = useSpace();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
 
   // Properties State
   const [properties, setProperties] = useState<Property[]>([]);
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [selectedLandlordFilter, setSelectedLandlordFilter] = useState<string>('all');
 
   React.useEffect(() => {
     try {
@@ -46,10 +53,31 @@ export default function PropertiesPage() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Nettoyage et assainissement des biens existants pour éliminer tout locataire fictif automatique ("Locataire Lot X")
+          // Récupération des utilisateurs connus pour rétro-affecter les propriétaires si manquant
+          const knownUsers = AuthService.getAllKnownUsers();
+          const defaultBailleur = knownUsers.find((u) => u.role === 'bailleur') || knownUsers[0];
+
           let changed = false;
           const sanitized = parsed.map((p: Property) => {
-            let propertyHasFakeTenant = false;
+            let propertyChanged = false;
+
+            // Rétro-affectation de l'auteur si absent
+            if (!p.authorName) {
+              propertyChanged = true;
+              p = {
+                ...p,
+                authorId: defaultBailleur?.id || 'usr_bailleur_1',
+                authorName: defaultBailleur?.name || 'Mamadou Diallo',
+                authorEmail: defaultBailleur?.email || 'mamadou.diallo@locagestion.site',
+                authorPhone: defaultBailleur?.phone || '+229 97 00 00 01',
+                authorCompany: defaultBailleur?.companyName || 'Immobilier Diallo & Frères',
+                authorMatricule: defaultBailleur?.matricule || 'MAT-BJ-84210',
+                authorRole: 'bailleur',
+                createdAt: p.createdAt || '15/01/2025',
+              };
+            }
+
+            // Nettoyage et assainissement des biens existants pour éliminer tout locataire fictif automatique ("Locataire Lot X")
             const updatedUnits = (p.unitsList || []).map((u) => {
               if (
                 u.tenant &&
@@ -57,7 +85,7 @@ export default function PropertiesPage() {
                   u.tenant.toLowerCase().includes('fictif') ||
                   u.tenant.toLowerCase() === 'locataire lot 1')
               ) {
-                propertyHasFakeTenant = true;
+                propertyChanged = true;
                 return {
                   ...u,
                   tenant: 'Disponible',
@@ -67,7 +95,7 @@ export default function PropertiesPage() {
               return u;
             });
 
-            if (propertyHasFakeTenant) {
+            if (propertyChanged) {
               changed = true;
               const realOccupiedCount = updatedUnits.filter((u) => u.status === 'occupe').length;
               return {
@@ -137,12 +165,60 @@ export default function PropertiesPage() {
     notifySave(msg, 'Résidence enregistrée !');
   };
 
-  const filteredProperties = properties.filter(
-    (p) =>
-      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.city.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.district.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Extraction de la liste unique des bailleurs propriétaires pour le filtrage Super-Admin
+  const landlordsList = React.useMemo(() => {
+    const map = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        company?: string;
+        matricule?: string;
+        email?: string;
+        phone?: string;
+        count: number;
+      }
+    >();
+
+    properties.forEach((p) => {
+      const key = p.authorId || p.authorMatricule || p.authorName || 'Bailleur Inconnu';
+      const existing = map.get(key);
+      if (existing) {
+        existing.count += 1;
+      } else {
+        map.set(key, {
+          id: key,
+          name: p.authorName || 'Bailleur Non Renseigné',
+          company: p.authorCompany,
+          matricule: p.authorMatricule,
+          email: p.authorEmail,
+          phone: p.authorPhone,
+          count: 1,
+        });
+      }
+    });
+
+    return Array.from(map.values());
+  }, [properties]);
+
+  const filteredProperties = properties.filter((p) => {
+    // Filtrage Super-Admin par bailleur spécifique
+    if (selectedLandlordFilter !== 'all') {
+      const key = p.authorId || p.authorMatricule || p.authorName || 'Bailleur Inconnu';
+      if (key !== selectedLandlordFilter) return false;
+    }
+
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      p.name.toLowerCase().includes(q) ||
+      p.city.toLowerCase().includes(q) ||
+      p.district.toLowerCase().includes(q) ||
+      (p.authorName && p.authorName.toLowerCase().includes(q)) ||
+      (p.authorCompany && p.authorCompany.toLowerCase().includes(q)) ||
+      (p.authorMatricule && p.authorMatricule.toLowerCase().includes(q))
+    );
+  });
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-900 flex">
@@ -194,14 +270,100 @@ export default function PropertiesPage() {
               </p>
             </div>
 
-            <button
-              onClick={() => setNewPropertyModalOpen(true)}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>+ Ajouter un bien</span>
-            </button>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder={isAdmin ? "Rechercher bien, bailleur, matricule..." : "Rechercher une résidence..."}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 shadow-xs"
+                />
+              </div>
+
+              <button
+                onClick={() => setNewPropertyModalOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all shrink-0 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>+ Ajouter un bien</span>
+              </button>
+            </div>
           </div>
+
+          {/* BANDEAU SUPER-ADMIN : VUE GLOBALE PAR BAILLEUR */}
+          {isAdmin && (
+            <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800 text-white shadow-xl space-y-4 animate-in fade-in duration-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shrink-0">
+                    <ShieldAlert className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-sm font-black text-white">Console Super-Admin : Vue Globale par Bailleur</h2>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-indigo-500/25 text-indigo-300 border border-indigo-500/30">
+                        Super Admin
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Filtrez et pilotez le parc immobilier bailleur par bailleur. Cliquez sur un bien pour afficher les coordonnées complètes de son auteur.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-2xl border border-slate-700/80">
+                  <Users className="w-4 h-4 text-indigo-400" />
+                  <span className="text-slate-400">Bailleurs identifiés :</span>
+                  <span className="font-mono font-bold text-white">{landlordsList.length}</span>
+                </div>
+              </div>
+
+              {/* Onglets sélecteurs Bailleurs */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLandlordFilter('all')}
+                  className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                    selectedLandlordFilter === 'all'
+                      ? 'bg-brand-500 text-white shadow-pink-glow'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5" />
+                  <span>Tous les Bailleurs ({properties.length})</span>
+                </button>
+
+                {landlordsList.map((ll) => {
+                  const isSelected = selectedLandlordFilter === ll.id;
+                  return (
+                    <button
+                      key={ll.id}
+                      type="button"
+                      onClick={() => setSelectedLandlordFilter(ll.id)}
+                      className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+                        isSelected
+                          ? 'bg-indigo-600 text-white shadow-md ring-2 ring-indigo-400/30'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                      }`}
+                    >
+                      <User className="w-3.5 h-3.5 text-indigo-400" />
+                      <span className="font-extrabold">{ll.name}</span>
+                      {ll.company && <span className="text-[10px] text-indigo-200">({ll.company})</span>}
+                      <span
+                        className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                          isSelected ? 'bg-indigo-800 text-white' : 'bg-slate-900 text-slate-400'
+                        }`}
+                      >
+                        {ll.count} {ll.count > 1 ? 'biens' : 'bien'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Properties Grid */}
           {filteredProperties.length === 0 ? (
@@ -308,6 +470,22 @@ export default function PropertiesPage() {
                       </div>
                     </div>
 
+                    {/* Bandeau Auteur / Propriétaire du Bien */}
+                    <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <User className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span className="text-slate-400 text-[10px]">Par :</span>
+                        <span className="font-bold text-slate-800 truncate" title={prop.authorName}>
+                          {prop.authorName || 'Bailleur'}
+                        </span>
+                      </div>
+                      {prop.authorMatricule && (
+                        <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 shrink-0">
+                          {prop.authorMatricule}
+                        </span>
+                      )}
+                    </div>
+
                     {/* Card Footer with Direct Action Buttons */}
                     <div className="p-4 pt-2 border-t border-slate-100 flex items-center justify-between">
                       <div>
@@ -385,6 +563,42 @@ export default function PropertiesPage() {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                </div>
+              </div>
+
+              {/* Carte Auteur / Propriétaire du Bien Sélectionné */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 to-indigo-950 text-white border border-indigo-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300 shrink-0">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] uppercase font-black tracking-wider text-indigo-300 block">
+                      Enregistré par le Propriétaire Bailleur
+                    </span>
+                    <h4 className="text-xs sm:text-sm font-black text-white">
+                      {selectedProperty.authorName || 'Bailleur Non Renseigné'}
+                      {selectedProperty.authorCompany ? ` (${selectedProperty.authorCompany})` : ''}
+                    </h4>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap text-xs">
+                  {selectedProperty.authorMatricule && (
+                    <span className="px-2.5 py-1 rounded-xl bg-slate-950 border border-indigo-500/40 font-mono font-black text-indigo-200">
+                      Matricule : {selectedProperty.authorMatricule}
+                    </span>
+                  )}
+                  {selectedProperty.authorPhone && (
+                    <span className="px-2 py-1 rounded-xl bg-white/10 font-mono text-slate-200 text-[11px]">
+                      📞 {selectedProperty.authorPhone}
+                    </span>
+                  )}
+                  {selectedProperty.authorEmail && (
+                    <span className="px-2 py-1 rounded-xl bg-white/10 text-slate-200 text-[11px] truncate max-w-[200px]">
+                      ✉️ {selectedProperty.authorEmail}
+                    </span>
+                  )}
                 </div>
               </div>
 
