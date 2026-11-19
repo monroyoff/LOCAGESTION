@@ -68,6 +68,81 @@ const ROOM_OPTIONS = [
   'Autre',
 ];
 
+/**
+ * Compresse et redimensionne une image côté client de manière ultra-rapide
+ * Réduit les photos de 10 Mo à ~200 Ko pour un affichage et un stockage instantanés sans blocage
+ */
+function compressImageFast(
+  file: File,
+  maxWidth = 1280,
+  maxHeight = 1280,
+  quality = 0.8
+): Promise<string> {
+  return new Promise((resolve) => {
+    // Timeout de sécurité : si le navigateur tarde plus de 4s sur un fichier, retourner un résultat
+    const timeout = setTimeout(() => {
+      resolve('');
+    }, 4000);
+
+    try {
+      const reader = new FileReader();
+      reader.onerror = () => {
+        clearTimeout(timeout);
+        resolve('');
+      };
+      reader.onload = (event) => {
+        const rawDataUrl = (event.target?.result as string) || '';
+        if (!rawDataUrl) {
+          clearTimeout(timeout);
+          resolve('');
+          return;
+        }
+
+        const img = new Image();
+        img.onerror = () => {
+          clearTimeout(timeout);
+          resolve(rawDataUrl); // Fallback sur l'URL brute
+        };
+        img.onload = () => {
+          clearTimeout(timeout);
+          try {
+            let { width, height } = img;
+            if (width > maxWidth || height > maxHeight) {
+              if (width > height) {
+                height = Math.round((height * maxWidth) / width);
+                width = maxWidth;
+              } else {
+                width = Math.round((width * maxHeight) / height);
+                height = maxHeight;
+              }
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+              resolve(rawDataUrl);
+              return;
+            }
+
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', quality);
+            resolve(compressed);
+          } catch (e) {
+            resolve(rawDataUrl);
+          }
+        };
+        img.src = rawDataUrl;
+      };
+      reader.readAsDataURL(file);
+    } catch (e) {
+      clearTimeout(timeout);
+      resolve('');
+    }
+  });
+}
+
 export function InspectionModal({
   isOpen,
   onClose,
@@ -87,47 +162,59 @@ export function InspectionModal({
 
   if (!isOpen) return null;
 
-  // Handle uploading local photos (multiple supported)
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  // Handle uploading local photos (multiple supported with fast client-side compression)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
 
     setIsUploading(true);
-    const newPhotos: InspectionPhoto[] = [];
+    const files = Array.from(fileList);
     const now = new Date();
     const dateFormatted = now.toLocaleDateString('fr-FR');
     const timeFormatted = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     const timestampStr = `${dateFormatted} à ${timeFormatted}`;
 
-    let processedCount = 0;
-    Array.from(files).forEach((file, index) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const resultUrl = event.target?.result as string;
-        if (resultUrl) {
-          newPhotos.push({
-            id: `photo-${Date.now()}-${index}`,
-            url: resultUrl,
-            label: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
-            room: 'Salon / Séjour',
-            timestamp: timestampStr,
-          });
-        }
-        processedCount++;
-        if (processedCount === files.length) {
-          setData((prev) => ({
-            ...prev,
-            photos: [...prev.photos, ...newPhotos],
-          }));
-          setIsUploading(false);
-          notifySave(`${newPhotos.length} photo(s) ajoutée(s) à l'état des lieux.`, 'Photos importées !');
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    try {
+      const processed = await Promise.all(
+        files.map(async (file, index) => {
+          try {
+            const compressedUrl = await compressImageFast(file, 1280, 1280, 0.8);
+            if (!compressedUrl) return null;
+            return {
+              id: `photo-${Date.now()}-${index}-${Math.random().toString(36).slice(2, 6)}`,
+              url: compressedUrl,
+              label: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
+              room: 'Salon / Séjour',
+              timestamp: timestampStr,
+            } as InspectionPhoto;
+          } catch {
+            return null;
+          }
+        })
+      );
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      const validPhotos = processed.filter((p): p is InspectionPhoto => p !== null);
+
+      if (validPhotos.length > 0) {
+        setData((prev) => ({
+          ...prev,
+          photos: [...prev.photos, ...validPhotos],
+        }));
+        notifySave(
+          `${validPhotos.length} photo(s) ajoutée(s) et optimisée(s) pour l'état des lieux.`,
+          'Photos importées !'
+        );
+      } else {
+        notifySave("Impossible de lire les photos sélectionnées.", "Erreur d'importation");
+      }
+    } catch (err) {
+      console.error('Erreur importation photos état des lieux:', err);
+      notifySave("Une erreur est survenue lors de l'importation.", 'Erreur');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -329,7 +416,12 @@ export function InspectionModal({
                 ) : (
                   <>
                     {/* Upload Action Area */}
-                    <div className="p-5 rounded-3xl bg-emerald-500/5 border-2 border-dashed border-emerald-500/30 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div
+                      onClick={() => {
+                        if (!isUploading) fileInputRef.current?.click();
+                      }}
+                      className="p-5 rounded-3xl bg-emerald-500/5 hover:bg-emerald-500/10 border-2 border-dashed border-emerald-500/30 hover:border-emerald-500/60 flex flex-col sm:flex-row items-center justify-between gap-4 cursor-pointer transition-all"
+                    >
                       <div className="flex items-center gap-4 text-center sm:text-left">
                         <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md shadow-emerald-500/20">
                           <UploadCloud className="w-6 h-6" />
@@ -339,7 +431,7 @@ export function InspectionModal({
                             Ajoutez des photos de l'état des lieux
                           </h3>
                           <p className="text-xs text-slate-500 mt-0.5">
-                            Importez vos photos réelles depuis votre téléphone ou ordinateur (JPG, PNG). Horodatage certifié automatique.
+                            Importez vos photos réelles depuis votre téléphone ou ordinateur (JPG, PNG). Compression et horodatage certifié automatiques.
                           </p>
                         </div>
                       </div>
@@ -355,12 +447,24 @@ export function InspectionModal({
                         />
                         <button
                           type="button"
-                          onClick={() => fileInputRef.current?.click()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                          }}
                           disabled={isUploading}
                           className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
                         >
-                          <Camera className="w-4 h-4" />
-                          <span>{isUploading ? 'Import en cours...' : '+ Prendre / Ajouter des photos'}</span>
+                          {isUploading ? (
+                            <>
+                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                              <span>Importation & optimisation...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Camera className="w-4 h-4" />
+                              <span>+ Prendre / Ajouter des photos</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
