@@ -120,17 +120,17 @@ export function TransmitLeaseModal({
     invitationCode: leaseData?.invitationCode || 'LOCA-INV-7842',
     landlordId: user?.id || 'usr-bailleur-voglossou',
     landlordName: user?.name || user?.companyName || 'VOGLOSSOU JOHANE',
-    landlordPhone: user?.phone || '+229 97 00 11 22',
-    landlordWhatsapp: user?.phone || '+229 97 00 11 22',
+    landlordPhone: user?.phone || '+229 01 95 44 44 30',
+    landlordWhatsapp: user?.phone || '+229 01 95 44 44 30',
     landlordEmail: user?.email || 'jobovog@gmail.com',
     landlordIfu: user?.ifuNumber || '3201984210987',
     landlordAddress: user?.residenceDistrict
       ? `${user.residenceDistrict}, ${user.residenceCity || 'Cotonou'}`
       : 'Haie Vive, Cotonou, Bénin',
     landlordPaymentMethods: {
-      wave: user?.phone || '+229 97 00 11 22',
-      mtn: user?.phone || '+229 97 00 11 22',
-      moov: user?.phone || '+229 97 00 11 22',
+      wave: user?.phone || '+229 01 95 44 44 30',
+      mtn: user?.phone || '+229 01 95 44 44 30',
+      moov: user?.phone || '+229 01 95 44 44 30',
       bank: 'BJ061 01001 001234567890 45 (BOA Bénin)',
     },
     landlordSignature: {

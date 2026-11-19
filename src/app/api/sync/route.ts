@@ -174,6 +174,16 @@ export async function POST(req: NextRequest) {
         incomingUser.isIdentitySealed = true;
       }
 
+      // CAS PARTICULIER STRICT JOHANE VOGLOSSOU (BAILLEUR) : numéro officiel unique +229 01 95 44 44 30
+      if (cleanEmail === 'jobovog@gmail.com') {
+        incomingUser.matricule = 'LOCA-MAT-BJ-84291';
+        incomingUser.firstName = 'Johane';
+        incomingUser.lastName = 'Voglossou';
+        incomingUser.name = 'VOGLOSSOU JOHANE';
+        incomingUser.phone = '+229 01 95 44 44 30';
+        incomingUser.isIdentitySealed = true;
+      }
+
       if (idx !== -1) {
         // Préserver le matricule existant et l'identité scellée
         const existing = currentUsers[idx];

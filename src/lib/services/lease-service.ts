@@ -165,15 +165,15 @@ export const INITIAL_LEASES: Lease[] = [
     signedByTenant: true,
     landlordId: 'usr-bailleur-voglossou',
     landlordName: 'VOGLOSSOU JOHANE',
-    landlordPhone: '+229 97 00 11 22',
-    landlordWhatsapp: '+229 97 00 11 22',
+    landlordPhone: '+229 01 95 44 44 30',
+    landlordWhatsapp: '+229 01 95 44 44 30',
     landlordEmail: 'jobovog@gmail.com',
     landlordIfu: '3201984210987',
     landlordAddress: 'Haie Vive, Cotonou, Bénin',
     landlordPaymentMethods: {
-      wave: '+229 97 00 11 22',
-      mtn: '+229 97 00 11 22',
-      moov: '+229 97 00 11 22',
+      wave: '+229 01 95 44 44 30',
+      mtn: '+229 01 95 44 44 30',
+      moov: '+229 01 95 44 44 30',
       bank: 'BJ061 01001 001234567890 45 (BOA Bénin)',
     },
     landlordSignature: {
@@ -233,19 +233,24 @@ export const LeaseService = {
 
           // Si le bail canonique est présent mais sans les coordonnées complètes du bailleur, les enrichir
           const jojoLease = parsed.find((l: Lease) => l.id === 'BAIL-2026-421');
-          if (jojoLease && (!jojoLease.landlordPhone || !jojoLease.landlordPaymentMethods)) {
+          if (
+            jojoLease &&
+            (!jojoLease.landlordPhone ||
+              !jojoLease.landlordPaymentMethods ||
+              jojoLease.landlordPhone.includes('97 00 11 22'))
+          ) {
             Object.assign(jojoLease, {
               landlordId: 'usr-bailleur-voglossou',
               landlordName: 'VOGLOSSOU JOHANE',
-              landlordPhone: '+229 97 00 11 22',
-              landlordWhatsapp: '+229 97 00 11 22',
+              landlordPhone: '+229 01 95 44 44 30',
+              landlordWhatsapp: '+229 01 95 44 44 30',
               landlordEmail: 'jobovog@gmail.com',
               landlordIfu: '3201984210987',
               landlordAddress: 'Haie Vive, Cotonou, Bénin',
               landlordPaymentMethods: {
-                wave: '+229 97 00 11 22',
-                mtn: '+229 97 00 11 22',
-                moov: '+229 97 00 11 22',
+                wave: '+229 01 95 44 44 30',
+                mtn: '+229 01 95 44 44 30',
+                moov: '+229 01 95 44 44 30',
                 bank: 'BJ061 01001 001234567890 45 (BOA Bénin)',
               },
             });

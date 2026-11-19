@@ -54,6 +54,16 @@ export async function POST(req: NextRequest) {
       body.isIdentitySealed = true;
     }
 
+    // RÈGLE D'OR : Le compte bailleur jobovog@gmail.com est irrévocablement lié à son numéro réel +229 01 95 44 44 30
+    if (cleanEmail === 'jobovog@gmail.com') {
+      body.matricule = 'LOCA-MAT-BJ-84291';
+      body.firstName = 'Johane';
+      body.lastName = 'Voglossou';
+      body.name = 'VOGLOSSOU JOHANE';
+      body.phone = '+229 01 95 44 44 30';
+      body.isIdentitySealed = true;
+    }
+
     const idx = users.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === cleanEmail);
 
     if (idx !== -1) {

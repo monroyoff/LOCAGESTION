@@ -365,7 +365,7 @@ export default function LoginPage() {
                     type="text"
                     value={forgotIdentifier}
                     onChange={(e) => setForgotIdentifier(e.target.value)}
-                    placeholder="ex: jobovog@gmail.com ou +229 97 00 11 22"
+                    placeholder="ex: jobovog@gmail.com ou +229 01 95 44 44 30"
                     className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                     required
                   />

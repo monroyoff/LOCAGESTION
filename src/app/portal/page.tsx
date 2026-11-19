@@ -643,7 +643,7 @@ function TenantPortalContent() {
       } catch (e) {}
     }
 
-    if (!phone) phone = '+229 97 00 11 22';
+    if (!phone) phone = '+229 01 95 44 44 30';
     if (!email) email = 'jobovog@gmail.com';
     if (!ifu) ifu = '3201984210987';
     if (!address) address = 'Haie Vive, Cotonou, Bénin';

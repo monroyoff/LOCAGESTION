@@ -130,15 +130,15 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     firstName: 'Johane',
     lastName: 'Voglossou',
     email: 'jobovog@gmail.com',
-    phone: '+229 97 00 11 22',
+    phone: '+229 01 95 44 44 30',
     role: 'bailleur',
     companyName: 'VOGLOSSOU IMMOBILIER',
     ifuNumber: '3201984210987',
     birthDate: '12/04/1988',
     birthPlace: 'Cotonou',
     residenceCountry: 'Bénin',
-    residenceCity: 'Cotonou',
-    residenceDistrict: 'Haie Vive',
+    residenceCity: 'Allada',
+    residenceDistrict: 'Allada',
     projectCountry: 'Bénin',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
     registeredAt: '18/11/2026',
@@ -230,6 +230,15 @@ export function isCanonicalJojoVog(
   const cleanMat = (matricule || '').trim().toUpperCase();
   const cleanName = (name || '').trim().toLowerCase();
 
+  // Exclusion absolue du bailleur jobovog@gmail.com et de son numéro officiel +229 01 95 44 44 30
+  if (
+    cleanId === 'jobovog@gmail.com' ||
+    cleanId.includes('jobovog') ||
+    cleanId.replace(/[^0-9]/g, '').endsWith('95444430')
+  ) {
+    return false;
+  }
+
   if (
     cleanId === 'jojovog007@gmail.com' ||
     cleanId.includes('jojovog007') ||
@@ -241,7 +250,7 @@ export function isCanonicalJojoVog(
   if (cleanMat === 'LOCA-MAT-BJ-17635' || cleanMat === 'LOCA-MAT-BJ-69734') {
     return true;
   }
-  if (cleanName === 'jojo vog' || cleanName === 'jojovog' || cleanName.includes('jojo vog')) {
+  if (cleanName === 'jojo vog' || cleanName === 'jojovog') {
     return true;
   }
   return false;
@@ -258,7 +267,33 @@ export function isCanonicalJojoVog(
 export function enforceUserIdentityIntegrity<T extends Partial<AuthUser>>(user: T): T {
   if (!user) return user;
 
-  // 1. CAS PARTICULIER CANONIQUE JOJO VOG : Toujours scellé avec les valeurs officielles
+  // 1. CAS PARTICULIER CANONIQUE JOHANE VOGLOSSOU (BAILLEUR) : Numéro officiel scellé +229 01 95 44 44 30
+  if (
+    user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')
+  ) {
+    return {
+      ...user,
+      id: user.id || 'usr-bailleur-voglossou',
+      name: 'VOGLOSSOU JOHANE',
+      firstName: 'Johane',
+      lastName: 'Voglossou',
+      email: 'jobovog@gmail.com',
+      phone: '+229 01 95 44 44 30',
+      role: 'bailleur',
+      companyName: 'VOGLOSSOU IMMOBILIER',
+      ifuNumber: '3201984210987',
+      birthDate: '12/04/1988',
+      birthPlace: 'Cotonou',
+      residenceCountry: 'Bénin',
+      residenceCity: 'Allada',
+      residenceDistrict: 'Allada',
+      projectCountry: 'Bénin',
+      isIdentitySealed: true,
+      accountStatus: 'active',
+    };
+  }
+
+  // 2. CAS PARTICULIER CANONIQUE JOJO VOG (LOCATAIRE) : Toujours scellé avec les valeurs officielles
   if (
     isCanonicalJojoVog(user.email || user.id || user.phone, user.matricule, user.name)
   ) {
@@ -962,7 +997,6 @@ export const AuthService = {
     const isOwnerAccount =
       areEmailsEqual(found.email, 'jobovog@gmail.com') ||
       areEmailsEqual(found.email, 'jojovog007@gmail.com') ||
-      arePhoneNumbersEqual(found.phone, '+229 97 00 11 22') ||
       arePhoneNumbersEqual(found.phone, '+229 01 95 44 44 30') ||
       arePhoneNumbersEqual(found.phone, '+229 97 00 12 34');
 
