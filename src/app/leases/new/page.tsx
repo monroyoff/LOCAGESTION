@@ -116,7 +116,7 @@ export default function NewLeasePage() {
 
   // Données communes
   const [unitNumber, setUnitNumber] = useState('Lot 1');
-  const [surface, setSurface] = useState('50');
+  const [surface, setSurface] = useState('');
 
   useEffect(() => {
     try {
@@ -134,7 +134,7 @@ export default function NewLeasePage() {
           const defaultUnit = parsed[0].unitsList?.find((u: any) => u.status === 'vacant') || parsed[0].unitsList?.[0];
           if (defaultUnit) {
             setUnitNumber(`${defaultUnit.unit} (${defaultUnit.type})`);
-            setSurface(String(defaultUnit.surface || '50'));
+            setSurface(String(defaultUnit.surface || ''));
             if (defaultUnit.rent) {
               setMonthlyRent(String(defaultUnit.rent));
             }
@@ -847,9 +847,7 @@ export default function NewLeasePage() {
                               type="button"
                               onClick={() => {
                                 setManualPropertyType(opt.id);
-                                if (!manualUnitName) {
-                                  setManualUnitName(opt.label);
-                                }
+                                setManualUnitName(opt.label);
                               }}
                               className={`p-2.5 rounded-2xl border text-left cursor-pointer transition-all flex items-start gap-2 ${
                                 isSelected
@@ -2141,7 +2139,7 @@ export default function NewLeasePage() {
                       </span>
                       <div className="font-extrabold text-slate-900 text-xs flex items-center justify-between">
                         <span>{resolvedPropertyName} — Espace / Lot : {resolvedUnitName}</span>
-                        <span className="text-slate-500 font-medium">{surface} m² habitables</span>
+                        {surface && <span className="text-slate-500 font-medium">{surface} m² habitables</span>}
                       </div>
                       <div className="text-[11px] text-slate-600">
                         Localisation : {manualAddress || 'Haie Vive, Rue 340'}, {manualCity || 'Cotonou'} ({activeLaw.countryName})
@@ -2705,7 +2703,7 @@ export default function NewLeasePage() {
                   Désignation des Lieux Loués :
                 </h4>
                 <p className="font-bold text-slate-900">
-                  {resolvedPropertyName} — Espace / Lot : {resolvedUnitName} ({surface} m² habitables)
+                  {resolvedPropertyName} — Espace / Lot : {resolvedUnitName}{surface ? ` (${surface} m² habitables)` : ''}
                 </p>
                 <p className="text-[11px] text-slate-600">
                   Adresse : {manualAddress || 'Haie Vive, Rue 340'}, {manualCity || 'Cotonou'} ({activeLaw.countryName})
