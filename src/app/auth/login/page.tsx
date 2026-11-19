@@ -16,8 +16,11 @@ import {
   Phone,
   Eye,
   EyeOff,
+  KeyRound,
+  X,
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/space-context';
+import { AuthService } from '@/lib/services/auth-service';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -28,6 +31,16 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Modal Mot de passe oublié
+  const [isForgotModalOpen, setIsForgotModalOpen] = useState(false);
+  const [forgotIdentifier, setForgotIdentifier] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [forgotError, setForgotError] = useState<string | null>(null);
+  const [forgotSuccess, setForgotSuccess] = useState<string | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +66,51 @@ export default function LoginPage() {
       setErrorMsg('Une erreur inattendue est survenue.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError(null);
+    setForgotSuccess(null);
+
+    if (!forgotIdentifier.trim()) {
+      setForgotError('Veuillez renseigner votre email ou numéro de téléphone.');
+      return;
+    }
+
+    if (!newPassword || newPassword.length < 6) {
+      setForgotError('Le nouveau mot de passe doit comporter au moins 6 caractères.');
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setForgotError('Les deux mots de passe ne correspondent pas.');
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      const res = AuthService.resetPassword(forgotIdentifier.trim(), newPassword);
+      if (!res.success) {
+        setForgotError(res.error || 'Erreur lors de la réinitialisation.');
+        setIsResetting(false);
+        return;
+      }
+
+      setForgotSuccess('Mot de passe mis à jour avec succès ! Connexion en cours...');
+      setTimeout(() => {
+        const loginRes = login(forgotIdentifier.trim(), newPassword);
+        if (!loginRes.success) {
+          setIsForgotModalOpen(false);
+          setIdentifier(forgotIdentifier.trim());
+          setPassword(newPassword);
+        }
+      }, 800);
+    } catch (e) {
+      setForgotError('Une erreur inattendue est survenue.');
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -106,9 +164,26 @@ export default function LoginPage() {
         <div className="bg-[#171b24] py-8 px-6 sm:px-10 shadow-2xl rounded-3xl border border-white/10 space-y-6">
           {/* Error Message */}
           {errorMsg && (
-            <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              <span>{errorMsg}</span>
+            <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{errorMsg}</span>
+              </div>
+              {errorMsg.includes('Mot de passe incorrect') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotIdentifier(identifier);
+                    setForgotError(null);
+                    setForgotSuccess(null);
+                    setIsForgotModalOpen(true);
+                  }}
+                  className="self-start text-[11px] font-bold text-brand-400 hover:text-brand-300 underline flex items-center gap-1.5 mt-0.5 cursor-pointer"
+                >
+                  <KeyRound className="w-3.5 h-3.5 text-brand-400" />
+                  <span>Réinitialiser mon mot de passe en 1 clic →</span>
+                </button>
+              )}
             </div>
           )}
 
@@ -146,6 +221,18 @@ export default function LoginPage() {
                 <label className="text-xs font-bold text-slate-300 block">
                   Mot de passe
                 </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setForgotIdentifier(identifier);
+                    setForgotError(null);
+                    setForgotSuccess(null);
+                    setIsForgotModalOpen(true);
+                  }}
+                  className="text-[11px] font-semibold text-brand-400 hover:text-brand-300 hover:underline cursor-pointer"
+                >
+                  Mot de passe oublié ?
+                </button>
               </div>
               <div className="relative">
                 <input
@@ -226,6 +313,128 @@ export default function LoginPage() {
           </Link>
         </div>
       </div>
+
+      {/* Modal Récupération / Mot de passe oublié */}
+      {isForgotModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#171b24] w-full max-w-md rounded-3xl border border-white/10 p-6 sm:p-8 shadow-2xl relative space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            {/* Bouton Fermer */}
+            <button
+              type="button"
+              onClick={() => setIsForgotModalOpen(false)}
+              className="absolute right-4 top-4 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* En-tête */}
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/30 shrink-0">
+                <KeyRound className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Nouveau Mot de Passe</h3>
+                <p className="text-xs text-slate-400">
+                  Définissez un mot de passe sécurisé pour vous connecter.
+                </p>
+              </div>
+            </div>
+
+            {/* Notifications statut */}
+            {forgotError && (
+              <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+                <span>{forgotError}</span>
+              </div>
+            )}
+            {forgotSuccess && (
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>{forgotSuccess}</span>
+              </div>
+            )}
+
+            {/* Formulaire de réinitialisation */}
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">
+                  Email ou Numéro de téléphone de votre compte
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={forgotIdentifier}
+                    onChange={(e) => setForgotIdentifier(e.target.value)}
+                    placeholder="ex: jobovog@gmail.com ou +229 97 00 11 22"
+                    className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                    required
+                  />
+                  <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">
+                  Nouveau mot de passe (min. 6 caractères)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                    required
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3.5 top-3 text-slate-400 hover:text-white"
+                  >
+                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">
+                  Confirmer le nouveau mot de passe
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
+                    required
+                  />
+                  <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsForgotModalOpen(false)}
+                  className="w-1/3 py-3 px-4 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isResetting}
+                  className="w-2/3 py-3 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white font-black text-xs shadow-lg shadow-brand-500/30 transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <span>{isResetting ? 'Mise à jour...' : 'Enregistrer & Se connecter'}</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

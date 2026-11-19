@@ -65,6 +65,7 @@ export async function POST(req: NextRequest) {
       users[idx] = {
         ...existing,
         ...body,
+        password: body.password || existing.password,
         matricule: immutableMatricule,
         firstName: isSealed ? (existing.firstName || body.firstName) : (body.firstName || existing.firstName),
         lastName: isSealed ? (existing.lastName || body.lastName) : (body.lastName || existing.lastName),

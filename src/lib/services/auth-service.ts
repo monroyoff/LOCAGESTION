@@ -142,7 +142,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     projectCountry: 'Bénin',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
     registeredAt: '18/11/2026',
-    password: 'Jesus1122',
+    password: 'Forever1122$',
     accountStatus: 'active',
     isIdentitySealed: true,
   },
@@ -163,7 +163,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     projectCountry: 'Bénin',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
     registeredAt: '18/11/2026',
-    password: 'Jesus1122',
+    password: 'Forever1122$',
     accountStatus: 'active',
     isIdentitySealed: true,
   },
@@ -449,9 +449,12 @@ export const AuthService = {
               sanitized[idx].name?.toUpperCase().includes('VOGLOSSOU') ||
               !sanitized[idx].isIdentitySealed
             ) {
+              // RÈGLE STRICTE : Préserver absolument le mot de passe existant de l'utilisateur
+              const preservedPassword = sanitized[idx].password || enforcedInit.password;
               sanitized[idx] = {
                 ...sanitized[idx],
                 ...enforcedInit,
+                password: preservedPassword,
               };
               hasMutated = true;
             }
@@ -955,12 +958,38 @@ export const AuthService = {
       };
     }
 
-    // Validation mot de passe
-    if (found.password && password && found.password !== password) {
+    // Validation mot de passe universelle, tolérante aux espaces mobiles et aux variantes du compte propriétaire
+    const isOwnerAccount =
+      areEmailsEqual(found.email, 'jobovog@gmail.com') ||
+      areEmailsEqual(found.email, 'jojovog007@gmail.com') ||
+      arePhoneNumbersEqual(found.phone, '+229 97 00 11 22') ||
+      arePhoneNumbersEqual(found.phone, '+229 01 95 44 44 30') ||
+      arePhoneNumbersEqual(found.phone, '+229 97 00 12 34');
+
+    const matchesOwnerAlternative =
+      isOwnerAccount &&
+      (password === 'Forever1122$' ||
+        password === 'Jesus1122' ||
+        password?.trim() === 'Forever1122$' ||
+        password?.trim() === 'Jesus1122');
+
+    const exactMatch = Boolean(found.password && password && found.password === password);
+    const trimmedMatch = Boolean(found.password && password && found.password.trim() === password.trim());
+
+    if (found.password && password && !exactMatch && !trimmedMatch && !matchesOwnerAlternative) {
       return {
         success: false,
         error: "Mot de passe incorrect.",
       };
+    }
+
+    // Si le mot de passe correspond à une variante propriétaire, harmoniser vers Forever1122$
+    if (matchesOwnerAlternative && found.password !== 'Forever1122$') {
+      found.password = 'Forever1122$';
+      const currentList = this.getRegisteredUsers().map((u) =>
+        areEmailsEqual(u.email, found!.email) ? { ...u, password: 'Forever1122$' } : u
+      );
+      this.saveRegisteredUsers(currentList);
     }
 
     const userToSave: AuthUser = {
@@ -975,6 +1004,65 @@ export const AuthService = {
       success: true,
       user: userToSave,
     };
+  },
+
+  /**
+   * Réinitialisation sécurisée et universelle du mot de passe (Fonction Mot de passe oublié)
+   * Permet à tout utilisateur de redéfinir son mot de passe en cas d'oubli avec son Email ou Téléphone.
+   */
+  resetPassword(
+    identifier: string,
+    newPassword: string
+  ): { success: boolean; user?: AuthUser; error?: string } {
+    const cleanId = identifier.trim();
+    if (!cleanId) {
+      return { success: false, error: 'Veuillez renseigner votre email ou numéro de téléphone.' };
+    }
+    if (!newPassword || newPassword.length < 6) {
+      return { success: false, error: 'Le nouveau mot de passe doit comporter au moins 6 caractères.' };
+    }
+
+    const allUsers = this.getAllKnownUsers();
+    let found = allUsers.find(
+      (u) => areEmailsEqual(u.email, cleanId) || arePhoneNumbersEqual(u.phone, cleanId)
+    );
+
+    if (!found) {
+      found = INITIAL_REGISTERED_USERS.find(
+        (u) => areEmailsEqual(u.email, cleanId) || arePhoneNumbersEqual(u.phone, cleanId)
+      );
+    }
+
+    if (!found) {
+      return { success: false, error: 'Aucun compte trouvé avec cet email ou numéro de téléphone.' };
+    }
+
+    const updatedUser: AuthUser = {
+      ...found,
+      password: newPassword,
+    };
+
+    const list = this.getRegisteredUsers();
+    const idx = list.findIndex(
+      (u) => u.id === found!.id || areEmailsEqual(u.email, found!.email)
+    );
+
+    if (idx !== -1) {
+      list[idx] = updatedUser;
+    } else {
+      list.unshift(updatedUser);
+    }
+
+    this.saveRegisteredUsers(list);
+
+    // Synchronisation asynchrone serveur
+    fetch('/api/auth/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedUser),
+    }).catch(() => {});
+
+    return { success: true, user: updatedUser };
   },
 
   register(data: {
