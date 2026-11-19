@@ -59,7 +59,7 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
       <div className="text-center mb-6">
         <Link href="/" className="inline-flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center text-white font-black text-lg shadow-md shadow-brand-500/25">
-            Ω
+            <ShieldCheck className="w-5 h-5 text-white" />
           </div>
           <span className="text-xl font-black tracking-tight text-slate-900">
             LOCA<span className="text-brand-500">GESTION</span>

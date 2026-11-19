@@ -43,6 +43,13 @@ function VerifyEmailContent() {
         );
         AuthService.setCurrentUser(updated);
 
+        // Synchroniser sur le backend
+        fetch('/api/auth/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated),
+        }).catch(() => {});
+
         setStatus('success');
         setMessage(`Votre adresse email ${email} a été confirmée avec succès ! Redirection vers votre espace...`);
 
@@ -74,7 +81,7 @@ function VerifyEmailContent() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 text-center">
         <div className="flex items-center justify-center gap-3 mb-6">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
-            <span className="text-xl font-black text-white">Ω</span>
+            <ShieldCheck className="w-6 h-6 text-white" />
           </div>
           <div className="text-left">
             <span className="text-2xl font-black tracking-tight text-white block">

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { UserSpace, AuthUser, LandlordSubRole } from '../types';
 import { AuthService, SYSTEM_ADMIN_USER, areEmailsEqual } from '../services/auth-service';
 import { notifyAction } from '../notifications/action-notifier';
+import { ShieldCheck } from 'lucide-react';
 
 export interface SpaceContextType {
   activeSpace: UserSpace;
@@ -21,7 +22,8 @@ export interface SpaceContextType {
     password?: string
   ) => { success: boolean; user?: AuthUser; error?: string };
   register: (
-    data: Parameters<typeof AuthService.register>[0]
+    data: Parameters<typeof AuthService.register>[0],
+    options?: { autoLogin?: boolean; emailVerified?: boolean }
   ) => { success: boolean; user?: AuthUser; error?: string };
   logout: () => void;
   switchSpace: (targetSpace: UserSpace) => void;
@@ -71,8 +73,24 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // 1.bis Si le compte est en attente de confirmation par email
+    if (current.emailVerified === false) {
+      if (!pathname?.startsWith('/auth')) {
+        AuthService.logout();
+        setUser(null);
+        router.replace('/auth/login');
+        return;
+      }
+    }
+
     // 2. Si déjà connecté et sur une page d'authentification (/auth/login ou /auth/register)
     if (pathname?.startsWith('/auth')) {
+      if (pathname.startsWith('/auth/verify')) {
+        return;
+      }
+      if (current.emailVerified === false) {
+        return;
+      }
       if (current.role === 'admin') {
         router.replace('/admin');
       } else if (current.role === 'locataire') {
@@ -158,25 +176,30 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     return res;
   };
 
-  const register = (data: Parameters<typeof AuthService.register>[0]) => {
-    const res = AuthService.register(data);
+  const register = (
+    data: Parameters<typeof AuthService.register>[0],
+    options?: { autoLogin?: boolean; emailVerified?: boolean }
+  ) => {
+    const res = AuthService.register(data, options);
     if (res.success && res.user) {
-      setUser(res.user);
-      if (res.user.matricule) {
-        notifyAction(
-          `Compte créé avec succès ! Votre matricule officiel unique est : ${res.user.matricule}`,
-          'Matricule Officiel Attribué',
-          'success'
-        );
-      }
-      if (res.user.role === 'admin') {
-        router.push('/admin');
-      } else if (res.user.role === 'locataire') {
-        router.push('/portal');
-      } else if (res.user.role === 'demarcheur') {
-        router.push('/listings');
-      } else {
-        router.push('/');
+      if (options?.autoLogin !== false) {
+        setUser(res.user);
+        if (res.user.matricule) {
+          notifyAction(
+            `Compte créé avec succès ! Votre matricule officiel unique est : ${res.user.matricule}`,
+            'Matricule Officiel Attribué',
+            'success'
+          );
+        }
+        if (res.user.role === 'admin') {
+          router.push('/admin');
+        } else if (res.user.role === 'locataire') {
+          router.push('/portal');
+        } else if (res.user.role === 'demarcheur') {
+          router.push('/listings');
+        } else {
+          router.push('/');
+        }
       }
     }
     return res;
@@ -223,7 +246,7 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen bg-[#0e1117] text-white flex flex-col items-center justify-center p-4 selection:bg-brand-500 selection:text-white">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/30 animate-pulse mb-4 text-white font-black text-xl">
-          Ω
+          <ShieldCheck className="w-6 h-6 text-white" />
         </div>
         <p className="text-sm font-bold text-slate-200">Authentification requise</p>
         <p className="text-xs text-slate-400 mt-1">Redirection sécurisée vers la page de connexion...</p>

@@ -295,6 +295,7 @@ export interface AuthUser {
   isIdentitySealed?: boolean; // Scellement officiel de l'identité (Nom, Prénom, Numéro, Matricule vérifiés et protégés)
   registeredAt: string;
   password?: string;
+  emailVerified?: boolean; // Statut de confirmation email (lien de validation ou code à 6 chiffres)
   adminSessionVersion?: string; // Version de session pour invalidation et déconnexion globale
   accountStatus?: 'active' | 'blocked_temporary' | 'blocked_permanent'; // Statut de modération du compte
   blockReason?: string;     // Motif du blocage temporaire ou définitif par le Super Admin

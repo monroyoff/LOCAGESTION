@@ -120,6 +120,7 @@ export const SYSTEM_ADMIN_USER: AuthUser = {
   registeredAt: '01/01/2026',
   password: 'Admin2027!LocaSecurity',
   adminSessionVersion: ADMIN_CURRENT_SESSION_VERSION,
+  emailVerified: true,
 };
 
 export const INITIAL_REGISTERED_USERS: AuthUser[] = [
@@ -145,6 +146,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     password: 'Forever1122$',
     accountStatus: 'active',
     isIdentitySealed: true,
+    emailVerified: true,
   },
   {
     id: 'usr-tenant-jojovog',
@@ -166,6 +168,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     password: 'Lolo1000$',
     accountStatus: 'active',
     isIdentitySealed: true,
+    emailVerified: true,
   },
   {
     id: 'usr-tenant-koffi',
@@ -186,6 +189,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     registeredAt: '10/11/2026',
     password: 'Koffi2026!',
     accountStatus: 'active',
+    emailVerified: true,
   },
   {
     id: 'usr-tenant-aicha',
@@ -206,6 +210,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     registeredAt: '12/11/2026',
     password: 'Aicha2026!',
     accountStatus: 'active',
+    emailVerified: true,
   },
 ];
 
@@ -1011,6 +1016,14 @@ export const AuthService = {
       };
     }
 
+    // 4. VÉRIFICATION DE LA CONFIRMATION DU COMPTE PAR EMAIL
+    if (found.emailVerified === false) {
+      return {
+        success: false,
+        error: "⚠️ Votre compte est en attente de confirmation. Veuillez cliquer sur le lien reçu par email ou valider votre code à 6 chiffres pour accéder à votre espace.",
+      };
+    }
+
     // RÈGLE D'OR ABSOLUE (1:1:1:1:1) : 1 seul compte = 1 seul mot de passe unique.
     // Tolérance uniquement sur le retrait des espaces accidentels des claviers mobiles (trim).
     const exactMatch = Boolean(found.password && password && found.password === password);
@@ -1158,28 +1171,34 @@ export const AuthService = {
     return { success: true };
   },
 
-  register(data: {
-    role: UserSpace;
-    firstName: string;
-    lastName: string;
-    name?: string;
-    email: string;
-    phone: string;
-    birthDate: string;
-    birthPlace: string;
-    residenceCountry: string;
-    residenceCity: string;
-    residenceDistrict?: string;
-    projectCountry?: string;
-    companyName?: string;
-    ifuNumber?: string;
-    password?: string;
-    avatarUrl?: string;
-  }): { success: boolean; user?: AuthUser; error?: string } {
+  register(
+    data: {
+      role: UserSpace;
+      firstName: string;
+      lastName: string;
+      name?: string;
+      email: string;
+      phone: string;
+      birthDate: string;
+      birthPlace: string;
+      residenceCountry: string;
+      residenceCity: string;
+      residenceDistrict?: string;
+      projectCountry?: string;
+      companyName?: string;
+      ifuNumber?: string;
+      password?: string;
+      avatarUrl?: string;
+    },
+    options?: {
+      autoLogin?: boolean;
+      emailVerified?: boolean;
+    }
+  ): { success: boolean; user?: AuthUser; error?: string } {
     const cleanEmail = data.email.trim().toLowerCase();
     const cleanPhone = data.phone.trim();
     const cleanPhoneDigits = cleanPhone.replace(/[^0-9]/g, '');
-    const users = this.getRegisteredUsers();
+    let users = this.getRegisteredUsers();
 
     if (!cleanEmail) {
       return {
@@ -1209,8 +1228,14 @@ export const AuthService = {
       };
     }
 
+    // Vérifier si un compte en attente de vérification avec cet email existe déjà
+    const existingPendingIndex = users.findIndex(
+      (u) => areEmailsEqual(u.email, cleanEmail) && u.emailVerified === false
+    );
+    const excludeId = existingPendingIndex !== -1 ? users[existingPendingIndex].id : undefined;
+
     // VÉRIFICATION D'UNICITÉ GLOBALE STRICTE (EMAIL ET TÉLÉPHONE)
-    const availability = this.checkIdentifierAvailability(cleanEmail, cleanPhone);
+    const availability = this.checkIdentifierAvailability(cleanEmail, cleanPhone, excludeId);
     if (!availability.available) {
       return {
         success: false,
@@ -1238,9 +1263,12 @@ export const AuthService = {
     // Matricule certifié déterministe basé sur l'email : 1 email = 1 seul et même matricule
     const userMatricule = generateUserMatricule(targetCountry, data.role, cleanEmail);
 
+    const isVerified = options?.emailVerified ?? false;
+    const shouldAutoLogin = options?.autoLogin ?? isVerified;
+
     const newUser: AuthUser = {
-      id: `usr-${data.role}-${Date.now().toString(36)}`,
-      matricule: userMatricule,
+      id: existingPendingIndex !== -1 ? users[existingPendingIndex].id : `usr-${data.role}-${Date.now().toString(36)}`,
+      matricule: existingPendingIndex !== -1 && users[existingPendingIndex].matricule ? users[existingPendingIndex].matricule : userMatricule,
       name: fullName,
       firstName: data.firstName.trim(),
       lastName: data.lastName.trim(),
@@ -1260,11 +1288,22 @@ export const AuthService = {
       password: data.password || 'demo1234',
       accountStatus: 'active',
       isIdentitySealed: true,
+      emailVerified: isVerified,
     };
 
-    const updatedList = [newUser, ...users];
+    let updatedList: AuthUser[];
+    if (existingPendingIndex !== -1) {
+      updatedList = [...users];
+      updatedList[existingPendingIndex] = newUser;
+    } else {
+      updatedList = [newUser, ...users];
+    }
+
     this.saveRegisteredUsers(updatedList);
-    this.setCurrentUser(newUser);
+
+    if (shouldAutoLogin) {
+      this.setCurrentUser(newUser);
+    }
 
     // Synchronisation asynchrone serveur
     fetch('/api/auth/users', {

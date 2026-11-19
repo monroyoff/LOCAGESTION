@@ -411,27 +411,30 @@ export default function RegisterPage() {
     setIsLoading(true);
     setErrorMsg(null);
 
-    // Pré-enregistrement immédiat et garanti du compte pour éviter toute perte
+    // Pré-enregistrement immédiat du compte en attente de vérification (sans connexion automatique)
     const targetProjectCountry = isOutsideUEMOACEMAC ? projectCountry : residenceCountry;
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
     try {
-      register({
-        role,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        name: fullName,
-        email: email.trim(),
-        phone: fullPhoneNumber,
-        birthDate: birthDate.trim(),
-        birthPlace: birthPlace.trim(),
-        residenceCountry,
-        residenceCity,
-        residenceDistrict: residenceDistrict.trim() || undefined,
-        projectCountry: targetProjectCountry,
-        companyName: companyName.trim() ? companyName.trim() : undefined,
-        ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
-        password: password || 'demo1234',
-      });
+      register(
+        {
+          role,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          name: fullName,
+          email: email.trim(),
+          phone: fullPhoneNumber,
+          birthDate: birthDate.trim(),
+          birthPlace: birthPlace.trim(),
+          residenceCountry,
+          residenceCity,
+          residenceDistrict: residenceDistrict.trim() || undefined,
+          projectCountry: targetProjectCountry,
+          companyName: companyName.trim() ? companyName.trim() : undefined,
+          ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
+          password: password || 'demo1234',
+        },
+        { autoLogin: false, emailVerified: false }
+      );
     } catch (e) {
       console.warn('Pré-enregistrement compte:', e);
     }
@@ -467,24 +470,27 @@ export default function RegisterPage() {
     const targetProjectCountry = isOutsideUEMOACEMAC ? projectCountry : residenceCountry;
 
     try {
-      const res = register({
-        role,
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        name: fullName,
-        email: email.trim(),
-        phone: fullPhoneNumber,
-        birthDate: birthDate.trim(),
-        birthPlace: birthPlace.trim(),
-        residenceCountry,
-        residenceCity,
-        residenceDistrict: residenceDistrict.trim() || undefined,
-        projectCountry: targetProjectCountry,
-        companyName: companyName.trim() ? companyName.trim() : undefined,
-        // IFU uniquement pour le bailleur (pas d'obligation pour démarcheur)
-        ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
-        password: password || 'demo1234',
-      });
+      const res = register(
+        {
+          role,
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          name: fullName,
+          email: email.trim(),
+          phone: fullPhoneNumber,
+          birthDate: birthDate.trim(),
+          birthPlace: birthPlace.trim(),
+          residenceCountry,
+          residenceCity,
+          residenceDistrict: residenceDistrict.trim() || undefined,
+          projectCountry: targetProjectCountry,
+          companyName: companyName.trim() ? companyName.trim() : undefined,
+          // IFU uniquement pour le bailleur (pas d'obligation pour démarcheur)
+          ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
+          password: password || 'demo1234',
+        },
+        { autoLogin: true, emailVerified: true }
+      );
 
       if (res.success && res.user && companyName.trim()) {
         ListingsService.syncAuthorCompany(res.user.id, companyName.trim());

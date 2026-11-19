@@ -58,7 +58,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
         <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-xl bg-brand-500 flex items-center justify-center text-white font-black text-sm">
-              Ω
+              <ShieldCheck className="w-4 h-4 text-white" />
             </div>
             <div>
               <span className="text-xs font-bold text-white block">
