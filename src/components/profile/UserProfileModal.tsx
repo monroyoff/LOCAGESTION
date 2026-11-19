@@ -465,14 +465,6 @@ export function UserProfileModal({
             />
           </div>
 
-          {/* Alerte Explicative Règle Métier */}
-          <div className="p-3.5 rounded-2xl bg-brand-50 border border-brand-200/80 text-xs text-brand-900 flex items-start gap-2.5">
-            <Info className="w-4 h-4 text-brand-600 shrink-0 mt-0.5" />
-            <div className="leading-relaxed">
-              <strong>Pays d'inscription :</strong> Définit automatiquement votre pays par défaut
-              pour la <strong>recherche de logements</strong> (annonces de ce pays affichées en exclusivité et par proximité) et la <strong>création d'annonces</strong>.
-            </div>
-          </div>
 
           {/* Matricule Officiel Certifié */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white border border-indigo-500/30 flex items-center justify-between gap-3 shadow-md">
