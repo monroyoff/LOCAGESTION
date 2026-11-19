@@ -45,6 +45,7 @@ import {
   X,
   CreditCard,
   PhoneCall,
+  Phone,
   MessageCircle,
   Camera,
   ClipboardCheck,
@@ -68,6 +69,7 @@ import {
   LeaseService,
   Lease,
 } from '@/lib/services/lease-service';
+import { AuthService, generateUserMatricule } from '@/lib/services/auth-service';
 import { TransmitLeaseModal } from '@/components/leases/TransmitLeaseModal';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { getUserResidenceCountry } from '@/lib/services/geo-service';
@@ -87,6 +89,25 @@ const LEASE_PROPERTY_TYPES = [
   { id: 'villa', label: 'Maison / Villa complète', sub: 'Cour ou jardin privé', icon: Building },
   { id: 'commercial', label: 'Boutique / Local commercial', sub: 'Usage professionnel', icon: Layers },
 ];
+
+export interface CandidateTenant {
+  id: string;
+  matricule: string;
+  name: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  phone: string;
+  address?: string;
+  idType?: string;
+  idNumber?: string;
+  ifu?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  emergencyContactRelation?: string;
+  city?: string;
+  country?: string;
+}
 
 export default function NewLeasePage() {
   const router = useRouter();
@@ -141,6 +162,13 @@ export default function NewLeasePage() {
   const listingSearchRef = useRef<HTMLDivElement>(null);
   const listingSearchRefManual = useRef<HTMLDivElement>(null);
 
+  // Recherche et sélection du compte locataire par matricule, nom & prénom, ou téléphone
+  const [selectedCandidateTenant, setSelectedCandidateTenant] = useState<CandidateTenant | null>(null);
+  const [tenantSearchQuery, setTenantSearchQuery] = useState('');
+  const [showTenantSearchDropdown, setShowTenantSearchDropdown] = useState(false);
+  const [allCandidateTenants, setAllCandidateTenants] = useState<CandidateTenant[]>([]);
+  const tenantSearchContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (listingSearchRef.current && !listingSearchRef.current.contains(event.target as Node)) {
@@ -149,10 +177,122 @@ export default function NewLeasePage() {
       if (listingSearchRefManual.current && !listingSearchRefManual.current.contains(event.target as Node)) {
         setShowListingSearchDropdownManual(false);
       }
+      if (tenantSearchContainerRef.current && !tenantSearchContainerRef.current.contains(event.target as Node)) {
+        setShowTenantSearchDropdown(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    try {
+      const map = new Map<string, CandidateTenant>();
+
+      // 1. Utilisateurs enregistrés sur la plateforme
+      const users = AuthService.getRegisteredUsers();
+      users
+        .filter((u) => u.role === 'locataire' || !u.role || u.role === 'bailleur')
+        .forEach((u) => {
+          const mat = u.matricule || generateUserMatricule(u.residenceCountry || 'Bénin', 'locataire', u.id || u.email);
+          const key = (u.email || u.phone || u.id).toLowerCase();
+          map.set(key, {
+            id: u.id,
+            matricule: mat,
+            name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Locataire Résident',
+            firstName: u.firstName,
+            lastName: u.lastName,
+            email: u.email || '',
+            phone: u.phone || '',
+            address: u.residenceDistrict ? `${u.residenceDistrict}, ${u.residenceCity || ''}` : (u.residenceCity || ''),
+            city: u.residenceCity,
+            country: u.residenceCountry,
+          });
+        });
+
+      // 2. Baux précédents
+      const leases = LeaseService.getLeases();
+      leases.forEach((l) => {
+        if (!l.tenant || !l.tenant.trim()) return;
+        const key = (l.tenantEmail || l.tenantPhone || l.tenant).toLowerCase();
+        if (!map.has(key)) {
+          const mat = generateUserMatricule(l.country || 'Bénin', 'locataire', l.tenant);
+          map.set(key, {
+            id: `lease-tenant-${l.id}`,
+            matricule: mat,
+            name: l.tenant,
+            email: l.tenantEmail || '',
+            phone: l.tenantPhone || '',
+            address: l.tenantAddress || '',
+            idType: l.tenantIdType,
+            idNumber: l.tenantIdNumber,
+            ifu: l.tenantIfu,
+            emergencyContactName: l.emergencyContactName,
+            emergencyContactPhone: l.emergencyContactPhone,
+            emergencyContactRelation: l.emergencyContactRelation,
+            country: l.country,
+          });
+        }
+      });
+
+      setAllCandidateTenants(Array.from(map.values()));
+    } catch (e) {
+      console.error('Erreur chargement locataires candidats:', e);
+    }
+  }, []);
+
+  const filteredTenants = useMemo(() => {
+    const q = tenantSearchQuery.trim().toLowerCase();
+    const rawDigits = q.replace(/[^0-9]/g, '');
+    if (!q) return allCandidateTenants.slice(0, 8);
+
+    return allCandidateTenants.filter((t) => {
+      const mat = (t.matricule || '').toLowerCase();
+      const name = (t.name || '').toLowerCase();
+      const fn = (t.firstName || '').toLowerCase();
+      const ln = (t.lastName || '').toLowerCase();
+      const email = (t.email || '').toLowerCase();
+      const phone = (t.phone || '').toLowerCase();
+      const phoneDigits = (t.phone || '').replace(/[^0-9]/g, '');
+
+      const matchesMatricule = mat.includes(q);
+      const matchesName = name.includes(q) || fn.includes(q) || ln.includes(q);
+      const matchesEmail = email.includes(q);
+      const matchesPhone = phone.includes(q) || (rawDigits.length >= 3 && phoneDigits.includes(rawDigits));
+
+      return matchesMatricule || matchesName || matchesEmail || matchesPhone;
+    });
+  }, [tenantSearchQuery, allCandidateTenants]);
+
+  const handleSelectCandidateTenant = (t: CandidateTenant) => {
+    setSelectedRegisteredTenantId(t.id);
+    setSelectedCandidateTenant(t);
+    setTenantSearchQuery(`${t.name} (${t.matricule || t.phone || t.email})`);
+    setShowTenantSearchDropdown(false);
+
+    // Remplir automatiquement tous les champs de l'étape 2
+    setTenantName(t.name);
+    if (t.phone) setTenantPhone(t.phone);
+    if (t.email) setTenantEmail(t.email);
+    if (t.address) setTenantAddress(t.address);
+    if (t.idType) setTenantIdType(t.idType);
+    if (t.idNumber) setTenantIdNumber(t.idNumber);
+    if (t.ifu) setTenantIfu(t.ifu);
+    if (t.emergencyContactName) setEmergencyContactName(t.emergencyContactName);
+    if (t.emergencyContactPhone) setEmergencyContactPhone(t.emergencyContactPhone);
+    if (t.emergencyContactRelation) setEmergencyContactRelation(t.emergencyContactRelation);
+
+    notifySave(
+      `Compte locataire ${t.name} (Matricule : ${t.matricule}) sélectionné ! Données importées.`,
+      'Locataire Lié au Contrat'
+    );
+  };
+
+  const handleUnlinkCandidateTenant = () => {
+    setSelectedRegisteredTenantId('');
+    setSelectedCandidateTenant(null);
+    setTenantSearchQuery('');
+  };
 
   useEffect(() => {
     try {
@@ -1444,25 +1584,142 @@ export default function NewLeasePage() {
                 </div>
 
                 {tenantMode === 'existing' && (
-                  <div className="p-4 rounded-2xl bg-brand-50/50 border border-brand-200/60 space-y-2">
-                    <label className="text-xs font-black text-brand-950 block">
-                      Sélectionnez le compte locataire qui recevra le bail pour contresignature :
-                    </label>
-                    <select
-                      value={selectedRegisteredTenantId}
-                      onChange={(e) => handleSelectRegisteredTenant(e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-white border border-brand-300 text-xs font-bold text-slate-900 shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-none cursor-pointer"
-                    >
-                      {REGISTERED_TENANTS.map((t) => (
-                        <option key={t.id} value={t.id}>
-                          {t.name} — {t.unit || 'Lot'} ({t.property || 'Résidence'}) • {t.email}
-                        </option>
-                      ))}
-                    </select>
+                  <div
+                    ref={tenantSearchContainerRef}
+                    className="relative p-4 rounded-2xl bg-brand-50/50 border border-brand-200/60 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black text-brand-950 flex items-center gap-1.5">
+                        <Search className="w-3.5 h-3.5 text-brand-600" />
+                        <span>Sélectionnez le compte locataire qui recevra le bail pour contresignature :</span>
+                      </label>
+                      {selectedCandidateTenant && (
+                        <button
+                          type="button"
+                          onClick={handleUnlinkCandidateTenant}
+                          className="text-[10px] font-extrabold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+                        >
+                          Changer de locataire ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Barre de recherche avec autocomplétion intelligente par matricule, nom & téléphone */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        placeholder="Rechercher par matricule (ex: LOCA-MAT-...), nom & prénom, ou téléphone (+229...)..."
+                        value={tenantSearchQuery}
+                        onChange={(e) => {
+                          setTenantSearchQuery(e.target.value);
+                          setShowTenantSearchDropdown(true);
+                        }}
+                        onFocus={() => setShowTenantSearchDropdown(true)}
+                        className="w-full pl-9 pr-24 py-2.5 rounded-xl bg-white border border-brand-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 shadow-xs"
+                      />
+                      <Search className="w-4 h-4 text-brand-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      <button
+                        type="button"
+                        onClick={() => setShowTenantSearchDropdown(!showTenantSearchDropdown)}
+                        className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold cursor-pointer transition-colors"
+                      >
+                        {showTenantSearchDropdown ? 'Fermer' : 'Parcourir'}
+                      </button>
+                    </div>
+
+                    {/* Dropdown des résultats filtrés */}
+                    {showTenantSearchDropdown && (
+                      <div className="absolute left-4 right-4 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-64 overflow-y-auto divide-y divide-slate-100 animate-in fade-in duration-150">
+                        {filteredTenants.length > 0 ? (
+                          filteredTenants.map((t) => (
+                            <div
+                              key={t.id}
+                              onClick={() => handleSelectCandidateTenant(t)}
+                              className="p-3 hover:bg-brand-50/70 cursor-pointer transition-colors flex items-center justify-between gap-3"
+                            >
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-9 h-9 rounded-full bg-brand-100 text-brand-700 font-black text-xs flex items-center justify-center shrink-0 border border-brand-200">
+                                  {t.name.charAt(0).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs font-black text-slate-900">{t.name}</span>
+                                    {t.matricule && (
+                                      <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200">
+                                        {t.matricule}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5 flex-wrap">
+                                    {t.phone && (
+                                      <span className="flex items-center gap-1 font-mono text-slate-600">
+                                        <Phone className="w-3 h-3 text-slate-400" />
+                                        {t.phone}
+                                      </span>
+                                    )}
+                                    {t.email && (
+                                      <span className="flex items-center gap-1 truncate text-slate-600">
+                                        <Mail className="w-3 h-3 text-slate-400" />
+                                        {t.email}
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="shrink-0 text-right">
+                                <span className="text-[10px] font-bold text-brand-600 bg-brand-50 px-2 py-1 rounded-lg border border-brand-200">
+                                  Sélectionner →
+                                </span>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="p-4 text-center space-y-2">
+                            <p className="text-xs text-slate-500">
+                              Aucun locataire trouvé pour « <strong>{tenantSearchQuery}</strong> »
+                            </p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setShowTenantSearchDropdown(false);
+                                setTenantMode('new');
+                              }}
+                              className="px-3 py-1.5 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 text-xs font-bold transition-colors cursor-pointer"
+                            >
+                              Passer en création libre (Nouveau locataire)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Badge de confirmation du locataire sélectionné */}
+                    {selectedCandidateTenant && (
+                      <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-2xl flex items-center justify-between gap-3 text-xs text-emerald-950">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-black shrink-0">
+                            ✓
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-extrabold text-emerald-900">{selectedCandidateTenant.name}</span>
+                              <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                {selectedCandidateTenant.matricule}
+                              </span>
+                            </div>
+                            <span className="text-[11px] text-emerald-800 block truncate">
+                              {selectedCandidateTenant.phone} • {selectedCandidateTenant.email}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <p className="text-[11px] text-slate-500">
                       ✓ Dès signature du bailleur, le contrat apparaîtra avec la mention{' '}
                       <strong className="text-amber-700">« En attente de signature »</strong> et sera
-                      transmis directement dans son Portail Locataire.
+                      transmis directement dans son Portail Résident.
                     </p>
                   </div>
                 )}
