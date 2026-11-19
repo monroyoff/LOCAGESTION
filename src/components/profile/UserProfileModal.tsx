@@ -23,6 +23,9 @@ import {
   Repeat,
   Copy,
   Fingerprint,
+  Key,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { UserProfile, UserSpace } from '@/lib/types';
 import {
@@ -32,7 +35,7 @@ import {
   requestUserGeolocationWithFeedback,
   UserGeoLocation,
 } from '@/lib/services/geo-service';
-import { isCanonicalJojoVog } from '@/lib/services/auth-service';
+import { AuthService, isCanonicalJojoVog } from '@/lib/services/auth-service';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { useSpace } from '@/lib/context/space-context';
@@ -88,11 +91,57 @@ export function UserProfileModal({
   const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Gestion sécurisée du mot de passe (Seul paramètre modifiable post-création)
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   const handleCopyMatricule = (matricule: string) => {
     if (!matricule) return;
     navigator.clipboard?.writeText(matricule);
     setCopiedMatricule(true);
     setTimeout(() => setCopiedMatricule(false), 2000);
+  };
+
+  const handleUpdatePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword) {
+      setPasswordError('Veuillez saisir votre mot de passe actuel.');
+      return;
+    }
+    if (!newPassword || newPassword.trim().length < 6) {
+      setPasswordError('Le nouveau mot de passe doit comporter au moins 6 caractères.');
+      return;
+    }
+    if (newPassword.trim() !== confirmPassword.trim()) {
+      setPasswordError('La confirmation ne correspond pas au nouveau mot de passe.');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    const identifier = user?.id || user?.email || profile.email;
+    const res = AuthService.changePassword(identifier, currentPassword, newPassword.trim());
+    setIsUpdatingPassword(false);
+
+    if (!res.success) {
+      setPasswordError(res.error || 'Erreur lors du changement de mot de passe.');
+    } else {
+      setPasswordSuccess('✓ Mot de passe mis à jour avec succès !');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      notifySave('Mot de passe mis à jour avec succès.');
+      setTimeout(() => setPasswordSuccess(null), 5000);
+    }
   };
 
   // Synchronisation des données à l'ouverture de la modale
@@ -528,55 +577,46 @@ export function UserProfileModal({
           </div>
 
           {/* Bannière Informations Personnelles & Coordonnées avec Statut de Scellement */}
-          {profile.isIdentitySealed || (profile.firstName && profile.lastName && profile.phone) ? (
-            <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between gap-3 shadow-xs">
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-                <div>
-                  <span className="font-black text-emerald-900 block">
-                    ✓ Identité Officielle Scellée & Conforme OHADA / UEMOA
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+              <div>
+                <span className="font-black text-emerald-950 block flex items-center gap-1.5">
+                  <span>✓ Compte Officiel Scellé & Conforme OHADA / UEMOA</span>
+                  <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.2 rounded bg-emerald-200/70 text-emerald-800 border border-emerald-300">
+                    IMMUABLE
                   </span>
-                  <span className="text-[11px] text-emerald-700">
-                    Nom de famille : <strong>{profile.lastName || 'VOG'}</strong> • Prénom(s) : <strong>{profile.firstName || 'Jojo'}</strong> • Matricule : <strong>{profile.matricule || 'LOCA-MAT-BJ-17635'}</strong>
-                  </span>
-                </div>
-              </div>
-              <span className="text-[10px] font-mono font-black uppercase px-2 py-0.5 rounded-md bg-emerald-200/60 text-emerald-800 border border-emerald-300 shrink-0">
-                SCELLÉ
-              </span>
-            </div>
-          ) : (
-            <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-950 flex items-start gap-2.5 shadow-xs">
-              <User className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-              <div className="leading-relaxed">
-                <strong className="text-amber-900">Identité en attente de scellement :</strong> Renseignez votre nom de famille, prénom(s) et numéro de téléphone pour sceller votre identité officielle. Une fois scellée, vos quittances et contrats seront infalsifiables.
+                </span>
+                <span className="text-[11px] text-emerald-800 leading-snug block mt-0.5">
+                  <strong>Règle d'or de sécurité :</strong> Matricule, nom, prénom, email et téléphone sont scellés pour toujours. <strong>Seul votre mot de passe peut être modifié.</strong>
+                </span>
               </div>
             </div>
-          )}
+            <div className="text-right shrink-0 hidden sm:block">
+              <span className="text-[10px] font-mono font-bold text-slate-500 block">Matricule</span>
+              <span className="text-xs font-mono font-black text-slate-800">{profile.matricule || user?.matricule || 'LOCA-MAT-BJ-17635'}</span>
+            </div>
+          </div>
 
-          {/* Identité Personnelle (Nom, Prénom, Téléphone modifiables & Email certifié) */}
+          {/* Identité Personnelle (Nom, Prénom, Téléphone, Email strictement scellés) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Nom de famille */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-brand-500" />
+                  <User className="w-3.5 h-3.5 text-slate-400" />
                   <span>Nom de famille</span>
                 </label>
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                  Modifiable
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Scellé
                 </span>
               </div>
               <input
                 type="text"
                 value={profile.lastName || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const fullName = `${profile.firstName || ''} ${val}`.trim();
-                  setProfile({ ...profile, lastName: val, name: fullName });
-                }}
-                placeholder="Votre nom de famille"
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
+                disabled
+                readOnly
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
               />
             </div>
 
@@ -584,23 +624,19 @@ export function UserProfileModal({
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                  <User className="w-3.5 h-3.5 text-brand-500" />
+                  <User className="w-3.5 h-3.5 text-slate-400" />
                   <span>Prénom(s)</span>
                 </label>
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                  Modifiable
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Scellé
                 </span>
               </div>
               <input
                 type="text"
                 value={profile.firstName || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  const fullName = `${val} ${profile.lastName || ''}`.trim();
-                  setProfile({ ...profile, firstName: val, name: fullName });
-                }}
-                placeholder="Votre prénom"
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
+                disabled
+                readOnly
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
               />
             </div>
 
@@ -609,7 +645,7 @@ export function UserProfileModal({
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Email certifié (Identifiant)</span>
+                  <span>Email officiel (Identifiant unique)</span>
                 </label>
                 <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
                   <Lock className="w-2.5 h-2.5" /> Scellé
@@ -624,25 +660,136 @@ export function UserProfileModal({
               />
             </div>
 
-            {/* Téléphone */}
+            {/* Téléphone certifié */}
             <div>
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-black text-slate-700 flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-brand-500" />
-                  <span>Numéro de téléphone</span>
+                  <Phone className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Numéro de téléphone officiel</span>
                 </label>
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
-                  Modifiable
+                <span className="text-[10px] font-bold text-slate-600 bg-slate-200/70 px-2 py-0.5 rounded-md flex items-center gap-1">
+                  <Lock className="w-2.5 h-2.5" /> Scellé
                 </span>
               </div>
               <input
                 type="tel"
                 value={profile.phone || ''}
-                onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                placeholder="+229 01 00 00 00"
-                className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all shadow-sm"
+                disabled
+                readOnly
+                className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
               />
             </div>
+          </div>
+
+          {/* Section Sécurité & Mot de Passe (Seul paramètre modifiable) */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/60 via-slate-50 to-indigo-50/30 border border-indigo-200/80 space-y-3.5 shadow-xs">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900 flex items-center gap-2">
+                    <span>Modifier mon mot de passe</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      Seul champ modifiable
+                    </span>
+                  </h4>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    1 seul mot de passe unique par compte. Mettez-le à jour en toute sécurité.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPasswordSection(!showPasswordSection)}
+                className="text-xs font-black text-indigo-700 hover:text-indigo-800 cursor-pointer px-3.5 py-1.5 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 shadow-xs transition-all flex items-center gap-1.5"
+              >
+                <Key className="w-3.5 h-3.5" />
+                <span>{showPasswordSection ? 'Fermer' : 'Modifier'}</span>
+              </button>
+            </div>
+
+            {showPasswordSection && (
+              <div className="pt-3 border-t border-indigo-100 space-y-3">
+                {passwordError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
+                    ⚠️ {passwordError}
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                    {passwordSuccess}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Mot de passe actuel</label>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Nouveau mot de passe</label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Min. 6 caractères"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Confirmer nouveau</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleUpdatePassword}
+                    disabled={isUpdatingPassword}
+                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                    <span>{isUpdatingPassword ? 'Mise à jour en cours...' : 'Enregistrer le nouveau mot de passe'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Entreprise / Agence Immobilière (Optionnel - Pour Bailleur et Démarcheur uniquement) */}

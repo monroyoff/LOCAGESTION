@@ -18,6 +18,7 @@
 10. [Design System & Principes UI/UX](#10-design-system--principes-uiux)
 11. [Instructions Strictes & Règles d'Or pour les Futurs Modèles IA](#11-instructions-strictes--règles-dor-pour-les-futurs-modèles-ia)
 12. [Règles de Sécurité Strictes & Modération IA Automatique](#12-règles-de-sécurité-strictes--modération-ia-automatique)
+13. [Règle d'Or d'Intégrité Absolue des Comptes & Scellement Immuable](#13-règle-dor-dintégrité-absolue-des-comptes--scellement-immuable)
 
 ---
 
@@ -422,6 +423,35 @@ Pour garantir la sécurité, la moralité publique, la sérénité des familles 
   - Consultation en direct du journal d'infractions (auteur, téléphone, email, extrait incriminé, date exacte).  
   - Maintien du blocage, suppression définitive ou dérogation administrative exceptionnelle.  
   - Supervision globale de toutes les annonces et mise en pause instantanée de toute publication suspecte.
+
+---
+
+## 13. Règle d'Or d'Intégrité Absolue des Comptes & Scellement Immuable
+
+> **RÈGLE INVIOLABLE SUR TOUTE LA PLATEFORME (WEB, MOBILE ET APPLICATION)**  
+> Tout développeur, administrateur ou modèle d'Intelligence Artificielle intervenant sur LOCAGESTION doit obligatoirement et strictement appliquer cette règle sans aucune exception.
+
+### 🔒 1. Unicité Stricte et Absolue (Règle 1:1:1:1:1)
+Chaque compte utilisateur sur LOCAGESTION est fondé sur une relation bijective et rigoureuse :
+- **1 seul compte**
+- **1 seul et unique mot de passe** (interdiction formelle et définitive d'avoir ou de tolérer 2 mots de passe, aucun fallback tolérant des variantes ou des anciens mots de passe d'essai).
+- **1 seul numéro de téléphone**
+- **1 seule adresse email**
+- **1 seul matricule officiel unique** (attribué de façon déterministe et certifiée).
+
+### 🛡️ 2. Scellement Définitif Post-Création
+Dès la création ou l'enregistrement d'un compte sur le Web, Mobile ou Appli :
+- **L'Identité Civile (Nom de famille & Prénom(s))** est **SCELLÉE & IMMUABLE**.
+- **L'Adresse Email** est **SCELLÉE & IMMUABLE**.
+- **Le Numéro de Téléphone** est **SCELLÉ & IMMUABLE**.
+- **Le Matricule Officiel Unique** est **SCELLÉ & IMMUABLE**.
+Ces informations garantissent la force probante juridique des baux électroniques et quittances certifiées (QR code scellé vérifiable par les tribunaux, banques et administrations). Elles ne peuvent en aucun cas être altérées après création du compte.
+
+### 🔑 3. Seul le Mot de Passe est Modifiable
+- **Le mot de passe est l'unique identifiant modifiable** du compte utilisateur.
+- Sa modification s'effectue exclusivement :
+  1. Soit depuis l'espace connecté via les paramètres du profil (**« Modifier mon mot de passe »**) avec contrôle obligatoire du mot de passe actuel.
+  2. Soit depuis l'écran de connexion via la procédure sécurisée **« Mot de passe oublié ? »** (`/auth/login`).
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

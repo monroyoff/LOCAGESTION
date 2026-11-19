@@ -184,7 +184,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     projectCountry: 'Côte d’Ivoire',
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
     registeredAt: '10/11/2026',
-    password: 'Jesus1122',
+    password: 'Koffi2026!',
     accountStatus: 'active',
   },
   {
@@ -204,7 +204,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     projectCountry: 'Sénégal',
     avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
     registeredAt: '12/11/2026',
-    password: 'Jesus1122',
+    password: 'Aicha2026!',
     accountStatus: 'active',
   },
 ];
@@ -778,12 +778,27 @@ export const AuthService = {
       return { success: false, error: 'Utilisateur introuvable.' };
     }
 
-    list[idx] = { ...list[idx], ...updates };
+    const existingUser = list[idx];
+
+    // RÈGLE D'OR ABSOLUE : Dès qu'un compte est créé et scellé, ses piliers d'identité
+    // (email, numéro de téléphone, matricule, nom, prénom) sont STRICTEMENT SCELLÉS et IMMUABLES.
+    // Seul le mot de passe peut être modifié.
+    const safeUpdates: Partial<AuthUser> = { ...updates };
+    if (existingUser.isIdentitySealed) {
+      delete safeUpdates.email;
+      delete safeUpdates.phone;
+      delete safeUpdates.matricule;
+      delete safeUpdates.firstName;
+      delete safeUpdates.lastName;
+      delete safeUpdates.name;
+    }
+
+    list[idx] = { ...existingUser, ...safeUpdates };
     this.saveRegisteredUsers(list);
 
     const current = this.getCurrentUser();
     if (current && current.id === userId) {
-      this.setCurrentUser({ ...current, ...updates });
+      this.setCurrentUser({ ...current, ...safeUpdates });
     }
 
     return { success: true };
@@ -993,37 +1008,16 @@ export const AuthService = {
       };
     }
 
-    // Validation mot de passe universelle, tolérante aux espaces mobiles et aux variantes du compte propriétaire
-    const isOwnerAccount =
-      areEmailsEqual(found.email, 'jobovog@gmail.com') ||
-      areEmailsEqual(found.email, 'jojovog007@gmail.com') ||
-      arePhoneNumbersEqual(found.phone, '+229 01 95 44 44 30') ||
-      arePhoneNumbersEqual(found.phone, '+229 97 00 12 34');
-
-    const matchesOwnerAlternative =
-      isOwnerAccount &&
-      (password === 'Forever1122$' ||
-        password === 'Jesus1122' ||
-        password?.trim() === 'Forever1122$' ||
-        password?.trim() === 'Jesus1122');
-
+    // RÈGLE D'OR ABSOLUE (1:1:1:1:1) : 1 seul compte = 1 seul mot de passe unique.
+    // Tolérance uniquement sur le retrait des espaces accidentels des claviers mobiles (trim).
     const exactMatch = Boolean(found.password && password && found.password === password);
     const trimmedMatch = Boolean(found.password && password && found.password.trim() === password.trim());
 
-    if (found.password && password && !exactMatch && !trimmedMatch && !matchesOwnerAlternative) {
+    if (!exactMatch && !trimmedMatch) {
       return {
         success: false,
         error: "Mot de passe incorrect.",
       };
-    }
-
-    // Si le mot de passe correspond à une variante propriétaire, harmoniser vers Forever1122$
-    if (matchesOwnerAlternative && found.password !== 'Forever1122$') {
-      found.password = 'Forever1122$';
-      const currentList = this.getRegisteredUsers().map((u) =>
-        areEmailsEqual(u.email, found!.email) ? { ...u, password: 'Forever1122$' } : u
-      );
-      this.saveRegisteredUsers(currentList);
     }
 
     const userToSave: AuthUser = {
@@ -1097,6 +1091,68 @@ export const AuthService = {
     }).catch(() => {});
 
     return { success: true, user: updatedUser };
+  },
+
+  /**
+   * Modification sécurisée du mot de passe (Seul élément modifiable du compte après création).
+   * Vérifie l'ancien mot de passe avant d'appliquer le nouveau.
+   */
+  changePassword(
+    userIdOrEmail: string,
+    currentPassword: string,
+    newPassword: string
+  ): { success: boolean; error?: string } {
+    if (typeof window === 'undefined') return { success: false, error: 'Environnement non supporté.' };
+
+    if (!newPassword || newPassword.trim().length < 6) {
+      return {
+        success: false,
+        error: 'Le nouveau mot de passe doit comporter au moins 6 caractères.',
+      };
+    }
+
+    const cleanInput = userIdOrEmail.trim();
+    const list = this.getRegisteredUsers();
+    const idx = list.findIndex(
+      (u) =>
+        u.id === cleanInput ||
+        (u.email && areEmailsEqual(u.email, cleanInput)) ||
+        (u.phone && arePhoneNumbersEqual(u.phone, cleanInput))
+    );
+
+    if (idx === -1) {
+      return { success: false, error: 'Compte utilisateur introuvable.' };
+    }
+
+    const targetUser = list[idx];
+    const isCurrentMatch = Boolean(
+      targetUser.password &&
+      (targetUser.password === currentPassword || targetUser.password.trim() === currentPassword?.trim())
+    );
+
+    if (!isCurrentMatch) {
+      return { success: false, error: 'Le mot de passe actuel saisi est incorrect.' };
+    }
+
+    // Mise à jour de l'unique mot de passe
+    targetUser.password = newPassword.trim();
+    list[idx] = targetUser;
+    this.saveRegisteredUsers(list);
+
+    // Mettre à jour la session active
+    const current = this.getCurrentUser();
+    if (current && (current.id === targetUser.id || areEmailsEqual(current.email, targetUser.email))) {
+      this.setCurrentUser({ ...current, password: newPassword.trim() });
+    }
+
+    // Synchronisation persistante backend
+    fetch('/api/auth/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(targetUser),
+    }).catch(() => {});
+
+    return { success: true };
   },
 
   register(data: {
@@ -1199,11 +1255,20 @@ export const AuthService = {
       ifuNumber: data.ifuNumber?.trim(),
       registeredAt: nowFormatted,
       password: data.password || 'demo1234',
+      accountStatus: 'active',
+      isIdentitySealed: true,
     };
 
     const updatedList = [newUser, ...users];
     this.saveRegisteredUsers(updatedList);
     this.setCurrentUser(newUser);
+
+    // Synchronisation asynchrone serveur
+    fetch('/api/auth/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newUser),
+    }).catch(() => {});
 
     return {
       success: true,
