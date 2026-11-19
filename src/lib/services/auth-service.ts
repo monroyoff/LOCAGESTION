@@ -101,7 +101,7 @@ export function generateUserMatricule(country?: string, role?: string, seed?: st
 }
 
 export const SYSTEM_ADMIN_USER: AuthUser = {
-  id: 'usr-admin-omega',
+  id: 'usr-admin-locagestion',
   matricule: 'LOCA-MAT-ADMIN-00001',
   name: 'Direction Générale - Super Admin',
   firstName: 'Admin',
@@ -113,12 +113,12 @@ export const SYSTEM_ADMIN_USER: AuthUser = {
   birthPlace: 'Cotonou',
   residenceCountry: 'Bénin',
   residenceCity: 'Cotonou',
-  residenceDistrict: 'Siège Central OMEGA',
+  residenceDistrict: 'Direction Générale LOCAGESTION',
   projectCountry: 'Bénin',
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
-  companyName: 'OMEGA LOCAGESTION HQ',
+  companyName: 'LOCAGESTION HQ',
   registeredAt: '01/01/2026',
-  password: 'Omega#Admin2027!LocaSecurity',
+  password: 'Admin2027!LocaSecurity',
   adminSessionVersion: ADMIN_CURRENT_SESSION_VERSION,
 };
 

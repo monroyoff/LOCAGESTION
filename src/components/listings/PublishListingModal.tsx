@@ -576,7 +576,7 @@ export function PublishListingModal({
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="Ex: Agence Immobilière Prestige, Omega Immo SARL..."
+              placeholder="Ex: Agence Immobilière Prestige, Alafia Immo SARL..."
               className="w-full px-3.5 py-2.5 rounded-xl bg-white border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
             <p className="text-[10px] text-slate-500 leading-snug">

@@ -740,7 +740,7 @@ export default function TenantsPage() {
                           {/* Formula Explanation */}
                           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
                             <h4 className="font-extrabold text-slate-900">
-                              Formule Objective de Ponctualité OMEGA LOCAGESTION :
+                              Formule Objective de Ponctualité LOCAGESTION :
                             </h4>
                             <p className="text-slate-600 text-[11px] leading-relaxed">
                               Le score (0-100) est calculé par un moteur déterministe pur en fonction de la régularité des règlements, de l’absence d’incidents critiques (&gt; 15 jours) et du solde de sortie. Aucune appréciation subjective n’est enregistrée afin de prévenir tout risque de diffamation.

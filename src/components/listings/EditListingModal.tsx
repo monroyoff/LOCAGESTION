@@ -500,7 +500,7 @@ export function EditListingModal({
               type="text"
               value={authorCompany}
               onChange={(e) => setAuthorCompany(e.target.value)}
-              placeholder="Ex: Agence Immobilière Prestige, Omega Immo SARL..."
+              placeholder="Ex: Agence Immobilière Prestige, Alafia Immo SARL..."
               className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
             <p className="text-[10px] text-slate-500 leading-snug">

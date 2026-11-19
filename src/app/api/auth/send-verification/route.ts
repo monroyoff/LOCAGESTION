@@ -52,10 +52,10 @@ export async function POST(req: NextRequest) {
 
     const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
     const smtpPort = Number(process.env.SMTP_PORT) || 465;
-    const smtpUser = process.env.SMTP_USER || 'omegafacture@gmail.com';
+    const smtpUser = process.env.SMTP_USER || 'contact@locagestion.site';
     const smtpPass = process.env.SMTP_PASS || 'kwacpwtfqtsvhllu';
     const smtpFrom =
-      process.env.SMTP_FROM || '"LOCAGESTION" <omegafacture@gmail.com>';
+      process.env.SMTP_FROM || '"LOCAGESTION" <contact@locagestion.site>';
 
     const transporter = nodemailer.createTransport({
       host: smtpHost,

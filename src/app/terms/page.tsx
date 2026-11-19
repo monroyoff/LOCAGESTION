@@ -4,7 +4,7 @@ import Link from 'next/link';
 export const metadata = {
   title: "Conditions Générales d'Utilisation (CGU) — LOCAGESTION",
   description:
-    "Conditions générales d'utilisation de la plateforme PropTech SaaS LOCAGESTION (Groupe OMEGA) pour l'Afrique francophone (UEMOA / CEMAC / OHADA).",
+    "Conditions générales d'utilisation de la plateforme PropTech SaaS LOCAGESTION pour l'Afrique francophone (UEMOA / CEMAC / OHADA).",
 };
 
 export default function TermsPage() {
@@ -15,7 +15,7 @@ export default function TermsPage() {
         <div className="mb-8 pb-6 border-b border-slate-100 flex items-center justify-between">
           <div>
             <span className="text-xs font-black text-brand-600 uppercase tracking-wider block mb-1">
-              LOCAGESTION • Groupe OMEGA
+              LOCAGESTION
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
               Conditions Générales d'Utilisation (CGU)
@@ -37,7 +37,7 @@ export default function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-base font-black text-slate-900">1. Objet et Présentation du Service</h2>
             <p>
-              Les présentes Conditions Générales d'Utilisation (ci-après <strong>« CGU »</strong>) régissent l'accès et l'utilisation de la plateforme <strong>LOCAGESTION</strong> (éditée par le Groupe OMEGA, accessible via le site web <strong>https://locagestion.site</strong> et l'application mobile Android).
+              Les présentes Conditions Générales d'Utilisation (ci-après <strong>« CGU »</strong>) régissent l'accès et l'utilisation de la plateforme <strong>LOCAGESTION</strong> (accessible via le site web <strong>https://locagestion.site</strong> et l'application mobile Android).
             </p>
             <p>
               LOCAGESTION est la première solution SaaS PropTech d'Afrique francophone dédiée à la gestion locative intégrale, à la contractualisation de baux électroniques certifiés conformes au droit OHADA, à l'émission de quittances de loyer numériques scellées avec QR code de vérification, et à l'intermédiation immobilière sécurisée.
@@ -108,7 +108,7 @@ export default function TermsPage() {
           <section className="space-y-2">
             <h2 className="text-base font-black text-slate-900">8. Propriété Intellectuelle</h2>
             <p>
-              L'ensemble des éléments constituant la plateforme (logiciel, charte graphique, marques, logos, bases de données, modèles juridiques) est la propriété exclusive du Groupe OMEGA. Toute reproduction ou exploitation non autorisée est strictement prohibée.
+              L'ensemble des éléments constituant la plateforme (logiciel, charte graphique, marques, logos, bases de données, modèles juridiques) est la propriété exclusive de LOCAGESTION. Toute reproduction ou exploitation non autorisée est strictement prohibée.
             </p>
           </section>
 
@@ -139,7 +139,7 @@ export default function TermsPage() {
             <h2 className="text-base font-black text-slate-900">11. Contact & Assistance</h2>
             <p>
               Pour toute question ou assistance relative à l'application :<br />
-              <strong>LOCAGESTION — Groupe OMEGA</strong><br />
+              <strong>LOCAGESTION</strong><br />
               Email : <strong>contact@locagestion.site</strong> / <strong>jobovog@gmail.com</strong><br />
               Téléphone : <strong>+229 01 95 44 44 30</strong><br />
               Site Web officiel : <a href="https://locagestion.site" className="text-brand-600 underline">https://locagestion.site</a>

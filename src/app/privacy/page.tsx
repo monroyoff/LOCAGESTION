@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'Politique de Confidentialité — LOCAGESTION',
-  description: 'Politique de confidentialité et protection des données personnelles de la plateforme LOCAGESTION (Groupe OMEGA).',
+  description: 'Politique de confidentialité et protection des données personnelles de la plateforme LOCAGESTION.',
 };
 
 export default function PrivacyPage() {
@@ -13,7 +13,7 @@ export default function PrivacyPage() {
         <div className="mb-8 pb-6 border-b border-slate-100 flex items-center justify-between">
           <div>
             <span className="text-xs font-black text-brand-600 uppercase tracking-wider block mb-1">
-              LOCAGESTION • Groupe OMEGA
+              LOCAGESTION
             </span>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900">
               Politique de Confidentialité & Protection des Données
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
           <section className="space-y-2">
             <h2 className="text-base font-black text-slate-900">1. Présentation de la plateforme</h2>
             <p>
-              LOCAGESTION (édité par le groupe OMEGA, accessible sur <strong>https://locagestion.site</strong>) est une plateforme PropTech SaaS d'Afrique francophone dédiée à la gestion locative, à l'émission de quittances certifiées et à la contractualisation de baux électroniques conformes au Droit OHADA.
+              LOCAGESTION (accessible sur <strong>https://locagestion.site</strong>) est une plateforme PropTech SaaS d'Afrique francophone dédiée à la gestion locative, à l'émission de quittances certifiées et à la contractualisation de baux électroniques conformes au Droit OHADA.
             </p>
           </section>
 
@@ -92,7 +92,7 @@ export default function PrivacyPage() {
             <h2 className="text-base font-black text-slate-900">7. Contact</h2>
             <p>
               Pour toute question relative à la présente politique de confidentialité :<br />
-              <strong>LOCAGESTION — Groupe OMEGA</strong><br />
+              <strong>LOCAGESTION</strong><br />
               Email : <strong>jobovog@gmail.com</strong> / <strong>contact@locagestion.site</strong><br />
               Site Web : <a href="https://locagestion.site" className="text-brand-600 underline">https://locagestion.site</a>
             </p>

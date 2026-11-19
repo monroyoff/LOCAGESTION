@@ -85,7 +85,7 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
               Quittance de Loyer Authentique & Scellée
             </h2>
             <p className="text-[11px] text-emerald-700">
-              Intégrité cryptographique vérifiée dans le registre OMEGA LOCAGESTION.
+              Intégrité cryptographique vérifiée dans le registre officiel LOCAGESTION.
             </p>
           </div>
         </div>

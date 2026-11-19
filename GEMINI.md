@@ -24,7 +24,7 @@
 
 ## 1. Vision & Présentation Générale
 
-**LOCAGESTION** (conçu par le groupe OMEGA, accessible sur **https://locagestion.site**) est la première plateforme PropTech SaaS d'Afrique francophone dédiée à la gestion locative intégrale, à la sécurisation des baux d'habitation et commerciaux, et à l'intermédiation immobilière de confiance.
+**LOCAGESTION** (accessible sur **https://locagestion.site**) est la première plateforme PropTech SaaS d'Afrique francophone dédiée à la gestion locative intégrale, à la sécurisation des baux d'habitation et commerciaux, et à l'intermédiation immobilière de confiance. Projet strictement autonome et indépendant.
 
 ### Problématiques résolues en Afrique francophone (UEMOA & CEMAC) :
 - **Absence d'écrits et d'actes juridiques certifiés :** La majorité des baux étaient conclus verbalement ou sur des brouillons fragiles. LOCAGESTION génère des contrats de baux électroniques conformes aux codes civils nationaux et à l'Acte Uniforme OHADA portant sur le Droit Commercial Général.
@@ -191,7 +191,7 @@ Le service `src/lib/export/pdf-download.ts` génère des fichiers PDF vectoriels
 1. **Quittance de Loyer Numérique :**
    - En-tête certifié avec identité du bailleur, IFU, coordonnées du locataire, lot concerné.
    - Période de loyer acquittée, montant en chiffres et lettres FCFA, date et canal d'encaissement.
-   - Sceau officiel numérique OMEGA LOCAGESTION et QR Code pointant sur l'URL de vérification `/verify/<receiptNumber>`.
+   - Sceau officiel numérique LOCAGESTION et QR Code pointant sur l'URL de vérification `/verify/<receiptNumber>`.
 2. **Contrat de Bail Conforme UEMOA / CEMAC / OHADA :**
    - 10 à 12 articles contractuels complets rédigés selon le droit applicable du pays.
    - Plafonnement légal des dépôts de garantie et avances.
@@ -413,7 +413,7 @@ Pour garantir la sécurité, la moralité publique, la sérénité des familles 
 ### 👑 5. Compte Super-Administrateur & Console de Gestion (`/admin`)
 - **Compte Super-Admin dédié (Sécurisé & Cloisonné) :**  
   - Email : `admin@locagestion.site`  
-  - Nouveau Mot de passe : `Omega#Admin2027!LocaSecurity`  
+  - Nouveau Mot de passe : `Admin2027!LocaSecurity`  
   - Téléphone : `+229 01 96 68 92 77`  
   - Rôle : `admin`
   - Invalidation globale : `adminSessionVersion = 'sec_v2_20261118_revoked_all'` déconnecte automatiquement tout appareil ayant conservé l'ancienne session.

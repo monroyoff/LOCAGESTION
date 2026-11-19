@@ -82,9 +82,9 @@ export async function POST(req: NextRequest) {
     // 1. TENTATIVE D'EXPÉDITION EMAIL VIA SMTP / SERVICE CONFIGURÉ
     const smtpHost = process.env.SMTP_HOST || process.env.EMAIL_SERVER_HOST || 'smtp.gmail.com';
     const smtpPort = Number(process.env.SMTP_PORT || process.env.EMAIL_SERVER_PORT) || 465;
-    const smtpUser = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER || 'omegafacture@gmail.com';
+    const smtpUser = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER || 'contact@locagestion.site';
     const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_SERVER_PASSWORD || 'kwacpwtfqtsvhllu';
-    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || '"LOCAGESTION" <omegafacture@gmail.com>';
+    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || '"LOCAGESTION" <contact@locagestion.site>';
 
     if (smtpHost && smtpUser && smtpPass && invitationData.recipientEmail) {
       try {

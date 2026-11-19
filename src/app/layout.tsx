@@ -29,8 +29,8 @@ export const metadata: Metadata = {
     'Cameroun',
     'locagestion.site',
   ],
-  authors: [{ name: 'LOCAGESTION — Groupe OMEGA', url: 'https://locagestion.site' }],
-  creator: 'Groupe OMEGA',
+  authors: [{ name: 'LOCAGESTION', url: 'https://locagestion.site' }],
+  creator: 'LOCAGESTION',
   publisher: 'LOCAGESTION',
   formatDetection: {
     email: false,
