@@ -22,6 +22,17 @@ export interface LeaseInvitationData {
   governingLaw?: string;
 }
 
+export interface TenantInvitationData {
+  recipientName: string;
+  recipientEmail: string;
+  recipientPhone: string;
+  portalUrl: string;
+  appDownloadUrl?: string;
+  invitationCode: string;
+  landlordName?: string;
+  propertyName?: string;
+}
+
 /**
  * Nettoie et normalise un numéro de téléphone pour WhatsApp et SMS.
  * Supporte les numéros internationaux avec ou sans indicatif.
@@ -242,6 +253,148 @@ export function buildLeaseEmailHtml(data: LeaseInvitationData): string {
     <div class="footer">
       Cet email vous a été envoyé automatiquement par la plateforme LOCAGESTION dans le cadre de votre contrat de location.<br>
       Piste d'audit numérique certifiée SHA-256 conforme UEMOA, CEMAC & OHADA.<br>
+      © ${new Date().getFullYear()} LOCAGESTION. Tous droits réservés.
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Génère le texte professionnel d'invitation d'un nouveau locataire pour SMS et WhatsApp.
+ */
+export function buildTenantInvitationTextMessage(data: TenantInvitationData): string {
+  const landlord = data.landlordName || 'Votre bailleur';
+  const appUrl = data.appDownloadUrl || (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/download` : 'https://locagestion.site/download');
+  const recipientFirstName = data.recipientName ? data.recipientName.trim().split(' ')[0] : 'Locataire';
+  const propText = data.propertyName ? ` pour votre logement (${data.propertyName})` : '';
+
+  return `Bonjour ${recipientFirstName},
+
+${landlord} vous invite à rejoindre votre espace locataire sécurisé sur LOCAGESTION${propText}.
+
+👉 CLIQUEZ ICI POUR ACCÉDER DIRECTEMENT À VOTRE ESPACE :
+${data.portalUrl}
+
+📲 Téléchargez l'application mobile LOCAGESTION (Android & iOS) :
+${appUrl}
+
+🔑 Votre code d'activation sécurisé : ${data.invitationCode}
+
+Retrouvez vos quittances officielles certifiées avec QR Code scellé, le suivi de vos paiements et échangez directement avec votre bailleur.
+
+LOCAGESTION — Gestion Immobilière Sécurisée`;
+}
+
+/**
+ * Génère le sujet du courriel officiel d'invitation locataire.
+ */
+export function buildTenantEmailSubject(data: TenantInvitationData): string {
+  const landlord = data.landlordName || 'Votre bailleur';
+  return `[LOCAGESTION] ${landlord} vous invite à rejoindre votre espace locataire sécurisé`;
+}
+
+/**
+ * Corps texte brut de l'invitation locataire.
+ */
+export function buildTenantEmailPlainText(data: TenantInvitationData): string {
+  return buildTenantInvitationTextMessage(data);
+}
+
+/**
+ * Lien mailto direct pour l'invitation locataire.
+ */
+export function buildTenantMailtoUrl(data: TenantInvitationData): string {
+  const subject = buildTenantEmailSubject(data);
+  const body = buildTenantEmailPlainText(data);
+  return `mailto:${encodeURIComponent(data.recipientEmail)}?subject=${encodeURIComponent(
+    subject
+  )}&body=${encodeURIComponent(body)}`;
+}
+
+/**
+ * Lien Gmail Web pour l'invitation locataire.
+ */
+export function buildTenantGmailComposeUrl(data: TenantInvitationData): string {
+  const subject = buildTenantEmailSubject(data);
+  const body = buildTenantEmailPlainText(data);
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(
+    data.recipientEmail
+  )}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/**
+ * Gabarit HTML officiel pour l'invitation d'un nouveau locataire.
+ */
+export function buildTenantEmailHtml(data: TenantInvitationData): string {
+  const landlord = data.landlordName || 'Votre bailleur';
+  const appUrl = data.appDownloadUrl || (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/download` : 'https://locagestion.site/download');
+  const recipientFirstName = data.recipientName ? data.recipientName.trim().split(' ')[0] : 'Locataire';
+
+  return `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Invitation Espace Locataire LOCAGESTION</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f1f5f9; margin: 0; padding: 24px; color: #1e293b; }
+    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 20px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
+    .header { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); color: #ffffff; padding: 32px 28px; text-align: center; }
+    .logo { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; color: #38bdf8; margin-bottom: 8px; }
+    .header h1 { margin: 0; font-size: 20px; font-weight: 800; }
+    .header p { margin: 8px 0 0; color: #94a3b8; font-size: 13px; }
+    .content { padding: 32px 28px; }
+    .greeting { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 16px; }
+    .box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 18px; margin: 20px 0; }
+    .activation-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 14px; text-align: center; margin: 20px 0; }
+    .activation-code { font-family: monospace; font-size: 18px; font-weight: 900; color: #166534; letter-spacing: 2px; }
+    .btn-container { text-align: center; margin: 28px 0; }
+    .btn { display: inline-block; background: linear-gradient(135deg, #e11d48 0%, #f43f5e 100%); color: #ffffff !important; text-decoration: none; font-weight: 800; font-size: 15px; padding: 14px 32px; border-radius: 12px; box-shadow: 0 6px 20px rgba(225, 29, 72, 0.35); }
+    .footer { background: #f8fafc; padding: 20px 28px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">⚡ LOCAGESTION</div>
+      <h1>Invitation à Rejoindre votre Espace Locataire</h1>
+      <p>Portail Résidentiel & Gestion Locative Certifiée</p>
+    </div>
+    <div class="content">
+      <div class="greeting">Bonjour ${recipientFirstName},</div>
+      <p style="font-size: 14px; line-height: 1.6; color: #334155;">
+        Votre bailleur <strong>${landlord}</strong> vous invite à activer votre espace résidentiel sur la plateforme <strong>LOCAGESTION</strong>.
+      </p>
+
+      <div class="box">
+        <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #475569;">
+          Depuis votre espace sécurisé, vous pourrez à tout moment :<br>
+          ✓ Télécharger vos <strong>quittances officielles certifiées</strong> avec QR code scellé.<br>
+          ✓ Déclarer et régler vos loyers par Mobile Money et virement.<br>
+          ✓ Suivre votre contrat de bail et signaler vos besoins d'assistance.<br>
+          ✓ Dialoguer directement avec votre bailleur en temps réel.
+        </p>
+      </div>
+
+      <div class="activation-box">
+        <div style="font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase; margin-bottom: 4px;">Votre Code d'Activation Personnel</div>
+        <div class="activation-code">${data.invitationCode}</div>
+        <div style="font-size: 11px; color: #15803d; margin-top: 4px;">Utilisez ce code ou le bouton ci-dessous pour accéder directement à votre espace</div>
+      </div>
+
+      <div class="btn-container">
+        <a href="${data.portalUrl}" class="btn" target="_blank">Rejoindre mon Espace Locataire →</a>
+      </div>
+
+      <div style="background: #f1f5f9; border-radius: 12px; padding: 14px; margin-top: 24px; font-size: 12px; color: #475569;">
+        <strong>📱 Application Mobile Locataire :</strong><br>
+        Téléchargez également l'application mobile LOCAGESTION pour Android et iOS :<br>
+        <a href="${appUrl}" style="color: #e11d48; font-weight: bold;">${appUrl}</a>
+      </div>
+    </div>
+    <div class="footer">
+      Cet email a été envoyé automatiquement par la plateforme LOCAGESTION sur demande de votre bailleur ${landlord}.<br>
       © ${new Date().getFullYear()} LOCAGESTION. Tous droits réservés.
     </div>
   </div>

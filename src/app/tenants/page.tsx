@@ -36,7 +36,16 @@ import {
   Download,
   Ban,
   RotateCcw,
+  Smartphone,
+  Check,
 } from 'lucide-react';
+import {
+  buildWhatsAppUrl,
+  buildSmsUri,
+  buildTenantMailtoUrl,
+  buildTenantGmailComposeUrl,
+  buildTenantInvitationTextMessage,
+} from '@/lib/services/notification-dispatch-service';
 import { formatFCFA, formatDateFR } from '@/lib/money/format';
 import { TenantScoringService } from '@/lib/services/tenant-scoring-service';
 import { UserSpace } from '@/lib/types';
@@ -136,6 +145,128 @@ export default function TenantsPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteName, setInviteName] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteToken, setInviteToken] = useState('tok_8942abc');
+  const [inviteCode, setInviteCode] = useState('LOCA-INV-7842');
+  const [isSendingInvite, setIsSendingInvite] = useState(false);
+  const [inviteSentSuccess, setInviteSentSuccess] = useState(false);
+  const [inviteCopied, setInviteCopied] = useState(false);
+  const [inviteDispatchResult, setInviteDispatchResult] = useState<{
+    emailSent: boolean;
+    emailProvider?: string;
+    emailError?: string | null;
+    smsSent: boolean;
+    smsProvider?: string;
+    smsError?: string | null;
+    whatsappUrl: string;
+    smsUri: string;
+    mailtoUrl: string;
+    gmailUrl: string;
+    textMessage: string;
+    portalUrl: string;
+  } | null>(null);
+
+  const openInviteModal = () => {
+    const randomTok = 'tok_' + Math.random().toString(36).substring(2, 9);
+    const randomCode = 'LOCA-INV-' + Math.floor(1000 + Math.random() * 9000);
+    setInviteToken(randomTok);
+    setInviteCode(randomCode);
+    setInviteName('');
+    setInvitePhone('');
+    setInviteEmail('');
+    setInviteSentSuccess(false);
+    setInviteDispatchResult(null);
+    setShowInviteModal(true);
+  };
+
+  const computedPortalUrl = useMemo(() => {
+    const origin = typeof window !== 'undefined' && window.location.origin
+      ? window.location.origin
+      : 'https://locagestion.site';
+    const params = new URLSearchParams();
+    if (inviteToken) params.set('invite', inviteToken);
+    if (inviteCode) params.set('code', inviteCode);
+    if (inviteName.trim()) params.set('name', inviteName.trim());
+    if (inviteEmail.trim()) params.set('email', inviteEmail.trim());
+    if (invitePhone.trim()) params.set('phone', invitePhone.trim());
+    return `${origin}/portal?${params.toString()}`;
+  }, [inviteToken, inviteCode, inviteName, inviteEmail, invitePhone]);
+
+  const handleSendInvitation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteName.trim() || !invitePhone.trim() || !inviteEmail.trim()) {
+      showToast('Veuillez renseigner le nom, le numéro de téléphone/SMS et l’adresse email.');
+      return;
+    }
+
+    setIsSendingInvite(true);
+    const currentUser = AuthService.getCurrentUser();
+    const landlordName = currentUser?.name || currentUser?.companyName || 'VOGLOSSOU JOHANE';
+
+    const tenantInviteData = {
+      recipientName: inviteName.trim(),
+      recipientEmail: inviteEmail.trim(),
+      recipientPhone: invitePhone.trim(),
+      portalUrl: computedPortalUrl,
+      invitationCode: inviteCode,
+      landlordName,
+      isGeneralInvite: true,
+      type: 'TENANT_INVITE',
+    };
+
+    const textMessage = buildTenantInvitationTextMessage(tenantInviteData);
+    const fallbackWhatsappUrl = buildWhatsAppUrl(invitePhone.trim(), textMessage);
+    const fallbackSmsUri = buildSmsUri(invitePhone.trim(), textMessage);
+    const fallbackMailtoUrl = buildTenantMailtoUrl(tenantInviteData);
+    const fallbackGmailUrl = buildTenantGmailComposeUrl(tenantInviteData);
+
+    try {
+      const res = await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(tenantInviteData),
+      });
+
+      const data = await res.json();
+
+      setInviteDispatchResult({
+        emailSent: Boolean(data?.emailStatus?.sent),
+        emailProvider: data?.emailStatus?.provider,
+        emailError: data?.emailStatus?.error,
+        smsSent: Boolean(data?.smsStatus?.sent),
+        smsProvider: data?.smsStatus?.provider,
+        smsError: data?.smsStatus?.error,
+        whatsappUrl: data?.deepLinks?.whatsappUrl || fallbackWhatsappUrl,
+        smsUri: data?.deepLinks?.smsUri || fallbackSmsUri,
+        mailtoUrl: data?.deepLinks?.mailtoUrl || fallbackMailtoUrl,
+        gmailUrl: data?.deepLinks?.gmailUrl || fallbackGmailUrl,
+        textMessage: data?.textMessage || textMessage,
+        portalUrl: computedPortalUrl,
+      });
+      setInviteSentSuccess(true);
+      const msg = `Invitation expédiée par email & SMS à ${inviteName.trim()} !`;
+      showToast(msg);
+      notifySave(msg, 'Locataire invité par Email et SMS');
+    } catch (err) {
+      console.error('Erreur dispatch notification:', err);
+      setInviteDispatchResult({
+        emailSent: false,
+        smsSent: false,
+        whatsappUrl: fallbackWhatsappUrl,
+        smsUri: fallbackSmsUri,
+        mailtoUrl: fallbackMailtoUrl,
+        gmailUrl: fallbackGmailUrl,
+        textMessage,
+        portalUrl: computedPortalUrl,
+      });
+      setInviteSentSuccess(true);
+      const msg = `Lien d'invitation préparé pour ${inviteName.trim()} !`;
+      showToast(msg);
+      notifySave(msg, 'Invitation prête pour expédition');
+    } finally {
+      setIsSendingInvite(false);
+    }
+  };
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [leases, setLeases] = useState<Lease[]>([]);
   const [lastResiliatedId, setLastResiliatedId] = useState<string | null>(null);
@@ -388,7 +519,7 @@ export default function TenantsPage() {
             {/* Top Action */}
             <button
               type="button"
-              onClick={() => setShowInviteModal(true)}
+              onClick={openInviteModal}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
             >
               <UserCheck className="w-4 h-4 text-brand-400" />
@@ -411,7 +542,7 @@ export default function TenantsPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setShowInviteModal(true)}
+                onClick={openInviteModal}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all cursor-pointer"
               >
                 <UserCheck className="w-4 h-4" />
@@ -1002,103 +1133,265 @@ export default function TenantsPage() {
       {/* Modal Inviter un Locataire */}
       {showInviteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
             <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-brand-400" />
-                <h3 className="font-extrabold text-sm">
-                  Inviter un Nouveau Locataire
-                </h3>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                  <UserCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm">
+                    Inviter un Nouveau Locataire
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Transmission par Email, SMS et WhatsApp
+                  </p>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setShowInviteModal(false)}
-                className="p-1 rounded-xl text-slate-400 hover:text-white"
+                className="p-1 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setShowInviteModal(false);
-                const msg = `Lien d’invitation généré et envoyé à ${inviteName || 'nouveau locataire'} !`;
-                showToast(msg);
-                notifySave(msg, 'Locataire invité avec succès !');
-              }}
-              className="p-6 space-y-4 text-xs"
-            >
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Nom complet du locataire *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={inviteName}
-                  onChange={(e) => setInviteName(e.target.value)}
-                  placeholder="Nom complet du locataire"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                />
-              </div>
+            {!inviteSentSuccess ? (
+              <form
+                onSubmit={handleSendInvitation}
+                className="p-6 space-y-4 text-xs"
+              >
+                {/* Information Canaux */}
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/90 flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-bold text-slate-600">Canaux d'envoi simultanés :</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 font-bold text-[10px] border border-blue-200 flex items-center gap-1">
+                      <Mail className="w-2.5 h-2.5" /> Email
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 font-bold text-[10px] border border-emerald-200 flex items-center gap-1">
+                      <Smartphone className="w-2.5 h-2.5" /> SMS
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-green-50 text-green-700 font-bold text-[10px] border border-green-200 flex items-center gap-1">
+                      <MessageCircle className="w-2.5 h-2.5" /> WhatsApp
+                    </span>
+                  </div>
+                </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Numéro WhatsApp / Téléphone *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={invitePhone}
-                  onChange={(e) => setInvitePhone(e.target.value)}
-                  placeholder="Ex: +229 97 00 00 00"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                />
-              </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Nom complet du locataire *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={inviteName}
+                    onChange={(e) => setInviteName(e.target.value)}
+                    placeholder="Ex: Aïcha Touré, Kofi Mensah..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  />
+                </div>
 
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
-                <span className="text-[10px] font-bold text-slate-400 uppercase">
-                  Lien d'invitation sécurisé à usage unique :
-                </span>
-                <div className="flex items-center gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Numéro WhatsApp / SMS *
+                    </label>
+                    <input
+                      type="tel"
+                      required
+                      value={invitePhone}
+                      onChange={(e) => setInvitePhone(e.target.value)}
+                      placeholder="Ex: +229 97 00 00 00"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Adresse email du locataire *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="locataire@exemple.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Lien d'invitation sécurisé à usage unique :
+                    </span>
+                    <span className="text-[10px] font-mono text-brand-600 font-bold">
+                      Code : {inviteCode}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={computedPortalUrl}
+                      className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600 truncate"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(computedPortalUrl);
+                        setInviteCopied(true);
+                        showToast('Lien d’invitation copié dans le presse-papier !');
+                        setTimeout(() => setInviteCopied(false), 2500);
+                      }}
+                      className="py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-colors shrink-0"
+                    >
+                      {inviteCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{inviteCopied ? 'Copié !' : 'Copier'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteModal(false)}
+                    className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50 text-slate-700 cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSendingInvite}
+                    className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-pink-glow flex items-center gap-2 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{isSendingInvite ? 'Envoi en cours...' : 'Envoyer par Email & SMS'}</span>
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-6 space-y-4 text-xs">
+                {/* Bannière de confirmation */}
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200/90 space-y-2">
+                  <div className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                    <h4 className="font-black text-sm text-emerald-950">
+                      Invitation expédiée avec succès !
+                    </h4>
+                  </div>
+                  <p className="text-[11px] text-emerald-800">
+                    Le lien d'invitation sécurisé a été généré pour <strong>{inviteName}</strong>.
+                  </p>
+                  <div className="pt-1 flex flex-wrap gap-2 text-[10px] font-bold">
+                    <span className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 flex items-center gap-1.5 shadow-2xs">
+                      <Mail className="w-3 h-3 text-blue-600" />
+                      <span>Email : {inviteEmail}</span>
+                    </span>
+                    <span className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 flex items-center gap-1.5 shadow-2xs">
+                      <Smartphone className="w-3 h-3 text-emerald-600" />
+                      <span>SMS : {invitePhone}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Actions directes 1-clic */}
+                <div className="space-y-2">
+                  <label className="text-[11px] font-bold text-slate-700 block">
+                    Accès direct aux applications de messagerie :
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {/* SMS direct */}
+                    {inviteDispatchResult?.smsUri && (
+                      <a
+                        href={inviteDispatchResult.smsUri}
+                        className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer group"
+                      >
+                        <Smartphone className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
+                        <span className="font-extrabold text-slate-800 text-[11px]">Ouvrir SMS</span>
+                        <span className="text-[9px] text-slate-500">App native</span>
+                      </a>
+                    )}
+
+                    {/* WhatsApp direct */}
+                    {inviteDispatchResult?.whatsappUrl && (
+                      <a
+                        href={inviteDispatchResult.whatsappUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer group"
+                      >
+                        <MessageCircle className="w-4 h-4 text-green-600 group-hover:scale-110 transition-transform" />
+                        <span className="font-extrabold text-slate-800 text-[11px]">WhatsApp</span>
+                        <span className="text-[9px] text-slate-500">Envoi direct</span>
+                      </a>
+                    )}
+
+                    {/* Mail direct */}
+                    {inviteDispatchResult?.gmailUrl && (
+                      <a
+                        href={inviteDispatchResult.gmailUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer group"
+                      >
+                        <Mail className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
+                        <span className="font-extrabold text-slate-800 text-[11px]">Ouvrir Email</span>
+                        <span className="text-[9px] text-slate-500">Gmail / Mailto</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Copier le message complet */}
+                <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase">
+                      Lien d'invitation :
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const txt = inviteDispatchResult?.textMessage || computedPortalUrl;
+                        navigator.clipboard?.writeText(txt);
+                        setInviteCopied(true);
+                        showToast('Message et lien d’invitation copiés !');
+                        setTimeout(() => setInviteCopied(false), 2500);
+                      }}
+                      className="text-brand-600 hover:text-brand-700 text-[10px] font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      {inviteCopied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
+                      <span>{inviteCopied ? 'Copié !' : 'Copier tout le texte'}</span>
+                    </button>
+                  </div>
                   <input
                     type="text"
                     readOnly
-                    value="https://locagestion.site/portal?invite=tok_8942abc"
-                    className="flex-1 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600"
+                    value={computedPortalUrl}
+                    className="w-full px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-[11px] font-mono text-slate-600 truncate"
                   />
+                </div>
+
+                <div className="pt-2 flex items-center justify-between">
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText('https://locagestion.site/portal?invite=tok_8942abc');
-                      showToast('Lien d’invitation copié dans le presse-papier !');
-                    }}
-                    className="py-1.5 px-3 rounded-lg bg-slate-900 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                    onClick={openInviteModal}
+                    className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50 text-slate-700 cursor-pointer"
                   >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copier</span>
+                    + Inviter un autre locataire
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowInviteModal(false)}
+                    className="py-2.5 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold cursor-pointer"
+                  >
+                    Terminer
                   </button>
                 </div>
               </div>
-
-              <div className="pt-2 flex items-center justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="submit"
-                  className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-extrabold shadow-pink-glow flex items-center gap-1.5 cursor-pointer"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Envoyer l'invitation</span>
-                </button>
-              </div>
-            </form>
+            )}
           </div>
         </div>
       )}

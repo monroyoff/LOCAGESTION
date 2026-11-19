@@ -4,10 +4,17 @@ import fs from 'fs';
 import path from 'path';
 import {
   LeaseInvitationData,
+  TenantInvitationData,
   buildLeaseInvitationTextMessage,
   buildLeaseEmailSubject,
   buildLeaseEmailPlainText,
   buildLeaseEmailHtml,
+  buildTenantInvitationTextMessage,
+  buildTenantEmailSubject,
+  buildTenantEmailPlainText,
+  buildTenantEmailHtml,
+  buildTenantMailtoUrl,
+  buildTenantGmailComposeUrl,
   buildWhatsAppUrl,
   buildSmsUri,
   buildMailtoUrl,
@@ -46,34 +53,75 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    const isTenantInvite = Boolean(
+      body.type === 'TENANT_INVITE' ||
+      body.isGeneralInvite ||
+      (!body.leaseId && !body.rent)
+    );
+
+    let textMessage: string;
+    let emailSubject: string;
+    let emailPlainText: string;
+    let emailHtml: string;
+    let whatsappUrl: string;
+    let smsUri: string;
+    let mailtoUrl: string;
+    let gmailUrl: string;
+
+    const recipientName = body.recipientName || 'Locataire';
+    const recipientEmail = body.recipientEmail || '';
+    const recipientPhone = body.recipientPhone || '';
+    const landlordName = body.landlordName || 'Le Bailleur';
+
     const invitationData: LeaseInvitationData = {
-      recipientName: body.recipientName || 'Locataire',
-      recipientEmail: body.recipientEmail || '',
-      recipientPhone: body.recipientPhone || '',
-      leaseId: body.leaseId || 'BAIL-2026',
+      recipientName,
+      recipientEmail,
+      recipientPhone,
+      leaseId: body.leaseId || (isTenantInvite ? 'LOCA-INV' : 'BAIL-2026'),
       propertyName: body.propertyName || 'Logement',
       unitNumber: body.unitNumber || 'Lot',
       rent: Number(body.rent) || 0,
       deposit: body.deposit ? Number(body.deposit) : undefined,
       utilitiesDeposit: body.utilitiesDeposit ? Number(body.utilitiesDeposit) : undefined,
       totalDueAtEntry: body.totalDueAtEntry ? Number(body.totalDueAtEntry) : undefined,
-      portalUrl: body.portalUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/portal?tab=bail` : 'https://locagestion.site/portal?tab=bail'),
+      portalUrl: body.portalUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/portal` : 'https://locagestion.site/portal'),
       appDownloadUrl: body.appDownloadUrl || (process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/download` : 'https://locagestion.site/download'),
       invitationCode: body.invitationCode || 'LOCA-INV-7842',
-      landlordName: body.landlordName || 'Le Bailleur',
+      landlordName,
       countryName: body.countryName,
       governingLaw: body.governingLaw,
     };
 
-    const textMessage = buildLeaseInvitationTextMessage(invitationData);
-    const emailSubject = buildLeaseEmailSubject(invitationData);
-    const emailPlainText = buildLeaseEmailPlainText(invitationData);
-    const emailHtml = buildLeaseEmailHtml(invitationData);
+    if (isTenantInvite) {
+      const tenantData: TenantInvitationData = {
+        recipientName,
+        recipientEmail,
+        recipientPhone,
+        portalUrl: invitationData.portalUrl,
+        appDownloadUrl: invitationData.appDownloadUrl,
+        invitationCode: invitationData.invitationCode,
+        landlordName,
+        propertyName: body.propertyName,
+      };
 
-    const whatsappUrl = buildWhatsAppUrl(invitationData.recipientPhone, textMessage);
-    const smsUri = buildSmsUri(invitationData.recipientPhone, textMessage);
-    const mailtoUrl = buildMailtoUrl(invitationData);
-    const gmailUrl = buildGmailComposeUrl(invitationData);
+      textMessage = buildTenantInvitationTextMessage(tenantData);
+      emailSubject = buildTenantEmailSubject(tenantData);
+      emailPlainText = buildTenantEmailPlainText(tenantData);
+      emailHtml = buildTenantEmailHtml(tenantData);
+      whatsappUrl = buildWhatsAppUrl(recipientPhone, textMessage);
+      smsUri = buildSmsUri(recipientPhone, textMessage);
+      mailtoUrl = buildTenantMailtoUrl(tenantData);
+      gmailUrl = buildTenantGmailComposeUrl(tenantData);
+    } else {
+      textMessage = buildLeaseInvitationTextMessage(invitationData);
+      emailSubject = buildLeaseEmailSubject(invitationData);
+      emailPlainText = buildLeaseEmailPlainText(invitationData);
+      emailHtml = buildLeaseEmailHtml(invitationData);
+      whatsappUrl = buildWhatsAppUrl(invitationData.recipientPhone, textMessage);
+      smsUri = buildSmsUri(invitationData.recipientPhone, textMessage);
+      mailtoUrl = buildMailtoUrl(invitationData);
+      gmailUrl = buildGmailComposeUrl(invitationData);
+    }
 
     let emailSent = false;
     let emailProvider = 'none';
@@ -215,7 +263,7 @@ end tell
     // 3. ENREGISTREMENT AU JOURNAL
     appendNotificationLog({
       timestamp: new Date().toISOString(),
-      type: 'LEASE_INVITATION',
+      type: isTenantInvite ? 'TENANT_INVITATION' : 'LEASE_INVITATION',
       recipientName: invitationData.recipientName,
       recipientEmail: invitationData.recipientEmail,
       recipientPhone: invitationData.recipientPhone,
