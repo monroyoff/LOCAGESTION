@@ -257,7 +257,6 @@ export default function NewLeasePage() {
           const defaultUnit = parsed[0].unitsList?.find((u: any) => u.status === 'vacant') || parsed[0].unitsList?.[0];
           if (defaultUnit) {
             setUnitNumber(`${defaultUnit.unit} (${defaultUnit.type})`);
-            setSurface(String(defaultUnit.surface || ''));
             if (defaultUnit.rent) {
               setMonthlyRent(String(defaultUnit.rent));
             }
@@ -347,7 +346,6 @@ export default function NewLeasePage() {
       if (defaultUnit) {
         setSelectedUnitMode('catalog');
         setUnitNumber(`${defaultUnit.unit} (${defaultUnit.type})`);
-        setSurface(String(defaultUnit.surface || ''));
         if (defaultUnit.rent) {
           setMonthlyRent(String(defaultUnit.rent));
         }
@@ -364,7 +362,6 @@ export default function NewLeasePage() {
   }) => {
     setSelectedUnitMode('catalog');
     setUnitNumber(`${unitObj.unit} (${unitObj.type})`);
-    setSurface(String(unitObj.surface || ''));
     if (unitObj.rent) {
       setMonthlyRent(String(unitObj.rent));
     }
