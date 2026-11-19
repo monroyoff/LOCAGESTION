@@ -152,10 +152,10 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
                 Logement Loué
               </span>
               <h4 className="font-extrabold text-sm text-slate-900">
-                {payment.propertyName || 'Résidence Les Cocotiers'}
+                {payment.propertyName || 'Bien Immobilier'}
               </h4>
               <p className="text-xs text-brand-600 font-bold mt-0.5">
-                {payment.unitNumber || 'Appt A3 (3 pièces)'}
+                {payment.unitNumber || 'Lot loué'}
               </p>
             </div>
           </div>
@@ -209,7 +209,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
           <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 text-xs text-slate-700 leading-relaxed flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
             <p>
-              Je soussigné, représentant légal de <strong>DIALLO PATRIMOINE SARL</strong>,
+              Je soussigné, représentant légal de <strong>{user?.companyName || user?.name || landlordName || 'la Direction de Gestion'}</strong>,
               reconnais avoir reçu de M./Mme <strong>{payment.tenantName}</strong> la somme
               de <strong>{formatFCFA(payment.amount)}</strong> au titre du règlement du loyer
               pour la période de <strong>{payment.period}</strong>, pour le logement situé à{' '}

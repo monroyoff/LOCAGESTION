@@ -168,10 +168,10 @@ export function InspectionModal({
 
   const handleDownloadPDF = () => {
     generateInspectionPDF({
-      id: leaseId || 'BAIL-2026-N09',
+      id: leaseId || 'BAIL-OFFICIEL',
       tenantName: tenantName || 'Locataire',
-      propertyName: propertyName || 'Résidence Les Cocotiers',
-      unit: unitNumber || 'Lot A1',
+      propertyName: propertyName || 'Logement',
+      unit: unitNumber || 'Lot principal',
       date: data.date,
       meterCashPower: data.meterCashPower,
       meterWater: data.meterWater,

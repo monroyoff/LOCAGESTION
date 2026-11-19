@@ -2664,10 +2664,14 @@ export default function NewLeasePage() {
                   <h4 className="text-[10px] font-black uppercase text-slate-400 mb-1">
                     Entre les soussignés (Bailleur) :
                   </h4>
-                  <p className="font-bold text-slate-900">Cabinet DIALLO Patrimoine SARL</p>
-                  <p className="text-[11px] text-slate-600">Représenté par M. Mamadou DIALLO</p>
-                  <p className="text-[11px] text-slate-600">Rue 340, Haie Vive, Cotonou ({activeLaw.countryName})</p>
-                  <p className="text-[11px] text-slate-600 font-mono">IFU : 0202110485960 • Tél : +229 01 95 44 44 30</p>
+                  <p className="font-bold text-slate-900">{user?.companyName || user?.name || 'Le Bailleur Propriétaire'}</p>
+                  {user?.companyName && user?.name && (
+                    <p className="text-[11px] text-slate-600">Représenté par {user.name}</p>
+                  )}
+                  <p className="text-[11px] text-slate-600">{user?.residenceCity || 'Cotonou'} ({activeLaw.countryName})</p>
+                  <p className="text-[11px] text-slate-600 font-mono">
+                    {user?.ifuNumber ? `IFU : ${user.ifuNumber} • ` : ''}Tél : {user?.phone || 'Non renseigné'}
+                  </p>
                 </div>
 
                 <div>

@@ -313,7 +313,7 @@ export const TenantNotificationService = {
       link: '/portal?tab=preavis',
       tenantName: params.tenantName,
       tenantEmail: params.tenantEmail,
-      actor: 'Cabinet DIALLO Patrimoine',
+      actor: 'Votre Bailleur',
       actionLabel: 'Voir le préavis légal',
     });
   },

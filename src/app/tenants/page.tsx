@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -174,7 +174,68 @@ export default function TenantsPage() {
     notifySave(msg, 'Bail réactivé avec succès !');
   };
 
-  const filteredTenants = MOCK_TENANTS.filter((t) => {
+  // Transformer les vrais baux du bailleur en fiches locataires dynamiques
+  const dynamicTenants: TenantDetail[] = useMemo(() => {
+    return leases.map((l, idx) => {
+      const parts = (l.tenant || 'Locataire').trim().split(' ');
+      const firstName = parts.slice(1).join(' ') || parts[0];
+      const lastName = parts[0] || '';
+      return {
+        id: l.id || `loc-${idx}`,
+        firstName,
+        lastName,
+        fullName: l.tenant || 'Locataire',
+        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+        email: l.tenantEmail || '',
+        phone: l.tenantPhone || '',
+        profession: 'Locataire Résident',
+        employer: 'N/A',
+        emergencyContact: {
+          name: l.emergencyContactName || 'N/A',
+          phone: l.emergencyContactPhone || 'N/A',
+          relation: l.emergencyContactRelation || 'Proche',
+        },
+        property: {
+          name: l.property || 'Bien Immobilier',
+          unit: l.unit || 'Lot',
+          address: l.tenantAddress || 'Adresse non renseignée',
+          city: 'Cotonou',
+        },
+        financials: {
+          monthlyRent: l.rent || 0,
+          charges: l.charges || 0,
+          deposit: l.deposit || 0,
+          advanceMonths: l.advanceMonths || 0,
+          paymentDay: 5,
+        },
+        lease: {
+          id: l.id,
+          startDate: l.startDate || '01/01/2026',
+          durationMonths: l.durationMonths || 12,
+          status: l.status === 'resilie' ? 'resilie' : 'actif',
+        },
+        scoring: {
+          score: 95,
+          badge: 'Excellent' as const,
+          onTimeRate: 100,
+          averageDelayDays: 0,
+          maxDelayDays: 0,
+          criticalDelaysCount: 0,
+          finalArrears: 0,
+          historyConsentGranted: true,
+        },
+        recentReceipts: [],
+        inspection: {
+          date: l.startDate || '01/01/2026',
+          generalState: 'Très bon état général',
+          photosCount: 0,
+          signedByBoth: !!l.signedByTenant && !!l.landlordSignedAt,
+        },
+      };
+    });
+  }, [leases]);
+
+  const filteredTenants = dynamicTenants.filter((t) => {
     const matchesSearch =
       t.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -262,7 +323,7 @@ export default function TenantsPage() {
                   Répertoire des Locataires & Dossiers
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand-50 text-brand-600 border border-brand-200">
-                  {MOCK_TENANTS.length} Fiches
+                  {dynamicTenants.length} Fiches
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">

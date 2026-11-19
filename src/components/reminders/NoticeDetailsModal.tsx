@@ -22,6 +22,7 @@ import { Notice, NoticeService, NOTICE_REASONS_CATALOG } from '@/lib/services/no
 import { formatFCFA } from '@/lib/money/format';
 import { generateNoticePDF } from '@/lib/export/pdf-download';
 import { notifyAction, notifyDelete } from '@/lib/notifications/action-notifier';
+import { useAuth } from '@/lib/context/space-context';
 import { NoticeEmailModal } from './NoticeEmailModal';
 
 interface NoticeDetailsModalProps {
@@ -37,6 +38,7 @@ export function NoticeDetailsModal({
   onNoticeUpdated,
   onOpenEmail,
 }: NoticeDetailsModalProps) {
+  const { user } = useAuth();
   const [showEmailModal, setShowEmailModal] = useState(false);
 
   if (!notice) return null;
@@ -88,7 +90,8 @@ export function NoticeDetailsModal({
 
   const handleWhatsApp = () => {
     const phoneClean = notice.tenantPhone.replace(/[^0-9]/g, '');
-    const message = `*RAPPEL PRÉAVIS DE CONGÉ DU BAIL (${notice.id})*\n\nBonjour M./Mme *${notice.tenantName}*,\n\nNous vous rappelons que votre préavis de congé pour votre logement *${notice.propertyName} (${notice.unitNumber})* est actuellement en cours.\n\n📌 *Motif :* ${notice.reasonTitle}\n🗓️ *Date limite de libération des locaux :* ${notice.effectiveDate} (${daysRemaining > 0 ? `${daysRemaining} jours restants` : 'Échéance atteinte'})\n\nNous restons à votre disposition pour coordonner l'état des lieux de sortie contradictoire et la remise des clés.\n\n*Direction DIALLO Patrimoine*`;
+    const landlordName = user?.companyName || user?.name || 'Votre Bailleur';
+    const message = `*RAPPEL PRÉAVIS DE CONGÉ DU BAIL (${notice.id})*\n\nBonjour M./Mme *${notice.tenantName}*,\n\nNous vous rappelons que votre préavis de congé pour votre logement *${notice.propertyName} (${notice.unitNumber})* est actuellement en cours.\n\n📌 *Motif :* ${notice.reasonTitle}\n🗓️ *Date limite de libération des locaux :* ${notice.effectiveDate} (${daysRemaining > 0 ? `${daysRemaining} jours restants` : 'Échéance atteinte'})\n\nNous restons à votre disposition pour coordonner l'état des lieux de sortie contradictoire et la remise des clés.\n\n*${landlordName}*`;
 
     const encoded = encodeURIComponent(message);
     window.open(`https://wa.me/${phoneClean}?text=${encoded}`, '_blank');

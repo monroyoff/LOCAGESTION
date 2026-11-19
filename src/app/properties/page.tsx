@@ -66,12 +66,12 @@ export default function PropertiesPage() {
               propertyChanged = true;
               p = {
                 ...p,
-                authorId: defaultBailleur?.id || 'usr_bailleur_1',
-                authorName: defaultBailleur?.name || 'Mamadou Diallo',
-                authorEmail: defaultBailleur?.email || 'mamadou.diallo@locagestion.site',
-                authorPhone: defaultBailleur?.phone || '+229 97 00 00 01',
-                authorCompany: defaultBailleur?.companyName || 'Immobilier Diallo & Frères',
-                authorMatricule: defaultBailleur?.matricule || 'MAT-BJ-84210',
+                authorId: user?.id || defaultBailleur?.id || 'usr_bailleur_1',
+                authorName: user?.name || defaultBailleur?.name || 'Bailleur Propriétaire',
+                authorEmail: user?.email || defaultBailleur?.email || '',
+                authorPhone: user?.phone || defaultBailleur?.phone || '',
+                authorCompany: user?.companyName || defaultBailleur?.companyName || '',
+                authorMatricule: user?.matricule || defaultBailleur?.matricule || '',
                 authorRole: 'bailleur',
                 createdAt: p.createdAt || '15/01/2025',
               };

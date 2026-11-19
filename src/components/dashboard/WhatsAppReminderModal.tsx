@@ -14,6 +14,7 @@ import { PaymentTransaction } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 import { notifyAction } from '@/lib/notifications/action-notifier';
 import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
+import { AuthService } from '@/lib/services/auth-service';
 
 interface WhatsAppReminderModalProps {
   payment: PaymentTransaction | null;
@@ -27,6 +28,9 @@ export function WhatsAppReminderModal({ payment, onClose }: WhatsAppReminderModa
   if (!payment) return null;
 
   const cleanPhone = payment.tenantPhone.replace(/[^0-9]/g, '');
+  const currentUser = AuthService.getCurrentUser();
+  const senderName = payment.landlordName || currentUser?.companyName || currentUser?.name || 'La Direction de Gestion';
+  const senderPhone = currentUser?.phone || 'notre gestion';
 
   const messageText =
     urgencyLevel === 'courtois'
@@ -39,14 +43,13 @@ Sauf erreur de notre part, nous n'avons pas encore enregistré le règlement de 
 Montant restant dû : ${formatFCFA(payment.expectedAmount)}
 
 Moyens de paiement acceptés :
-• Wave au +229 01 95 44 44 30
-• MTN Mobile Money / Moov Money au +229 01 95 44 44 30
-• Virement bancaire sur compte BOA/UBA
+• Mobile Money (Wave, MTN, Moov, Orange)
+• Virement bancaire ou règlement direct
 
 Merci de bien vouloir nous faire parvenir la confirmation de votre règlement dès que possible.
 
 Bien cordialement,
-Direction DIALLO PATRIMOINE SARL`
+${senderName}`
       : `NOTIFICATION OFFICIELLE DE RETARD DE LOYER
 
 À l'attention de M./Mme ${payment.tenantName},
@@ -58,9 +61,9 @@ Conformément aux clauses de votre contrat de bail et à la réglementation en v
 
 En l'absence de régularisation, une procédure formelle de mise en demeure sera engagée.
 
-Pour toute difficulté, merci de nous contacter d'urgence au +229 01 95 44 44 30.
+Pour toute difficulté, merci de nous contacter d'urgence au ${senderPhone}.
 
-DIALLO PATRIMOINE SARL`;
+${senderName}`;
 
   const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
 

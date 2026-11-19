@@ -34,6 +34,7 @@ import { LeaseService, RegisteredTenant } from '@/lib/services/lease-service';
 import { formatFCFA } from '@/lib/money/format';
 import { generateNoticePDF } from '@/lib/export/pdf-download';
 import { notifyAction } from '@/lib/notifications/action-notifier';
+import { useAuth } from '@/lib/context/space-context';
 import { NoticeEmailModal } from './NoticeEmailModal';
 
 interface IssueNoticeModalProps {
@@ -49,6 +50,7 @@ export function IssueNoticeModal({
   onNoticeCreated,
   preselectedTenantName,
 }: IssueNoticeModalProps) {
+  const { user } = useAuth();
   const [registeredTenants, setRegisteredTenants] = useState<RegisteredTenant[]>(() => {
     if (typeof window !== 'undefined') {
       return LeaseService.getRegisteredTenants();
@@ -224,7 +226,9 @@ export function IssueNoticeModal({
   const handleShareWhatsApp = () => {
     const payload = buildNoticePayload();
     const phoneClean = payload.tenantPhone.replace(/[^0-9]/g, '');
-    const message = `*NOTIFICATION FORMELLE DE CONGÉ / PRÉAVIS DE BAIL*\n\nBonjour M./Mme *${payload.tenantName}*,\n\nNous vous notifions officiellement par la présente le préavis de congé concernant votre logement : *${payload.propertyName} (${payload.unitNumber})*.\n\n📌 *Motif du congé :* ${payload.reasonTitle}\n⚖️ *Fondement juridique :* ${payload.legalBasis}\n⏳ *Délai de préavis légal :* ${payload.noticeMonths} mois\n🗓️ *Date impérative de libération des lieux :* ${payload.effectiveDate}\n\nConformément à la réglementation UEMOA, le paiement régulier des loyers demeure obligatoire jusqu'à la remise effective de l'intégralité des clés.\n\nL'état des lieux de sortie contradictoire et la restitution de caution seront organisés à l'échéance du préavis.\n\n*Cabinet DIALLO Patrimoine & Gestion Immobilière*\nContact : +229 97 12 34 56`;
+    const landlordName = user?.companyName || user?.name || 'Le Bailleur Propriétaire';
+    const landlordContact = user?.phone ? `Contact : ${user.phone}` : 'Direction de Gestion';
+    const message = `*NOTIFICATION FORMELLE DE CONGÉ / PRÉAVIS DE BAIL*\n\nBonjour M./Mme *${payload.tenantName}*,\n\nNous vous notifions officiellement par la présente le préavis de congé concernant votre logement : *${payload.propertyName} (${payload.unitNumber})*.\n\n📌 *Motif du congé :* ${payload.reasonTitle}\n⚖️ *Fondement juridique :* ${payload.legalBasis}\n⏳ *Délai de préavis légal :* ${payload.noticeMonths} mois\n🗓️ *Date impérative de libération des lieux :* ${payload.effectiveDate}\n\nConformément à la réglementation UEMOA, le paiement régulier des loyers demeure obligatoire jusqu'à la remise effective de l'intégralité des clés.\n\nL'état des lieux de sortie contradictoire et la restitution de caution seront organisés à l'échéance du préavis.\n\n*${landlordName}*\n${landlordContact}`;
 
     const encoded = encodeURIComponent(message);
     window.open(`https://wa.me/${phoneClean}?text=${encoded}`, '_blank');
@@ -376,7 +380,7 @@ export function IssueNoticeModal({
                       required
                       value={monthlyRent}
                       onChange={(e) => setMonthlyRent(Number(e.target.value))}
-                      placeholder="220000"
+                      placeholder="Ex: 50000"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                     />
                   </div>

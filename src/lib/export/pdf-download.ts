@@ -9,6 +9,18 @@ import jsPDF from 'jspdf';
 import { formatFCFA } from '@/lib/money/format';
 import { notifyDownloadComplete } from './download-notifier';
 import { resolveCountryTenancyLaw } from '@/lib/legal/country-tenancy-law';
+import { AuthService } from '@/lib/services/auth-service';
+
+function getPdfLandlordProfile(explicitLandlord?: string) {
+  const current = typeof window !== 'undefined' ? AuthService.getCurrentUser() : null;
+  const name = explicitLandlord || current?.companyName || current?.name || 'Le Bailleur Propriétaire';
+  const representative = current?.companyName && current?.name ? current.name : current?.name || name;
+  const city = current?.residenceCity || 'Cotonou';
+  const country = current?.residenceCountry || 'Bénin';
+  const phone = current?.phone || '';
+  const email = current?.email || 'contact@locagestion.site';
+  return { name, representative, city, country, phone, email };
+}
 
 // ============================================================================
 // TYPES
@@ -338,17 +350,18 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   doc.text('ATTESTATION DE CONTRESIGNATURE ÉLECTRONIQUE (HORODATAGE LÉGAL)', margin + 4, y + 6);
 
   // Signature Bailleur
+  const leaseLandlord = getPdfLandlordProfile(data.landlordName);
   doc.setFontSize(7.5);
   doc.text('Le Bailleur (Propriétaire)', margin + 4, y + 12);
   doc.setFont('helvetica', 'normal');
-  doc.text('Mamadou DIALLO — Gérant', margin + 4, y + 16);
+  doc.text(`${leaseLandlord.representative} — Bailleur`, margin + 4, y + 16);
   doc.setTextColor(5, 150, 105); // emerald-600
   doc.setFont('helvetica', 'bold');
   doc.text('Signé numériquement ✓', margin + 4, y + 21);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
   doc.text(`Date : ${data.landlordSignedAt || data.startDate}`, margin + 4, y + 26);
-  doc.text('Certifié conforme par Cabinet DIALLO Patrimoine', margin + 4, y + 30);
+  doc.text(`Certifié conforme par ${leaseLandlord.name}`, margin + 4, y + 30);
 
   // Signature Locataire
   doc.setTextColor(15, 23, 42);
@@ -406,10 +419,11 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   doc.setFillColor(15, 23, 42);
   doc.rect(margin, y, contentWidth, 20, 'F');
 
+  const receiptLandlord = getPdfLandlordProfile();
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('CABINET DIALLO PATRIMOINE SARL • GESTION LOCATIVE', margin + contentWidth / 2, y + 7, {
+  doc.text(`${receiptLandlord.name.toUpperCase()} • GESTION LOCATIVE`, margin + contentWidth / 2, y + 7, {
     align: 'center',
   });
 
@@ -596,7 +610,7 @@ export function generateReceiptPDF(payment: ReceiptPDFData, customFilename?: str
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
-  doc.text('Signature autorisée : Mamadou DIALLO — Gérant', margin + 4, y + 12);
+  doc.text(`Signature autorisée : ${receiptLandlord.representative} — Gérant`, margin + 4, y + 12);
   doc.setTextColor(5, 150, 105);
   doc.setFont('helvetica', 'bold');
   doc.text('Sceau de certification électronique apposé ✓', margin + 4, y + 17);
@@ -669,6 +683,7 @@ export function generateInspectionPDF(data: InspectionPDFData, customFilename?: 
   y += 20;
 
   // Cadre Logement & Parties
+  const inspectionLandlord = getPdfLandlordProfile();
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(margin, y, contentWidth, 22, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
@@ -679,7 +694,7 @@ export function generateInspectionPDF(data: InspectionPDFData, customFilename?: 
   doc.setFontSize(7.5);
   doc.setTextColor(71, 85, 105);
   doc.text(`• Logement : ${data.propertyName} — Lot ${data.unit}`, margin + 4, y + 11);
-  doc.text(`• Bailleur représenté : Cabinet DIALLO Patrimoine SARL (M. Mamadou DIALLO)`, margin + 4, y + 15);
+  doc.text(`• Bailleur représenté : ${inspectionLandlord.name}`, margin + 4, y + 15);
   doc.text(`• Locataire entrant : M./Mme ${data.tenantName}`, margin + 4, y + 19);
 
   y += 28;
@@ -739,7 +754,7 @@ export function generateInspectionPDF(data: InspectionPDFData, customFilename?: 
   doc.setFontSize(7.5);
   doc.text('Signature du Bailleur', margin + 4, y + 13);
   doc.setFont('helvetica', 'normal');
-  doc.text('Mamadou DIALLO — Lu et approuvé ✓', margin + 4, y + 18);
+  doc.text(`${inspectionLandlord.representative} — Lu et approuvé ✓`, margin + 4, y + 18);
   doc.text(`Date : ${data.date || '01/11/2025'}`, margin + 4, y + 23);
 
   const col2 = margin + contentWidth / 2;
@@ -839,15 +854,16 @@ export function generateNoticePDF(data: NoticePDFData, customFilename?: string):
   doc.setTextColor(30, 41, 59);
   doc.text('LE BAILLEUR / GESTIONNAIRE', margin + 4, y + 6.5);
 
+  const noticeLandlord = getPdfLandlordProfile();
   doc.setFontSize(8);
   doc.setTextColor(51, 65, 85);
-  doc.text('Cabinet DIALLO Patrimoine Immobilier', margin + 4, y + 13);
+  doc.text(noticeLandlord.name, margin + 4, y + 13);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7);
-  doc.text('Représenté par Mamadou DIALLO', margin + 4, y + 17.5);
-  doc.text('Rue 340, Haie Vive, Cotonou (Bénin)', margin + 4, y + 22);
-  doc.text('Tél : +229 01 95 44 44 30 • Email : contact@locagestion.site', margin + 4, y + 26.5);
-  doc.text('Réf. Mandat de Gestion : MANDAT-2026-COTI', margin + 4, y + 31);
+  doc.text(`Représenté par ${noticeLandlord.representative}`, margin + 4, y + 17.5);
+  doc.text(`${noticeLandlord.city} (${noticeLandlord.country})`, margin + 4, y + 22);
+  doc.text(`${noticeLandlord.phone ? `Tél : ${noticeLandlord.phone} • ` : ''}Email : ${noticeLandlord.email}`, margin + 4, y + 26.5);
+  doc.text('Mandat de gestion certifié LOCAGESTION', margin + 4, y + 31);
 
   // Cadre Locataire & Logement
   const col2X = margin + colWidth + 6;
@@ -1002,8 +1018,8 @@ export function generateNoticePDF(data: NoticePDFData, customFilename?: string):
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(6.8);
   doc.setTextColor(100, 116, 139);
-  doc.text('Mamadou DIALLO • Signé numériquement ✓', margin + 4, y + 10);
-  doc.text(`Fait à Cotonou, le ${data.noticeDate}`, margin + 4, y + 15);
+  doc.text(`${noticeLandlord.representative} • Signé numériquement ✓`, margin + 4, y + 10);
+  doc.text(`Fait à ${noticeLandlord.city}, le ${data.noticeDate}`, margin + 4, y + 15);
   doc.text('Cachet certifié LOCAGESTION UEMOA', margin + 4, y + 20);
 
   // Accusé de réception Preneur
@@ -1093,9 +1109,9 @@ export function downloadDocument(filename: string, content: string, mimeType: st
     const noticeId = idMatch ? idMatch[1] : 'PREAV-2026-001';
     generateNoticePDF({
       id: noticeId,
-      tenantName: 'Jean-Marc Kouassi',
-      propertyName: 'Immeuble Palmier Royal',
-      unitNumber: 'Lot 101',
+      tenantName: 'Locataire',
+      propertyName: 'Bien Immobilier',
+      unitNumber: 'Lot',
       monthlyRent: 120000,
       reasonType: 'reprise_personnelle',
       reasonTitle: 'Reprise pour Habitation Personnelle',

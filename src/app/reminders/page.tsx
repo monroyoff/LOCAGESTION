@@ -47,9 +47,11 @@ import { IssueNoticeModal } from '@/components/reminders/IssueNoticeModal';
 import { NoticeDetailsModal } from '@/components/reminders/NoticeDetailsModal';
 import { NoticeEmailModal } from '@/components/reminders/NoticeEmailModal';
 import { generateNoticePDF } from '@/lib/export/pdf-download';
+import { useAuth } from '@/lib/context/space-context';
 
 export default function RemindersCenterPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
   const [collectiveAuto, setCollectiveAuto] = useState(true);
@@ -744,7 +746,8 @@ export default function RemindersCenterPage() {
                               type="button"
                               onClick={() => {
                                 const phoneClean = item.tenantPhone.replace(/[^0-9]/g, '');
-                                const msg = `*NOTIFICATION DE PRÉAVIS DE CONGÉ*\n\nBonjour M./Mme *${item.tenantName}*,\n\nNous vous informons que votre préavis de congé pour votre logement *${item.propertyName} (${item.unitNumber})* arrive à échéance le *${item.effectiveDate}*.\n\n📌 *Motif :* ${item.reasonTitle}\n\nMerci de contacter la gestion pour coordonner l'état des lieux de sortie.\n\n*Cabinet DIALLO Patrimoine*`;
+                                const senderName = user?.companyName || user?.name || 'La Direction du Patrimoine';
+                                const msg = `*NOTIFICATION DE PRÉAVIS DE CONGÉ*\n\nBonjour M./Mme *${item.tenantName}*,\n\nNous vous informons que votre préavis de congé pour votre logement *${item.propertyName} (${item.unitNumber})* arrive à échéance le *${item.effectiveDate}*.\n\n📌 *Motif :* ${item.reasonTitle}\n\nMerci de contacter la gestion pour coordonner l'état des lieux de sortie.\n\n*${senderName}*`;
                                 window.open(
                                   `https://wa.me/${phoneClean}?text=${encodeURIComponent(msg)}`,
                                   '_blank'
@@ -836,7 +839,7 @@ export default function RemindersCenterPage() {
 
             <div className="p-6 space-y-4 text-xs">
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-slate-800 whitespace-pre-wrap leading-relaxed font-sans">
-                {`Bonjour [Nom du Locataire],\n\nLe Cabinet DIALLO Patrimoine vous rappelle que l'échéance de votre loyer du mois prochain sera exigible le 05.\n\nModes de règlement acceptés :\n• Wave : +229 97 12 34 56 (Réf: Votre nom)\n• MTN Mobile Money : +229 95 12 34 56\n• Virement BOA Bénin\n\nVotre quittance certifiée vous sera immédiatement délivrée dès validation.\n\nExcellente fin de mois,\nLa Direction de Gestion`}
+                {`Bonjour [Nom du Locataire],\n\n${user?.companyName || user?.name || 'Votre Bailleur'} vous rappelle que l'échéance de votre loyer du mois prochain sera exigible le 05.\n\nModes de règlement acceptés :\n• Mobile Money (Wave, MTN, Moov, Orange)\n• Virement bancaire ou règlement direct\n\nVotre quittance certifiée vous sera immédiatement délivrée dès validation.\n\nExcellente fin de mois,\nLa Direction de Gestion`}
               </div>
 
               <div className="p-3 bg-blue-50 rounded-2xl border border-blue-200 text-[11px] text-blue-800 flex items-center gap-2">

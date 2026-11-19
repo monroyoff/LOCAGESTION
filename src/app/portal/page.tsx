@@ -2592,7 +2592,7 @@ function TenantPortalContent() {
                     </h3>
                   </div>
                   <span className="text-[11px] font-semibold text-slate-400">
-                    Échéance mensuelle au 05
+                    {currentLease ? `Échéance mensuelle au ${tenant.dueDate || '05'}` : 'Aucune échéance'}
                   </span>
                 </div>
 
@@ -2601,25 +2601,33 @@ function TenantPortalContent() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-black text-slate-900">
-                          Échéance Courante : Novembre 2026
+                          {currentLease ? `Échéance Courante : ${declaredPeriod}` : 'Aucune échéance active'}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                          Rappel automatique
-                        </span>
+                        {currentLease && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            Rappel automatique
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-slate-500">
-                        Loyer mensuel contractuel de 220 000 FCFA. Règlement direct via Wave ou Mobile Money.
+                        {currentLease ? (
+                          <>Loyer mensuel contractuel de <strong>{formatFCFA(tenant.monthlyRent)}</strong>. Règlement direct via Wave ou Mobile Money.</>
+                        ) : (
+                          <>Aucune échéance de loyer à régler pour le moment. Vos rappels et échéances s'afficheront ici automatiquement dès qu'un bail vous sera attribué.</>
+                        )}
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setDeclarationModalOpen(true)}
-                      className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0 self-start sm:self-auto"
-                    >
-                      <Smartphone className="w-4 h-4" />
-                      <span>Déclarer un Règlement</span>
-                    </button>
+                    {currentLease && (
+                      <button
+                        type="button"
+                        onClick={() => setDeclarationModalOpen(true)}
+                        className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0 self-start sm:self-auto"
+                      >
+                        <Smartphone className="w-4 h-4" />
+                        <span>Déclarer un Règlement</span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Message de relance reçu */}

@@ -17,6 +17,7 @@ import { Notice } from '@/lib/services/notice-service';
 import { formatFCFA } from '@/lib/money/format';
 import { generateNoticePDF } from '@/lib/export/pdf-download';
 import { notifyAction } from '@/lib/notifications/action-notifier';
+import { useAuth } from '@/lib/context/space-context';
 
 interface NoticeEmailModalProps {
   isOpen: boolean;
@@ -25,10 +26,16 @@ interface NoticeEmailModalProps {
 }
 
 export function NoticeEmailModal({ isOpen, notice, onClose }: NoticeEmailModalProps) {
+  const { user } = useAuth();
   if (!isOpen || !notice) return null;
 
   const [recipientEmail, setRecipientEmail] = useState(notice.tenantEmail || '');
   const [copied, setCopied] = useState(false);
+
+  const landlordName = user?.companyName || user?.name || 'Le Bailleur Propriétaire';
+  const landlordCity = user?.residenceCity ? `${user.residenceCity} (${user.residenceCountry || 'Afrique'})` : 'Cotonou (Bénin)';
+  const landlordPhone = user?.phone ? `Tél : ${user.phone} • ` : '';
+  const landlordEmail = user?.email || 'contact@locagestion.site';
 
   const subject = `[NOTIFICATION OFFICIELLE DE PRÉAVIS] Réf: ${notice.id} — Congé pour ${notice.reasonTitle} — ${notice.tenantName}`;
 
@@ -42,7 +49,7 @@ LOYER MENSUEL CONTRACTUEL : ${formatFCFA(notice.monthlyRent)}
 
 Madame, Monsieur,
 
-Par la présente, le Cabinet DIALLO Patrimoine & Gestion Immobilière, agissant au nom et pour le compte du propriétaire bailleur, vous notifie officiellement congé et résiliation de votre contrat de bail d'habitation concernant le logement mentionné ci-dessus.
+Par la présente, ${landlordName}, agissant en qualité de propriétaire bailleur, vous notifie officiellement congé et résiliation de votre contrat de bail d'habitation concernant le logement mentionné ci-dessus.
 
 1. MOTIF LÉGAL DU CONGÉ :
 ${notice.reasonTitle.toUpperCase()}
@@ -69,9 +76,9 @@ Nous restons à votre entière disposition pour coordonner les modalités pratiq
 Veuillez agréer, Madame, Monsieur, l'expression de nos salutations distinguées.
 
 Direction de la Gestion Immobilière
-Cabinet DIALLO Patrimoine
-Rue 340, Haie Vive, Cotonou (Bénin)
-Tél : +229 01 95 44 44 30 • Email : contact@locagestion.site`;
+${landlordName}
+${landlordCity}
+${landlordPhone}Email : ${landlordEmail}`;
 
   const handleOpenMailClient = () => {
     if (!recipientEmail.trim()) {

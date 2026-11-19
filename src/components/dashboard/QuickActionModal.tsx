@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   FileText,
@@ -26,11 +26,25 @@ export function QuickActionModal({
   onSuccess,
 }: QuickActionModalProps) {
   const [tenantName, setTenantName] = useState('');
-  const [amount, setAmount] = useState('220000');
+  const [amount, setAmount] = useState('');
   const [method, setMethod] = useState('wave');
   const [periodChoice, setPeriodChoice] = useState('Novembre 2026');
-  const [propertyChoice, setPropertyChoice] = useState('Résidence Les Cocotiers');
-  const [unitChoice, setUnitChoice] = useState('Appt B2 (3 pièces)');
+  const [propertyChoice, setPropertyChoice] = useState('');
+  const [unitChoice, setUnitChoice] = useState('');
+  const [propertiesList, setPropertiesList] = useState<{ id: string; name: string }[]>([]);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('locagestion:properties:v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setPropertiesList(parsed.map((p: any) => ({ id: p.id, name: p.name })));
+          setPropertyChoice(parsed[0].name);
+        }
+      }
+    } catch {}
+  }, []);
 
   if (!actionType) return null;
 
@@ -136,7 +150,7 @@ export function QuickActionModal({
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                    placeholder="220000"
+                    placeholder="Ex: 50000"
                   />
                 </div>
                 <div>
@@ -205,15 +219,27 @@ export function QuickActionModal({
                 <label className="text-xs font-bold text-slate-700 block mb-1.5">
                   Bien & Résidence
                 </label>
-                <select
-                  value={propertyChoice}
-                  onChange={(e) => setPropertyChoice(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
-                >
-                  <option value="Résidence Les Cocotiers">Résidence Les Cocotiers (Haie Vive, Cotonou)</option>
-                  <option value="Immeuble Palmier Royal">Immeuble Palmier Royal (Cocody, Abidjan)</option>
-                  <option value="Villa Émeraude">Villa Émeraude (Almadies, Dakar)</option>
-                </select>
+                {propertiesList.length > 0 ? (
+                  <select
+                    value={propertyChoice}
+                    onChange={(e) => setPropertyChoice(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
+                  >
+                    {propertiesList.map((p) => (
+                      <option key={p.id} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    value={propertyChoice}
+                    onChange={(e) => setPropertyChoice(e.target.value)}
+                    placeholder="Nom du bien immobilier"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-800"
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -223,7 +249,9 @@ export function QuickActionModal({
                   </label>
                   <input
                     type="text"
-                    defaultValue="Appt C4 (3 pièces)"
+                    value={unitChoice}
+                    onChange={(e) => setUnitChoice(e.target.value)}
+                    placeholder="Ex: Lot 1, Appt 2..."
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-semibold"
                   />
                 </div>
@@ -233,7 +261,9 @@ export function QuickActionModal({
                   </label>
                   <input
                     type="number"
-                    defaultValue="250000"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="Ex: 50000"
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800 font-bold"
                   />
                 </div>

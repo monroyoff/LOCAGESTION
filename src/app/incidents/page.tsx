@@ -1052,7 +1052,7 @@ function IncidentsPageContent() {
                 </div>
                 <div>
                   <h3 className="font-black text-sm text-white">Signaler une Panne ou Incident</h3>
-                  <p className="text-[11px] text-slate-400">Appt A3 • Résidence Les Cocotiers</p>
+                  <p className="text-[11px] text-slate-400">Déclaration et transmission au gestionnaire</p>
                 </div>
               </div>
               <button
