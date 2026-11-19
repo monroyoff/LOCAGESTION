@@ -48,13 +48,20 @@ import { NoticeDetailsModal } from '@/components/reminders/NoticeDetailsModal';
 import { NoticeEmailModal } from '@/components/reminders/NoticeEmailModal';
 import { generateNoticePDF } from '@/lib/export/pdf-download';
 import { useAuth } from '@/lib/context/space-context';
+import { SkeletonTable } from '@/components/ui/SkeletonLoader';
 
 export default function RemindersCenterPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+  const [isLoading, setIsLoading] = useState(true);
   const [collectiveAuto, setCollectiveAuto] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
   const [selectedReminderTarget, setSelectedReminderTarget] = useState<any | null>(null);
   const [showCollectiveModal, setShowCollectiveModal] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -631,7 +638,9 @@ export default function RemindersCenterPage() {
                   </div>
                 </div>
 
-                {filteredNotices.length === 0 ? (
+                {isLoading ? (
+                  <SkeletonTable rows={4} />
+                ) : filteredNotices.length === 0 ? (
                   <div className="p-10 text-center rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1">
                     <Scale className="w-8 h-8 text-slate-400 mx-auto mb-2" />
                     <p className="text-xs font-bold text-slate-700">

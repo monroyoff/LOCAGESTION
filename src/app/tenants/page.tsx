@@ -47,6 +47,7 @@ import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { Footer } from '@/components/layout/Footer';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
+import { SkeletonTable } from '@/components/ui/SkeletonLoader';
 
 interface TenantDetail {
   id: string;
@@ -115,6 +116,12 @@ export default function TenantsPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
   const [selectedTenant, setSelectedTenant] = useState<TenantDetail | null>(null);
   const [activeTab, setActiveTab] = useState<'apercu' | 'solvabilite' | 'bail' | 'edl' | 'paiements'>('apercu');
   const [searchQuery, setSearchQuery] = useState('');
@@ -401,7 +408,9 @@ export default function TenantsPage() {
 
                 {/* Tenants Vertical Cards */}
                 <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
-                  {filteredTenants.map((t) => {
+                  {isLoading ? (
+                    <SkeletonTable rows={4} />
+                  ) : filteredTenants.map((t) => {
                     const isSelected = selectedTenant?.id === t.id;
 
                     return (

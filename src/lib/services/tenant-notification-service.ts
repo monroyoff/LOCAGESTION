@@ -108,6 +108,12 @@ export const TenantNotificationService = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+        // Poussée immédiate vers le serveur central pour synchronisation mobile instantanée
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notifications: [newNotif] }),
+        }).catch(() => {});
       } catch (e) {
         console.error('Erreur sauvegarde notifications locataire:', e);
       }

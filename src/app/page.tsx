@@ -24,12 +24,19 @@ import { IncidentService } from '@/lib/services/incident-service';
 import { PaymentService } from '@/lib/services/payment-service';
 import { notifyAction } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
+import { SkeletonLandlordDashboard } from '@/components/ui/SkeletonLoader';
 
 export default function DashboardPage() {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { user, activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 350);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const refreshPayments = () => {
@@ -136,8 +143,12 @@ export default function DashboardPage() {
 
         {/* Dashboard Body */}
         <main className="flex-1 p-4 sm:p-8 max-w-7xl mx-auto w-full flex flex-col gap-6">
-          {/* 1. Welcome & Context Banner */}
-          <div className="order-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-gradient-to-r from-slate-900 via-[#131722] to-slate-900 rounded-3xl text-white shadow-xl relative overflow-hidden">
+          {isLoading ? (
+            <SkeletonLandlordDashboard />
+          ) : (
+            <>
+              {/* 1. Welcome & Context Banner */}
+              <div className="order-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 bg-gradient-to-r from-slate-900 via-[#131722] to-slate-900 rounded-3xl text-white shadow-xl relative overflow-hidden">
             {/* Background glowing sphere */}
             <div className="absolute -right-10 -bottom-10 w-44 h-44 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
 
@@ -274,11 +285,13 @@ export default function DashboardPage() {
             <StatCards kpis={dashboardKPIs} onCardClick={handleDashboardCardClick} />
           </section>
 
-          {/* 7. Footer en fin de page : Créée au Bénin (en bas à gauche) */}
-          <div className="order-7 lg:order-7">
-            <Footer />
-          </div>
-        </main>
+            {/* 7. Footer en fin de page : Créée au Bénin (en bas à gauche) */}
+            <div className="order-7 lg:order-7">
+              <Footer />
+            </div>
+          </>
+        )}
+      </main>
       </div>
 
       {/* 7. Toast Notification */}

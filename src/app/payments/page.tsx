@@ -36,6 +36,7 @@ import { PaymentService } from '@/lib/services/payment-service';
 import { downloadCSV } from '@/lib/export/csv-export';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
+import { SkeletonKPIGrid, SkeletonTable } from '@/components/ui/SkeletonLoader';
 
 function PaymentsPageContent() {
   const router = useRouter();
@@ -47,6 +48,12 @@ function PaymentsPageContent() {
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Onglet principal : 'all' (Tous les encaissements) ou 'pending' (Déclarations à vérifier)
   const [activeMainTab, setActiveMainTab] = useState<'all' | 'pending'>(
@@ -266,7 +273,9 @@ function PaymentsPageContent() {
           </div>
 
           {/* VUE 1 : TOUS LES ENCAISSEMENTS & QUITTANCES VALIDÉES */}
-          {activeMainTab === 'all' && (
+          {isLoading ? (
+            <SkeletonTable rows={6} />
+          ) : activeMainTab === 'all' && (
             <div className="space-y-4">
               {subTabFilter === 'paye' && (
                 <div className="p-3.5 sm:p-4 rounded-2xl bg-emerald-50 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-xs animate-in fade-in">

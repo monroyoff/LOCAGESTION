@@ -33,6 +33,7 @@ import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
 import { notifyAction } from '@/lib/notifications/action-notifier';
+import { SkeletonTable } from '@/components/ui/SkeletonLoader';
 
 interface Message {
   id: string;
@@ -123,6 +124,12 @@ export default function MessagesPage() {
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [optionsMenuOpen, setOptionsMenuOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   const saveConversations = (updated: Conversation[]) => {
     setConversations(updated);
@@ -331,7 +338,9 @@ export default function MessagesPage() {
 
             {/* Conversations Scrollable List */}
             <div className="flex-1 overflow-y-auto p-3 space-y-1.5">
-              {filteredConversations.length === 0 ? (
+              {isLoading ? (
+                <SkeletonTable rows={4} />
+              ) : filteredConversations.length === 0 ? (
                 <div className="flex flex-col items-center justify-center p-8 text-center text-slate-400 space-y-2 mt-8">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center">
                     <MessageCircle className="w-6 h-6" />

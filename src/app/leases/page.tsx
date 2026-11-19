@@ -41,12 +41,19 @@ import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { useSpace } from '@/lib/context/space-context';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
+import { SkeletonLeaseCard } from '@/components/ui/SkeletonLoader';
 
 export default function LeasesPage() {
   const router = useRouter();
   const spaceCtx = useSpace();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
   const [quickAction, setQuickAction] = useState<
     'new_lease' | 'new_payment' | 'new_property' | null
   >(null);
@@ -532,7 +539,13 @@ export default function LeasesPage() {
 
           {/* Liste des Baux */}
           <div className="space-y-4">
-            {filteredLeases.length === 0 ? (
+            {isLoading ? (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <SkeletonLeaseCard />
+                <SkeletonLeaseCard />
+                <SkeletonLeaseCard />
+              </div>
+            ) : filteredLeases.length === 0 ? (
               <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
                 <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                   <FileText className="w-7 h-7" />

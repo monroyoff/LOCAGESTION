@@ -43,6 +43,7 @@ import {
 import { LandlordIncidentModal } from '@/components/dashboard/LandlordIncidentModal';
 import { notifySave, notifyUpdate } from '@/lib/notifications/action-notifier';
 import { formatFCFA } from '@/lib/money/format';
+import { SkeletonTable } from '@/components/ui/SkeletonLoader';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -67,7 +68,13 @@ function IncidentsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { user, isLandlord, isTenant, activeSpace, switchSpace } = useSpace();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Liste des incidents synchronisée
   const [incidents, setIncidents] = useState<ReportedIncident[]>(INITIAL_INCIDENTS);
@@ -437,7 +444,9 @@ function IncidentsPageContent() {
               </div>
 
               {/* Liste Détaillée des Pannes & Incidents */}
-              {filteredIncidents.length === 0 ? (
+              {isLoading ? (
+                <SkeletonTable rows={4} />
+              ) : filteredIncidents.length === 0 ? (
                 <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/90 shadow-soft">
                   <div className="w-14 h-14 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
                     <CheckCircle2 className="w-7 h-7 text-emerald-500" />

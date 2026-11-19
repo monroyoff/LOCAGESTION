@@ -43,10 +43,18 @@ export async function POST(req: NextRequest) {
 
     const users = getUsersFromFile();
     const cleanEmail = body.email.trim().toLowerCase();
+
+    // RÈGLE D'OR : Le compte jojovog007@gmail.com est irrévocablement lié à LOCA-MAT-BJ-17635
+    if (cleanEmail === 'jojovog007@gmail.com') {
+      body.matricule = 'LOCA-MAT-BJ-17635';
+    }
+
     const idx = users.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === cleanEmail);
 
     if (idx !== -1) {
-      users[idx] = { ...users[idx], ...body };
+      // Conservation stricte du matricule existant (immutabilité garantie)
+      const existingMatricule = users[idx].matricule || body.matricule;
+      users[idx] = { ...users[idx], ...body, matricule: existingMatricule };
     } else {
       users.unshift(body);
     }

@@ -73,6 +73,7 @@ import { IncidentService, ReportedIncident } from '@/lib/services/incident-servi
 import { MONTHS_OF_YEAR, PaymentService } from '@/lib/services/payment-service';
 import { notifyAction, notifySave } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
+import { SkeletonPortalDashboard } from '@/components/ui/SkeletonLoader';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -99,6 +100,12 @@ function TenantPortalContent() {
 
   // Primary Tab state: 'accueil' (Mon Logement), 'quittances' (Mes Quittances & Reçus), 'bail' (Mon Bail & Contrat), 'solvabilite' (Passeport), 'preavis' (Relances & Préavis)
   const [activeTab, setActiveTab] = useState<'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis'>('accueil');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Sub-tab inside "Mon Bail & Contrat" to switch between Bail & État des Lieux et Mon Bailleur
   const [bailSubTab, setBailSubTab] = useState<'tout' | 'bail_etat' | 'bailleur'>('tout');
@@ -791,8 +798,12 @@ function TenantPortalContent() {
 
         {/* Main Tenant Container */}
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-5xl mx-auto w-full">
-          {/* Top Segmented Navigation Tabs */}
-          <div className="resident-subbar flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
+          {isLoading ? (
+            <SkeletonPortalDashboard />
+          ) : (
+            <>
+              {/* Top Segmented Navigation Tabs */}
+              <div className="resident-subbar flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => handleTabChange('accueil')}
@@ -2652,7 +2663,9 @@ function TenantPortalContent() {
 
           {/* Footer en fin de page : Créée au Bénin (en bas à gauche) */}
           <Footer />
-        </main>
+        </>
+      )}
+    </main>
       </div>
 
       {/* Modal: Déclaration de Paiement avec Preuve */}

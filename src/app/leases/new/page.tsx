@@ -222,7 +222,7 @@ export default function NewLeasePage() {
         if (!l.tenant || !l.tenant.trim()) return;
         const key = (l.tenantEmail || l.tenantPhone || l.tenant).toLowerCase();
         if (!map.has(key)) {
-          const mat = generateUserMatricule(l.country || 'Bénin', 'locataire', l.tenant);
+          const mat = generateUserMatricule(l.country || 'Bénin', 'locataire', l.tenantEmail || l.tenantPhone || l.tenant);
           map.set(key, {
             id: `lease-tenant-${l.id}`,
             matricule: mat,

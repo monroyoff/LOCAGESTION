@@ -35,12 +35,19 @@ import { PropertyDetailModal } from '@/components/properties/PropertyDetailModal
 import { NewPropertyModal } from '@/components/properties/NewPropertyModal';
 import { Footer } from '@/components/layout/Footer';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
+import { SkeletonListingGrid } from '@/components/ui/SkeletonLoader';
 
 export default function PropertiesPage() {
   const router = useRouter();
   const { user, isAdmin } = useSpace();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Properties State
   const [properties, setProperties] = useState<Property[]>([]);
@@ -366,7 +373,9 @@ export default function PropertiesPage() {
           )}
 
           {/* Properties Grid */}
-          {filteredProperties.length === 0 ? (
+          {isLoading ? (
+            <SkeletonListingGrid count={4} />
+          ) : filteredProperties.length === 0 ? (
             <div className="bg-white rounded-3xl p-10 border border-slate-200 text-center space-y-3">
               <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Building2 className="w-7 h-7" />

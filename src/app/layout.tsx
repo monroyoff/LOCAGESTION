@@ -3,6 +3,7 @@ import './globals.css';
 import { SpaceProvider } from '@/lib/context/space-context';
 import { GlobalDownloadToast } from '@/components/ui/GlobalDownloadToast';
 import { GlobalCenterToast } from '@/components/ui/GlobalCenterToast';
+import { GlobalSyncProvider } from '@/components/layout/GlobalSyncProvider';
 
 import { SITE_CONFIG } from '@/lib/config/site';
 
@@ -86,9 +87,11 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <SpaceProvider>
-          {children}
-          <GlobalDownloadToast />
-          <GlobalCenterToast />
+          <GlobalSyncProvider>
+            {children}
+            <GlobalDownloadToast />
+            <GlobalCenterToast />
+          </GlobalSyncProvider>
         </SpaceProvider>
       </body>
     </html>

@@ -11,6 +11,7 @@ import { RentalListing } from '@/lib/types';
 import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
 import { EditListingModal } from '@/components/listings/EditListingModal';
+import { SkeletonListingGrid } from '@/components/ui/SkeletonLoader';
 import { ListingsService, resolveListingAuthorCompany, resolveListingAuthorRole } from '@/lib/services/listings-service';
 import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier';
 import {
@@ -122,6 +123,12 @@ export default function ListingsPage() {
   // Géolocalisation dynamique de l'utilisateur
   const [userLocation, setUserLocation] = useState<UserGeoLocation | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 300);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -1335,7 +1342,9 @@ export default function ListingsPage() {
           {/* ==================================================================== */}
           {/* GRILLE DES RÉSULTATS                                                 */}
           {/* ==================================================================== */}
-          {filteredListings.length > 0 ? (
+          {isLoading ? (
+            <SkeletonListingGrid count={6} />
+          ) : filteredListings.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredListings.map((listing) => {
                 const entryCost = computeEntryCost(listing);

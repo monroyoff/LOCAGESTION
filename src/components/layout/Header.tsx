@@ -85,12 +85,16 @@ export function Header({
     window.addEventListener('locagestion:leases_updated', handleStorage);
     window.addEventListener('locagestion:notices_updated', handleStorage);
     window.addEventListener('locagestion:tenant_notifs_updated', handleStorage);
+    window.addEventListener('locagestion:tenant_notifications_updated', handleStorage);
+    window.addEventListener('locagestion:notifications_updated', handleStorage);
     window.addEventListener('locagestion:security_alerts_updated', handleStorage);
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('locagestion:leases_updated', handleStorage);
       window.removeEventListener('locagestion:notices_updated', handleStorage);
       window.removeEventListener('locagestion:tenant_notifs_updated', handleStorage);
+      window.removeEventListener('locagestion:tenant_notifications_updated', handleStorage);
+      window.removeEventListener('locagestion:notifications_updated', handleStorage);
       window.removeEventListener('locagestion:security_alerts_updated', handleStorage);
       window.removeEventListener('storage', handleStorage);
     };

@@ -68,13 +68,26 @@ export function getCountryMatriculeCode(country?: string): string {
  */
 export function generateUserMatricule(country?: string, role?: string, seed?: string): string {
   if (role === 'admin') return 'LOCA-MAT-ADMIN-00001';
+  const cleanSeed = (seed || '').trim().toLowerCase();
+
+  // MAPPINGS STRICTS ET IRRÉVOCABLES POUR LES COMPTES OFFICIELS PLATEFORME
+  if (cleanSeed.includes('jojovog007') || cleanSeed.includes('usr-tenant-jojovog')) {
+    return 'LOCA-MAT-BJ-17635';
+  }
+  if (cleanSeed.includes('koffi.mensah') || cleanSeed.includes('usr-tenant-koffi')) {
+    return 'LOCA-MAT-CI-48219';
+  }
+  if (cleanSeed.includes('aicha.toure') || cleanSeed.includes('usr-tenant-aicha')) {
+    return 'LOCA-MAT-SN-39042';
+  }
+
   const code = getCountryMatriculeCode(country);
 
   let numStr = '';
-  if (seed) {
+  if (cleanSeed) {
     let hash = 0;
-    for (let i = 0; i < seed.length; i++) {
-      hash = (hash << 5) - hash + seed.charCodeAt(i);
+    for (let i = 0; i < cleanSeed.length; i++) {
+      hash = (hash << 5) - hash + cleanSeed.charCodeAt(i);
       hash |= 0;
     }
     const num = (Math.abs(hash) % 90000) + 10000;
@@ -269,11 +282,18 @@ export const AuthService = {
 
           let hasMutated = false;
           sanitized.forEach((u) => {
+            // RÉCONCILIATION STRICTE & DÉFINITIVE JOJO VOG : un seul matricule LOCA-MAT-BJ-17635
+            if (areEmailsEqual(u.email, 'jojovog007@gmail.com') || u.matricule === 'LOCA-MAT-BJ-69734') {
+              if (u.matricule !== 'LOCA-MAT-BJ-17635') {
+                u.matricule = 'LOCA-MAT-BJ-17635';
+                hasMutated = true;
+              }
+            }
             if (!u.matricule) {
               u.matricule = generateUserMatricule(
                 u.projectCountry || u.residenceCountry,
                 u.role,
-                u.id || u.email
+                u.email || u.id
               );
               hasMutated = true;
             }
@@ -394,11 +414,19 @@ export const AuthService = {
               } catch (e) {}
             }
           }
+          if (areEmailsEqual(parsed.email, 'jojovog007@gmail.com') || parsed.matricule === 'LOCA-MAT-BJ-69734') {
+            if (parsed.matricule !== 'LOCA-MAT-BJ-17635') {
+              parsed.matricule = 'LOCA-MAT-BJ-17635';
+              try {
+                localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
+              } catch (e) {}
+            }
+          }
           if (!parsed.matricule) {
             parsed.matricule = generateUserMatricule(
               parsed.projectCountry || parsed.residenceCountry,
               parsed.role,
-              parsed.id || parsed.email
+              parsed.email || parsed.id
             );
             try {
               localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
@@ -896,7 +924,8 @@ export const AuthService = {
 
     const fullName = data.name?.trim() || `${data.firstName.trim()} ${data.lastName.trim()}`;
     const targetCountry = data.projectCountry || data.residenceCountry || 'Bénin';
-    const userMatricule = generateUserMatricule(targetCountry, data.role);
+    // Matricule certifié déterministe basé sur l'email : 1 email = 1 seul et même matricule
+    const userMatricule = generateUserMatricule(targetCountry, data.role, cleanEmail);
 
     const newUser: AuthUser = {
       id: `usr-${data.role}-${Date.now().toString(36)}`,
