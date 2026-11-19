@@ -70,6 +70,12 @@ import {
   Lease,
 } from '@/lib/services/lease-service';
 import { AuthService, generateUserMatricule } from '@/lib/services/auth-service';
+import {
+  ParaphStyle,
+  PARAPH_STYLES,
+  extractInitials,
+  generateParaphDataUrl,
+} from '@/lib/signatures/paraph-generator';
 import { TransmitLeaseModal } from '@/components/leases/TransmitLeaseModal';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { getUserResidenceCountry } from '@/lib/services/geo-service';
@@ -599,10 +605,23 @@ export default function NewLeasePage() {
     parsedUtilitiesDeposit +
     parsedAdvanceRent;
 
-  // Signature canvas
+  // Signature canvas & Paraphe avec initiales
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
+  const [signatureMode, setSignatureMode] = useState<'draw' | 'paraph'>('draw');
+  const [paraphInitials, setParaphInitials] = useState<string>(() => extractInitials(user?.name || user?.companyName || 'Le Bailleur'));
+  const [paraphStyle, setParaphStyle] = useState<ParaphStyle>('manuscript');
+  const [paraphPreviewUrl, setParaphPreviewUrl] = useState<string>('');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const landlordName = user?.name || user?.companyName || 'Le Bailleur';
+      const inits = paraphInitials.trim() || extractInitials(landlordName);
+      const url = generateParaphDataUrl(inits, landlordName, paraphStyle, '#0f172a');
+      setParaphPreviewUrl(url);
+    }
+  }, [paraphInitials, paraphStyle, user?.name, user?.companyName]);
 
   // Initialize canvas
   useEffect(() => {
@@ -667,8 +686,15 @@ export default function NewLeasePage() {
   const handleFinish = () => {
     const landlordDisplayName = user?.name || user?.companyName || 'Le Bailleur';
     const signatureData =
-      canvasRef.current?.toDataURL('image/png') ||
-      `data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="60"><text x="10" y="35" font-family="cursive" font-size="22" fill="%23ec4899">${encodeURIComponent(landlordDisplayName)}</text></svg>`;
+      signatureMode === 'paraph'
+        ? generateParaphDataUrl(
+            paraphInitials.trim() || extractInitials(landlordDisplayName),
+            landlordDisplayName,
+            paraphStyle,
+            '#0f172a'
+          )
+        : (canvasRef.current?.toDataURL('image/png') ||
+           generateParaphDataUrl(extractInitials(landlordDisplayName), landlordDisplayName, 'manuscript', '#0f172a'));
 
     const generatedLeaseId = `BAIL-2026-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -2875,56 +2901,161 @@ export default function NewLeasePage() {
                   </div>
                 </div>
 
-                {/* --- ZONE D'APPOSITION DE LA SIGNATURE TACTILE DU BAILLEUR --- */}
-                <div className="p-4 sm:p-5 rounded-3xl bg-slate-50 border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
+                {/* --- ZONE D'APPOSITION DE LA SIGNATURE OU PARAPHE DU BAILLEUR --- */}
+                <div className="p-4 sm:p-5 rounded-3xl bg-slate-50 border border-slate-200 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
                       <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                         <PenTool className="w-3.5 h-3.5 text-brand-600" />
-                        <span>Signature Tactile du Bailleur ({user?.name || 'Propriétaire'}) :</span>
+                        <span>Validation & Signature du Bailleur ({user?.name || 'Propriétaire'}) :</span>
                       </h3>
                       <p className="text-[11px] text-slate-500">
-                        Apposez votre signature au doigt ou à la souris pour sceller le contrat de bail visualisé ci-dessus.
+                        Choisissez votre mode : tracez votre signature manuelle ou paraphez avec vos initiales certifiées.
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={clearSignature}
-                      className="py-1.5 px-3 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Effacer</span>
-                    </button>
+                    {/* Sélecteur de mode : Dessin vs Paraphe */}
+                    <div className="p-1 bg-slate-200/80 rounded-2xl flex items-center gap-1 self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setSignatureMode('draw')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          signatureMode === 'draw'
+                            ? 'bg-white text-slate-900 shadow-sm font-black'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <PenTool className="w-3.5 h-3.5 text-brand-500" />
+                        <span>Dessiner</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSignatureMode('paraph')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          signatureMode === 'paraph'
+                            ? 'bg-white text-slate-900 shadow-sm font-black'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>Paraphe initiales</span>
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Signature Canvas Pad */}
-                  <div className="border-2 border-dashed border-slate-300 rounded-2xl overflow-hidden bg-white shadow-inner relative h-44">
-                    <canvas
-                      ref={canvasRef}
-                      width={680}
-                      height={176}
-                      className="w-full h-full cursor-crosshair touch-none"
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                    />
-
-                    {!hasSignature && (
-                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs font-semibold">
-                        Apposez votre signature ici (Bailleur : {user?.name || 'Propriétaire'})
+                  {/* MODE 1 : Tracé de signature tactile */}
+                  {signatureMode === 'draw' && (
+                    <div className="space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-slate-700">
+                          Tracez votre signature au doigt ou à la souris :
+                        </span>
+                        {hasSignature && (
+                          <button
+                            type="button"
+                            onClick={clearSignature}
+                            className="py-1 px-2.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-rose-600 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Effacer</span>
+                          </button>
+                        )}
                       </div>
-                    )}
-                  </div>
+
+                      <div className="border-2 border-dashed border-slate-300 rounded-2xl overflow-hidden bg-white shadow-inner relative h-40">
+                        <canvas
+                          ref={canvasRef}
+                          width={680}
+                          height={160}
+                          className="w-full h-full cursor-crosshair touch-none"
+                          onMouseDown={startDrawing}
+                          onMouseMove={draw}
+                          onMouseUp={stopDrawing}
+                          onMouseLeave={stopDrawing}
+                          onTouchStart={startDrawing}
+                          onTouchMove={draw}
+                          onTouchEnd={stopDrawing}
+                        />
+
+                        {!hasSignature && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400 text-xs font-semibold">
+                            Apposez votre signature ici (Bailleur : {user?.name || 'Propriétaire'})
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MODE 2 : Paraphe certifié avec initiales */}
+                  {signatureMode === 'paraph' && (
+                    <div className="space-y-3 p-4 rounded-2xl bg-white border border-brand-200/80 shadow-xs animate-in fade-in duration-150">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                            Vos initiales pour le paraphe officiel :
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={6}
+                            placeholder="Ex: MD, JV, KM..."
+                            value={paraphInitials}
+                            onChange={(e) => setParaphInitials(e.target.value.toUpperCase())}
+                            className="w-full px-3.5 py-2 rounded-xl bg-slate-50 border border-brand-300 font-mono text-base font-black text-brand-900 tracking-wider text-center focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                            Style de paraphe électronique :
+                          </label>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {PARAPH_STYLES.map((st) => (
+                              <button
+                                key={st.id}
+                                type="button"
+                                onClick={() => setParaphStyle(st.id)}
+                                className={`p-1.5 rounded-xl text-[10px] font-bold border transition-all cursor-pointer text-center ${
+                                  paraphStyle === st.id
+                                    ? 'bg-brand-50 border-brand-500 text-brand-950 ring-1 ring-brand-500 font-black'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                }`}
+                              >
+                                {st.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Aperçu en direct du paraphe scellé */}
+                      <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-center">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1.5">
+                          Aperçu certifié de votre paraphe officiel :
+                        </span>
+                        {paraphPreviewUrl ? (
+                          <div className="bg-white p-2 rounded-xl border border-dashed border-slate-300 inline-block shadow-xs">
+                            <img
+                              src={paraphPreviewUrl}
+                              alt="Aperçu Paraphe"
+                              className="h-20 w-auto object-contain mx-auto"
+                            />
+                          </div>
+                        ) : (
+                          <div className="h-20 flex items-center justify-center text-xs text-slate-400">
+                            Génération du paraphe...
+                          </div>
+                        )}
+                        <p className="text-[10px] text-emerald-800 font-semibold mt-1">
+                          ✓ Vos initiales « {paraphInitials || '...'} » seront apposées comme paraphe scellé sur chaque feuillet du bail et sur le PDF.
+                        </p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-200 text-[11px] text-emerald-800 flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span>
-                      En signant, vous attestez avoir visualisé le contrat et ses spécificités. La signature sera scellée avec horodatage certifié, adresse IP et hash SHA-256 infalsifiable.
+                      En validant, vous attestez avoir visualisé le contrat et ses spécificités. La signature ou le paraphe sera scellé avec horodatage certifié, adresse IP et hash SHA-256 infalsifiable.
                     </span>
                   </div>
                 </div>
@@ -2958,10 +3089,10 @@ export default function NewLeasePage() {
               ) : (
                 <button
                   type="button"
-                  disabled={!hasSignature}
+                  disabled={signatureMode === 'draw' ? !hasSignature : !paraphInitials.trim()}
                   onClick={handleFinish}
                   className={`py-3 px-6 rounded-2xl text-xs sm:text-sm font-black flex items-center gap-2 shadow-pink-glow transition-all ${
-                    hasSignature
+                    (signatureMode === 'draw' ? hasSignature : paraphInitials.trim().length > 0)
                       ? 'bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white cursor-pointer active:scale-95'
                       : 'bg-slate-300 text-slate-500 cursor-not-allowed shadow-none'
                   }`}
