@@ -45,7 +45,7 @@ import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
-import { AuthService, areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
+import { AuthService, areEmailsEqual, arePhoneNumbersEqual, isCanonicalJojoVog } from '@/lib/services/auth-service';
 import { Footer } from '@/components/layout/Footer';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 import { SkeletonTable } from '@/components/ui/SkeletonLoader';
@@ -194,9 +194,11 @@ export default function TenantsPage() {
           (u.id && l.tenantId && u.id === l.tenantId)
       );
 
-      const isJojo =
-        (l.tenantEmail && areEmailsEqual(l.tenantEmail, 'jojovog007@gmail.com')) ||
-        (l.tenant && l.tenant.toLowerCase().includes('jojo'));
+      const isJojo = isCanonicalJojoVog(
+        l.tenantEmail || matchedUser?.email,
+        matchedUser?.matricule,
+        l.tenant || matchedUser?.name
+      );
 
       let resolvedFirstName = isJojo ? 'Jojo' : (matchedUser?.firstName || '');
       let resolvedLastName = isJojo ? 'VOG' : (matchedUser?.lastName || '');

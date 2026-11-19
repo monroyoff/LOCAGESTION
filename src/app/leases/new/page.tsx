@@ -69,7 +69,7 @@ import {
   LeaseService,
   Lease,
 } from '@/lib/services/lease-service';
-import { AuthService, generateUserMatricule } from '@/lib/services/auth-service';
+import { AuthService, generateUserMatricule, isCanonicalJojoVog } from '@/lib/services/auth-service';
 import {
   ParaphStyle,
   PARAPH_STYLES,
@@ -200,9 +200,7 @@ export default function NewLeasePage() {
       users
         .filter((u) => u.role === 'locataire' || !u.role || u.role === 'bailleur')
         .forEach((u) => {
-          const isJojo =
-            (u.email && u.email.toLowerCase().includes('jojovog007')) ||
-            (u.name && u.name.toLowerCase().includes('jojo'));
+          const isJojo = isCanonicalJojoVog(u.email || u.id || u.phone, u.matricule, u.name);
 
           const finalFn = isJojo ? 'Jojo' : u.firstName;
           const finalLn = isJojo ? 'VOG' : u.lastName;

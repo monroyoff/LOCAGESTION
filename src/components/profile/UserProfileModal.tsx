@@ -32,6 +32,7 @@ import {
   requestUserGeolocationWithFeedback,
   UserGeoLocation,
 } from '@/lib/services/geo-service';
+import { isCanonicalJojoVog } from '@/lib/services/auth-service';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { useSpace } from '@/lib/context/space-context';
@@ -214,9 +215,7 @@ export function UserProfileModal({
     e.preventDefault();
 
     // 1. Calcul des données d'identité saisies par l'utilisateur avec scellement d'intégrité
-    const isJojo =
-      (profile.email && profile.email.toLowerCase().includes('jojovog007')) ||
-      (user?.email && user.email.toLowerCase().includes('jojovog007'));
+    const isJojo = isCanonicalJojoVog(profile.email || user?.email, profile.matricule || user?.matricule, profile.name || user?.name);
 
     const resolvedFirstName = isJojo ? 'Jojo' : (profile.firstName?.trim() || '');
     const resolvedLastName = isJojo ? 'VOG' : (profile.lastName?.trim() || '');

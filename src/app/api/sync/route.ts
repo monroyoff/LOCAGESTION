@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
       );
 
       // CAS PARTICULIER STRICT JOJO VOG : matricule et identité scellés pour toujours
-      if (cleanEmail === 'jojovog007@gmail.com') {
+      if (cleanEmail === 'jojovog007@gmail.com' || cleanEmail === 'jojovo007@gmail.com' || cleanEmail.startsWith('jojovo007') || cleanEmail.startsWith('jojovog007')) {
         incomingUser.matricule = 'LOCA-MAT-BJ-17635';
         incomingUser.firstName = 'Jojo';
         incomingUser.lastName = 'VOG';

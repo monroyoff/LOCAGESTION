@@ -1,6 +1,7 @@
 'use client';
 
 import { RentalListing, UserProfile, UserSpace } from '../types';
+import { isCanonicalJojoVog } from './auth-service';
 
 export interface UserGeoLocation {
   country: string;
@@ -237,7 +238,7 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
           u.name !== 'Koffi Mensah' &&
           u.name !== 'Ibrahim Traoré'
         ) {
-          const isJojoVog = u.email && u.email.trim().toLowerCase() === 'jojovog007@gmail.com';
+          const isJojoVog = isCanonicalJojoVog(u.email || u.id || u.phone, u.matricule, u.name);
           const isSealed = Boolean(u.isIdentitySealed || isJojoVog || (u.firstName && u.lastName && u.phone));
 
           return {
@@ -245,7 +246,7 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
             name: isJojoVog ? 'Jojo VOG' : (u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Locataire'),
             firstName: isJojoVog ? 'Jojo' : (u.firstName || (u.name ? u.name.split(' ')[0] : 'Locataire')),
             lastName: isJojoVog ? 'VOG' : (u.lastName || (u.name && u.name.split(' ').length > 1 ? u.name.split(' ').slice(1).join(' ') : '')),
-            email: u.email,
+            email: isJojoVog ? (u.email && u.email.includes('jojovo007') ? 'jojovo007@gmail.com' : 'jojovog007@gmail.com') : u.email,
             phone: isJojoVog ? (u.phone || '+229 97 00 12 34') : (u.phone || ''),
             role: isJojoVog ? 'locataire' : (u.role || role),
             birthDate: isJojoVog ? '15/05/1992' : (u.birthDate || ''),
@@ -339,6 +340,14 @@ export function saveUserProfile(profile: UserProfile): void {
     const sessionStr = localStorage.getItem('locagestion:auth:session:v1');
     if (sessionStr) {
       const session = JSON.parse(sessionStr);
+      const isJojo = isCanonicalJojoVog(profile.email || session.email, profile.matricule || session.matricule, profile.name || session.name);
+      const finalFn = isJojo ? 'Jojo' : (profile.firstName || session.firstName || '');
+      const finalLn = isJojo ? 'VOG' : (profile.lastName || session.lastName || '');
+      const finalName = isJojo ? 'Jojo VOG' : (profile.name || `${finalFn} ${finalLn}`.trim() || session.name);
+      const finalPhone = isJojo ? (profile.phone || '+229 97 00 12 34') : (profile.phone || session.phone || '');
+      const finalMatricule = isJojo ? 'LOCA-MAT-BJ-17635' : (profile.matricule || session.matricule);
+      const finalSealed = Boolean(isJojo || profile.isIdentitySealed || (finalFn && finalLn && finalPhone));
+
       const updatedUser = {
         ...session,
         avatarUrl: profile.avatarUrl || session.avatarUrl,
@@ -346,8 +355,12 @@ export function saveUserProfile(profile: UserProfile): void {
         residenceCity: profile.residenceCity || session.residenceCity,
         residenceDistrict: profile.residenceDistrict || session.residenceDistrict,
         projectCountry: profile.projectCountry || session.projectCountry,
-        matricule: session.matricule || profile.matricule,
-        name: profile.name || session.name,
+        matricule: finalMatricule,
+        name: finalName,
+        firstName: finalFn,
+        lastName: finalLn,
+        phone: finalPhone,
+        isIdentitySealed: finalSealed,
       };
       localStorage.setItem('locagestion:auth:session:v1', JSON.stringify(updatedUser));
       window.dispatchEvent(new CustomEvent('locagestion:auth_changed', { detail: { user: updatedUser } }));
