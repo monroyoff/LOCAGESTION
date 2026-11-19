@@ -451,9 +451,7 @@ Ces informations garantissent la force probante juridique des baux électronique
 
 ### 🔑 3. Seul le Mot de Passe est Modifiable
 - **Le mot de passe est l'unique identifiant modifiable** du compte utilisateur.
-- Sa modification s'effectue exclusivement :
-  1. Soit depuis l'espace connecté via les paramètres du profil (**« Modifier mon mot de passe »**) avec contrôle obligatoire du mot de passe actuel.
-  2. Soit depuis l'écran de connexion via la procédure sécurisée **« Mot de passe oublié ? »** (`/auth/login`).
+- Sa modification s'effectue depuis la procédure sécurisée **« Mot de passe oublié ? »** accessible sur la page de connexion (`/auth/login`).
 
 ### 👤 4. Personnalisation Garantie des Préférences Visuelles & Commerciales
 - **Nom d'entreprise / Agence :** Optionnel pour les bailleurs et démarcheurs. Dès sa saisie, modification ou suppression dans le profil, il est immédiatement répercuté et garanti de façon pérenne sur toutes les annonces publiées, les en-têtes et les quittances, sans jamais être écrasé par une valeur mockée par défaut.

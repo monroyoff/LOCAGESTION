@@ -23,9 +23,6 @@ import {
   Repeat,
   Copy,
   Fingerprint,
-  Key,
-  Eye,
-  EyeOff,
 } from 'lucide-react';
 import { UserProfile, UserSpace } from '@/lib/types';
 import {
@@ -47,34 +44,6 @@ interface UserProfileModalProps {
   activeSpace?: UserSpace;
 }
 
-const PRESET_AVATARS = [
-  {
-    label: 'Koffi (Cadre)',
-    url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Mamadou (Bailleur)',
-    url: 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Amina (Consultante)',
-    url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=160&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Jean-Yves (Directeur)',
-    url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Fatoumata (Gestionnaire)',
-    url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=160&auto=format&fit=crop&q=80',
-  },
-  {
-    label: 'Rodrigue (Entrepreneur)',
-    url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=160&auto=format&fit=crop&q=80',
-  },
-];
-
-
 export function UserProfileModal({
   isOpen,
   onClose,
@@ -91,57 +60,11 @@ export function UserProfileModal({
   const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Gestion sécurisée du mot de passe (Seul paramètre modifiable post-création)
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPasswordSection, setShowPasswordSection] = useState(false);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-
   const handleCopyMatricule = (matricule: string) => {
     if (!matricule) return;
     navigator.clipboard?.writeText(matricule);
     setCopiedMatricule(true);
     setTimeout(() => setCopiedMatricule(false), 2000);
-  };
-
-  const handleUpdatePassword = (e: React.FormEvent) => {
-    e.preventDefault();
-    setPasswordError(null);
-    setPasswordSuccess(null);
-
-    if (!currentPassword) {
-      setPasswordError('Veuillez saisir votre mot de passe actuel.');
-      return;
-    }
-    if (!newPassword || newPassword.trim().length < 6) {
-      setPasswordError('Le nouveau mot de passe doit comporter au moins 6 caractères.');
-      return;
-    }
-    if (newPassword.trim() !== confirmPassword.trim()) {
-      setPasswordError('La confirmation ne correspond pas au nouveau mot de passe.');
-      return;
-    }
-
-    setIsUpdatingPassword(true);
-    const identifier = user?.id || user?.email || profile.email;
-    const res = AuthService.changePassword(identifier, currentPassword, newPassword.trim());
-    setIsUpdatingPassword(false);
-
-    if (!res.success) {
-      setPasswordError(res.error || 'Erreur lors du changement de mot de passe.');
-    } else {
-      setPasswordSuccess('✓ Mot de passe mis à jour avec succès !');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
-      notifySave('Mot de passe mis à jour avec succès.');
-      setTimeout(() => setPasswordSuccess(null), 5000);
-    }
   };
 
   // Synchronisation des données à l'ouverture de la modale
@@ -499,53 +422,47 @@ export function UserProfileModal({
             </div>
           </div>
 
-          {/* Choix d'avatar professionnel ou import photo */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-black text-slate-800 flex items-center gap-1.5">
-                <Camera className="w-3.5 h-3.5 text-brand-500" />
-                <span>Photo de profil / Avatar</span>
-              </label>
-
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
-              >
-                <UploadCloud className="w-3.5 h-3.5" />
-                <span>Importer une photo</span>
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarFileUpload}
-                className="hidden"
-              />
+          {/* Photo de profil / Avatar */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="relative shrink-0">
+                <img
+                  src={
+                    profile.avatarUrl ||
+                    (profile.role === 'bailleur'
+                      ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
+                      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')
+                  }
+                  alt={profile.name}
+                  className="w-12 h-12 rounded-xl object-cover ring-2 ring-white shadow-xs"
+                />
+              </div>
+              <div>
+                <span className="text-xs font-black text-slate-900 block flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-brand-500" />
+                  <span>Photo de profil / Avatar</span>
+                </span>
+                <span className="text-[11px] text-slate-500 block mt-0.5">
+                  Format JPG, PNG ou WEBP • Optimisée automatiquement
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-6 gap-2">
-              {PRESET_AVATARS.map((av) => (
-                <button
-                  key={av.url}
-                  type="button"
-                  onClick={() => setProfile({ ...profile, avatarUrl: av.url })}
-                  className={`relative rounded-xl overflow-hidden aspect-square border-2 transition-all cursor-pointer ${
-                    profile.avatarUrl === av.url
-                      ? 'border-brand-500 ring-2 ring-brand-400/40 scale-105 shadow-md'
-                      : 'border-slate-200 hover:border-slate-300 opacity-75 hover:opacity-100'
-                  }`}
-                  title={av.label}
-                >
-                  <img src={av.url} alt={av.label} className="w-full h-full object-cover" />
-                  {profile.avatarUrl === av.url && (
-                    <div className="absolute inset-0 bg-brand-500/30 flex items-center justify-center">
-                      <Check className="w-4 h-4 text-white stroke-[3]" />
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold border border-slate-200 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-brand-500" />
+              <span>Changer la photo</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleAvatarFileUpload}
+              className="hidden"
+            />
           </div>
 
           {/* Alerte Explicative Règle Métier */}
@@ -598,27 +515,6 @@ export function UserProfileModal({
             </button>
           </div>
 
-          {/* Bannière Informations Personnelles & Coordonnées avec Statut de Scellement */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200 text-xs text-emerald-950 flex items-center justify-between gap-3 shadow-xs">
-            <div className="flex items-center gap-2.5">
-              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0" />
-              <div>
-                <span className="font-black text-emerald-950 block flex items-center gap-1.5">
-                  <span>✓ Compte Officiel Scellé & Conforme OHADA / UEMOA</span>
-                  <span className="text-[9px] font-mono font-black uppercase px-1.5 py-0.2 rounded bg-emerald-200/70 text-emerald-800 border border-emerald-300">
-                    IMMUABLE
-                  </span>
-                </span>
-                <span className="text-[11px] text-emerald-800 leading-snug block mt-0.5">
-                  <strong>Règle d'or de sécurité :</strong> Matricule, nom, prénom, email et téléphone sont scellés pour toujours. <strong>Seul votre mot de passe peut être modifié.</strong>
-                </span>
-              </div>
-            </div>
-            <div className="text-right shrink-0 hidden sm:block">
-              <span className="text-[10px] font-mono font-bold text-slate-500 block">Matricule</span>
-              <span className="text-xs font-mono font-black text-slate-800">{profile.matricule || user?.matricule || 'LOCA-MAT-BJ-17635'}</span>
-            </div>
-          </div>
 
           {/* Identité Personnelle (Nom, Prénom, Téléphone, Email strictement scellés) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -703,116 +599,6 @@ export function UserProfileModal({
             </div>
           </div>
 
-          {/* Section Sécurité & Mot de Passe (Seul paramètre modifiable) */}
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/60 via-slate-50 to-indigo-50/30 border border-indigo-200/80 space-y-3.5 shadow-xs">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                  <Key className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-900 flex items-center gap-2">
-                    <span>Modifier mon mot de passe</span>
-                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      Seul champ modifiable
-                    </span>
-                  </h4>
-                  <p className="text-[11px] text-slate-500 mt-0.5">
-                    1 seul mot de passe unique par compte. Mettez-le à jour en toute sécurité.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowPasswordSection(!showPasswordSection)}
-                className="text-xs font-black text-indigo-700 hover:text-indigo-800 cursor-pointer px-3.5 py-1.5 rounded-xl bg-white hover:bg-indigo-50 border border-indigo-200 shadow-xs transition-all flex items-center gap-1.5"
-              >
-                <Key className="w-3.5 h-3.5" />
-                <span>{showPasswordSection ? 'Fermer' : 'Modifier'}</span>
-              </button>
-            </div>
-
-            {showPasswordSection && (
-              <div className="pt-3 border-t border-indigo-100 space-y-3">
-                {passwordError && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
-                    ⚠️ {passwordError}
-                  </div>
-                )}
-                {passwordSuccess && (
-                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
-                    {passwordSuccess}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Mot de passe actuel</label>
-                    <div className="relative">
-                      <input
-                        type={showCurrentPassword ? 'text' : 'password'}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 pr-8"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        {showCurrentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Nouveau mot de passe</label>
-                    <div className="relative">
-                      <input
-                        type={showNewPassword ? 'text' : 'password'}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Min. 6 caractères"
-                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 pr-8"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Confirmer nouveau</label>
-                    <input
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-1">
-                  <button
-                    type="button"
-                    onClick={handleUpdatePassword}
-                    disabled={isUpdatingPassword}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
-                  >
-                    <Key className="w-3.5 h-3.5" />
-                    <span>{isUpdatingPassword ? 'Mise à jour en cours...' : 'Enregistrer le nouveau mot de passe'}</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
 
           {/* Entreprise / Agence Immobilière (Optionnel - Pour Bailleur et Démarcheur uniquement) */}
           {profile.role !== 'locataire' && (
