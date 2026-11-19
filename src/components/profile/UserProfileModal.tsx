@@ -23,6 +23,9 @@ import {
   Repeat,
   Copy,
   Fingerprint,
+  Key,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { UserProfile, UserSpace } from '@/lib/types';
 import {
@@ -60,11 +63,57 @@ export function UserProfileModal({
   const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Modification du mot de passe
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswordSection, setShowPasswordSection] = useState(false);
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
   const handleCopyMatricule = (matricule: string) => {
     if (!matricule) return;
     navigator.clipboard?.writeText(matricule);
     setCopiedMatricule(true);
     setTimeout(() => setCopiedMatricule(false), 2000);
+  };
+
+  const handleUpdatePassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    if (!currentPassword) {
+      setPasswordError('Veuillez saisir votre mot de passe actuel.');
+      return;
+    }
+    if (!newPassword || newPassword.trim().length < 6) {
+      setPasswordError('Le nouveau mot de passe doit comporter au moins 6 caractères.');
+      return;
+    }
+    if (newPassword.trim() !== confirmPassword.trim()) {
+      setPasswordError('La confirmation ne correspond pas au nouveau mot de passe.');
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    const identifier = user?.id || user?.email || profile.email;
+    const res = AuthService.changePassword(identifier, currentPassword, newPassword.trim());
+    setIsUpdatingPassword(false);
+
+    if (!res.success) {
+      setPasswordError(res.error || 'Erreur lors du changement de mot de passe.');
+    } else {
+      setPasswordSuccess('✓ Mot de passe mis à jour avec succès !');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+      notifySave('Mot de passe mis à jour avec succès.');
+      setTimeout(() => setPasswordSuccess(null), 5000);
+    }
   };
 
   // Synchronisation des données à l'ouverture de la modale
@@ -589,6 +638,114 @@ export function UserProfileModal({
                 className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-600 cursor-not-allowed select-none opacity-85 shadow-inner"
               />
             </div>
+          </div>
+
+          {/* Modification du mot de passe */}
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center shadow-xs">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-900">
+                    Mot de passe
+                  </h4>
+                  <p className="text-[11px] text-slate-500">
+                    Mettez à jour votre mot de passe de connexion
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowPasswordSection(!showPasswordSection)}
+                className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 text-xs font-bold border border-slate-200 shadow-xs flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <Key className="w-3.5 h-3.5 text-brand-500" />
+                <span>{showPasswordSection ? 'Fermer' : 'Modifier le mot de passe'}</span>
+              </button>
+            </div>
+
+            {showPasswordSection && (
+              <div className="pt-3 border-t border-slate-200/80 space-y-3">
+                {passwordError && (
+                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-medium">
+                    ⚠️ {passwordError}
+                  </div>
+                )}
+                {passwordSuccess && (
+                  <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold">
+                    {passwordSuccess}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Mot de passe actuel</label>
+                    <div className="relative">
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Nouveau mot de passe</label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Min. 6 caractères"
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 pr-8"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showNewPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-slate-700 block mb-1">Confirmer nouveau</label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-200 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={handleUpdatePassword}
+                    disabled={isUpdatingPassword}
+                    className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer disabled:opacity-50"
+                  >
+                    <Key className="w-3.5 h-3.5" />
+                    <span>{isUpdatingPassword ? 'Mise à jour en cours...' : 'Enregistrer le mot de passe'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
 
