@@ -164,23 +164,25 @@ export async function POST(req: NextRequest) {
         (u) => u.email && u.email.trim().toLowerCase() === cleanEmail
       );
 
-      // CAS PARTICULIER STRICT JOJO VOG : matricule et identité scellés pour toujours
+      // CAS PARTICULIER STRICT JOJO VOG : matricule et identité scellés pour toujours, mot de passe unique distinct Lolo1000$
       if (cleanEmail === 'jojovog007@gmail.com') {
         incomingUser.matricule = 'LOCA-MAT-BJ-17635';
         incomingUser.firstName = 'Jojo';
         incomingUser.lastName = 'VOG';
         incomingUser.name = 'Jojo VOG';
         incomingUser.phone = incomingUser.phone || '+229 97 00 12 34';
+        incomingUser.password = incomingUser.password || 'Lolo1000$';
         incomingUser.isIdentitySealed = true;
       }
 
-      // CAS PARTICULIER STRICT JOHANE VOGLOSSOU (BAILLEUR) : numéro officiel unique +229 01 95 44 44 30
+      // CAS PARTICULIER STRICT JOHANE VOGLOSSOU (BAILLEUR) : numéro officiel unique +229 01 95 44 44 30, mot de passe unique distinct Forever1122$
       if (cleanEmail === 'jobovog@gmail.com') {
         incomingUser.matricule = 'LOCA-MAT-BJ-84291';
         incomingUser.firstName = 'Johane';
         incomingUser.lastName = 'Voglossou';
         incomingUser.name = 'VOGLOSSOU JOHANE';
         incomingUser.phone = '+229 01 95 44 44 30';
+        incomingUser.password = incomingUser.password || 'Forever1122$';
         incomingUser.isIdentitySealed = true;
       }
 

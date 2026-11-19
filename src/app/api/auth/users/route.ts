@@ -44,23 +44,25 @@ export async function POST(req: NextRequest) {
     const users = getUsersFromFile();
     const cleanEmail = body.email.trim().toLowerCase();
 
-    // RÈGLE D'OR : Le compte jojovog007@gmail.com est irrévocablement lié à LOCA-MAT-BJ-17635 et scellé
+    // RÈGLE D'OR : Le compte jojovog007@gmail.com est irrévocablement lié à LOCA-MAT-BJ-17635 et scellé, mot de passe unique Lolo1000$
     if (cleanEmail === 'jojovog007@gmail.com') {
       body.matricule = 'LOCA-MAT-BJ-17635';
       body.firstName = 'Jojo';
       body.lastName = 'VOG';
       body.name = 'Jojo VOG';
       body.phone = body.phone || '+229 97 00 12 34';
+      body.password = body.password || 'Lolo1000$';
       body.isIdentitySealed = true;
     }
 
-    // RÈGLE D'OR : Le compte bailleur jobovog@gmail.com est irrévocablement lié à son numéro réel +229 01 95 44 44 30
+    // RÈGLE D'OR : Le compte bailleur jobovog@gmail.com est irrévocablement lié à son numéro réel +229 01 95 44 44 30, mot de passe unique Forever1122$
     if (cleanEmail === 'jobovog@gmail.com') {
       body.matricule = 'LOCA-MAT-BJ-84291';
       body.firstName = 'Johane';
       body.lastName = 'Voglossou';
       body.name = 'VOGLOSSOU JOHANE';
       body.phone = '+229 01 95 44 44 30';
+      body.password = body.password || 'Forever1122$';
       body.isIdentitySealed = true;
     }
 

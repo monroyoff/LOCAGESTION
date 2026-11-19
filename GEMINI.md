@@ -434,7 +434,8 @@ Pour garantir la sécurité, la moralité publique, la sérénité des familles 
 ### 🔒 1. Unicité Stricte et Absolue (Règle 1:1:1:1:1)
 Chaque compte utilisateur sur LOCAGESTION est fondé sur une relation bijective et rigoureuse :
 - **1 seul compte**
-- **1 seul et unique mot de passe** (interdiction formelle et définitive d'avoir ou de tolérer 2 mots de passe, aucun fallback tolérant des variantes ou des anciens mots de passe d'essai).
+- **1 seul et unique mot de passe** (interdiction formelle et définitive d'avoir ou de tolérer 2 mots de passe pour un même compte).
+- **Mots de passe obligatoirement distincts entre comptes différents :** Deux comptes différents ne doivent JAMAIS partager le même mot de passe (ex : compte bailleur `jobovog@gmail.com` avec son mot de passe unique `Forever1122$`, distinct du compte locataire `jojovog007@gmail.com` avec son mot de passe unique `Lolo1000$`).
 - **1 seul numéro de téléphone**
 - **1 seule adresse email**
 - **1 seul matricule officiel unique** (attribué de façon déterministe et certifiée).

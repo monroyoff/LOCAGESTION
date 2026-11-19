@@ -163,7 +163,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     projectCountry: 'Bénin',
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
     registeredAt: '18/11/2026',
-    password: 'Forever1122$',
+    password: 'Lolo1000$',
     accountStatus: 'active',
     isIdentitySealed: true,
   },
@@ -466,6 +466,14 @@ export const AuthService = {
                 sanitized[i].email || sanitized[i].id
               );
             }
+            if (areEmailsEqual(sanitized[i].email, 'jojovog007@gmail.com') && sanitized[i].password !== 'Lolo1000$') {
+              sanitized[i].password = 'Lolo1000$';
+              hasMutated = true;
+            }
+            if (areEmailsEqual(sanitized[i].email, 'jobovog@gmail.com') && sanitized[i].password !== 'Forever1122$') {
+              sanitized[i].password = 'Forever1122$';
+              hasMutated = true;
+            }
             if (JSON.stringify(sanitized[i]) !== beforeJson) {
               hasMutated = true;
             }
@@ -482,14 +490,20 @@ export const AuthService = {
               sanitized[idx].role !== enforcedInit.role ||
               sanitized[idx].id !== enforcedInit.id ||
               sanitized[idx].name?.toUpperCase().includes('VOGLOSSOU') ||
-              !sanitized[idx].isIdentitySealed
+              !sanitized[idx].isIdentitySealed ||
+              (areEmailsEqual(sanitized[idx].email, 'jojovog007@gmail.com') && sanitized[idx].password !== 'Lolo1000$') ||
+              (areEmailsEqual(sanitized[idx].email, 'jobovog@gmail.com') && sanitized[idx].password !== 'Forever1122$')
             ) {
-              // RÈGLE STRICTE : Préserver absolument le mot de passe existant de l'utilisateur
-              const preservedPassword = sanitized[idx].password || enforcedInit.password;
+              let targetPassword = sanitized[idx].password || enforcedInit.password;
+              if (areEmailsEqual(sanitized[idx].email, 'jojovog007@gmail.com')) {
+                targetPassword = 'Lolo1000$';
+              } else if (areEmailsEqual(sanitized[idx].email, 'jobovog@gmail.com')) {
+                targetPassword = 'Forever1122$';
+              }
               sanitized[idx] = {
                 ...sanitized[idx],
                 ...enforcedInit,
-                password: preservedPassword,
+                password: targetPassword,
               };
               hasMutated = true;
             }
