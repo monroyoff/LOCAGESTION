@@ -458,5 +458,26 @@ Ces informations garantissent la force probante juridique des baux électronique
 - **Photo de profil / Avatar :** Tout changement d'avatar ou import de photo par l'utilisateur (bailleur, démarcheur, locataire) est immédiatement synchronisé et persisté de manière définitive sur tous les espaces (Web, Mobile, Application) sans jamais être écrasé par les images Unsplash mockées initiales.
 
 ---
+
+## 14. Parcours d'Invitation, Vérification Email & Passeport Solvabilité
+
+### 📩 1. Invitation & Onboarding Locataire
+- **Champs séparés sur la même ligne :** Dans la modale d'invitation d'un nouveau locataire (`/tenants`), les champs **Nom** et **Prénom** sont distincts mais disposés côte à côte sur la même ligne (`grid grid-cols-2 gap-3`).
+- **Expédition Multi-Canal Automatique :** Lors de l'envoi de l'invitation, le lien unique sécurisé est automatiquement expédié par **Email** (via SMTP Gmail / API) et par **SMS** (via passerelle SMS / lien de composition natif), en plus du lien direct WhatsApp et du bouton Copier.
+
+### 🛡️ 2. Confirmation d'Email Strictement Obligatoire
+- **Interdiction d'accès anticipé :** Tout compte créé reste en statut `emailVerified: false` avec connexion automatique bloquée (`autoLogin: false`). Aucune redirection vers l'Espace Locataire ou Bailleur n'est autorisée avant confirmation.
+- **Validation bilatérale :** L'activation s'effectue soit par saisie du code à 6 chiffres dans l'interface, soit par clic sur le lien sécurisé `/auth/verify?email=...&code=...`.
+- **Blocage à la connexion :** Tout utilisateur non vérifié tentant de se connecter sur `/auth/login` est immédiatement notifié et bloqué jusqu'à confirmation de son email.
+
+### 🟢 3. Passeport Solvabilité Locataire
+- **Score initial garanti :** Tout nouveau compte locataire débute avec un score maximal de **100/100 en VERT vif**.
+- **Paliers d'évolution :**
+  - **85 - 100 :** Vert (Excellent payeur, ponctualité exemplaire).
+  - **70 - 84 :** Bleu (Bon payeur, retards occasionnels régularisés sous 5 jours).
+  - **50 - 69 :** Orange (Paiements partiels ou retards fréquents au-delà du 10 du mois).
+  - **0 - 49 :** Rouge (Impayés prolongés, mises en demeure).
+
+---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
 
