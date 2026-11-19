@@ -143,7 +143,8 @@ export default function TenantsPage() {
   const [receiptPayment, setReceiptPayment] = useState<any | null>(null);
   const [reminderPayment, setReminderPayment] = useState<any | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteName, setInviteName] = useState('');
+  const [inviteLastName, setInviteLastName] = useState('');
+  const [inviteFirstName, setInviteFirstName] = useState('');
   const [invitePhone, setInvitePhone] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteToken, setInviteToken] = useState('tok_8942abc');
@@ -166,12 +167,15 @@ export default function TenantsPage() {
     portalUrl: string;
   } | null>(null);
 
+  const inviteFullName = `${inviteLastName.trim()} ${inviteFirstName.trim()}`.trim();
+
   const openInviteModal = () => {
     const randomTok = 'tok_' + Math.random().toString(36).substring(2, 9);
     const randomCode = 'LOCA-INV-' + Math.floor(1000 + Math.random() * 9000);
     setInviteToken(randomTok);
     setInviteCode(randomCode);
-    setInviteName('');
+    setInviteLastName('');
+    setInviteFirstName('');
     setInvitePhone('');
     setInviteEmail('');
     setInviteSentSuccess(false);
@@ -186,16 +190,20 @@ export default function TenantsPage() {
     const params = new URLSearchParams();
     if (inviteToken) params.set('invite', inviteToken);
     if (inviteCode) params.set('code', inviteCode);
-    if (inviteName.trim()) params.set('name', inviteName.trim());
+    const fullName = `${inviteLastName.trim()} ${inviteFirstName.trim()}`.trim();
+    if (fullName) params.set('name', fullName);
+    if (inviteLastName.trim()) params.set('lastName', inviteLastName.trim());
+    if (inviteFirstName.trim()) params.set('firstName', inviteFirstName.trim());
     if (inviteEmail.trim()) params.set('email', inviteEmail.trim());
     if (invitePhone.trim()) params.set('phone', invitePhone.trim());
     return `${origin}/portal?${params.toString()}`;
-  }, [inviteToken, inviteCode, inviteName, inviteEmail, invitePhone]);
+  }, [inviteToken, inviteCode, inviteLastName, inviteFirstName, inviteEmail, invitePhone]);
 
   const handleSendInvitation = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteName.trim() || !invitePhone.trim() || !inviteEmail.trim()) {
-      showToast('Veuillez renseigner le nom, le numéro de téléphone/SMS et l’adresse email.');
+    const fullName = `${inviteLastName.trim()} ${inviteFirstName.trim()}`.trim();
+    if (!inviteLastName.trim() || !inviteFirstName.trim() || !invitePhone.trim() || !inviteEmail.trim()) {
+      showToast('Veuillez renseigner le nom, le prénom, le numéro de téléphone/SMS et l’adresse email.');
       return;
     }
 
@@ -204,7 +212,7 @@ export default function TenantsPage() {
     const landlordName = currentUser?.name || currentUser?.companyName || 'VOGLOSSOU JOHANE';
 
     const tenantInviteData = {
-      recipientName: inviteName.trim(),
+      recipientName: fullName,
       recipientEmail: inviteEmail.trim(),
       recipientPhone: invitePhone.trim(),
       portalUrl: computedPortalUrl,
@@ -244,7 +252,7 @@ export default function TenantsPage() {
         portalUrl: computedPortalUrl,
       });
       setInviteSentSuccess(true);
-      const msg = `Invitation expédiée par email & SMS à ${inviteName.trim()} !`;
+      const msg = `Invitation expédiée par email & SMS à ${fullName} !`;
       showToast(msg);
       notifySave(msg, 'Locataire invité par Email et SMS');
     } catch (err) {
@@ -260,7 +268,7 @@ export default function TenantsPage() {
         portalUrl: computedPortalUrl,
       });
       setInviteSentSuccess(true);
-      const msg = `Lien d'invitation préparé pour ${inviteName.trim()} !`;
+      const msg = `Lien d'invitation préparé pour ${fullName} !`;
       showToast(msg);
       notifySave(msg, 'Invitation prête pour expédition');
     } finally {
@@ -354,10 +362,10 @@ export default function TenantsPage() {
         computedScore.tier.tier === 'excellent'
           ? 'Excellent'
           : computedScore.tier.tier === 'bon'
-          ? 'Fiable'
-          : computedScore.tier.tier === 'vigilance'
-          ? 'À surveiller'
-          : 'À risque';
+            ? 'Fiable'
+            : computedScore.tier.tier === 'vigilance'
+              ? 'À surveiller'
+              : 'À risque';
 
       return {
         id: l.id || `loc-${idx}`,
@@ -399,10 +407,10 @@ export default function TenantsPage() {
           onTimeRate: computedScore.isNewTenant
             ? 100
             : Math.round(
-                100 *
-                  (computedScore.onTimePaymentsCount /
-                    Math.max(1, computedScore.onTimePaymentsCount + computedScore.delayedPaymentsCount))
-              ),
+              100 *
+              (computedScore.onTimePaymentsCount /
+                Math.max(1, computedScore.onTimePaymentsCount + computedScore.delayedPaymentsCount))
+            ),
           averageDelayDays: computedScore.currentMonthDelayedDays,
           maxDelayDays: computedScore.currentMonthDelayedDays,
           criticalDelaysCount: computedScore.delayedPaymentsCount,
@@ -574,8 +582,8 @@ export default function TenantsPage() {
                         type="button"
                         onClick={() => setFilterBadge(f)}
                         className={`px-3 py-1 rounded-xl transition-all whitespace-nowrap cursor-pointer ${filterBadge === f
-                            ? 'bg-slate-900 text-white shadow-sm'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          ? 'bg-slate-900 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                           }`}
                       >
                         {f === 'all' ? 'Tous' : f}
@@ -596,8 +604,8 @@ export default function TenantsPage() {
                         key={t.id}
                         onClick={() => setSelectedTenant(t)}
                         className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected
-                            ? 'bg-brand-50/40 border-brand-500/50 shadow-sm ring-1 ring-brand-500/20'
-                            : 'bg-white hover:bg-slate-50 border-slate-200/80'
+                          ? 'bg-brand-50/40 border-brand-500/50 shadow-sm ring-1 ring-brand-500/20'
+                          : 'bg-white hover:bg-slate-50 border-slate-200/80'
                           }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
@@ -609,10 +617,10 @@ export default function TenantsPage() {
                             />
                             <span
                               className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full ring-2 ring-white ${t.scoring.score >= 85
-                                  ? 'bg-emerald-500'
-                                  : t.scoring.score >= 70
-                                    ? 'bg-blue-500'
-                                    : 'bg-amber-500'
+                                ? 'bg-emerald-500'
+                                : t.scoring.score >= 70
+                                  ? 'bg-blue-500'
+                                  : 'bg-amber-500'
                                 }`}
                             />
                           </div>
@@ -638,8 +646,8 @@ export default function TenantsPage() {
                         <div className="text-right shrink-0">
                           <ChevronRight
                             className={`w-4 h-4 transition-transform ${isSelected
-                                ? 'text-brand-600 translate-x-1'
-                                : 'text-slate-300'
+                              ? 'text-brand-600 translate-x-1'
+                              : 'text-slate-300'
                               }`}
                           />
                         </div>
@@ -727,8 +735,8 @@ export default function TenantsPage() {
                             type="button"
                             onClick={() => setActiveTab(tab.id as any)}
                             className={`flex items-center gap-1.5 py-2 px-3 rounded-xl transition-all whitespace-nowrap cursor-pointer ${isActive
-                                ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-black'
-                                : 'text-slate-500 hover:text-slate-900'
+                              ? 'bg-white text-slate-900 shadow-sm border border-slate-200 font-black'
+                              : 'text-slate-500 hover:text-slate-900'
                               }`}
                           >
                             <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-brand-500' : 'text-slate-400'}`} />
@@ -906,15 +914,15 @@ export default function TenantsPage() {
                           <div className="space-y-4 animate-in fade-in duration-200">
                             <div
                               className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isLeaseResiliated
-                                  ? 'bg-rose-50/50 border-rose-200 shadow-soft'
-                                  : 'bg-slate-50 border-slate-200'
+                                ? 'bg-rose-50/50 border-rose-200 shadow-soft'
+                                : 'bg-slate-50 border-slate-200'
                                 }`}
                             >
                               <div className="flex items-center gap-3">
                                 <div
                                   className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isLeaseResiliated
-                                      ? 'bg-rose-100 text-rose-700 border border-rose-200'
-                                      : 'bg-brand-50 text-brand-600'
+                                    ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                                    : 'bg-brand-50 text-brand-600'
                                     }`}
                                 >
                                   {isLeaseResiliated ? (
@@ -1178,18 +1186,35 @@ export default function TenantsPage() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">
-                    Nom complet du locataire *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={inviteName}
-                    onChange={(e) => setInviteName(e.target.value)}
-                    placeholder="Ex: Aïcha Touré, Kofi Mensah..."
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                  />
+                {/* Nom et Prénom séparés sur la même ligne */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Nom de famille *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={inviteLastName}
+                      onChange={(e) => setInviteLastName(e.target.value)}
+                      placeholder="Ex: Touré, Mensah..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">
+                      Prénom(s) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={inviteFirstName}
+                      onChange={(e) => setInviteFirstName(e.target.value)}
+                      placeholder="Ex: Aïcha, Kofi..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1283,7 +1308,7 @@ export default function TenantsPage() {
                     </h4>
                   </div>
                   <p className="text-[11px] text-emerald-800">
-                    Le lien d'invitation sécurisé a été généré pour <strong>{inviteName}</strong>.
+                    Le lien d'invitation sécurisé a été généré pour <strong>{inviteFullName || 'le locataire'}</strong>.
                   </p>
                   <div className="pt-1 flex flex-wrap gap-2 text-[10px] font-bold">
                     <span className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 flex items-center gap-1.5 shadow-2xs">
