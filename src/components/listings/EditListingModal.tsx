@@ -487,15 +487,10 @@ export function EditListingModal({
 
           {/* Identité Entreprise / Agence sous « Publié par » */}
           <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1.5">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <Building2 className="w-4 h-4 text-brand-600" />
-                <span>Nom de l&apos;entreprise ou agence (Optionnel)</span>
-              </label>
-              <span className="text-[10px] text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full font-bold border border-brand-200">
-                Prioritaire sous « Publié par »
-              </span>
-            </div>
+            <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+              <Building2 className="w-4 h-4 text-brand-600" />
+              <span>Nom de l&apos;entreprise ou agence (Optionnel)</span>
+            </label>
             <input
               type="text"
               value={authorCompany}
@@ -503,9 +498,6 @@ export function EditListingModal({
               placeholder="Ex: Agence Immobilière Prestige, Alafia Immo SARL..."
               className="w-full px-3.5 py-2.5 rounded-2xl bg-white border border-slate-200 text-slate-900 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500"
             />
-            <p className="text-[10px] text-slate-500 leading-snug">
-              💡 <strong>Règle d&apos;affichage :</strong> Si renseigné, ce nom d&apos;entreprise apparaîtra sous <strong>« Publié par »</strong> sur toute la plateforme. Si laissé vide, votre nom civil (<strong>{listing.authorName || 'Nom civil'}</strong>) sera affiché par défaut.
-            </p>
           </div>
 
           {/* 2. Titre & Type */}
