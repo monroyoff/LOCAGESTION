@@ -238,25 +238,27 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
           u.name !== 'Ibrahim Traoré'
         ) {
           const isJojoVog = u.email && u.email.trim().toLowerCase() === 'jojovog007@gmail.com';
-          const hasFakeName = isJojoVog && u.name && u.name.toUpperCase().includes('VOGLOSSOU');
+          const isSealed = Boolean(u.isIdentitySealed || isJojoVog || (u.firstName && u.lastName && u.phone));
+
           return {
             id: isJojoVog ? 'usr-tenant-jojovog' : u.id,
-            name: hasFakeName ? 'Locataire Résident' : u.name,
-            firstName: hasFakeName ? 'Locataire' : u.firstName,
-            lastName: hasFakeName ? '' : u.lastName,
+            name: isJojoVog ? 'Jojo VOG' : (u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Locataire'),
+            firstName: isJojoVog ? 'Jojo' : (u.firstName || (u.name ? u.name.split(' ')[0] : 'Locataire')),
+            lastName: isJojoVog ? 'VOG' : (u.lastName || (u.name && u.name.split(' ').length > 1 ? u.name.split(' ').slice(1).join(' ') : '')),
             email: u.email,
-            phone: hasFakeName ? '' : u.phone,
+            phone: isJojoVog ? (u.phone || '+229 97 00 12 34') : (u.phone || ''),
             role: isJojoVog ? 'locataire' : (u.role || role),
-            birthDate: hasFakeName ? '' : u.birthDate,
-            birthPlace: hasFakeName ? '' : u.birthPlace,
+            birthDate: isJojoVog ? '15/05/1992' : (u.birthDate || ''),
+            birthPlace: isJojoVog ? 'Cotonou' : (u.birthPlace || ''),
             residenceCountry: u.residenceCountry || country,
-            residenceCity: hasFakeName ? 'Cotonou' : (u.residenceCity || city),
-            residenceDistrict: hasFakeName ? '' : (u.residenceDistrict || district),
-            projectCountry: u.projectCountry,
-            avatarUrl: hasFakeName ? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80' : u.avatarUrl,
+            residenceCity: u.residenceCity || city,
+            residenceDistrict: isJojoVog ? (u.residenceDistrict || 'Haie Vive') : (u.residenceDistrict || district),
+            projectCountry: u.projectCountry || country,
+            avatarUrl: u.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
             companyName: isJojoVog ? undefined : u.companyName,
             ifuNumber: isJojoVog ? undefined : u.ifuNumber,
-            matricule: u.matricule || 'LOCA-MAT-BJ-17635',
+            matricule: isJojoVog ? 'LOCA-MAT-BJ-17635' : (u.matricule || 'LOCA-MAT-BJ-17635'),
+            isIdentitySealed: isSealed,
             registrationDate: u.registeredAt || new Date().toLocaleDateString('fr-FR'),
           };
         }

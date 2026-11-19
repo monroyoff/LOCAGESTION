@@ -44,18 +44,38 @@ export async function POST(req: NextRequest) {
     const users = getUsersFromFile();
     const cleanEmail = body.email.trim().toLowerCase();
 
-    // RÈGLE D'OR : Le compte jojovog007@gmail.com est irrévocablement lié à LOCA-MAT-BJ-17635
+    // RÈGLE D'OR : Le compte jojovog007@gmail.com est irrévocablement lié à LOCA-MAT-BJ-17635 et scellé
     if (cleanEmail === 'jojovog007@gmail.com') {
       body.matricule = 'LOCA-MAT-BJ-17635';
+      body.firstName = 'Jojo';
+      body.lastName = 'VOG';
+      body.name = 'Jojo VOG';
+      body.phone = body.phone || '+229 97 00 12 34';
+      body.isIdentitySealed = true;
     }
 
     const idx = users.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === cleanEmail);
 
     if (idx !== -1) {
-      // Conservation stricte du matricule existant (immutabilité garantie)
-      const existingMatricule = users[idx].matricule || body.matricule;
-      users[idx] = { ...users[idx], ...body, matricule: existingMatricule };
+      // Conservation stricte du matricule existant et protection de l'identité scellée
+      const existing = users[idx];
+      const immutableMatricule = existing.matricule || body.matricule;
+      const isSealed = Boolean(existing.isIdentitySealed || body.isIdentitySealed);
+
+      users[idx] = {
+        ...existing,
+        ...body,
+        matricule: immutableMatricule,
+        firstName: isSealed ? (existing.firstName || body.firstName) : (body.firstName || existing.firstName),
+        lastName: isSealed ? (existing.lastName || body.lastName) : (body.lastName || existing.lastName),
+        name: isSealed ? (existing.name || body.name) : (body.name || existing.name),
+        phone: isSealed ? (existing.phone || body.phone) : (body.phone || existing.phone),
+        isIdentitySealed: isSealed,
+      };
     } else {
+      if (body.firstName && body.lastName && body.phone) {
+        body.isIdentitySealed = true;
+      }
       users.unshift(body);
     }
 

@@ -120,11 +120,11 @@ export function NewPropertyModal({
     const rev = parseInt(monthlyRevenue, 10) || 0;
     const rentPerUnit = unitsCount > 0 ? Math.round(rev / unitsCount) : rev;
 
-    // À la création du bien, chaque lot est libre et vacant (pas de locataire fictif tant qu'aucun bail n'est conclu)
+    // À la création du bien, chaque lot est libre et vacant (pas de surface fictive par défaut)
     const generatedUnits = Array.from({ length: unitsCount }).map((_, idx) => ({
       unit: `Lot ${idx + 1}`,
-      type: idx === 0 ? (type || 'Chambre Salon Sanitaire • 45 m²') : `${idx + 1} Pièces • ${50 + idx * 15} m²`,
-      surface: 50 + idx * 10,
+      type: idx === 0 ? (type || 'Chambre Salon Sanitaire') : `${idx + 1} Pièces`,
+      surface: 0,
       rent: rentPerUnit,
       tenant: 'Disponible',
       status: 'vacant' as const,

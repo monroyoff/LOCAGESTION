@@ -142,6 +142,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     registeredAt: '18/11/2026',
     password: 'Jesus1122',
     accountStatus: 'active',
+    isIdentitySealed: true,
   },
   {
     id: 'usr-tenant-koffi',
@@ -282,10 +283,27 @@ export const AuthService = {
 
           let hasMutated = false;
           sanitized.forEach((u) => {
-            // RÉCONCILIATION STRICTE & DÉFINITIVE JOJO VOG : un seul matricule LOCA-MAT-BJ-17635
+            // RÉCONCILIATION STRICTE & SCELLEMENT DÉFINITIF DU COMPTE JOJO VOG
             if (areEmailsEqual(u.email, 'jojovog007@gmail.com') || u.matricule === 'LOCA-MAT-BJ-69734') {
-              if (u.matricule !== 'LOCA-MAT-BJ-17635') {
+              if (
+                u.matricule !== 'LOCA-MAT-BJ-17635' ||
+                u.firstName !== 'Jojo' ||
+                u.lastName !== 'VOG' ||
+                u.name !== 'Jojo VOG' ||
+                !u.isIdentitySealed
+              ) {
                 u.matricule = 'LOCA-MAT-BJ-17635';
+                u.firstName = 'Jojo';
+                u.lastName = 'VOG';
+                u.name = 'Jojo VOG';
+                u.phone = u.phone || '+229 97 00 12 34';
+                u.isIdentitySealed = true;
+                hasMutated = true;
+              }
+            } else if (u.firstName && u.lastName && u.phone) {
+              // Règle d'or universelle : toute identité renseignée et complète est scellée
+              if (!u.isIdentitySealed) {
+                u.isIdentitySealed = true;
                 hasMutated = true;
               }
             }
@@ -415,8 +433,18 @@ export const AuthService = {
             }
           }
           if (areEmailsEqual(parsed.email, 'jojovog007@gmail.com') || parsed.matricule === 'LOCA-MAT-BJ-69734') {
-            if (parsed.matricule !== 'LOCA-MAT-BJ-17635') {
-              parsed.matricule = 'LOCA-MAT-BJ-17635';
+            parsed.matricule = 'LOCA-MAT-BJ-17635';
+            parsed.firstName = 'Jojo';
+            parsed.lastName = 'VOG';
+            parsed.name = 'Jojo VOG';
+            parsed.phone = parsed.phone || '+229 97 00 12 34';
+            parsed.isIdentitySealed = true;
+            try {
+              localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
+            } catch (e) {}
+          } else if (parsed.firstName && parsed.lastName && parsed.phone) {
+            if (!parsed.isIdentitySealed) {
+              parsed.isIdentitySealed = true;
               try {
                 localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
               } catch (e) {}

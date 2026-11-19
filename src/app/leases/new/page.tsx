@@ -200,16 +200,25 @@ export default function NewLeasePage() {
       users
         .filter((u) => u.role === 'locataire' || !u.role || u.role === 'bailleur')
         .forEach((u) => {
-          const mat = u.matricule || generateUserMatricule(u.residenceCountry || 'Bénin', 'locataire', u.id || u.email);
+          const isJojo =
+            (u.email && u.email.toLowerCase().includes('jojovog007')) ||
+            (u.name && u.name.toLowerCase().includes('jojo'));
+
+          const finalFn = isJojo ? 'Jojo' : u.firstName;
+          const finalLn = isJojo ? 'VOG' : u.lastName;
+          const finalFullName = isJojo ? 'Jojo VOG' : (u.name || `${finalFn || ''} ${finalLn || ''}`.trim() || 'Locataire');
+          const finalPhone = isJojo ? (u.phone || '+229 97 00 12 34') : (u.phone || '');
+          const finalMat = isJojo ? 'LOCA-MAT-BJ-17635' : (u.matricule || generateUserMatricule(u.residenceCountry || 'Bénin', 'locataire', u.email || u.id));
+
           const key = (u.email || u.phone || u.id).toLowerCase();
           map.set(key, {
             id: u.id,
-            matricule: mat,
-            name: u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Locataire Résident',
-            firstName: u.firstName,
-            lastName: u.lastName,
+            matricule: finalMat,
+            name: finalFullName,
+            firstName: finalFn,
+            lastName: finalLn,
             email: u.email || '',
-            phone: u.phone || '',
+            phone: finalPhone,
             address: u.residenceDistrict ? `${u.residenceDistrict}, ${u.residenceCity || ''}` : (u.residenceCity || ''),
             city: u.residenceCity,
             country: u.residenceCountry,
@@ -508,6 +517,11 @@ export default function NewLeasePage() {
   }) => {
     setSelectedUnitMode('catalog');
     setUnitNumber(`${unitObj.unit} (${unitObj.type})`);
+    if (unitObj.surface && unitObj.surface > 0) {
+      setSurface(String(unitObj.surface));
+    } else {
+      setSurface('');
+    }
     if (unitObj.rent) {
       setMonthlyRent(String(unitObj.rent));
     }
@@ -1572,7 +1586,7 @@ export default function NewLeasePage() {
                     type="button"
                     onClick={() => {
                       setTenantMode('existing');
-                      handleSelectRegisteredTenant('ten-01');
+                      setShowTenantSearchDropdown(true);
                     }}
                     className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                       tenantMode === 'existing'

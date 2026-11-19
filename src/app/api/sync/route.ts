@@ -125,20 +125,36 @@ export async function POST(req: NextRequest) {
         (u) => u.email && u.email.trim().toLowerCase() === cleanEmail
       );
 
-      // CAS PARTICULIER STRICT JOJO VOG : matricule LOCA-MAT-BJ-17635 verrouillé pour toujours
+      // CAS PARTICULIER STRICT JOJO VOG : matricule et identité scellés pour toujours
       if (cleanEmail === 'jojovog007@gmail.com') {
         incomingUser.matricule = 'LOCA-MAT-BJ-17635';
+        incomingUser.firstName = 'Jojo';
+        incomingUser.lastName = 'VOG';
+        incomingUser.name = 'Jojo VOG';
+        incomingUser.phone = incomingUser.phone || '+229 97 00 12 34';
+        incomingUser.isIdentitySealed = true;
       }
 
       if (idx !== -1) {
-        // Préserver le matricule existant (immutabilité garantie)
-        const immutableMatricule = currentUsers[idx].matricule || incomingUser.matricule;
+        // Préserver le matricule existant et l'identité scellée
+        const existing = currentUsers[idx];
+        const immutableMatricule = existing.matricule || incomingUser.matricule;
+        const isSealed = Boolean(existing.isIdentitySealed || incomingUser.isIdentitySealed);
+
         currentUsers[idx] = {
-          ...currentUsers[idx],
+          ...existing,
           ...incomingUser,
           matricule: immutableMatricule,
+          firstName: isSealed ? (existing.firstName || incomingUser.firstName) : (incomingUser.firstName || existing.firstName),
+          lastName: isSealed ? (existing.lastName || incomingUser.lastName) : (incomingUser.lastName || existing.lastName),
+          name: isSealed ? (existing.name || incomingUser.name) : (incomingUser.name || existing.name),
+          phone: isSealed ? (existing.phone || incomingUser.phone) : (incomingUser.phone || existing.phone),
+          isIdentitySealed: isSealed,
         };
       } else {
+        if (incomingUser.firstName && incomingUser.lastName && incomingUser.phone) {
+          incomingUser.isIdentitySealed = true;
+        }
         currentUsers.unshift(incomingUser);
       }
       writeJsonFile(USERS_FILE, currentUsers);

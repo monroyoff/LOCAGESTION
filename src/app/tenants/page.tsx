@@ -45,6 +45,7 @@ import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
+import { AuthService, areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
 import { Footer } from '@/components/layout/Footer';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 import { SkeletonTable } from '@/components/ui/SkeletonLoader';
@@ -181,20 +182,47 @@ export default function TenantsPage() {
     notifySave(msg, 'Bail réactivé avec succès !');
   };
 
-  // Transformer les vrais baux du bailleur en fiches locataires dynamiques
+  // Transformer les vrais baux du bailleur en fiches locataires dynamiques avec identité scellée
   const dynamicTenants: TenantDetail[] = useMemo(() => {
+    const registeredUsers = AuthService.getRegisteredUsers();
+
     return leases.map((l, idx) => {
-      const parts = (l.tenant || 'Locataire').trim().split(' ');
-      const firstName = parts.slice(1).join(' ') || parts[0];
-      const lastName = parts[0] || '';
+      const matchedUser = registeredUsers.find(
+        (u) =>
+          (l.tenantEmail && areEmailsEqual(u.email, l.tenantEmail)) ||
+          (l.tenantPhone && arePhoneNumbersEqual(u.phone, l.tenantPhone)) ||
+          (u.id && l.tenantId && u.id === l.tenantId)
+      );
+
+      const isJojo =
+        (l.tenantEmail && areEmailsEqual(l.tenantEmail, 'jojovog007@gmail.com')) ||
+        (l.tenant && l.tenant.toLowerCase().includes('jojo'));
+
+      let resolvedFirstName = isJojo ? 'Jojo' : (matchedUser?.firstName || '');
+      let resolvedLastName = isJojo ? 'VOG' : (matchedUser?.lastName || '');
+      let resolvedFullName = isJojo
+        ? 'Jojo VOG'
+        : (matchedUser?.name || `${resolvedFirstName} ${resolvedLastName}`.trim() || l.tenant || 'Locataire');
+
+      if (!resolvedFirstName && !resolvedLastName) {
+        const rawParts = (l.tenant || 'Locataire').trim().split(/\s+/);
+        if (rawParts.length >= 2) {
+          resolvedFirstName = rawParts[0];
+          resolvedLastName = rawParts.slice(1).join(' ');
+        } else {
+          resolvedFirstName = rawParts[0];
+          resolvedLastName = '';
+        }
+      }
+
       return {
         id: l.id || `loc-${idx}`,
-        firstName,
-        lastName,
-        fullName: l.tenant || 'Locataire',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
-        email: l.tenantEmail || '',
-        phone: l.tenantPhone || '',
+        firstName: resolvedFirstName,
+        lastName: resolvedLastName,
+        fullName: resolvedFullName,
+        avatar: matchedUser?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80',
+        email: matchedUser?.email || l.tenantEmail || '',
+        phone: matchedUser?.phone || l.tenantPhone || '',
         profession: 'Locataire Résident',
         employer: 'N/A',
         emergencyContact: {
