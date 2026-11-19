@@ -57,6 +57,21 @@ export interface Lease {
     date: string;
     signatureDataUrl?: string;
   };
+  landlordId?: string;
+  landlordName?: string;
+  landlordPhone?: string;
+  landlordEmail?: string;
+  landlordWhatsapp?: string;
+  landlordIfu?: string;
+  landlordAddress?: string;
+  landlordPaymentMethods?: {
+    wave?: string;
+    mtn?: string;
+    moov?: string;
+    orange?: string;
+    airtel?: string;
+    bank?: string;
+  };
   tenantSignature?: {
     signedBy: string;
     date: string;
@@ -148,8 +163,21 @@ export const INITIAL_LEASES: Lease[] = [
     status: 'actif',
     signedByLandlord: true,
     signedByTenant: true,
+    landlordId: 'usr-bailleur-voglossou',
+    landlordName: 'VOGLOSSOU JOHANE',
+    landlordPhone: '+229 97 00 11 22',
+    landlordWhatsapp: '+229 97 00 11 22',
+    landlordEmail: 'jobovog@gmail.com',
+    landlordIfu: '3201984210987',
+    landlordAddress: 'Haie Vive, Cotonou, Bénin',
+    landlordPaymentMethods: {
+      wave: '+229 97 00 11 22',
+      mtn: '+229 97 00 11 22',
+      moov: '+229 97 00 11 22',
+      bank: 'BJ061 01001 001234567890 45 (BOA Bénin)',
+    },
     landlordSignature: {
-      signedBy: 'Le Bailleur',
+      signedBy: 'VOGLOSSOU JOHANE',
       date: '18/11/2026',
       signatureDataUrl: '',
     },
@@ -189,6 +217,32 @@ export const LeaseService = {
               localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(merged));
             } catch (e) {}
             return merged;
+          }
+
+          // Si le bail canonique est présent mais sans les coordonnées du bailleur, les enrichir
+          const jojoLease = parsed.find((l: Lease) => l.id === 'BAIL-2026-BJ-17635');
+          if (jojoLease && (!jojoLease.landlordPhone || !jojoLease.landlordPaymentMethods)) {
+            Object.assign(jojoLease, {
+              landlordId: 'usr-bailleur-voglossou',
+              landlordName: 'VOGLOSSOU JOHANE',
+              landlordPhone: '+229 97 00 11 22',
+              landlordWhatsapp: '+229 97 00 11 22',
+              landlordEmail: 'jobovog@gmail.com',
+              landlordIfu: '3201984210987',
+              landlordAddress: 'Haie Vive, Cotonou, Bénin',
+              landlordPaymentMethods: {
+                wave: '+229 97 00 11 22',
+                mtn: '+229 97 00 11 22',
+                moov: '+229 97 00 11 22',
+                bank: 'BJ061 01001 001234567890 45 (BOA Bénin)',
+              },
+            });
+            if (jojoLease.landlordSignature) {
+              jojoLease.landlordSignature.signedBy = 'VOGLOSSOU JOHANE';
+            }
+            try {
+              localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
+            } catch (e) {}
           }
           if (parsed.length > 0) return parsed;
         }

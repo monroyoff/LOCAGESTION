@@ -753,6 +753,21 @@ export default function NewLeasePage() {
       endDate: '2029-10-31',
       durationMonths: parseInt(durationMonths, 10) || 36,
       status: 'en_attente_signature',
+      landlordId: user?.id || 'usr-bailleur-voglossou',
+      landlordName: landlordDisplayName || 'VOGLOSSOU JOHANE',
+      landlordPhone: user?.phone || '+229 97 00 11 22',
+      landlordWhatsapp: user?.phone || '+229 97 00 11 22',
+      landlordEmail: user?.email || 'jobovog@gmail.com',
+      landlordIfu: user?.ifuNumber || '3201984210987',
+      landlordAddress: user?.residenceDistrict
+        ? `${user.residenceDistrict}, ${user.residenceCity || 'Cotonou'}`
+        : 'Haie Vive, Cotonou, Bénin',
+      landlordPaymentMethods: {
+        wave: user?.phone || '+229 97 00 11 22',
+        mtn: user?.phone || '+229 97 00 11 22',
+        moov: user?.phone || '+229 97 00 11 22',
+        bank: 'BJ061 01001 001234567890 45 (BOA Bénin)',
+      },
       landlordSignature: {
         signedBy: landlordDisplayName,
         date: new Date().toLocaleDateString('fr-FR'),

@@ -17,6 +17,8 @@ import {
   Download,
   ExternalLink,
   Lock,
+  ArrowRight,
+  Building2,
 } from 'lucide-react';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
 import { ListingsService } from '@/lib/services/listings-service';
@@ -582,14 +584,15 @@ export function TenantSignLeaseModal({
                 </div>
               </div>
 
-              {/* Actions post-signature */}
+              {/* Actions post-signature : Accès direct aux infos et comptes du bailleur */}
               <div className="pt-2 flex flex-col sm:flex-row gap-3">
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors cursor-pointer"
+                  className="flex-1 py-3.5 px-5 rounded-2xl bg-gradient-to-r from-brand-600 via-rose-600 to-pink-600 hover:from-brand-700 hover:to-rose-700 text-white text-xs font-black shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
                 >
-                  Accéder à mon espace locataire
+                  <Building2 className="w-4 h-4" />
+                  <span>Accéder immédiatement aux infos & comptes du bailleur →</span>
                 </button>
               </div>
             </div>

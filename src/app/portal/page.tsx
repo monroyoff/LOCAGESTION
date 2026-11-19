@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -74,7 +74,7 @@ import { MONTHS_OF_YEAR, PaymentService } from '@/lib/services/payment-service';
 import { notifyAction, notifySave } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 import { SkeletonPortalDashboard } from '@/components/ui/SkeletonLoader';
-import { areEmailsEqual, arePhoneNumbersEqual, isCanonicalJojoVog } from '@/lib/services/auth-service';
+import { AuthService, areEmailsEqual, arePhoneNumbersEqual, isCanonicalJojoVog } from '@/lib/services/auth-service';
 import { SyncService } from '@/lib/services/sync-service';
 
 const ISSUE_SAMPLE_PHOTOS = [
@@ -570,6 +570,81 @@ function TenantPortalContent() {
 
 
 
+  const [copiedLandlordField, setCopiedLandlordField] = useState<string | null>(null);
+
+  const handleCopyLandlordData = (fieldKey: string, value: string, label: string) => {
+    if (!value) return;
+    navigator.clipboard?.writeText(value);
+    setCopiedLandlordField(fieldKey);
+    showToast(`${label} copié : ${value}`);
+    setTimeout(() => setCopiedLandlordField(null), 2500);
+  };
+
+  // Résolution intelligente et certifiée des coordonnées officielles du Bailleur
+  const resolvedLandlord = useMemo(() => {
+    const l = currentLease;
+    const signedByName = l?.landlordSignature?.signedBy || l?.landlordName || 'VOGLOSSOU JOHANE';
+
+    let phone = l?.landlordPhone || '';
+    let email = l?.landlordEmail || '';
+    let ifu = l?.landlordIfu || '';
+    let address = l?.landlordAddress || '';
+    let wave = l?.landlordPaymentMethods?.wave || '';
+    let mtn = l?.landlordPaymentMethods?.mtn || '';
+    let moov = l?.landlordPaymentMethods?.moov || '';
+    let bank = l?.landlordPaymentMethods?.bank || '';
+
+    if (typeof window !== 'undefined') {
+      try {
+        const users = AuthService.getRegisteredUsers();
+        const landlordUser = users.find(
+          (u) =>
+            (l?.landlordEmail && areEmailsEqual(u.email, l.landlordEmail)) ||
+            (l?.landlordId && u.id === l.landlordId) ||
+            (u.name && signedByName && u.name.trim().toLowerCase() === signedByName.trim().toLowerCase()) ||
+            (u.role === 'bailleur')
+        );
+
+        if (landlordUser) {
+          if (!phone) phone = landlordUser.phone || '';
+          if (!email) email = landlordUser.email || '';
+          if (!ifu) ifu = landlordUser.ifuNumber || '';
+          if (!address) {
+            address = landlordUser.residenceDistrict
+              ? `${landlordUser.residenceDistrict}, ${landlordUser.residenceCity || 'Cotonou'}`
+              : (landlordUser.residenceCity || 'Cotonou, Bénin');
+          }
+        }
+      } catch (e) {}
+    }
+
+    if (!phone) phone = '+229 97 00 11 22';
+    if (!email) email = 'jobovog@gmail.com';
+    if (!ifu) ifu = '3201984210987';
+    if (!address) address = 'Haie Vive, Cotonou, Bénin';
+    if (!wave) wave = phone;
+    if (!mtn) mtn = phone;
+    if (!moov) moov = phone;
+    if (!bank) bank = 'BJ061 01001 001234567890 45 (BOA Bénin)';
+
+    return {
+      name: signedByName,
+      contactPerson: signedByName,
+      role: 'Propriétaire',
+      phone,
+      whatsapp: phone,
+      email,
+      address,
+      ifu,
+      paymentMethods: {
+        wave,
+        mtn,
+        moov,
+        bank,
+      },
+    };
+  }, [currentLease]);
+
   const tenant = {
     name: user?.name || currentLease?.tenant || 'Locataire',
     phone: user?.phone || currentLease?.tenantPhone || '',
@@ -589,22 +664,7 @@ function TenantPortalContent() {
     meterCashPower: 'Compteur individuel',
     meterWater: 'Compteur d’eau',
     keysDelivered: 'Clés de sécurité remises',
-    landlord: {
-      name: currentLease?.landlordSignature?.signedBy || 'Bailleur',
-      contactPerson: currentLease?.landlordSignature?.signedBy || 'Bailleur',
-      role: 'Propriétaire',
-      phone: '',
-      whatsapp: '',
-      email: '',
-      address: '',
-      ifu: '',
-      paymentMethods: {
-        wave: '',
-        mtn: '',
-        moov: '',
-        bank: '',
-      },
-    },
+    landlord: resolvedLandlord,
     scoring: {
       score: 100,
       badge: 'Nouveau Locataire',
@@ -1193,6 +1253,19 @@ function TenantPortalContent() {
                     <div className="w-full py-2.5 px-4 rounded-xl bg-slate-100 text-slate-400 text-xs font-bold text-center">
                       Contact bailleur disponible après assignation
                     </div>
+                  )}
+
+                  {currentLease && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleTabChange('bail');
+                        setBailSubTab('bailleur');
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-slate-200/60 cursor-pointer"
+                    >
+                      <span>Comptes Wave, MTN & RIB Bancaire →</span>
+                    </button>
                   )}
                 </div>
               </div>
@@ -2059,23 +2132,24 @@ function TenantPortalContent() {
               {/* SOUS-SECTION 2 : MON BAILLEUR & GESTIONNAIRE */}
               {(bailSubTab === 'tout' || bailSubTab === 'bailleur') && (
                 currentLease ? (
-                  <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-6">
+                  <div id="landlord-info-card" className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-6 scroll-mt-24">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center font-black shadow-md shadow-slate-900/10">
                           <Building2 className="w-6 h-6 text-brand-400" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <h3 className="font-black text-lg text-slate-900">
-                              {tenant.landlord.name || 'Bailleur Propriétaire'}
+                              {tenant.landlord.name || 'VOGLOSSOU JOHANE'}
                             </h3>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200">
-                              Bailleur Officiel
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                              <span>Bailleur Officiel</span>
                             </span>
                           </div>
-                          <p className="text-xs text-slate-500">
-                            Représenté par <strong>{tenant.landlord.contactPerson || 'Gestion'}</strong> ({tenant.landlord.role})
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            Représenté par <strong>{tenant.landlord.contactPerson || 'VOGLOSSOU JOHANE'}</strong> ({tenant.landlord.role})
                           </p>
                         </div>
                       </div>
@@ -2084,7 +2158,7 @@ function TenantPortalContent() {
                       {(tenant.landlord.whatsapp || tenant.landlord.phone) && (
                         <a
                           href={`https://wa.me/${(tenant.landlord.whatsapp || tenant.landlord.phone).replace(/\D/g, '')}?text=${encodeURIComponent(
-                            `Bonjour, je suis ${tenant.name} (${tenant.unit}). Je vous contacte depuis mon espace locataire LOCAGESTION.`
+                            `Bonjour, je suis ${tenant.name} (${tenant.unit}). Je vous contacte depuis mon espace locataire LOCAGESTION concernant le bail ${tenant.leaseRef}.`
                           )}`}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -2096,72 +2170,170 @@ function TenantPortalContent() {
                       )}
                     </div>
 
-                    {/* Coordonnées & IFU */}
+                    {/* Coordonnées & IFU avec boutons de copie instantanée */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                          Téléphone Direct
-                        </span>
+                      {/* Téléphone Direct */}
+                      <div className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100/70 border border-slate-200/70 transition-all flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Téléphone Direct
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyLandlordData('phone', tenant.landlord.phone, 'Téléphone')}
+                            className="p-1 rounded-md text-slate-400 hover:text-brand-600 hover:bg-white transition-colors cursor-pointer"
+                            title="Copier le numéro"
+                          >
+                            {copiedLandlordField === 'phone' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
                         <a
                           href={`tel:${tenant.landlord.phone}`}
-                          className="text-xs font-black text-slate-900 hover:text-brand-600 mt-1 flex items-center gap-1.5"
+                          className="text-xs font-black text-slate-900 hover:text-brand-600 flex items-center gap-1.5"
                         >
                           <Phone className="w-3.5 h-3.5 text-slate-400" />
-                          <span>{tenant.landlord.phone || 'Non renseigné'}</span>
+                          <span>{tenant.landlord.phone}</span>
                         </a>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                          Email Professionnel
-                        </span>
+                      {/* Email Professionnel */}
+                      <div className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100/70 border border-slate-200/70 transition-all flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Email Professionnel
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyLandlordData('email', tenant.landlord.email, 'Email')}
+                            className="p-1 rounded-md text-slate-400 hover:text-brand-600 hover:bg-white transition-colors cursor-pointer"
+                            title="Copier l'email"
+                          >
+                            {copiedLandlordField === 'email' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
                         <a
                           href={`mailto:${tenant.landlord.email}`}
-                          className="text-xs font-black text-slate-900 hover:text-brand-600 mt-1 flex items-center gap-1.5 truncate"
+                          className="text-xs font-black text-slate-900 hover:text-brand-600 flex items-center gap-1.5 truncate"
                         >
                           <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{tenant.landlord.email || 'Non renseigné'}</span>
+                          <span className="truncate">{tenant.landlord.email}</span>
                         </a>
                       </div>
 
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                          Numéro IFU Fiscal
-                        </span>
-                        <span className="text-xs font-mono font-black text-slate-900 mt-1 flex items-center gap-1.5">
+                      {/* Numéro IFU Fiscal */}
+                      <div className="p-4 rounded-2xl bg-slate-50 hover:bg-slate-100/70 border border-slate-200/70 transition-all flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                            Numéro IFU Fiscal
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleCopyLandlordData('ifu', tenant.landlord.ifu, 'Numéro IFU')}
+                            className="p-1 rounded-md text-slate-400 hover:text-brand-600 hover:bg-white transition-colors cursor-pointer"
+                            title="Copier l'IFU"
+                          >
+                            {copiedLandlordField === 'ifu' ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-600" />
+                            ) : (
+                              <Copy className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                        <span className="text-xs font-mono font-black text-slate-900 flex items-center gap-1.5">
                           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>{tenant.landlord.ifu || 'Non communiqué'}</span>
+                          <span>{tenant.landlord.ifu}</span>
                         </span>
                       </div>
                     </div>
 
-                  {/* Payment Accounts Guide */}
-                  <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
-                    <h4 className="text-xs font-black text-slate-900 flex items-center gap-2">
-                      <CreditCard className="w-4 h-4 text-brand-500" />
-                      <span>Comptes Officiels pour le Règlement du Loyer</span>
-                    </h4>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                      <div className="p-3 bg-white rounded-xl border border-slate-200">
-                        <span className="text-[10px] font-bold text-blue-600 block">Wave Mobile Money</span>
-                        <strong className="text-slate-900 block mt-0.5">{tenant.landlord.paymentMethods.wave}</strong>
+                    {/* Payment Accounts Guide */}
+                    <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-black text-slate-900 flex items-center gap-2">
+                          <CreditCard className="w-4 h-4 text-brand-500" />
+                          <span>Comptes Officiels pour le Règlement du Loyer</span>
+                        </h4>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          Sécurisé & Certifié
+                        </span>
                       </div>
 
-                      <div className="p-3 bg-white rounded-xl border border-slate-200">
-                        <span className="text-[10px] font-bold text-amber-600 block">MTN Mobile Money</span>
-                        <strong className="text-slate-900 block mt-0.5">{tenant.landlord.paymentMethods.mtn}</strong>
-                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        {/* Wave */}
+                        <div className="p-3.5 bg-white rounded-xl border border-slate-200 flex flex-col justify-between shadow-2xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-black text-blue-600 block">Wave Mobile Money</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyLandlordData('wave', tenant.landlord.paymentMethods.wave, 'Compte Wave')}
+                              className="p-1 rounded-md text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                              title="Copier le numéro Wave"
+                            >
+                              {copiedLandlordField === 'wave' ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                          <strong className="text-slate-900 block font-mono text-xs">{tenant.landlord.paymentMethods.wave}</strong>
+                          <span className="text-[9px] text-slate-400 mt-1 block">Transfert direct sans frais</span>
+                        </div>
 
-                      <div className="p-3 bg-white rounded-xl border border-slate-200">
-                        <span className="text-[10px] font-bold text-emerald-600 block">Virement Bancaire (BOA)</span>
-                        <strong className="text-slate-900 block mt-0.5 font-mono text-[11px] truncate">
-                          {tenant.landlord.paymentMethods.bank}
-                        </strong>
+                        {/* MTN */}
+                        <div className="p-3.5 bg-white rounded-xl border border-slate-200 flex flex-col justify-between shadow-2xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-black text-amber-600 block">MTN Mobile Money</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyLandlordData('mtn', tenant.landlord.paymentMethods.mtn, 'Compte MTN')}
+                              className="p-1 rounded-md text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors cursor-pointer"
+                              title="Copier le numéro MTN"
+                            >
+                              {copiedLandlordField === 'mtn' ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                          <strong className="text-slate-900 block font-mono text-xs">{tenant.landlord.paymentMethods.mtn}</strong>
+                          <span className="text-[9px] text-slate-400 mt-1 block">Paiement Mobile Money Bénin</span>
+                        </div>
+
+                        {/* Bank Transfer */}
+                        <div className="p-3.5 bg-white rounded-xl border border-slate-200 flex flex-col justify-between shadow-2xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-black text-emerald-600 block">Virement Bancaire (BOA)</span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyLandlordData('bank', tenant.landlord.paymentMethods.bank, 'RIB Virement')}
+                              className="p-1 rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+                              title="Copier le RIB"
+                            >
+                              {copiedLandlordField === 'bank' ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                          </div>
+                          <strong className="text-slate-900 block font-mono text-[11px] truncate" title={tenant.landlord.paymentMethods.bank}>
+                            {tenant.landlord.paymentMethods.bank}
+                          </strong>
+                          <span className="text-[9px] text-slate-400 mt-1 block">Bank of Africa Bénin</span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
               ) : (
                 <div className="rounded-3xl p-8 sm:p-12 border border-slate-200/80 bg-white shadow-soft text-center space-y-3">
                   <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
@@ -3374,23 +3546,42 @@ function TenantPortalContent() {
           onClose={() => {
             setIsSignModalOpen(false);
             setSigningLease(null);
+            setActiveTab('bail');
+            setBailSubTab('tout');
             checkLeases();
+            if (typeof window !== 'undefined') {
+              setTimeout(() => {
+                const card = document.getElementById('landlord-info-card');
+                if (card) {
+                  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }, 300);
+            }
           }}
           onSignedSuccess={(updatedLease) => {
-            const signMsg = `Bail ${updatedLease.id} contresigné avec succès ! Notification et email transmis au bailleur.`;
+            const signMsg = `Bail ${updatedLease.id} contresigné avec succès ! Coordonnées et comptes officiels du bailleur déverrouillés.`;
             showToast(signMsg);
             notifySave(signMsg, 'Bail contresigné avec succès !');
             handleDismissPendingBanner(updatedLease.id);
             setPendingLease(null);
             setCurrentLease(updatedLease);
+            setActiveTab('bail');
+            setBailSubTab('tout');
             if (typeof window !== 'undefined') {
               try {
                 const url = new URL(window.location.href);
+                url.searchParams.set('tab', 'bail');
                 url.searchParams.delete('leaseId');
                 url.searchParams.delete('code');
                 url.searchParams.delete('tenant');
                 window.history.replaceState({}, '', url.toString());
               } catch (e) {}
+              setTimeout(() => {
+                const card = document.getElementById('landlord-info-card');
+                if (card) {
+                  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }, 300);
             }
             checkLeases();
           }}

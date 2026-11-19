@@ -21,8 +21,21 @@
     "status": "actif",
     "signedByLandlord": true,
     "signedByTenant": true,
+    "landlordId": "usr-bailleur-voglossou",
+    "landlordName": "VOGLOSSOU JOHANE",
+    "landlordPhone": "+229 97 00 11 22",
+    "landlordWhatsapp": "+229 97 00 11 22",
+    "landlordEmail": "jobovog@gmail.com",
+    "landlordIfu": "3201984210987",
+    "landlordAddress": "Haie Vive, Cotonou, Bénin",
+    "landlordPaymentMethods": {
+      "wave": "+229 97 00 11 22",
+      "mtn": "+229 97 00 11 22",
+      "moov": "+229 97 00 11 22",
+      "bank": "BJ061 01001 001234567890 45 (BOA Bénin)"
+    },
     "landlordSignature": {
-      "signedBy": "Le Bailleur",
+      "signedBy": "VOGLOSSOU JOHANE",
       "date": "18/11/2026",
       "signatureDataUrl": ""
     },
