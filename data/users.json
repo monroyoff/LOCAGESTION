@@ -19,26 +19,5 @@
     "password": "Jesus1122",
     "accountStatus": "active",
     "isIdentitySealed": true
-  },
-  {
-    "id": "usr-tenant-jojovo",
-    "matricule": "LOCA-MAT-BJ-17635",
-    "name": "Jojo VOG",
-    "firstName": "Jojo",
-    "lastName": "VOG",
-    "email": "jojovo007@gmail.com",
-    "phone": "+229 97 00 12 34",
-    "role": "locataire",
-    "birthDate": "15/05/1992",
-    "birthPlace": "Cotonou",
-    "residenceCountry": "Bénin",
-    "residenceCity": "Cotonou",
-    "residenceDistrict": "Haie Vive",
-    "projectCountry": "Bénin",
-    "avatarUrl": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80",
-    "registeredAt": "18/11/2026",
-    "password": "Jesus1122",
-    "accountStatus": "active",
-    "isIdentitySealed": true
   }
 ]

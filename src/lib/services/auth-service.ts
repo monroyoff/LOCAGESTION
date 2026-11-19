@@ -145,27 +145,6 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     isIdentitySealed: true,
   },
   {
-    id: 'usr-tenant-jojovo',
-    matricule: 'LOCA-MAT-BJ-17635',
-    name: 'Jojo VOG',
-    firstName: 'Jojo',
-    lastName: 'VOG',
-    email: 'jojovo007@gmail.com',
-    phone: '+229 97 00 12 34',
-    role: 'locataire',
-    birthDate: '15/05/1992',
-    birthPlace: 'Cotonou',
-    residenceCountry: 'Bénin',
-    residenceCity: 'Cotonou',
-    residenceDistrict: 'Haie Vive',
-    projectCountry: 'Bénin',
-    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-    registeredAt: '18/11/2026',
-    password: 'Jesus1122',
-    accountStatus: 'active',
-    isIdentitySealed: true,
-  },
-  {
     id: 'usr-tenant-koffi',
     matricule: 'LOCA-MAT-CI-48219',
     name: 'Koffi Mensah',
@@ -212,17 +191,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
  */
 export function areEmailsEqual(emailA?: string | null, emailB?: string | null): boolean {
   if (!emailA || !emailB) return false;
-  const a = emailA.trim().toLowerCase();
-  const b = emailB.trim().toLowerCase();
-  if (a === b) return true;
-  // Alias canonique Jojo VOG : jojovog007@gmail.com <-> jojovo007@gmail.com
-  if (
-    (a === 'jojovog007@gmail.com' && b === 'jojovo007@gmail.com') ||
-    (a === 'jojovo007@gmail.com' && b === 'jojovog007@gmail.com')
-  ) {
-    return true;
-  }
-  return false;
+  return emailA.trim().toLowerCase() === emailB.trim().toLowerCase();
 }
 
 /**
@@ -240,8 +209,6 @@ export function isCanonicalJojoVog(
 
   if (
     cleanId === 'jojovog007@gmail.com' ||
-    cleanId === 'jojovo007@gmail.com' ||
-    cleanId.includes('jojovo007') ||
     cleanId.includes('jojovog007') ||
     cleanId === 'usr-tenant-jojovog' ||
     cleanId.replace(/[^0-9]/g, '') === '22997001234'
@@ -278,7 +245,7 @@ export function enforceUserIdentityIntegrity<T extends Partial<AuthUser>>(user: 
       name: 'Jojo VOG',
       firstName: 'Jojo',
       lastName: 'VOG',
-      email: user.email && user.email.includes('jojovo007') ? 'jojovo007@gmail.com' : 'jojovog007@gmail.com',
+      email: 'jojovog007@gmail.com',
       phone: '+229 97 00 12 34',
       role: 'locataire',
       matricule: 'LOCA-MAT-BJ-17635',

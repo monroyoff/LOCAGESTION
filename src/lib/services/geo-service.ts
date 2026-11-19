@@ -246,7 +246,7 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
             name: isJojoVog ? 'Jojo VOG' : (u.name || `${u.firstName || ''} ${u.lastName || ''}`.trim() || 'Locataire'),
             firstName: isJojoVog ? 'Jojo' : (u.firstName || (u.name ? u.name.split(' ')[0] : 'Locataire')),
             lastName: isJojoVog ? 'VOG' : (u.lastName || (u.name && u.name.split(' ').length > 1 ? u.name.split(' ').slice(1).join(' ') : '')),
-            email: isJojoVog ? (u.email && u.email.includes('jojovo007') ? 'jojovo007@gmail.com' : 'jojovog007@gmail.com') : u.email,
+            email: isJojoVog ? 'jojovog007@gmail.com' : u.email,
             phone: isJojoVog ? (u.phone || '+229 97 00 12 34') : (u.phone || ''),
             role: isJojoVog ? 'locataire' : (u.role || role),
             birthDate: isJojoVog ? '15/05/1992' : (u.birthDate || ''),

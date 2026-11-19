@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
     const users = getUsersFromFile();
     const cleanEmail = body.email.trim().toLowerCase();
 
-    // RÈGLE D'OR : Le compte jojovog007@gmail.com / jojovo007@gmail.com est irrévocablement lié à LOCA-MAT-BJ-17635 et scellé
-    if (cleanEmail === 'jojovog007@gmail.com' || cleanEmail === 'jojovo007@gmail.com' || cleanEmail.startsWith('jojovo007') || cleanEmail.startsWith('jojovog007')) {
+    // RÈGLE D'OR : Le compte jojovog007@gmail.com est irrévocablement lié à LOCA-MAT-BJ-17635 et scellé
+    if (cleanEmail === 'jojovog007@gmail.com') {
       body.matricule = 'LOCA-MAT-BJ-17635';
       body.firstName = 'Jojo';
       body.lastName = 'VOG';
