@@ -396,12 +396,37 @@ function TenantPortalContent() {
 
     setPendingLease(pl || null);
 
-    const myLease = allLeases.find(
-      (l) =>
-        (pl && l.id === pl.id) ||
-        (queryLeaseId && l.id === queryLeaseId) ||
-        (user && isLeaseMatchingUser(l))
-    );
+    // Sélection intelligente et prioritaire du bail du locataire connecté
+    const matchingLeases = allLeases.filter((l) => (user && isLeaseMatchingUser(l)));
+
+    matchingLeases.sort((a, b) => {
+      // 1. Demande explicite par ID dans l'URL
+      if (queryLeaseId && a.id === queryLeaseId) return -1;
+      if (queryLeaseId && b.id === queryLeaseId) return 1;
+
+      // 2. Si un bail en attente correspond
+      if (pl && a.id === pl.id) return -1;
+      if (pl && b.id === pl.id) return 1;
+
+      // 3. Priorité aux baux actifs
+      if (a.status === 'actif' && b.status !== 'actif') return -1;
+      if (b.status === 'actif' && a.status !== 'actif') return 1;
+
+      // 4. Priorité aux baux contresignés par le locataire
+      if (a.signedByTenant && !b.signedByTenant) return -1;
+      if (b.signedByTenant && !a.signedByTenant) return 1;
+
+      // 5. Éliminer / reléguer tout ancien mock obsolète
+      if (a.id === 'BAIL-2026-BJ-17635') return 1;
+      if (b.id === 'BAIL-2026-BJ-17635') return -1;
+
+      // 6. Privilégier le bail le plus récent par date de signature ou de prise d'effet
+      const dateA = a.tenantSignedAt || a.startDate || '';
+      const dateB = b.tenantSignedAt || b.startDate || '';
+      return dateB.localeCompare(dateA);
+    });
+
+    const myLease = matchingLeases[0] || (queryLeaseId ? allLeases.find((l) => l.id === queryLeaseId) : null);
     setCurrentLease(myLease || null);
   };
 

@@ -120,11 +120,15 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(incomingLeases) && incomingLeases.length > 0) {
       const currentLeases = readJsonFile<any[]>(LEASES_FILE, []);
       const mergedMap = new Map<string, any>();
-      // Déposer d'abord les baux serveur
-      currentLeases.forEach((l) => mergedMap.set(l.id, l));
-      // Écraser ou ajouter avec les baux entrants récents
+      // Déposer d'abord les baux serveur (en purgeant l'ancien mock obsolète BAIL-2026-BJ-17635)
+      currentLeases.forEach((l) => {
+        if (l && l.id && l.id !== 'BAIL-2026-BJ-17635') {
+          mergedMap.set(l.id, l);
+        }
+      });
+      // Écraser ou ajouter avec les baux entrants récents (en rejetant l'ancien mock obsolète)
       incomingLeases.forEach((l) => {
-        if (l && l.id) {
+        if (l && l.id && l.id !== 'BAIL-2026-BJ-17635') {
           const existing = mergedMap.get(l.id);
           // Si le bail existe déjà, préserver ou fusionner les signatures
           if (existing) {

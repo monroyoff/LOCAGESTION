@@ -142,24 +142,24 @@ export interface LandlordNotification {
 
 export const INITIAL_LEASES: Lease[] = [
   {
-    id: 'BAIL-2026-BJ-17635',
+    id: 'BAIL-2026-421',
     tenant: 'Jojo VOG',
     tenantId: 'usr-tenant-jojovog',
     tenantEmail: 'jojovog007@gmail.com',
     tenantPhone: '+229 97 00 12 34',
     tenantAddress: 'Haie Vive, Cotonou',
-    property: 'Appartement meublé',
-    unit: 'Lot 1 (Appartement)',
+    property: 'CHAMBRE SALON SANITAIRE',
+    unit: 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
     country: 'Bénin',
     governingLaw: 'Loi n° 2018-12 du 02 juillet 2018 (Bénin)',
-    rent: 75000,
-    deposit: 225000,
-    charges: 5000,
+    rent: 25000,
+    deposit: 75000,
+    charges: 0,
     utilitiesDeposit: 25000,
-    totalDueAtEntry: 380000,
+    totalDueAtEntry: 125000,
     startDate: '01/11/2026',
-    endDate: '31/10/2029',
-    durationMonths: 36,
+    endDate: '31/10/2027',
+    durationMonths: 12,
     status: 'actif',
     signedByLandlord: true,
     signedByTenant: true,
@@ -178,17 +178,17 @@ export const INITIAL_LEASES: Lease[] = [
     },
     landlordSignature: {
       signedBy: 'VOGLOSSOU JOHANE',
-      date: '18/11/2026',
+      date: '01/11/2026',
       signatureDataUrl: '',
     },
     tenantSignature: {
       signedBy: 'Jojo VOG',
-      date: '18/11/2026',
+      date: '01/11/2026',
       signatureDataUrl: '',
     },
-    transmittedAt: '18/11/2026',
-    tenantSignedAt: '18/11/2026',
-    invitationCode: 'LOCA-INV-17635',
+    transmittedAt: '01/11/2026',
+    tenantSignedAt: '01/11/2026',
+    invitationCode: 'LOCA-INV-7842',
   },
 ];
 
@@ -207,11 +207,17 @@ export const LeaseService = {
     try {
       const stored = localStorage.getItem(LEASES_STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        let parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // Si le bail canonique actif de Jojo VOG n'est pas encore présent localement, le fusionner
-          const hasJojo = parsed.some((l: Lease) => l.id === 'BAIL-2026-BJ-17635');
-          if (!hasJojo && INITIAL_LEASES.length > 0) {
+          // Élimination absolue et définitive du faux mock obsolète BAIL-2026-BJ-17635 (75 000 FCFA)
+          const hadOldMock = parsed.some((l: Lease) => l.id === 'BAIL-2026-BJ-17635');
+          if (hadOldMock) {
+            parsed = parsed.filter((l: Lease) => l.id !== 'BAIL-2026-BJ-17635');
+          }
+
+          // Si le vrai bail actif de Jojo VOG (BAIL-2026-421) n'est pas encore présent, le fusionner
+          const hasRealLease = parsed.some((l: Lease) => l.id === 'BAIL-2026-421');
+          if (!hasRealLease && INITIAL_LEASES.length > 0) {
             const merged = [...INITIAL_LEASES, ...parsed];
             try {
               localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(merged));
@@ -219,8 +225,14 @@ export const LeaseService = {
             return merged;
           }
 
-          // Si le bail canonique est présent mais sans les coordonnées du bailleur, les enrichir
-          const jojoLease = parsed.find((l: Lease) => l.id === 'BAIL-2026-BJ-17635');
+          if (hadOldMock) {
+            try {
+              localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
+            } catch (e) {}
+          }
+
+          // Si le bail canonique est présent mais sans les coordonnées complètes du bailleur, les enrichir
+          const jojoLease = parsed.find((l: Lease) => l.id === 'BAIL-2026-421');
           if (jojoLease && (!jojoLease.landlordPhone || !jojoLease.landlordPaymentMethods)) {
             Object.assign(jojoLease, {
               landlordId: 'usr-bailleur-voglossou',

@@ -53,12 +53,18 @@ export const SyncService = {
           if (stored) localLeases = JSON.parse(stored);
         } catch (e) {}
 
+        // Purger immédiatement et définitivement l'ancien mock de démo BAIL-2026-BJ-17635 du client
+        if (localLeases.some((l) => l.id === 'BAIL-2026-BJ-17635')) {
+          localLeases = localLeases.filter((l) => l.id !== 'BAIL-2026-BJ-17635');
+          leasesUpdated = true;
+        }
+
         const leaseMap = new Map<string, Lease>();
         // Déposer les baux locaux
         localLeases.forEach((l) => leaseMap.set(l.id, l));
         // Fusionner avec les baux serveur (le serveur a priorité sur les signatures et transmissions)
         data.leases.forEach((serverLease: Lease) => {
-          if (!serverLease || !serverLease.id) return;
+          if (!serverLease || !serverLease.id || serverLease.id === 'BAIL-2026-BJ-17635') return;
           const local = leaseMap.get(serverLease.id);
           if (!local) {
             leaseMap.set(serverLease.id, serverLease);
