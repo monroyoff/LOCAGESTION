@@ -74,6 +74,8 @@ import { MONTHS_OF_YEAR, PaymentService } from '@/lib/services/payment-service';
 import { notifyAction, notifySave } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 import { SkeletonPortalDashboard } from '@/components/ui/SkeletonLoader';
+import { areEmailsEqual, arePhoneNumbersEqual, isCanonicalJojoVog } from '@/lib/services/auth-service';
+import { SyncService } from '@/lib/services/sync-service';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -128,7 +130,7 @@ function TenantPortalContent() {
       window.removeEventListener('locagestion:notices_updated', loadNotices);
       window.removeEventListener('storage', loadNotices);
     };
-  }, []);
+  }, [user]);
   const [issueCategory, setIssueCategory] = useState('Plomberie / Fuite d’eau');
   const [issueDesc, setIssueDesc] = useState('');
   const [issueUrgency, setIssueUrgency] = useState<'normale' | 'urgente' | 'critique'>('normale');
@@ -349,6 +351,38 @@ function TenantPortalContent() {
         pl = tenantMatch;
       }
     }
+    const isLeaseMatchingUser = (l: Lease) => {
+      if (!user || !l) return false;
+      // 1. Profil canonique scellé Jojo VOG
+      if (
+        isCanonicalJojoVog(user.email || user.id || user.phone, user.matricule, user.name) &&
+        isCanonicalJojoVog(l.tenantEmail || l.tenantId || l.tenantPhone, (l as any).matricule, l.tenant)
+      ) {
+        return true;
+      }
+      // 2. Email exact / normalisé
+      if (user.email && l.tenantEmail && areEmailsEqual(user.email, l.tenantEmail)) {
+        return true;
+      }
+      // 3. User ID exact
+      if (user.id && l.tenantId && user.id === l.tenantId) {
+        return true;
+      }
+      // 4. Matricule unique
+      if (user.matricule && (l as any).matricule && user.matricule === (l as any).matricule) {
+        return true;
+      }
+      // 5. Téléphone normalisé
+      if (user.phone && l.tenantPhone && arePhoneNumbersEqual(user.phone, l.tenantPhone)) {
+        return true;
+      }
+      // 6. Nom exact
+      if (user.name && l.tenant && user.name.trim().toLowerCase() === l.tenant.trim().toLowerCase()) {
+        return true;
+      }
+      return false;
+    };
+
     // Recherche stricte liée au locataire connecté (jamais de fuite sur le bail d'un tiers)
     if (!pl && user) {
       pl = allLeases.find(
@@ -356,9 +390,7 @@ function TenantPortalContent() {
           l.status === 'en_attente_signature' &&
           !l.signedByTenant &&
           !dismissed.includes(l.id) &&
-          ((user.email && l.tenantEmail && l.tenantEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) ||
-            (user.phone && l.tenantPhone && l.tenantPhone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) ||
-            (user.name && l.tenant && l.tenant.trim().toLowerCase() === user.name.trim().toLowerCase()))
+          isLeaseMatchingUser(l)
       );
     }
 
@@ -368,23 +400,29 @@ function TenantPortalContent() {
       (l) =>
         (pl && l.id === pl.id) ||
         (queryLeaseId && l.id === queryLeaseId) ||
-        (user?.email && l.tenantEmail && l.tenantEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) ||
-        (user?.phone && l.tenantPhone && l.tenantPhone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) ||
-        (user?.name && l.tenant && l.tenant.trim().toLowerCase() === user.name.trim().toLowerCase())
+        (user && isLeaseMatchingUser(l))
     );
     setCurrentLease(myLease || null);
   };
 
   useEffect(() => {
     checkLeases();
+
+    // Déclencher une synchronisation immédiate Web <-> Mobile pour charger instantanément les baux du serveur
+    SyncService.sync().then(() => {
+      checkLeases();
+    });
+
     const handleUpdate = () => checkLeases();
     window.addEventListener('locagestion:leases_updated', handleUpdate);
+    window.addEventListener('locagestion:auth_changed', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     return () => {
       window.removeEventListener('locagestion:leases_updated', handleUpdate);
+      window.removeEventListener('locagestion:auth_changed', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     const leaseId = currentLease?.id || pendingLease?.id || '';

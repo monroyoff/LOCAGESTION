@@ -3,42 +3,77 @@ import fs from 'fs';
 import path from 'path';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
-const LEASES_FILE = path.join(DATA_DIR, 'leases.json');
-const NOTIFS_FILE = path.join(DATA_DIR, 'notifications.json');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const LISTINGS_FILE = path.join(DATA_DIR, 'listings.json');
+const TMP_DATA_DIR = path.join('/tmp', 'locagestion_data');
 
-function ensureFile(filePath: string, defaultContent: string) {
+const LEASES_FILE = 'leases.json';
+const NOTIFS_FILE = 'notifications.json';
+const USERS_FILE = 'users.json';
+const LISTINGS_FILE = 'listings.json';
+
+// In-memory global store to guarantee cross-request persistence in serverless instances
+const memoryStore: Record<string, any[]> =
+  (globalThis as any)._locagestion_store ||
+  ((globalThis as any)._locagestion_store = {});
+
+function readJsonFile<T>(filename: string, fallback: T): T {
+  const storeKey = filename.replace('.json', '');
+
+  // 1. In-memory cache
+  if (memoryStore[storeKey] && Array.isArray(memoryStore[storeKey]) && memoryStore[storeKey].length > 0) {
+    return memoryStore[storeKey] as T;
+  }
+
+  // 2. /tmp directory (writable in serverless / Vercel lambdas)
+  try {
+    const tmpPath = path.join(TMP_DATA_DIR, filename);
+    if (fs.existsSync(tmpPath)) {
+      const raw = fs.readFileSync(tmpPath, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        memoryStore[storeKey] = parsed;
+        return parsed as T;
+      }
+    }
+  } catch (e) {}
+
+  // 3. process.cwd()/data (static data bundled at build time)
+  try {
+    const dataPath = path.join(DATA_DIR, filename);
+    if (fs.existsSync(dataPath)) {
+      const raw = fs.readFileSync(dataPath, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        memoryStore[storeKey] = parsed;
+        return parsed as T;
+      }
+    }
+  } catch (e) {}
+
+  memoryStore[storeKey] = fallback as any;
+  return fallback;
+}
+
+function writeJsonFile<T>(filename: string, data: T) {
+  const storeKey = filename.replace('.json', '');
+  memoryStore[storeKey] = data as any;
+
+  // Try writing to data/ directory (works on standard hosts and local environment)
   try {
     if (!fs.existsSync(DATA_DIR)) {
       fs.mkdirSync(DATA_DIR, { recursive: true });
     }
-    if (!fs.existsSync(filePath)) {
-      fs.writeFileSync(filePath, defaultContent, 'utf8');
+    fs.writeFileSync(path.join(DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    // Read-only filesystem in serverless; falls back to /tmp below
+  }
+
+  // Also write to /tmp for persistent writes across warm serverless functions
+  try {
+    if (!fs.existsSync(TMP_DATA_DIR)) {
+      fs.mkdirSync(TMP_DATA_DIR, { recursive: true });
     }
-  } catch (e) {
-    console.error(`Erreur ensureFile (${filePath}):`, e);
-  }
-}
-
-function readJsonFile<T>(filePath: string, fallback: T): T {
-  try {
-    ensureFile(filePath, JSON.stringify(fallback));
-    const raw = fs.readFileSync(filePath, 'utf8');
-    return JSON.parse(raw) as T;
-  } catch (e) {
-    console.error(`Erreur lecture ${filePath}:`, e);
-    return fallback;
-  }
-}
-
-function writeJsonFile<T>(filePath: string, data: T) {
-  try {
-    ensureFile(filePath, '[]');
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {
-    console.error(`Erreur écriture ${filePath}:`, e);
-  }
+    fs.writeFileSync(path.join(TMP_DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {}
 }
 
 export async function GET(req: NextRequest) {

@@ -30,7 +30,22 @@ export interface TenantNotification {
 
 export const STORAGE_KEY_TENANT_NOTIFS = 'locagestion:tenant_notifications:v1';
 
-export const INITIAL_TENANT_NOTIFICATIONS: TenantNotification[] = [];
+export const INITIAL_TENANT_NOTIFICATIONS: TenantNotification[] = [
+  {
+    id: 'tnotif-jojovog-lease-active',
+    title: 'Bail contresigné et actif !',
+    message: "Votre contrat de bail pour Appartement meublé (Lot 1 (Appartement)) a été contresigné avec succès et est désormais en cours d'exécution.",
+    time: 'Récent',
+    timestamp: '18/11/2026 14:00',
+    type: 'lease_available',
+    read: false,
+    link: '/portal?tab=bail',
+    tenantName: 'Jojo VOG',
+    tenantEmail: 'jojovog007@gmail.com',
+    tenantPhone: '+229 97 00 12 34',
+    actor: 'Le Bailleur',
+  },
+];
 
 function dispatchUpdateEvent() {
   if (typeof window !== 'undefined') {
@@ -44,26 +59,36 @@ export const TenantNotificationService = {
    * Récupère toutes les notifications destinées au locataire
    */
   getNotifications(tenantFilter?: string): TenantNotification[] {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return INITIAL_TENANT_NOTIFICATIONS;
     try {
       const stored = localStorage.getItem(STORAGE_KEY_TENANT_NOTIFS);
+      let list: TenantNotification[] = [];
       if (stored) {
-        const list: TenantNotification[] = JSON.parse(stored);
-        if (tenantFilter && tenantFilter.trim()) {
-          const filterLower = tenantFilter.toLowerCase().trim();
-          return list.filter(
-            (n) =>
-              !n.tenantName ||
-              n.tenantName.toLowerCase().includes(filterLower) ||
-              (n.tenantEmail && n.tenantEmail.toLowerCase().includes(filterLower))
-          );
-        }
-        return list;
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) list = parsed;
       }
+
+      if (list.length === 0 && INITIAL_TENANT_NOTIFICATIONS.length > 0) {
+        list = [...INITIAL_TENANT_NOTIFICATIONS];
+        try {
+          localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(list));
+        } catch (e) {}
+      }
+
+      if (tenantFilter && tenantFilter.trim()) {
+        const filterLower = tenantFilter.toLowerCase().trim();
+        return list.filter(
+          (n) =>
+            !n.tenantName ||
+            n.tenantName.toLowerCase().includes(filterLower) ||
+            (n.tenantEmail && n.tenantEmail.toLowerCase().includes(filterLower))
+        );
+      }
+      return list;
     } catch (e) {
       console.error('Erreur lecture notifications locataire:', e);
     }
-    return [];
+    return INITIAL_TENANT_NOTIFICATIONS;
   },
 
   /**

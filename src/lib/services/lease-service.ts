@@ -125,7 +125,44 @@ export interface LandlordNotification {
   };
 }
 
-export const INITIAL_LEASES: Lease[] = [];
+export const INITIAL_LEASES: Lease[] = [
+  {
+    id: 'BAIL-2026-BJ-17635',
+    tenant: 'Jojo VOG',
+    tenantId: 'usr-tenant-jojovog',
+    tenantEmail: 'jojovog007@gmail.com',
+    tenantPhone: '+229 97 00 12 34',
+    tenantAddress: 'Haie Vive, Cotonou',
+    property: 'Appartement meublé',
+    unit: 'Lot 1 (Appartement)',
+    country: 'Bénin',
+    governingLaw: 'Loi n° 2018-12 du 02 juillet 2018 (Bénin)',
+    rent: 75000,
+    deposit: 225000,
+    charges: 5000,
+    utilitiesDeposit: 25000,
+    totalDueAtEntry: 380000,
+    startDate: '01/11/2026',
+    endDate: '31/10/2029',
+    durationMonths: 36,
+    status: 'actif',
+    signedByLandlord: true,
+    signedByTenant: true,
+    landlordSignature: {
+      signedBy: 'Le Bailleur',
+      date: '18/11/2026',
+      signatureDataUrl: '',
+    },
+    tenantSignature: {
+      signedBy: 'Jojo VOG',
+      date: '18/11/2026',
+      signatureDataUrl: '',
+    },
+    transmittedAt: '18/11/2026',
+    tenantSignedAt: '18/11/2026',
+    invitationCode: 'LOCA-INV-17635',
+  },
+];
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
 const NOTIFICATIONS_STORAGE_KEY = 'locagestion:landlord_notifications:v1';
@@ -138,17 +175,35 @@ function notifyStorageChange() {
 
 export const LeaseService = {
   getLeases(): Lease[] {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return INITIAL_LEASES;
     try {
       const stored = localStorage.getItem(LEASES_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
+        if (Array.isArray(parsed)) {
+          // Si le bail canonique actif de Jojo VOG n'est pas encore présent localement, le fusionner
+          const hasJojo = parsed.some((l: Lease) => l.id === 'BAIL-2026-BJ-17635');
+          if (!hasJojo && INITIAL_LEASES.length > 0) {
+            const merged = [...INITIAL_LEASES, ...parsed];
+            try {
+              localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(merged));
+            } catch (e) {}
+            return merged;
+          }
+          if (parsed.length > 0) return parsed;
+        }
       }
     } catch (e) {
       console.error('Erreur lecture baux:', e);
     }
-    return [];
+
+    // Si stockage vide sur le nouvel appareil ou mobile, initialiser avec les baux par défaut
+    if (INITIAL_LEASES.length > 0) {
+      try {
+        localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(INITIAL_LEASES));
+      } catch (e) {}
+    }
+    return INITIAL_LEASES;
   },
 
   getLeaseById(id: string): Lease | undefined {
