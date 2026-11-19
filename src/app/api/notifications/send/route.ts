@@ -130,9 +130,9 @@ export async function POST(req: NextRequest) {
     // 1. TENTATIVE D'EXPÉDITION EMAIL VIA SMTP / SERVICE CONFIGURÉ
     const smtpHost = process.env.SMTP_HOST || process.env.EMAIL_SERVER_HOST || 'smtp.gmail.com';
     const smtpPort = Number(process.env.SMTP_PORT || process.env.EMAIL_SERVER_PORT) || 465;
-    const smtpUser = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER || 'contact@locagestion.site';
+    const smtpUser = process.env.SMTP_USER || process.env.EMAIL_SERVER_USER || 'omegafacture@gmail.com';
     const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_SERVER_PASSWORD || 'kwacpwtfqtsvhllu';
-    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || '"LOCAGESTION" <contact@locagestion.site>';
+    const smtpFrom = process.env.SMTP_FROM || process.env.EMAIL_FROM || '"LOCAGESTION" <omegafacture@gmail.com>';
 
     if (smtpHost && smtpUser && smtpPass && invitationData.recipientEmail) {
       try {
@@ -160,9 +160,39 @@ export async function POST(req: NextRequest) {
         emailError = err?.message || 'Erreur inconnue lors de l’envoi SMTP';
         console.error('[NotificationAPI] Erreur SMTP:', err);
       }
-    } else {
-      emailProvider = 'unconfigured';
-      emailError = 'Serveur SMTP non configuré dans .env.local (fallback 1-clic direct disponible)';
+    }
+
+    // 1.1 FALLBACK AUTOMATIQUE RESEND SI CONFIGURÉ ET SI SMTP ÉCHOUE
+    if (!emailSent && invitationData.recipientEmail) {
+      const resendApiKey = process.env.RESEND_API_KEY;
+      if (resendApiKey) {
+        try {
+          const resendRes = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              from: 'LOCAGESTION <onboarding@resend.dev>',
+              to: invitationData.recipientEmail,
+              subject: emailSubject,
+              html: emailHtml,
+              text: emailPlainText,
+            }),
+          });
+          const resendData = await resendRes.json();
+          if (resendRes.ok && resendData?.id) {
+            emailSent = true;
+            emailProvider = 'resend';
+            emailError = null;
+          } else {
+            console.warn('[NotificationAPI] Resend non livré:', resendData);
+          }
+        } catch (resendErr: any) {
+          console.error('[NotificationAPI] Erreur Resend fallback:', resendErr);
+        }
+      }
     }
 
     // 2. TENTATIVE D'EXPÉDITION SMS VIA PASSERELLE

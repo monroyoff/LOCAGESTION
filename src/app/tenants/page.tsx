@@ -252,11 +252,22 @@ export default function TenantsPage() {
         portalUrl: computedPortalUrl,
       });
       setInviteSentSuccess(true);
-      const msg = `Invitation expédiée par email & SMS à ${fullName} !`;
+
+      // Sur mobile (smartphone / tablette), déclencher l'ouverture de l'application SMS native
+      const targetSmsUri = data?.deepLinks?.smsUri || fallbackSmsUri;
+      if (typeof window !== 'undefined' && targetSmsUri) {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = targetSmsUri;
+        }
+      }
+
+      const msg = `Email officiel expédié à ${inviteEmail} et SMS prêt pour ${invitePhone} !`;
       showToast(msg);
-      notifySave(msg, 'Locataire invité par Email et SMS');
+      notifySave(msg, 'Invitation locataire expédiée');
     } catch (err) {
       console.error('Erreur dispatch notification:', err);
+      const targetSmsUri = fallbackSmsUri;
       setInviteDispatchResult({
         emailSent: false,
         smsSent: false,
@@ -268,6 +279,14 @@ export default function TenantsPage() {
         portalUrl: computedPortalUrl,
       });
       setInviteSentSuccess(true);
+
+      if (typeof window !== 'undefined' && targetSmsUri) {
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = targetSmsUri;
+        }
+      }
+
       const msg = `Lien d'invitation préparé pour ${fullName} !`;
       showToast(msg);
       notifySave(msg, 'Invitation prête pour expédition');
@@ -1300,43 +1319,57 @@ export default function TenantsPage() {
             ) : (
               <div className="p-6 space-y-4 text-xs">
                 {/* Bannière de confirmation */}
-                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200/90 space-y-2">
+                <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200/90 space-y-2.5">
                   <div className="flex items-center gap-2.5">
                     <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-                    <h4 className="font-black text-sm text-emerald-950">
-                      Invitation expédiée avec succès !
-                    </h4>
+                    <div>
+                      <h4 className="font-black text-sm text-emerald-950">
+                        Invitation générée avec succès !
+                      </h4>
+                      <p className="text-[11px] text-emerald-800">
+                        Pour <strong>{inviteFullName || 'le locataire'}</strong>
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-emerald-800">
-                    Le lien d'invitation sécurisé a été généré pour <strong>{inviteFullName || 'le locataire'}</strong>.
-                  </p>
-                  <div className="pt-1 flex flex-wrap gap-2 text-[10px] font-bold">
-                    <span className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 flex items-center gap-1.5 shadow-2xs">
-                      <Mail className="w-3 h-3 text-blue-600" />
-                      <span>Email : {inviteEmail}</span>
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-white border border-emerald-200 text-emerald-800 flex items-center gap-1.5 shadow-2xs">
-                      <Smartphone className="w-3 h-3 text-emerald-600" />
-                      <span>SMS : {invitePhone}</span>
-                    </span>
+
+                  <div className="space-y-1.5 pt-1 text-[11px]">
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-emerald-200 text-emerald-900 font-semibold shadow-2xs">
+                      <span className="flex items-center gap-1.5">
+                        <Mail className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Email officiel à <strong>{inviteEmail}</strong></span>
+                      </span>
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
+                        {inviteDispatchResult?.emailSent ? '✓ Expédié' : '✓ Envoi déclenché'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-emerald-200 text-emerald-900 font-semibold shadow-2xs">
+                      <span className="flex items-center gap-1.5">
+                        <Smartphone className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>SMS vers <strong>{invitePhone}</strong></span>
+                      </span>
+                      <span className="text-[10px] bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-bold">
+                        Prêt pour envoi direct
+                      </span>
+                    </div>
                   </div>
                 </div>
 
                 {/* Actions directes 1-clic */}
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <label className="text-[11px] font-bold text-slate-700 block">
-                    Accès direct aux applications de messagerie :
+                    Expédier immédiatement via vos applications :
                   </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {/* SMS direct */}
                     {inviteDispatchResult?.smsUri && (
                       <a
                         href={inviteDispatchResult.smsUri}
-                        className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer group"
+                        className="p-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 font-black text-xs shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
                       >
-                        <Smartphone className="w-4 h-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-                        <span className="font-extrabold text-slate-800 text-[11px]">Ouvrir SMS</span>
-                        <span className="text-[9px] text-slate-500">App native</span>
+                        <Smartphone className="w-4 h-4" />
+                        <span>Ouvrir dans l'app SMS</span>
                       </a>
                     )}
 
@@ -1346,35 +1379,33 @@ export default function TenantsPage() {
                         href={inviteDispatchResult.whatsappUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer group"
+                        className="p-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 font-black text-xs shadow-md shadow-green-600/20 active:scale-95 transition-all cursor-pointer"
                       >
-                        <MessageCircle className="w-4 h-4 text-green-600 group-hover:scale-110 transition-transform" />
-                        <span className="font-extrabold text-slate-800 text-[11px]">WhatsApp</span>
-                        <span className="text-[9px] text-slate-500">Envoi direct</span>
-                      </a>
-                    )}
-
-                    {/* Mail direct */}
-                    {inviteDispatchResult?.gmailUrl && (
-                      <a
-                        href={inviteDispatchResult.gmailUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="p-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 flex flex-col items-center justify-center gap-1 text-center transition-all cursor-pointer group"
-                      >
-                        <Mail className="w-4 h-4 text-blue-600 group-hover:scale-110 transition-transform" />
-                        <span className="font-extrabold text-slate-800 text-[11px]">Ouvrir Email</span>
-                        <span className="text-[9px] text-slate-500">Gmail / Mailto</span>
+                        <MessageCircle className="w-4 h-4" />
+                        <span>Envoyer par WhatsApp</span>
                       </a>
                     )}
                   </div>
+
+                  {/* Mail direct */}
+                  {inviteDispatchResult?.gmailUrl && (
+                    <a
+                      href={inviteDispatchResult.gmailUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full p-2.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 flex items-center justify-center gap-2 font-bold text-xs transition-colors cursor-pointer"
+                    >
+                      <Mail className="w-4 h-4 text-blue-600" />
+                      <span>Ouvrir le brouillon dans Gmail / Application Mail</span>
+                    </a>
+                  )}
                 </div>
 
                 {/* Copier le message complet */}
                 <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">
-                      Lien d'invitation :
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                      Lien d'invitation sécurisé :
                     </span>
                     <button
                       type="button"
@@ -1403,14 +1434,14 @@ export default function TenantsPage() {
                   <button
                     type="button"
                     onClick={openInviteModal}
-                    className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50 text-slate-700 cursor-pointer"
+                    className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50 text-slate-700 cursor-pointer text-xs"
                   >
                     + Inviter un autre locataire
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowInviteModal(false)}
-                    className="py-2.5 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold cursor-pointer"
+                    className="py-2.5 px-5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold cursor-pointer text-xs"
                   >
                     Terminer
                   </button>
