@@ -408,36 +408,32 @@ export function IssueNoticeModal({
                       key={item.type}
                       type="button"
                       onClick={() => handleSelectReason(item.type)}
-                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-brand-500 scale-[1.01]'
-                          : 'bg-slate-50 hover:bg-white text-slate-800 border-slate-200 hover:border-slate-300'
-                      }`}
+                      className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${isSelected
+                        ? 'bg-slate-900 text-white border-slate-900 shadow-md ring-2 ring-brand-500 scale-[1.01]'
+                        : 'bg-slate-50 hover:bg-white text-slate-800 border-slate-200 hover:border-slate-300'
+                        }`}
                     >
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <span
-                            className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                              isSelected
-                                ? 'bg-brand-500 text-white'
-                                : 'bg-slate-200 text-slate-700'
-                            }`}
+                            className={`text-[10px] font-black px-2 py-0.5 rounded-full ${isSelected
+                              ? 'bg-brand-500 text-white'
+                              : 'bg-slate-200 text-slate-700'
+                              }`}
                           >
                             Préavis : {item.recommendedMonths} mois
                           </span>
                           {isSelected && <CheckCircle2 className="w-4 h-4 text-brand-400 shrink-0" />}
                         </div>
                         <h4
-                          className={`text-xs font-black leading-tight ${
-                            isSelected ? 'text-white' : 'text-slate-900'
-                          }`}
+                          className={`text-xs font-black leading-tight ${isSelected ? 'text-white' : 'text-slate-900'
+                            }`}
                         >
                           {item.title}
                         </h4>
                         <p
-                          className={`text-[11px] mt-1 line-clamp-2 ${
-                            isSelected ? 'text-slate-300' : 'text-slate-500'
-                          }`}
+                          className={`text-[11px] mt-1 line-clamp-2 ${isSelected ? 'text-slate-300' : 'text-slate-500'
+                            }`}
                         >
                           {item.description}
                         </p>
@@ -531,11 +527,10 @@ export function IssueNoticeModal({
                         key={m}
                         type="button"
                         onClick={() => handleMonthsChange(m)}
-                        className={`py-2 rounded-xl text-xs font-black border transition-all cursor-pointer text-center ${
-                          noticeMonths === m
-                            ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
-                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
-                        }`}
+                        className={`py-2 rounded-xl text-xs font-black border transition-all cursor-pointer text-center ${noticeMonths === m
+                          ? 'bg-brand-500 text-white border-brand-500 shadow-sm'
+                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                          }`}
                       >
                         {m} {m === 1 ? 'mois' : 'mois'}
                       </button>
