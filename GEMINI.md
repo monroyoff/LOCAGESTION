@@ -455,6 +455,10 @@ Ces informations garantissent la force probante juridique des baux électronique
   1. Soit depuis l'espace connecté via les paramètres du profil (**« Modifier mon mot de passe »**) avec contrôle obligatoire du mot de passe actuel.
   2. Soit depuis l'écran de connexion via la procédure sécurisée **« Mot de passe oublié ? »** (`/auth/login`).
 
+### 👤 4. Personnalisation Garantie des Préférences Visuelles & Commerciales
+- **Nom d'entreprise / Agence :** Optionnel pour les bailleurs et démarcheurs. Dès sa saisie, modification ou suppression dans le profil, il est immédiatement répercuté et garanti de façon pérenne sur toutes les annonces publiées, les en-têtes et les quittances, sans jamais être écrasé par une valeur mockée par défaut.
+- **Photo de profil / Avatar :** Tout changement d'avatar ou import de photo par l'utilisateur (bailleur, démarcheur, locataire) est immédiatement synchronisé et persisté de manière définitive sur tous les espaces (Web, Mobile, Application) sans jamais être écrasé par les images Unsplash mockées initiales.
+
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
 

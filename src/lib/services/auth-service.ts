@@ -132,7 +132,7 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     email: 'jobovog@gmail.com',
     phone: '+229 01 95 44 44 30',
     role: 'bailleur',
-    companyName: 'VOGLOSSOU IMMOBILIER',
+    companyName: '',
     ifuNumber: '3201984210987',
     birthDate: '12/04/1988',
     birthPlace: 'Cotonou',
@@ -280,14 +280,15 @@ export function enforceUserIdentityIntegrity<T extends Partial<AuthUser>>(user: 
       email: 'jobovog@gmail.com',
       phone: '+229 01 95 44 44 30',
       role: 'bailleur',
-      companyName: 'VOGLOSSOU IMMOBILIER',
-      ifuNumber: '3201984210987',
+      companyName: user.companyName !== undefined ? user.companyName : '',
+      avatarUrl: user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+      ifuNumber: user.ifuNumber || '3201984210987',
       birthDate: '12/04/1988',
       birthPlace: 'Cotonou',
-      residenceCountry: 'Bénin',
-      residenceCity: 'Allada',
-      residenceDistrict: 'Allada',
-      projectCountry: 'Bénin',
+      residenceCountry: user.residenceCountry || 'Bénin',
+      residenceCity: user.residenceCity || 'Allada',
+      residenceDistrict: user.residenceDistrict || 'Allada',
+      projectCountry: user.projectCountry || 'Bénin',
       isIdentitySealed: true,
       accountStatus: 'active',
     };
@@ -309,10 +310,11 @@ export function enforceUserIdentityIntegrity<T extends Partial<AuthUser>>(user: 
       matricule: 'LOCA-MAT-BJ-17635',
       birthDate: '15/05/1992',
       birthPlace: 'Cotonou',
-      residenceCountry: 'Bénin',
-      residenceCity: 'Cotonou',
-      residenceDistrict: 'Haie Vive',
-      projectCountry: 'Bénin',
+      residenceCountry: user.residenceCountry || 'Bénin',
+      residenceCity: user.residenceCity || 'Cotonou',
+      residenceDistrict: user.residenceDistrict || 'Haie Vive',
+      projectCountry: user.projectCountry || 'Bénin',
+      avatarUrl: user.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
       isIdentitySealed: true,
       accountStatus: 'active',
     };
@@ -486,26 +488,40 @@ export const AuthService = {
             if (idx === -1) {
               sanitized.push(enforcedInit);
               hasMutated = true;
-            } else if (
-              sanitized[idx].role !== enforcedInit.role ||
-              sanitized[idx].id !== enforcedInit.id ||
-              sanitized[idx].name?.toUpperCase().includes('VOGLOSSOU') ||
-              !sanitized[idx].isIdentitySealed ||
-              (areEmailsEqual(sanitized[idx].email, 'jojovog007@gmail.com') && sanitized[idx].password !== 'Lolo1000$') ||
-              (areEmailsEqual(sanitized[idx].email, 'jobovog@gmail.com') && sanitized[idx].password !== 'Forever1122$')
-            ) {
-              let targetPassword = sanitized[idx].password || enforcedInit.password;
-              if (areEmailsEqual(sanitized[idx].email, 'jojovog007@gmail.com')) {
+            } else {
+              // RÈGLE D'OR : Préserver rigoureusement les personnalisations utilisateur (avatarUrl, companyName, résidence)
+              // et sceller les piliers d'identité (nom, prénom, matricule, email, téléphone, mot de passe unique)
+              const existing = sanitized[idx];
+              const preservedAvatar = existing.avatarUrl || enforcedInit.avatarUrl;
+              const preservedCompany = existing.companyName !== undefined ? existing.companyName : enforcedInit.companyName;
+              let targetPassword = existing.password || enforcedInit.password;
+              if (areEmailsEqual(existing.email, 'jojovog007@gmail.com')) {
                 targetPassword = 'Lolo1000$';
-              } else if (areEmailsEqual(sanitized[idx].email, 'jobovog@gmail.com')) {
+              } else if (areEmailsEqual(existing.email, 'jobovog@gmail.com')) {
                 targetPassword = 'Forever1122$';
               }
-              sanitized[idx] = {
-                ...sanitized[idx],
+
+              const reconciled: AuthUser = {
                 ...enforcedInit,
+                ...existing, // Les personnalisations choisies par l'utilisateur l'emportent toujours
+                id: enforcedInit.id,
+                role: enforcedInit.role,
+                matricule: enforcedInit.matricule,
+                email: enforcedInit.email,
+                phone: enforcedInit.phone,
+                name: enforcedInit.name,
+                firstName: enforcedInit.firstName,
+                lastName: enforcedInit.lastName,
+                isIdentitySealed: true,
+                avatarUrl: preservedAvatar,
+                companyName: preservedCompany,
                 password: targetPassword,
               };
-              hasMutated = true;
+
+              if (JSON.stringify(sanitized[idx]) !== JSON.stringify(reconciled)) {
+                sanitized[idx] = reconciled;
+                hasMutated = true;
+              }
             }
           });
 
@@ -571,33 +587,6 @@ export const AuthService = {
           parsed.phone = SYSTEM_ADMIN_USER.phone;
           parsed.matricule = SYSTEM_ADMIN_USER.matricule;
         } else if (parsed) {
-          const matchingInit = INITIAL_REGISTERED_USERS.find((initU) => areEmailsEqual(initU.email, parsed.email));
-          if (matchingInit) {
-            let sessionMutated = false;
-            if (parsed.role !== matchingInit.role || parsed.id !== matchingInit.id) {
-              parsed.role = matchingInit.role;
-              parsed.id = matchingInit.id;
-              sessionMutated = true;
-            }
-            if (parsed.name && typeof parsed.name === 'string' && parsed.name.toUpperCase().includes('VOGLOSSOU')) {
-              parsed.name = matchingInit.name;
-              parsed.firstName = matchingInit.firstName;
-              parsed.lastName = matchingInit.lastName;
-              parsed.companyName = undefined;
-              parsed.phone = matchingInit.phone;
-              parsed.residenceCity = matchingInit.residenceCity;
-              parsed.residenceDistrict = matchingInit.residenceDistrict;
-              sessionMutated = true;
-            }
-            if (sessionMutated) {
-              try {
-                localStorage.setItem(STORAGE_KEY_SESSION, JSON.stringify(parsed));
-                localStorage.setItem('locagestion:active_space', matchingInit.role);
-                localStorage.removeItem('locagestion:profile:bailleur');
-                localStorage.removeItem('locagestion:profile:locataire');
-              } catch (e) {}
-            }
-          }
           const enforced = enforceUserIdentityIntegrity(parsed);
           if (!enforced.matricule) {
             enforced.matricule = generateUserMatricule(

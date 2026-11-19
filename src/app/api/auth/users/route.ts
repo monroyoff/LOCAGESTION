@@ -77,6 +77,8 @@ export async function POST(req: NextRequest) {
       users[idx] = {
         ...existing,
         ...body,
+        companyName: body.companyName !== undefined ? body.companyName : existing.companyName,
+        avatarUrl: body.avatarUrl || existing.avatarUrl,
         password: body.password || existing.password,
         matricule: immutableMatricule,
         firstName: isSealed ? (existing.firstName || body.firstName) : (body.firstName || existing.firstName),

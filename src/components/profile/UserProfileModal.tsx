@@ -148,8 +148,19 @@ export function UserProfileModal({
   useEffect(() => {
     if (isOpen) {
       const p = getUserProfile(currentRole);
-      if (user && user.avatarUrl) {
-        p.avatarUrl = user.avatarUrl;
+      if (user) {
+        if (user.avatarUrl) p.avatarUrl = user.avatarUrl;
+        if (user.companyName !== undefined) p.companyName = user.companyName;
+        if (user.name) p.name = user.name;
+        if (user.firstName) p.firstName = user.firstName;
+        if (user.lastName) p.lastName = user.lastName;
+        if (user.email) p.email = user.email;
+        if (user.phone) p.phone = user.phone;
+        if (user.matricule) p.matricule = user.matricule;
+        if (user.residenceCountry) p.residenceCountry = user.residenceCountry;
+        if (user.residenceCity) p.residenceCity = user.residenceCity;
+        if (user.residenceDistrict) p.residenceDistrict = user.residenceDistrict;
+        if (user.projectCountry) p.projectCountry = user.projectCountry;
       }
       setProfile(p);
       setSavedSuccess(false);
@@ -275,6 +286,8 @@ export function UserProfileModal({
     const isSealed = Boolean(profile.isIdentitySealed || isComplete || isJojo);
 
     const fullName = `${resolvedFirstName} ${resolvedLastName}`.trim() || profile.name || user?.name || '';
+    const cleanCompany = profile.role === 'locataire' ? undefined : (profile.companyName !== undefined ? profile.companyName.trim() : undefined);
+    const targetAvatar = profile.avatarUrl || user?.avatarUrl;
 
     const finalProfile: UserProfile = {
       ...profile,
@@ -285,67 +298,76 @@ export function UserProfileModal({
       email: user?.email || profile.email,
       matricule: resolvedMatricule,
       isIdentitySealed: isSealed,
-      companyName: profile.role === 'locataire' ? undefined : (profile.companyName?.trim() || undefined),
+      companyName: cleanCompany,
+      avatarUrl: targetAvatar,
     };
 
-    // 2. Sauvegarde du profil
+    // 2. Sauvegarde du profil via geo-service
     saveUserProfile(finalProfile);
 
-    // Synchronisation sur toutes les annonces publiées par cet utilisateur si bailleur/démarcheur
+    // 3. Mise à jour via AuthService
+    if (user?.id) {
+      AuthService.updateUser(user.id, {
+        companyName: cleanCompany,
+        avatarUrl: targetAvatar,
+        residenceCountry: finalProfile.residenceCountry,
+        residenceCity: finalProfile.residenceCity,
+        residenceDistrict: finalProfile.residenceDistrict,
+        projectCountry: finalProfile.projectCountry,
+      });
+    }
+
+    AuthService.updateCurrentUser({
+      companyName: cleanCompany,
+      avatarUrl: targetAvatar,
+      residenceCountry: finalProfile.residenceCountry,
+      residenceCity: finalProfile.residenceCity,
+      residenceDistrict: finalProfile.residenceDistrict,
+      projectCountry: finalProfile.projectCountry,
+    });
+
+    // 4. Synchronisation sur toutes les annonces publiées par cet utilisateur si bailleur/démarcheur
     if (finalProfile.role !== 'locataire') {
       if (finalProfile.id) {
-        ListingsService.syncAuthorCompany(finalProfile.id, finalProfile.companyName);
+        ListingsService.syncAuthorCompany(finalProfile.id, cleanCompany);
       }
       if (finalProfile.name) {
-        ListingsService.syncAuthorCompany(finalProfile.name, finalProfile.companyName);
+        ListingsService.syncAuthorCompany(finalProfile.name, cleanCompany);
       }
       if (finalProfile.email) {
-        ListingsService.syncAuthorCompany(finalProfile.email, finalProfile.companyName);
+        ListingsService.syncAuthorCompany(finalProfile.email, cleanCompany);
       }
       if (finalProfile.phone) {
-        ListingsService.syncAuthorCompany(finalProfile.phone, finalProfile.companyName);
+        ListingsService.syncAuthorCompany(finalProfile.phone, cleanCompany);
       }
     }
 
-    // 3. Synchronisation absolue dans la session active et les utilisateurs enregistrés
+    // 5. Synchronisation absolue dans la session active et les utilisateurs enregistrés
     if (typeof window !== 'undefined') {
       try {
-        const sessionStr = localStorage.getItem('locagestion:auth:session:v1');
-        if (sessionStr) {
-          const session = JSON.parse(sessionStr);
-          const updatedUser = {
-            ...session,
-            ...finalProfile,
-            avatarUrl: profile.avatarUrl || session.avatarUrl,
-          };
-          localStorage.setItem('locagestion:auth:session:v1', JSON.stringify(updatedUser));
-
-          // Mettre à jour dans la liste permanente des utilisateurs
-          const usersStr = localStorage.getItem('locagestion:auth:users:v1');
-          if (usersStr) {
-            const users = JSON.parse(usersStr);
-            if (Array.isArray(users)) {
-              const updatedUsers = users.map((u: any) =>
-                u.id === updatedUser.id || (u.email && u.email.toLowerCase() === updatedUser.email.toLowerCase())
-                  ? { ...u, ...updatedUser }
-                  : u
-              );
-              localStorage.setItem('locagestion:auth:users:v1', JSON.stringify(updatedUsers));
-            }
-          }
-
-          // Déclencher le re-render immédiat dans tous les composants React
-          window.dispatchEvent(new CustomEvent('locagestion:auth_changed', { detail: { user: updatedUser } }));
-        }
+        const payloadUser = {
+          ...(user || {}),
+          ...finalProfile,
+          companyName: cleanCompany,
+          avatarUrl: targetAvatar,
+        };
 
         // Sauvegarde sur le serveur Next.js en arrière-plan
         fetch('/api/auth/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(finalProfile),
+          body: JSON.stringify(payloadUser),
         }).catch(() => {});
 
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user: payloadUser }),
+        }).catch(() => {});
+
+        window.dispatchEvent(new CustomEvent('locagestion:auth_changed', { detail: { user: payloadUser } }));
         window.dispatchEvent(new CustomEvent('locagestion:profile_updated', { detail: finalProfile }));
+        window.dispatchEvent(new CustomEvent('locagestion:users_updated'));
         window.dispatchEvent(new Event('storage'));
       } catch (err) {
         console.error('Erreur mise à jour session:', err);

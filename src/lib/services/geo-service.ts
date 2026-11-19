@@ -351,6 +351,7 @@ export function saveUserProfile(profile: UserProfile): void {
       const updatedUser = {
         ...session,
         avatarUrl: profile.avatarUrl || session.avatarUrl,
+        companyName: profile.role === 'locataire' ? undefined : (profile.companyName !== undefined ? profile.companyName : session.companyName),
         residenceCountry: profile.residenceCountry || session.residenceCountry,
         residenceCity: profile.residenceCity || session.residenceCity,
         residenceDistrict: profile.residenceDistrict || session.residenceDistrict,
@@ -363,6 +364,26 @@ export function saveUserProfile(profile: UserProfile): void {
         isIdentitySealed: finalSealed,
       };
       localStorage.setItem('locagestion:auth:session:v1', JSON.stringify(updatedUser));
+
+      // Mettre aussi à jour la liste permanente des utilisateurs enregistrés
+      const usersStr = localStorage.getItem('locagestion:auth:users:v1');
+      if (usersStr) {
+        try {
+          const uList = JSON.parse(usersStr);
+          if (Array.isArray(uList)) {
+            const idx = uList.findIndex(
+              (u: any) =>
+                u.id === updatedUser.id ||
+                (u.email && updatedUser.email && u.email.toLowerCase() === updatedUser.email.toLowerCase())
+            );
+            if (idx !== -1) {
+              uList[idx] = { ...uList[idx], ...updatedUser };
+              localStorage.setItem('locagestion:auth:users:v1', JSON.stringify(uList));
+            }
+          }
+        } catch (e) {}
+      }
+
       window.dispatchEvent(new CustomEvent('locagestion:auth_changed', { detail: { user: updatedUser } }));
     }
 
