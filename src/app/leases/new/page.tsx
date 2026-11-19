@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -48,6 +48,7 @@ import {
   MessageCircle,
   Camera,
   ClipboardCheck,
+  Search,
 } from 'lucide-react';
 import {
   buildWhatsAppUrl,
@@ -56,7 +57,8 @@ import {
   buildLeaseInvitationTextMessage,
 } from '@/lib/services/notification-dispatch-service';
 import { formatFCFA } from '@/lib/money/format';
-import { UserSpace, Property } from '@/lib/types';
+import { UserSpace, Property, RentalListing } from '@/lib/types';
+import { ListingsService } from '@/lib/services/listings-service';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { InspectionModal, InspectionData } from '@/components/leases/InspectionModal';
@@ -117,6 +119,127 @@ export default function NewLeasePage() {
   // Données communes
   const [unitNumber, setUnitNumber] = useState('Lot 1');
   const [surface, setSurface] = useState('');
+
+  // Step 3 conditions financières
+  const [monthlyRent, setMonthlyRent] = useState('');
+  const [charges, setCharges] = useState('');
+  const [includeFirstRent, setIncludeFirstRent] = useState(true);
+  const [depositMonths, setDepositMonths] = useState('3');
+  const [customDepositAmount, setCustomDepositAmount] = useState('');
+  const [hasUtilitiesDeposit, setHasUtilitiesDeposit] = useState(false);
+  const [utilitiesDepositAmount, setUtilitiesDepositAmount] = useState('');
+  const [advanceMonths, setAdvanceMonths] = useState('0');
+  const [paymentDay, setPaymentDay] = useState('5');
+
+  // Liaison avec une annonce publiée par sa référence
+  const [linkedListing, setLinkedListing] = useState<RentalListing | null>(null);
+  const [listingSearchQuery, setListingSearchQuery] = useState('');
+  const [showListingSearchDropdown, setShowListingSearchDropdown] = useState(false);
+  const [showListingSearchDropdownManual, setShowListingSearchDropdownManual] = useState(false);
+  const [allListings, setAllListings] = useState<RentalListing[]>([]);
+
+  const listingSearchRef = useRef<HTMLDivElement>(null);
+  const listingSearchRefManual = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (listingSearchRef.current && !listingSearchRef.current.contains(event.target as Node)) {
+        setShowListingSearchDropdown(false);
+      }
+      if (listingSearchRefManual.current && !listingSearchRefManual.current.contains(event.target as Node)) {
+        setShowListingSearchDropdownManual(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    try {
+      const items = ListingsService.getAllListings();
+      setAllListings(items);
+    } catch (e) {
+      console.error('Erreur chargement annonces pour le bail:', e);
+    }
+  }, []);
+
+  const filteredListings = useMemo(() => {
+    const q = listingSearchQuery.trim().toLowerCase();
+    if (!q) return allListings.slice(0, 10);
+    return allListings.filter((l) => {
+      const ref = (l.referenceCode || l.id || '').toLowerCase();
+      const title = (l.title || '').toLowerCase();
+      const city = (l.city || '').toLowerCase();
+      const district = (l.district || '').toLowerCase();
+      const country = (l.country || '').toLowerCase();
+      const author = (l.authorName || l.authorCompany || '').toLowerCase();
+      return (
+        ref.includes(q) ||
+        title.includes(q) ||
+        city.includes(q) ||
+        district.includes(q) ||
+        country.includes(q) ||
+        author.includes(q)
+      );
+    });
+  }, [listingSearchQuery, allListings]);
+
+  const handleSelectListing = (l: RentalListing) => {
+    setLinkedListing(l);
+    setListingSearchQuery(l.referenceCode || l.id);
+    setShowListingSearchDropdown(false);
+    setShowListingSearchDropdownManual(false);
+
+    // Mettre à jour automatiquement les champs du formulaire avec les données de l'annonce
+    const titleWithRef = l.referenceCode ? `${l.title} (${l.referenceCode})` : l.title;
+    setCustomUnitNumber(titleWithRef);
+    setManualUnitName(titleWithRef);
+    if (l.surface) {
+      setSurface(String(l.surface));
+    } else {
+      setSurface('');
+    }
+    if (l.monthlyRent) {
+      setMonthlyRent(String(l.monthlyRent));
+    }
+    if (l.charges) {
+      setCharges(String(l.charges));
+    }
+    if (l.depositMonths) {
+      setDepositMonths(String(l.depositMonths));
+    }
+    if (l.advanceMonths) {
+      setAdvanceMonths(String(l.advanceMonths));
+    }
+    if (l.hasUtilitiesDeposit && l.utilitiesDeposit) {
+      setHasUtilitiesDeposit(true);
+      setUtilitiesDepositAmount(String(l.utilitiesDeposit));
+    }
+
+    if (l.country) {
+      setSelectedCountryName(l.country);
+    }
+    if (l.city) {
+      setManualCity(l.city);
+    }
+    if (l.district || l.landmark) {
+      setManualAddress([l.district, l.landmark].filter(Boolean).join(', '));
+    }
+    if (propertyMode === 'manual') {
+      setManualPropertyName(l.title);
+    }
+
+    notifySave(
+      `Annonce ${l.referenceCode || l.id} (« ${l.title} ») liée au contrat de bail. Caractéristiques importées !`,
+      'Annonce Liée au Bail'
+    );
+  };
+
+  const handleUnlinkListing = () => {
+    setLinkedListing(null);
+    setListingSearchQuery('');
+    notifySave('Liaison avec l’annonce retirée.', 'Annonce dissociée');
+  };
 
   useEffect(() => {
     try {
@@ -298,17 +421,6 @@ export default function NewLeasePage() {
     () => `LOCA-INV-${Math.floor(1000 + Math.random() * 9000)}`
   );
 
-  // Step 3 conditions financières
-  const [monthlyRent, setMonthlyRent] = useState('');
-  const [charges, setCharges] = useState('');
-  const [includeFirstRent, setIncludeFirstRent] = useState(true);
-  const [depositMonths, setDepositMonths] = useState('3');
-  const [customDepositAmount, setCustomDepositAmount] = useState('');
-  const [hasUtilitiesDeposit, setHasUtilitiesDeposit] = useState(false);
-  const [utilitiesDepositAmount, setUtilitiesDepositAmount] = useState('');
-  const [advanceMonths, setAdvanceMonths] = useState('0');
-  const [paymentDay, setPaymentDay] = useState('5');
-
   const [leaseType, setLeaseType] = useState('habitation');
   const [durationMonths, setDurationMonths] = useState('12');
 
@@ -441,6 +553,8 @@ export default function NewLeasePage() {
       emergencyContactRelation: emergencyContactRelation || undefined,
       property: resolvedPropertyName,
       unit: resolvedUnitName,
+      listingId: linkedListing?.id,
+      listingReference: linkedListing?.referenceCode || linkedListing?.id,
       country: activeLaw.countryName,
       governingLaw: `${activeLaw.officialLawReference} (${activeLaw.countryName})`,
       specialConditions: specialConditions.trim() || undefined,
@@ -633,7 +747,14 @@ export default function NewLeasePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPropertyMode('manual')}
+                    onClick={() => {
+                      setPropertyMode('manual');
+                      setSurface('');
+                      if (manualPropertyType) {
+                        const match = LEASE_PROPERTY_TYPES.find((p) => p.id === manualPropertyType);
+                        if (match) setManualUnitName(match.label);
+                      }
+                    }}
                     className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
                       propertyMode === 'manual'
                         ? 'bg-white text-slate-900 shadow-sm font-black'
@@ -716,11 +837,17 @@ export default function NewLeasePage() {
                         </label>
                         <button
                           type="button"
-                          onClick={() =>
-                            setSelectedUnitMode(
-                              selectedUnitMode === 'catalog' ? 'custom' : 'catalog'
-                            )
-                          }
+                          onClick={() => {
+                            if (selectedUnitMode === 'catalog') {
+                              setSelectedUnitMode('custom');
+                              setCustomUnitNumber('');
+                              setSurface('');
+                              setLinkedListing(null);
+                              setListingSearchQuery('');
+                            } else {
+                              setSelectedUnitMode('catalog');
+                            }
+                          }}
                           className="text-[11px] text-brand-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
                         >
                           {selectedUnitMode === 'catalog' ? (
@@ -784,22 +911,146 @@ export default function NewLeasePage() {
                         </div>
                       ) : (
                         <div className="p-4 rounded-2xl bg-brand-50/50 border border-brand-200/60 space-y-3">
-                          <div className="text-xs font-bold text-brand-900 flex items-center gap-1.5">
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>
-                              Saisie d'un nouveau lot ou chambre dans {currentProperty?.name} :
+                          <div className="text-xs font-bold text-brand-900 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>
+                                Saisie d'un nouveau lot ou chambre dans {currentProperty?.name} :
+                              </span>
                             </span>
+                            {linkedListing && (
+                              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                Annonce liée ✓
+                              </span>
+                            )}
                           </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-[11px] font-bold text-slate-700 block mb-1">
-                                Désignation du lot / chambre
+
+                          {/* Recherche & Liaison d'une Annonce Publiée par sa Référence */}
+                          <div ref={listingSearchRef} className="relative p-3 bg-white/90 rounded-2xl border border-brand-200/80 shadow-xs space-y-2">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                                <Search className="w-3.5 h-3.5 text-brand-600" />
+                                <span>Lier une annonce par sa référence (tous pays & auteurs) :</span>
                               </label>
+                              {linkedListing && (
+                                <button
+                                  type="button"
+                                  onClick={handleUnlinkListing}
+                                  className="text-[10px] font-extrabold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+                                >
+                                  Dissocier ✕
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="relative">
                               <input
                                 type="text"
-                                placeholder="Ex: Chambre 3, Lot 104..."
+                                placeholder="Rechercher par référence (ex: LOCA-BJ-17635, ANN-...), titre, ville..."
+                                value={listingSearchQuery}
+                                onChange={(e) => {
+                                  setListingSearchQuery(e.target.value);
+                                  setShowListingSearchDropdown(true);
+                                }}
+                                onFocus={() => setShowListingSearchDropdown(true)}
+                                className="w-full pl-8 pr-20 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500"
+                              />
+                              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                              <button
+                                type="button"
+                                onClick={() => setShowListingSearchDropdown(!showListingSearchDropdown)}
+                                className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-200/80 hover:bg-slate-300 text-slate-700 text-[10px] font-bold cursor-pointer transition-colors"
+                              >
+                                {showListingSearchDropdown ? 'Fermer' : 'Parcourir'}
+                              </button>
+                            </div>
+
+                            {/* Dropdown des résultats */}
+                            {showListingSearchDropdown && (
+                              <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100">
+                                {filteredListings.length > 0 ? (
+                                  filteredListings.map((l) => (
+                                    <div
+                                      key={l.id}
+                                      onClick={() => handleSelectListing(l)}
+                                      className="p-2.5 hover:bg-brand-50/60 cursor-pointer transition-colors flex items-center justify-between gap-3"
+                                    >
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-brand-50 text-brand-700 border border-brand-200 shrink-0">
+                                            {l.referenceCode || l.id}
+                                          </span>
+                                          <strong className="text-xs text-slate-900 font-bold truncate">{l.title}</strong>
+                                        </div>
+                                        <div className="text-[10px] text-slate-500 mt-0.5 truncate">
+                                          {l.flag} {l.country} • {l.city} {l.district ? `(${l.district})` : ''} • Par : {l.authorCompany || l.authorName || 'Démarcheur'}
+                                        </div>
+                                      </div>
+                                      <div className="text-right shrink-0">
+                                        <span className="text-xs font-black text-brand-600 block">
+                                          {formatFCFA(l.monthlyRent)}
+                                        </span>
+                                        {l.surface > 0 && (
+                                          <span className="text-[10px] text-slate-400">{l.surface} m²</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="p-3 text-center text-xs text-slate-500">
+                                    Aucune annonce trouvée pour « {listingSearchQuery} »
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Badge vert si une annonce est liée */}
+                            {linkedListing && (
+                              <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between gap-2 text-xs text-emerald-950">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[11px] font-black shrink-0">
+                                    ✓
+                                  </div>
+                                  <div className="min-w-0">
+                                    <span className="font-bold">Annonce liée : {linkedListing.referenceCode || linkedListing.id}</span>
+                                    <span className="text-[10px] text-emerald-800 block">
+                                      Loyer ({formatFCFA(linkedListing.monthlyRent)}) et surface ({linkedListing.surface} m²) importés. Sera retirée du portail dès contresignature du locataire.
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-[11px] font-bold text-slate-700">
+                                  Désignation du lot / chambre
+                                </label>
+                                {!linkedListing && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowListingSearchDropdown(true)}
+                                    className="text-[10px] text-brand-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                                  >
+                                    <Search className="w-3 h-3" />
+                                    <span>Lier par réf.</span>
+                                  </button>
+                                )}
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="Ex: Chambre 3, Lot 104, ou réf. annonce..."
                                 value={customUnitNumber}
-                                onChange={(e) => setCustomUnitNumber(e.target.value)}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCustomUnitNumber(val);
+                                  if (val.trim().length >= 3) {
+                                    setListingSearchQuery(val);
+                                    setShowListingSearchDropdown(true);
+                                  }
+                                }}
                                 className="w-full px-3.5 py-2 rounded-xl bg-white border border-brand-300 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500"
                               />
                             </div>
@@ -830,6 +1081,103 @@ export default function NewLeasePage() {
                       <span>
                         <strong>Saisie libre & directe :</strong> Renseignez directement le bien, la maison, l'appartement ou la chambre indépendante à mettre en location sans avoir à le créer préalablement dans le catalogue.
                       </span>
+                    </div>
+
+                    {/* Recherche & Liaison d'une Annonce Publiée par sa Référence */}
+                    <div ref={listingSearchRefManual} className="relative p-3 bg-white/95 rounded-2xl border border-emerald-200/80 shadow-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
+                          <Search className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Lier une annonce publiée par sa référence (tous pays & démarcheurs) :</span>
+                        </label>
+                        {linkedListing && (
+                          <button
+                            type="button"
+                            onClick={handleUnlinkListing}
+                            className="text-[10px] font-extrabold text-rose-600 hover:text-rose-700 underline cursor-pointer"
+                          >
+                            Dissocier ✕
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="relative">
+                        <input
+                          type="text"
+                          placeholder="Rechercher par référence (ex: LOCA-BJ-17635, ANN-...), titre, ville..."
+                          value={listingSearchQuery}
+                          onChange={(e) => {
+                            setListingSearchQuery(e.target.value);
+                            setShowListingSearchDropdownManual(true);
+                          }}
+                          onFocus={() => setShowListingSearchDropdownManual(true)}
+                          className="w-full pl-8 pr-20 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        />
+                        <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <button
+                          type="button"
+                          onClick={() => setShowListingSearchDropdownManual(!showListingSearchDropdownManual)}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 rounded-lg bg-slate-200/80 hover:bg-slate-300 text-slate-700 text-[10px] font-bold cursor-pointer transition-colors"
+                        >
+                          {showListingSearchDropdownManual ? 'Fermer' : 'Parcourir'}
+                        </button>
+                      </div>
+
+                      {/* Dropdown des annonces disponibles */}
+                      {showListingSearchDropdownManual && (
+                        <div className="absolute left-0 right-0 top-full mt-1 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl max-h-56 overflow-y-auto divide-y divide-slate-100">
+                          {filteredListings.length > 0 ? (
+                            filteredListings.map((l) => (
+                              <div
+                                key={l.id}
+                                onClick={() => handleSelectListing(l)}
+                                className="p-2.5 hover:bg-emerald-50/60 cursor-pointer transition-colors flex items-center justify-between gap-3"
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-mono text-[10px] font-black px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                                      {l.referenceCode || l.id}
+                                    </span>
+                                    <strong className="text-xs text-slate-900 font-bold truncate">{l.title}</strong>
+                                  </div>
+                                  <div className="text-[10px] text-slate-500 mt-0.5 truncate">
+                                    {l.flag} {l.country} • {l.city} {l.district ? `(${l.district})` : ''} • Par : {l.authorCompany || l.authorName || 'Démarcheur'}
+                                  </div>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <span className="text-xs font-black text-emerald-600 block">
+                                    {formatFCFA(l.monthlyRent)}
+                                  </span>
+                                  {l.surface > 0 && (
+                                    <span className="text-[10px] text-slate-400">{l.surface} m²</span>
+                                  )}
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="p-3 text-center text-xs text-slate-500">
+                              Aucune annonce trouvée pour « {listingSearchQuery} »
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Badge vert si annonce liée */}
+                      {linkedListing && (
+                        <div className="p-2.5 bg-emerald-50 border border-emerald-300 rounded-xl flex items-center justify-between gap-2 text-xs text-emerald-950">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[11px] font-black shrink-0">
+                              ✓
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-bold">Annonce liée : {linkedListing.referenceCode || linkedListing.id}</span>
+                              <span className="text-[10px] text-emerald-800 block">
+                                Loyer ({formatFCFA(linkedListing.monthlyRent)}) et surface ({linkedListing.surface} m²) importés. Sera retirée du portail dès contresignature du locataire.
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Type d'espace loué */}
@@ -899,14 +1247,33 @@ export default function NewLeasePage() {
                     {/* Désignation précise de la chambre ou du lot */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs font-bold text-slate-700 block mb-1">
-                          Désignation précise de la chambre ou du lot
-                        </label>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-xs font-bold text-slate-700">
+                            Désignation précise de la chambre ou du lot
+                          </label>
+                          {!linkedListing && (
+                            <button
+                              type="button"
+                              onClick={() => setShowListingSearchDropdownManual(true)}
+                              className="text-[10px] text-emerald-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                            >
+                              <Search className="w-3 h-3" />
+                              <span>Lier par réf.</span>
+                            </button>
+                          )}
+                        </div>
                         <input
                           type="text"
-                          placeholder="Ex: Chambre n°2 avec sanitaire, Studio RDC gauche, Porte A..."
+                          placeholder="Ex: Chambre n°2 avec sanitaire, Studio, ou réf. annonce..."
                           value={manualUnitName}
-                          onChange={(e) => setManualUnitName(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setManualUnitName(val);
+                            if (val.trim().length >= 3) {
+                              setListingSearchQuery(val);
+                              setShowListingSearchDropdownManual(true);
+                            }
+                          }}
                           className="w-full px-4 py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-900 focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 outline-none"
                         />
                       </div>

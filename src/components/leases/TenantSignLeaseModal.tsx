@@ -19,6 +19,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
+import { ListingsService } from '@/lib/services/listings-service';
 import { formatFCFA } from '@/lib/money/format';
 
 interface TenantSignLeaseModalProps {
@@ -128,6 +129,18 @@ export function TenantSignLeaseModal({
 
       // Enregistrement de la contresignature dans le service
       const result = LeaseService.signLeaseByTenant(lease.id, tenantName, dataUrl);
+
+      // Retrait automatique de l'annonce si le bail était lié à une annonce
+      if (lease.listingId || lease.listingReference) {
+        try {
+          ListingsService.removeListingAfterLeaseSigned(
+            lease.listingId || lease.listingReference!,
+            lease.id
+          );
+        } catch (e) {
+          console.error('Erreur retrait automatique annonce depuis modal:', e);
+        }
+      }
 
       setIsSubmitting(false);
       setIsSignedSuccess(true);

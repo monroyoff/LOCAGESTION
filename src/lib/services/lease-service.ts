@@ -39,6 +39,8 @@ export interface Lease {
   invitationSentByEmail?: boolean;
   appDownloadLink?: string;
   portalAccessLink?: string;
+  listingId?: string;
+  listingReference?: string;
   startDate: string;
   endDate?: string;
   durationMonths?: number;
@@ -366,6 +368,19 @@ export const LeaseService = {
         tenantSignedAt: nowFormatted,
       };
       this.saveLease(updatedLease);
+    }
+
+    // Règle métier : Dès que le bail est contresigné par le locataire, retirer automatiquement l'annonce liée de la place de marché
+    if (typeof window !== 'undefined' && (updatedLease.listingId || updatedLease.listingReference)) {
+      try {
+        const { ListingsService } = require('./listings-service');
+        ListingsService.removeListingAfterLeaseSigned(
+          updatedLease.listingId || updatedLease.listingReference!,
+          updatedLease.id
+        );
+      } catch (err) {
+        console.error('Erreur retrait automatique annonce après contresignature:', err);
+      }
     }
 
     // Créer la notification pour informer le bailleur dans l'app et par mail

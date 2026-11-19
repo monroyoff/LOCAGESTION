@@ -398,10 +398,12 @@ export const ListingsService = {
   },
 
   getAllListings(): RentalListing[] {
-    const custom = this.getCustomListings().filter((l) => !isFakeListing(l));
+    const trash = this.getTrashListings();
+    const trashIds = new Set(trash.map((t) => t.id));
+    const custom = this.getCustomListings().filter((l) => !isFakeListing(l) && !trashIds.has(l.id));
     const customIds = new Set(custom.map((l) => l.id));
     const nonDuplicatedMock = MOCK_RENTAL_LISTINGS.filter(
-      (m) => !isFakeListing(m) && !customIds.has(m.id)
+      (m) => !isFakeListing(m) && !customIds.has(m.id) && !trashIds.has(m.id)
     );
     return [...custom, ...nonDuplicatedMock];
   },
@@ -521,8 +523,9 @@ export const ListingsService = {
    * Permet au Super Admin de restaurer l'annonce à tout moment pour l'utilisateur.
    */
   deleteListing(id: string, deletedBy: 'Utilisateur' | 'Super Admin' = 'Utilisateur', reason?: string): boolean {
+    const all = this.getAllListings();
+    const target = all.find((l) => l.id === id);
     const current = this.getCustomListings().filter((l) => !isFakeListing(l));
-    const target = current.find((l) => l.id === id);
 
     if (target && typeof window !== 'undefined') {
       try {
@@ -549,6 +552,29 @@ export const ListingsService = {
       } catch (e) {
         console.error('Erreur suppression annonce:', e);
       }
+    }
+    return false;
+  },
+
+  /**
+   * Retire automatiquement une annonce de la diffusion publique lorsqu'un bail la concernant est contresigné par le locataire
+   */
+  removeListingAfterLeaseSigned(listingIdOrRef: string, leaseId: string): boolean {
+    if (!listingIdOrRef || typeof window === 'undefined') return false;
+    const all = this.getAllListings();
+    const cleanQuery = listingIdOrRef.trim().toLowerCase();
+    const target = all.find(
+      (l) =>
+        l.id.toLowerCase() === cleanQuery ||
+        (l.referenceCode && l.referenceCode.trim().toLowerCase() === cleanQuery)
+    );
+    if (target) {
+      this.deleteListing(
+        target.id,
+        'Utilisateur',
+        `Annonce conclue : Bail ${leaseId} contresigné électroniquement par le locataire.`
+      );
+      return true;
     }
     return false;
   },
