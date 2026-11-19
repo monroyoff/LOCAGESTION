@@ -38,6 +38,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { formatFCFA, formatDateFR } from '@/lib/money/format';
+import { TenantScoringService } from '@/lib/services/tenant-scoring-service';
 import { UserSpace } from '@/lib/types';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
@@ -217,6 +218,16 @@ export default function TenantsPage() {
         }
       }
 
+      const computedScore = TenantScoringService.calculateScore(l.tenantEmail, l.tenantPhone);
+      const badgeMapping: 'Excellent' | 'Fiable' | 'À surveiller' | 'À risque' =
+        computedScore.tier.tier === 'excellent'
+          ? 'Excellent'
+          : computedScore.tier.tier === 'bon'
+          ? 'Fiable'
+          : computedScore.tier.tier === 'vigilance'
+          ? 'À surveiller'
+          : 'À risque';
+
       return {
         id: l.id || `loc-${idx}`,
         firstName: resolvedFirstName,
@@ -252,12 +263,18 @@ export default function TenantsPage() {
           status: l.status === 'resilie' ? 'resilie' : 'actif',
         },
         scoring: {
-          score: 95,
-          badge: 'Excellent' as const,
-          onTimeRate: 100,
-          averageDelayDays: 0,
-          maxDelayDays: 0,
-          criticalDelaysCount: 0,
+          score: computedScore.currentScore,
+          badge: badgeMapping,
+          onTimeRate: computedScore.isNewTenant
+            ? 100
+            : Math.round(
+                100 *
+                  (computedScore.onTimePaymentsCount /
+                    Math.max(1, computedScore.onTimePaymentsCount + computedScore.delayedPaymentsCount))
+              ),
+          averageDelayDays: computedScore.currentMonthDelayedDays,
+          maxDelayDays: computedScore.currentMonthDelayedDays,
+          criticalDelaysCount: computedScore.delayedPaymentsCount,
           finalArrears: 0,
           historyConsentGranted: true,
         },
@@ -740,10 +757,10 @@ export default function TenantsPage() {
                           {/* Formula Explanation */}
                           <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-2">
                             <h4 className="font-extrabold text-slate-900">
-                              Formule Objective de Ponctualité LOCAGESTION :
+                              Barème Déterministe de Solvabilité LOCAGESTION :
                             </h4>
                             <p className="text-slate-600 text-[11px] leading-relaxed">
-                              Le score (0-100) est calculé par un moteur déterministe pur en fonction de la régularité des règlements, de l’absence d’incidents critiques (&gt; 15 jours) et du solde de sortie. Aucune appréciation subjective n’est enregistrée afin de prévenir tout risque de diffamation.
+                              Le score démarre obligatoirement à <strong>100/100 (Vert)</strong> pour tout nouveau locataire dès la création de son compte. Il évolue ensuite selon le comportement de paiement à l'échéance du 5 du mois : <strong>Palier Vert (85 à 100)</strong>, <strong>Palier Bleu (70 à 84)</strong>, <strong>Palier Orange (50 à 69)</strong> et <strong>Palier Rouge (&lt; 50)</strong>. Aucune appréciation subjective n’est enregistrée afin de garantir une intégrité juridique totale.
                             </p>
                           </div>
                         </div>

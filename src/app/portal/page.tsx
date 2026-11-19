@@ -57,6 +57,10 @@ import {
   CalendarDays,
   Compass,
   Plus,
+  Award,
+  TrendingUp,
+  XCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
@@ -76,6 +80,7 @@ import { Footer } from '@/components/layout/Footer';
 import { SkeletonPortalDashboard } from '@/components/ui/SkeletonLoader';
 import { AuthService, areEmailsEqual, arePhoneNumbersEqual, isCanonicalJojoVog } from '@/lib/services/auth-service';
 import { SyncService } from '@/lib/services/sync-service';
+import { TenantScoringService, SCORING_TIERS, TenantScoreBreakdown } from '@/lib/services/tenant-scoring-service';
 
 const ISSUE_SAMPLE_PHOTOS = [
   {
@@ -670,6 +675,16 @@ function TenantPortalContent() {
     };
   }, [currentLease]);
 
+  const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>([]);
+
+  // Calcul dynamique et fonctionnel du score de solvabilité (100/100 en vert au départ)
+  const tenantScoring = useMemo(() => {
+    return TenantScoringService.calculateScore(
+      user?.email || currentLease?.tenantEmail,
+      user?.phone || currentLease?.tenantPhone
+    );
+  }, [user, receiptsList, currentLease]);
+
   const tenant = {
     name: user?.name || currentLease?.tenant || 'Locataire',
     phone: user?.phone || currentLease?.tenantPhone || '',
@@ -691,14 +706,18 @@ function TenantPortalContent() {
     keysDelivered: 'Clés de sécurité remises',
     landlord: resolvedLandlord,
     scoring: {
-      score: 100,
-      badge: 'Nouveau Locataire',
-      onTimeRate: 100,
-      totalMonthsPaid: 0,
+      score: tenantScoring.currentScore,
+      badge: tenantScoring.tier.badge,
+      onTimeRate: tenantScoring.isNewTenant
+        ? 100
+        : Math.round(
+            100 *
+              (tenantScoring.onTimePaymentsCount /
+                Math.max(1, tenantScoring.onTimePaymentsCount + tenantScoring.delayedPaymentsCount))
+          ),
+      totalMonthsPaid: tenantScoring.onTimePaymentsCount,
     },
   };
-
-  const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>([]);
 
   useEffect(() => {
     const syncReceipts = () => {
@@ -985,11 +1004,19 @@ function TenantPortalContent() {
               <ShieldCheck className="w-4 h-4" />
               <span>Passeport Solvabilité</span>
               <span
-                className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-                  activeTab === 'solvabilite' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-700'
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black tracking-tight ${
+                  activeTab === 'solvabilite'
+                    ? 'bg-white/25 text-white'
+                    : tenantScoring.currentScore >= 85
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                    : tenantScoring.currentScore >= 70
+                    ? 'bg-teal-100 text-teal-800 border border-teal-300'
+                    : tenantScoring.currentScore >= 50
+                    ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                    : 'bg-rose-100 text-rose-800 border border-rose-300'
                 }`}
               >
-                96/100
+                {tenantScoring.currentScore}/100
               </span>
             </button>
           </div>
@@ -2403,23 +2430,220 @@ function TenantPortalContent() {
               </div>
 
               {/* Score Showcase */}
-              <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-emerald-600 to-tealAccent-600 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-                <div>
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-100 block">
-                    Score de Ponctualité Global
-                  </span>
-                  <div className="text-5xl font-black mt-1">
-                    {receiptsList.length === 0 ? 100 : Math.round(100 * (receiptsList.filter((r) => r.isVerified).length / receiptsList.length))} <span className="text-base text-emerald-100 font-bold">/ 100</span>
+              <div
+                className={`p-6 sm:p-8 rounded-3xl bg-gradient-to-r ${tenantScoring.tier.bgGradient} text-white flex flex-col sm:flex-row sm:items-center justify-between gap-6 shadow-xl relative overflow-hidden`}
+              >
+                <div className="absolute right-0 top-0 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="relative z-10 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-black uppercase tracking-wider text-white/90">
+                      Score de Solvabilité & Ponctualité
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-white/20 border border-white/30 text-white">
+                      Certifié LOCAGESTION
+                    </span>
                   </div>
-                  <p className="text-xs text-emerald-100 mt-1.5">
-                    {receiptsList.length === 0
-                      ? 'Nouveau Résident : Votre historique débutera dès la validation de votre premier loyer.'
-                      : `${receiptsList.filter((r) => r.isVerified).length} quittance(s) validée(s) sur ${receiptsList.length} règlement(s) enregistré(s).`}
+
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl sm:text-6xl font-black tracking-tight">{tenantScoring.currentScore}</span>
+                    <span className="text-xl sm:text-2xl text-white/80 font-bold">/ 100</span>
+                  </div>
+
+                  <p className="text-xs text-white/90 max-w-xl leading-relaxed">
+                    {tenantScoring.isNewTenant
+                      ? '✓ Nouveau Résident : Votre score démarre à 100/100 (Palier Vert). Il reste au maximum tant que vous respectez l’échéance du 5 de chaque mois.'
+                      : tenantScoring.tier.description}
                   </p>
                 </div>
 
-                <div className="px-5 py-2.5 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs font-black border border-white/20 self-start sm:self-auto">
-                  Badge Officiel : {receiptsList.length === 0 ? 'NOUVEAU LOCATAIRE' : receiptsList.length >= 6 ? 'EXCELLENT PAYEUR' : 'RÉSIDENT ACTIF'}
+                <div className="relative z-10 flex flex-col sm:items-end gap-2 shrink-0">
+                  <div className="px-4 py-2 rounded-2xl bg-white/20 backdrop-blur-md text-white text-xs font-black border border-white/30 shadow-sm self-start sm:self-auto">
+                    {tenantScoring.tier.badge}
+                  </div>
+                  <span className="text-[11px] text-white/80 font-medium">
+                    Palier : <strong className="text-white uppercase">{tenantScoring.tier.label}</strong>
+                  </span>
+                </div>
+              </div>
+
+              {/* Barre de Progression Visuelle */}
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-black text-slate-700">Indice de ponctualité locative</span>
+                  <span className={`font-black ${tenantScoring.tier.textColor}`}>{tenantScoring.currentScore} %</span>
+                </div>
+                <div className="w-full h-3 rounded-full bg-slate-200 overflow-hidden relative">
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      tenantScoring.currentScore >= 85
+                        ? 'bg-emerald-500'
+                        : tenantScoring.currentScore >= 70
+                        ? 'bg-teal-500'
+                        : tenantScoring.currentScore >= 50
+                        ? 'bg-amber-500'
+                        : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${tenantScoring.currentScore}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Grille des 4 Paliers Professionnels de Solvabilité */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
+                    <Award className="w-4 h-4 text-brand-600" />
+                    <span>Barème Officiel des Paliers de Solvabilité</span>
+                  </h4>
+                  <span className="text-[10px] text-slate-400 font-medium">Standard PropTech UEMOA / CEMAC</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* Palier Vert */}
+                  <div
+                    className={`p-3.5 rounded-2xl border transition-all ${
+                      tenantScoring.tier.tier === 'excellent'
+                        ? 'bg-emerald-50/80 border-emerald-300 ring-2 ring-emerald-500/20 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 opacity-75'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-black text-emerald-800 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                        <span>Vert (85 à 100)</span>
+                      </span>
+                      {tenantScoring.tier.tier === 'excellent' && (
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 border border-emerald-300">
+                          Votre Palier
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-900 block">Solvabilité Maximale</span>
+                    <p className="text-[10px] text-slate-500 mt-1 leading-snug">
+                      Nouveau compte ou règlements à l'heure. Dossier prioritaire sans caution supplémentaire.
+                    </p>
+                  </div>
+
+                  {/* Palier Bleu */}
+                  <div
+                    className={`p-3.5 rounded-2xl border transition-all ${
+                      tenantScoring.tier.tier === 'bon'
+                        ? 'bg-teal-50/80 border-teal-300 ring-2 ring-teal-500/20 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 opacity-75'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-black text-teal-800 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-teal-500" />
+                        <span>Bleu (70 à 84)</span>
+                      </span>
+                      {tenantScoring.tier.tier === 'bon' && (
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-teal-200 text-teal-800 border border-teal-300">
+                          Votre Palier
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-900 block">Locataire Fiable</span>
+                    <p className="text-[10px] text-slate-500 mt-1 leading-snug">
+                      Retards très légers (&lt; 5 j.) résolus rapidement. Profil validé par 95% des bailleurs.
+                    </p>
+                  </div>
+
+                  {/* Palier Orange */}
+                  <div
+                    className={`p-3.5 rounded-2xl border transition-all ${
+                      tenantScoring.tier.tier === 'vigilance'
+                        ? 'bg-amber-50/80 border-amber-300 ring-2 ring-amber-500/20 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 opacity-75'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-black text-amber-800 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                        <span>Orange (50 à 69)</span>
+                      </span>
+                      {tenantScoring.tier.tier === 'vigilance' && (
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-200 text-amber-800 border border-amber-300">
+                          Votre Palier
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-900 block">Vigilance Requise</span>
+                    <p className="text-[10px] text-slate-500 mt-1 leading-snug">
+                      Retards répétés (6 à 15 j.) ou relance active. Garant ou justificatifs demandés.
+                    </p>
+                  </div>
+
+                  {/* Palier Rouge */}
+                  <div
+                    className={`p-3.5 rounded-2xl border transition-all ${
+                      tenantScoring.tier.tier === 'critique'
+                        ? 'bg-rose-50/80 border-rose-300 ring-2 ring-rose-500/20 shadow-xs'
+                        : 'bg-slate-50 border-slate-200 opacity-75'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-black text-rose-800 flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                        <span>Rouge (0 à 49)</span>
+                      </span>
+                      {tenantScoring.tier.tier === 'critique' && (
+                        <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-200 text-rose-800 border border-rose-300">
+                          Votre Palier
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-900 block">Risque Élevé d'Impayé</span>
+                    <p className="text-[10px] text-slate-500 mt-1 leading-snug">
+                      Retard &gt; 15 jours, mise en demeure ou impayé. Risque de résiliation de bail.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Facteurs Objectifs d'Évolution du Score */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black text-slate-900 flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-600" />
+                    <span>Détail Objectif du Calcul de Votre Score</span>
+                  </h4>
+                  <span className="text-[11px] text-slate-500">Moteur déterministe certifié</span>
+                </div>
+
+                <div className="space-y-2">
+                  {tenantScoring.factors.map((f, i) => (
+                    <div
+                      key={i}
+                      className="p-2.5 rounded-xl bg-white border border-slate-200/80 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {f.type === 'positive' ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        ) : f.type === 'negative' ? (
+                          <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                        ) : (
+                          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <span className="font-bold text-slate-800 block truncate">{f.title}</span>
+                          <span className="text-[10px] text-slate-500 block truncate">{f.description}</span>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`text-xs font-black shrink-0 px-2 py-0.5 rounded-md ${
+                          f.impact > 0
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : f.impact < 0
+                            ? 'bg-rose-100 text-rose-800'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}
+                      >
+                        {f.impact > 0 ? `+${f.impact} pts` : f.impact < 0 ? `${f.impact} pts` : 'Initial'}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
 
