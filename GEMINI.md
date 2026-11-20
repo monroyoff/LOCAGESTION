@@ -131,6 +131,7 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 ### 👥 4. Gestion des Locataires (`/tenants`)
 - Fiches locataires complètes avec scoring de fiabilité (Excellent, Fiable, À surveiller, À risque).
 - Suivi du loyer, date d'entrée, coordonnées téléphoniques directes et statut de paiement.
+- **Moteur de Recherche Multi-Critères :** Filtrage instantané et souple par **Matricule officiel** (ex: `LOCA-MAT-BJ-17635`, `17635`), **Référence de bail** (ex: `BAIL-2026-421`, `421`), **Nom & Prénom** (dans l'ordre direct ou inversé), **Lieu géographique** (quartier, ville, pays, repère local, adresse), désignation du bien et contacts.
 
 ### 💳 5. Paiements & Quittances Numériques (`/payments`)
 - Suivi des flux financiers par canal : Wave, MTN Mobile Money, Moov Money, Orange Money, Virement, Espèces.

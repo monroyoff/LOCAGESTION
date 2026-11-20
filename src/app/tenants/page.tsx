@@ -535,14 +535,82 @@ export default function TenantsPage() {
   }, [leases]);
 
   const filteredTenants = dynamicTenants.filter((t) => {
-    const matchesSearch =
-      t.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.matricule && t.matricule.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      t.property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.property.unit.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.phone.includes(searchQuery);
+    // Filtre par palier de solvabilité
     const matchesFilter = filterBadge === 'all' || t.scoring.badge === filterBadge;
-    return matchesSearch && matchesFilter;
+    if (!matchesFilter) return false;
+
+    const rawQ = searchQuery.trim().toLowerCase();
+    if (!rawQ) return true;
+
+    // Décomposition et normalisation pour recherche souple
+    const cleanQ = rawQ.replace(/[^a-z0-9]/gi, '');
+    const tokens = rawQ.split(/\s+/).filter(Boolean);
+
+    // 1. Recherche par Matricule (ex: LOCA-MAT-BJ-17635, 17635, BJ-17635)
+    const mat = (t.matricule || '').toLowerCase();
+    const cleanMat = mat.replace(/[^a-z0-9]/gi, '');
+    const matchesMatricule =
+      mat.includes(rawQ) ||
+      (cleanQ.length >= 2 && cleanMat.includes(cleanQ));
+
+    // 2. Recherche par Référence de Bail (ex: BAIL-2026-421, 421, 2026-421)
+    const leaseId = (t.lease?.id || '').toLowerCase();
+    const cleanLeaseId = leaseId.replace(/[^a-z0-9]/gi, '');
+    const matchesLease =
+      leaseId.includes(rawQ) ||
+      (cleanQ.length >= 2 && cleanLeaseId.includes(cleanQ));
+
+    // 3. Recherche par Nom & Prénom (direct, inversé, prénom seul, nom seul ou multi-mots)
+    const fn = (t.firstName || '').toLowerCase();
+    const ln = (t.lastName || '').toLowerCase();
+    const full = (t.fullName || '').toLowerCase();
+    const reverseFull = `${ln} ${fn}`.trim();
+    const matchesName =
+      full.includes(rawQ) ||
+      reverseFull.includes(rawQ) ||
+      fn.includes(rawQ) ||
+      ln.includes(rawQ) ||
+      (tokens.length > 1 && tokens.every((tok) => full.includes(tok) || reverseFull.includes(tok)));
+
+    // 4. Recherche par Lieu (Localisation, Quartier, Ville, Repère local, Adresse)
+    const loc = (t.property.location || '').toLowerCase();
+    const district = (t.property.district || '').toLowerCase();
+    const city = (t.property.city || '').toLowerCase();
+    const landmark = (t.property.landmark || '').toLowerCase();
+    const address = (t.property.address || '').toLowerCase();
+    const matchesLocation =
+      loc.includes(rawQ) ||
+      district.includes(rawQ) ||
+      city.includes(rawQ) ||
+      landmark.includes(rawQ) ||
+      address.includes(rawQ) ||
+      (tokens.length > 1 && tokens.some((tok) => loc.includes(tok) || landmark.includes(tok) || district.includes(tok) || city.includes(tok)));
+
+    // 5. Recherche par Propriété, Lot ou Référence d'Annonce
+    const propName = (t.property.name || '').toLowerCase();
+    const unit = (t.property.unit || '').toLowerCase();
+    const listingRef = (t.property.listingReference || '').toLowerCase();
+    const matchesProperty =
+      propName.includes(rawQ) ||
+      unit.includes(rawQ) ||
+      listingRef.includes(rawQ);
+
+    // 6. Recherche par Téléphone ou Email
+    const cleanPhone = (t.phone || '').replace(/[^0-9]/g, '');
+    const cleanQDigits = rawQ.replace(/[^0-9]/g, '');
+    const matchesContact =
+      (t.email && t.email.toLowerCase().includes(rawQ)) ||
+      (t.phone && t.phone.toLowerCase().includes(rawQ)) ||
+      (cleanQDigits.length >= 3 && cleanPhone.includes(cleanQDigits));
+
+    return (
+      matchesMatricule ||
+      matchesLease ||
+      matchesName ||
+      matchesLocation ||
+      matchesProperty ||
+      matchesContact
+    );
   });
 
   useEffect(() => {
@@ -676,9 +744,19 @@ export default function TenantsPage() {
                       type="text"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Rechercher par nom, résidence, téléphone..."
-                      className="w-full pl-10 pr-3 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                      placeholder="Rechercher par matricule, réf bail, nom, prénom, lieu..."
+                      className="w-full pl-10 pr-9 py-2 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                     />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
+                        title="Effacer la recherche"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   {/* Filter Pills */}
@@ -703,7 +781,27 @@ export default function TenantsPage() {
                 <div className="space-y-2 max-h-[640px] overflow-y-auto pr-1">
                   {isLoading ? (
                     <SkeletonTable rows={4} />
-                  ) : filteredTenants.map((t) => {
+                  ) : filteredTenants.length === 0 ? (
+                    <div className="p-6 text-center text-slate-500 text-xs bg-slate-50/70 rounded-2xl border border-dashed border-slate-200">
+                      <Search className="w-6 h-6 text-slate-300 mx-auto mb-2" />
+                      <p className="font-bold text-slate-800">Aucun locataire trouvé</p>
+                      <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                        Aucun résultat pour « <strong className="text-slate-700">{searchQuery}</strong> ».
+                        Essayez par matricule, réf bail, nom, prénom ou lieu (quartier/ville).
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setFilterBadge('all');
+                        }}
+                        className="mt-3 text-[11px] font-bold text-brand-600 hover:text-brand-700 underline cursor-pointer"
+                      >
+                        Effacer la recherche
+                      </button>
+                    </div>
+                  ) : (
+                    filteredTenants.map((t) => {
                     const isSelected = selectedTenant?.id === t.id;
 
                     return (
@@ -769,7 +867,7 @@ export default function TenantsPage() {
                         </div>
                       </div>
                     );
-                  })}
+                  }))}
                 </div>
               </div>
 
