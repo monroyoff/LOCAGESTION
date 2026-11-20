@@ -25,26 +25,103 @@ export const MONTHS_OF_YEAR = [
   'Février 2027',
 ];
 
-const INITIAL_DECLARED_PAYMENTS: PaymentTransaction[] = [];
+export const INITIAL_DECLARED_PAYMENTS: PaymentTransaction[] = [
+  {
+    id: 'pay-vog-001',
+    receiptNumber: 'DEC-2026-4211',
+    leaseId: 'BAIL-2026-421',
+    tenantId: 'usr-tenant-jojovog',
+    tenantName: 'Jojo VOG',
+    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+    tenantPhone: '+229 97 00 12 34',
+    tenantEmail: 'jojovog007@gmail.com',
+    propertyName: 'CHAMBRE SALON SANITAIRE',
+    unitNumber: 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
+    landlordName: 'VOGLOSSOU JOHANE',
+    landlordId: 'usr-bailleur-voglossou',
+    amount: 25000,
+    expectedAmount: 25000,
+    period: 'Novembre 2026',
+    paymentDate: '01/11/2026',
+    method: 'wave',
+    status: 'paye',
+    isVerified: true,
+  },
+  {
+    id: 'pay-diallo-002',
+    receiptNumber: 'DEC-2026-1021',
+    leaseId: 'BAIL-2026-MAG-102',
+    tenantId: 'usr-tenant-jojovog',
+    tenantName: 'Jojo VOG',
+    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+    tenantPhone: '+229 97 00 12 34',
+    tenantEmail: 'jojovog007@gmail.com',
+    propertyName: 'ENTREPÔT & MAGASINS DU PORT',
+    unitNumber: 'Magasin A4 (Stockage Marchandises • 70 m²)',
+    landlordName: 'MAMADOU DIALLO',
+    landlordId: 'usr-bailleur-diallo',
+    amount: 65000,
+    expectedAmount: 65000,
+    period: 'Novembre 2026',
+    paymentDate: '02/11/2026',
+    method: 'mtn',
+    status: 'paye',
+    isVerified: true,
+  },
+  {
+    id: 'pay-toure-003',
+    receiptNumber: 'DEC-2026-2051',
+    leaseId: 'BAIL-2026-COM-205',
+    tenantId: 'usr-tenant-jojovog',
+    tenantName: 'Jojo VOG',
+    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+    tenantPhone: '+229 97 00 12 34',
+    tenantEmail: 'jojovog007@gmail.com',
+    propertyName: 'GALERIE COMMERCIALE LES PALMIERS',
+    unitNumber: 'Boutique N° 12 (Emplacement Commercial • 30 m²)',
+    landlordName: 'AÏCHA TOURÉ',
+    landlordId: 'usr-bailleur-toure',
+    amount: 40000,
+    expectedAmount: 40000,
+    period: 'Novembre 2026',
+    paymentDate: '03/11/2026',
+    method: 'moov',
+    status: 'paye',
+    isVerified: true,
+  },
+];
 
 export const PaymentService = {
   /**
    * Récupère la liste des déclarations de paiement en attente ou traitées
    */
   getDeclaredPayments(): PaymentTransaction[] {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return INITIAL_DECLARED_PAYMENTS;
     try {
       const saved = localStorage.getItem(STORAGE_KEY_DECLARED);
       if (saved) {
-        const parsed = JSON.parse(saved);
+        let parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
+          const missing = INITIAL_DECLARED_PAYMENTS.filter(
+            (initP) => !parsed.some((p: PaymentTransaction) => p.id === initP.id || p.receiptNumber === initP.receiptNumber)
+          );
+          if (missing.length > 0) {
+            parsed = [...missing, ...parsed];
+            try {
+              localStorage.setItem(STORAGE_KEY_DECLARED, JSON.stringify(parsed));
+            } catch (e) {}
+          }
           return parsed;
         }
       }
+      try {
+        localStorage.setItem(STORAGE_KEY_DECLARED, JSON.stringify(INITIAL_DECLARED_PAYMENTS));
+      } catch (e) {}
+      return INITIAL_DECLARED_PAYMENTS;
     } catch (e) {
       console.error('Erreur lecture déclarations:', e);
     }
-    return [];
+    return INITIAL_DECLARED_PAYMENTS;
   },
 
   /**

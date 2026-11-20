@@ -3,7 +3,9 @@ export type LandlordSubRole = 'bailleur' | 'demarcheur';
 
 export type PaymentMethod =
   | 'wave'
+  | 'mtn'
   | 'mtn_momo'
+  | 'moov'
   | 'moov_money'
   | 'orange_money'
   | 'virement'
@@ -107,6 +109,7 @@ export interface Tenant {
 export interface PaymentTransaction {
   id: string;
   receiptNumber: string;
+  leaseId?: string;
   tenantId: string;
   tenantName: string;
   tenantAvatar: string;
@@ -126,6 +129,7 @@ export interface PaymentTransaction {
   isVerified: boolean;
   tenantEmail?: string;
   landlordName?: string;
+  landlordId?: string;
   isAdvance?: boolean;
   advanceMonthsCount?: number;
   advanceMonthsList?: string[];

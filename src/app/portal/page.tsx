@@ -61,6 +61,10 @@ import {
   TrendingUp,
   XCircle,
   AlertTriangle,
+  Package,
+  ShoppingBag,
+  Store,
+  Briefcase,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
@@ -186,6 +190,7 @@ function TenantPortalContent() {
   const handleSubmitIssue = (e: React.FormEvent) => {
     e.preventDefault();
     const photoCount = issuePhotos.length;
+    const targetIncidentLease = myLeases.find((l) => l.id === incidentLeaseId) || currentLease;
 
     IncidentService.addIncident({
       category: issueCategory,
@@ -195,8 +200,8 @@ function TenantPortalContent() {
       tenantName: user?.name || 'Locataire',
       tenantPhone: user?.phone || '',
       tenantEmail: user?.email || '',
-      property: tenant.property,
-      unit: tenant.unit,
+      property: targetIncidentLease?.property || tenant.property,
+      unit: targetIncidentLease?.unit || tenant.unit,
       status: 'en_attente',
     });
 
@@ -204,7 +209,7 @@ function TenantPortalContent() {
     setReportIssueModalOpen(false);
     setIssuePhotos([]);
     setIssueDesc('');
-    const issueMsg = `Incident (${issueCategory})${photoCount > 0 ? ` avec ${photoCount} photo(s)` : ''} transmis instantanément au bailleur ! Prise en charge sous 24h.`;
+    const issueMsg = `Incident (${issueCategory})${photoCount > 0 ? ` avec ${photoCount} photo(s)` : ''} pour le logement ${targetIncidentLease?.unit || tenant.unit} transmis instantanément au bailleur ! Prise en charge sous 24h.`;
     showToast(issueMsg);
     notifySave(issueMsg, 'Panne signalée avec succès !');
   };
@@ -288,6 +293,13 @@ function TenantPortalContent() {
   const [signingLease, setSigningLease] = useState<Lease | null>(null);
   const [currentLease, setCurrentLease] = useState<Lease | null>(null);
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+
+  // Multi-Baux & Multi-Bailleurs state (Compte Locataire Unique)
+  const [myLeases, setMyLeases] = useState<Lease[]>([]);
+  const [selectedLeaseId, setSelectedLeaseId] = useState<string>('all');
+  const [declarationLeaseId, setDeclarationLeaseId] = useState<string>('');
+  const [incidentLeaseId, setIncidentLeaseId] = useState<string>('');
+  const [receiptSelectedLeaseId, setReceiptSelectedLeaseId] = useState<string>('all');
 
   // État des lieux & Photos (Lecture seule depuis l'espace bailleur)
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
@@ -431,8 +443,71 @@ function TenantPortalContent() {
       return dateB.localeCompare(dateA);
     });
 
-    const myLease = matchingLeases[0] || (queryLeaseId ? allLeases.find((l) => l.id === queryLeaseId) : null);
-    setCurrentLease(myLease || null);
+    setMyLeases(matchingLeases);
+
+    if (matchingLeases.length > 0) {
+      setDeclarationLeaseId((prev) => prev || matchingLeases[0].id);
+      setIncidentLeaseId((prev) => prev || matchingLeases[0].id);
+    }
+
+    let targetLease: Lease | null = null;
+    if (selectedLeaseId && selectedLeaseId !== 'all') {
+      targetLease = matchingLeases.find((l) => l.id === selectedLeaseId) || null;
+    }
+    if (!targetLease) {
+      targetLease = matchingLeases[0] || (queryLeaseId ? allLeases.find((l) => l.id === queryLeaseId) : null);
+    }
+    setCurrentLease(targetLease || null);
+  };
+
+  const getUsageInfo = (usage?: string) => {
+    switch (usage) {
+      case 'magasin':
+        return { label: 'Magasin stockage', icon: Package, badgeColor: 'bg-amber-100 text-amber-800 border-amber-300' };
+      case 'boutique':
+        return { label: 'Boutique commerciale', icon: Store, badgeColor: 'bg-purple-100 text-purple-800 border-purple-300' };
+      case 'commercial':
+        return { label: 'Local commercial', icon: ShoppingBag, badgeColor: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
+      case 'bureau':
+        return { label: 'Bureau professionnel', icon: Briefcase, badgeColor: 'bg-blue-100 text-blue-800 border-blue-300' };
+      default:
+        return { label: "Bail d'Habitation", icon: Home, badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    }
+  };
+
+  const totalCumulativeRent = useMemo(() => {
+    return myLeases.reduce((acc, l) => acc + (l.rent || 0), 0);
+  }, [myLeases]);
+
+  const distinctLandlordsCount = useMemo(() => {
+    const names = new Set(myLeases.map((l) => l.landlordSignature?.signedBy || l.landlordName || 'Bailleur'));
+    return names.size;
+  }, [myLeases]);
+
+  const handleSelectLease = (leaseId: string) => {
+    setSelectedLeaseId(leaseId);
+    if (leaseId === 'all') {
+      if (myLeases.length > 0) {
+        setCurrentLease(myLeases[0]);
+      }
+    } else {
+      const found = myLeases.find((l) => l.id === leaseId);
+      if (found) {
+        setCurrentLease(found);
+        setDeclarationLeaseId(found.id);
+        setIncidentLeaseId(found.id);
+      }
+    }
+  };
+
+  const openDeclarationModalForLease = (leaseId?: string) => {
+    const targetL = leaseId ? myLeases.find((l) => l.id === leaseId) : (currentLease || myLeases[0]);
+    if (targetL) {
+      setDeclarationLeaseId(targetL.id);
+      const months = paymentType === 'current' ? 1 : paymentType === 'advance' ? selectedAdvanceMonths.length || 1 : 1 + selectedAdvanceMonths.length;
+      setDeclaredAmount(String(months * (targetL.rent || 0)));
+    }
+    setDeclarationModalOpen(true);
   };
 
   useEffect(() => {
@@ -797,6 +872,15 @@ function TenantPortalContent() {
         return m.includes('novembre') || m.includes('octobre') || m.includes('septembre');
       }
 
+      // 4. Filtre par bail / lot sélectionné dans l'onglet quittances
+      if (receiptSelectedLeaseId !== 'all') {
+        const targetL = myLeases.find((l) => l.id === receiptSelectedLeaseId);
+        if (targetL) {
+          if (rec.leaseId && rec.leaseId !== targetL.id) return false;
+          if (!rec.leaseId && !(rec.unitNumber === targetL.unit && rec.propertyName === targetL.property)) return false;
+        }
+      }
+
       return true;
     })
     .sort((a, b) => {
@@ -833,8 +917,11 @@ function TenantPortalContent() {
   const handleDeclarePayment = (e: React.FormEvent) => {
     e.preventDefault();
     const isAdvance = paymentType === 'advance' || paymentType === 'both';
-    const numAmount = parseInt(declaredAmount) || resolvedMonthsCount * tenant.monthlyRent;
+    const targetPaymentLease = myLeases.find((l) => l.id === declarationLeaseId) || currentLease;
+    const monthlyRent = targetPaymentLease?.rent || tenant.monthlyRent;
+    const numAmount = parseInt(declaredAmount) || resolvedMonthsCount * monthlyRent;
     const dateStr = new Date().toLocaleDateString('fr-FR');
+    const landlordName = targetPaymentLease?.landlordSignature?.signedBy || targetPaymentLease?.landlordName || 'VOGLOSSOU JOHANE';
     const newTx: PaymentTransaction = {
       id: `decl-${Date.now()}`,
       receiptNumber: `DEC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -843,10 +930,13 @@ function TenantPortalContent() {
       tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
       tenantPhone: tenant.phone,
       tenantEmail: tenant.email,
-      propertyName: tenant.property,
-      unitNumber: tenant.unit,
+      propertyName: targetPaymentLease?.property || tenant.property,
+      unitNumber: targetPaymentLease?.unit || tenant.unit,
+      leaseId: targetPaymentLease?.id,
+      landlordId: targetPaymentLease?.landlordId,
+      landlordName: landlordName,
       amount: numAmount,
-      expectedAmount: tenant.monthlyRent,
+      expectedAmount: monthlyRent,
       period: resolvedPeriodLabel,
       paymentDate: dateStr,
       method: declaredMethod as any,
@@ -872,13 +962,13 @@ function TenantPortalContent() {
       title: isAdvance
         ? `Loyer d'avance déclaré par ${tenant.name} (${resolvedMonthsCount} mois)`
         : `Paiement déclaré par ${tenant.name}`,
-      message: `Déclaration de loyer de ${formatFCFA(numAmount)} pour la période ${resolvedPeriodLabel} via ${declaredMethod.toUpperCase()} (Réf: ${declaredRef || 'Non spécifiée'}).`,
+      message: `Déclaration de loyer de ${formatFCFA(numAmount)} pour le lot ${targetPaymentLease?.unit || tenant.unit} (${resolvedPeriodLabel}) via ${declaredMethod.toUpperCase()} (Réf: ${declaredRef || 'Non spécifiée'}).`,
       type: 'payment_declared',
       read: false,
       timestamp: `À l'instant`,
       tenantName: tenant.name,
-      unit: tenant.unit,
-      property: tenant.property,
+      unit: targetPaymentLease?.unit || tenant.unit,
+      property: targetPaymentLease?.property || tenant.property,
       paymentId: newTx.id,
     });
 
@@ -893,7 +983,7 @@ function TenantPortalContent() {
     } else {
       TenantNotificationService.addNotification({
         title: 'Paiement de Loyer Déclaré',
-        message: `Votre déclaration de ${formatFCFA(numAmount)} pour ${resolvedPeriodLabel} est enregistrée. Quittance certifiée dès validation du bailleur.`,
+        message: `Votre déclaration de ${formatFCFA(numAmount)} pour ${targetPaymentLease?.unit || tenant.unit} (${resolvedPeriodLabel}) auprès de ${landlordName} est enregistrée. Quittance certifiée dès validation.`,
         type: 'receipt_issued',
         link: '/portal?tab=quittances',
         tenantName: tenant.name,
@@ -904,8 +994,8 @@ function TenantPortalContent() {
     setDeclarationModalOpen(false);
     setProofFile(null);
     const payMsg = isAdvance
-      ? `Déclaration de ${resolvedMonthsCount} mois d'avance (${formatFCFA(numAmount)}) transmise avec succès au bailleur !`
-      : `Déclaration de ${formatFCFA(numAmount)} (${resolvedPeriodLabel}) transmise avec succès au bailleur ! Quittance émise dès validation.`;
+      ? `Déclaration de ${resolvedMonthsCount} mois d'avance (${formatFCFA(numAmount)}) transmise avec succès au bailleur ${landlordName} !`
+      : `Déclaration de ${formatFCFA(numAmount)} (${resolvedPeriodLabel}) transmise avec succès au bailleur ${landlordName} ! Quittance émise dès validation.`;
     showToast(payMsg);
     notifySave(payMsg, 'Paiement déclaré avec succès !');
 
@@ -1113,6 +1203,83 @@ function TenantPortalContent() {
                 </button>
               </div>
 
+              {/* SÉLECTEUR MULTI-BAUX & MULTI-BAILLEURS (Compte Locataire Unique) */}
+              {myLeases.length > 1 && (
+                <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-soft space-y-3 animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-xl bg-brand-50 text-brand-600">
+                        <Store className="w-4 h-4" />
+                      </span>
+                      <div>
+                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-wider">
+                          Mes Baux & Bailleurs Rattachés ({myLeases.length} contrats • {distinctLandlordsCount} bailleur{distinctLandlordsCount > 1 ? 's' : ''})
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          Pilotez vos locations d'habitation, magasins et boutiques depuis votre compte unique.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-left sm:text-right">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Loyers Mensuels</span>
+                      <strong className="text-xs sm:text-sm font-black text-emerald-700">{formatFCFA(totalCumulativeRent)}</strong>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                    {/* Bouton Vue d'ensemble */}
+                    <button
+                      type="button"
+                      onClick={() => handleSelectLease('all')}
+                      className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer ${
+                        selectedLeaseId === 'all'
+                          ? 'bg-slate-900 text-white shadow-md font-black'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <Building2 className="w-3.5 h-3.5 text-brand-400" />
+                      <span>Vue d'ensemble (Tous mes baux)</span>
+                      <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-white/20 font-mono font-bold">
+                        {myLeases.length}
+                      </span>
+                    </button>
+
+                    {/* Un bouton par bail */}
+                    {myLeases.map((l) => {
+                      const usage = getUsageInfo(l.propertyUsage);
+                      const UsageIcon = usage.icon;
+                      const isSelected = selectedLeaseId === l.id;
+                      const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                      return (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => handleSelectLease(l.id)}
+                          className={`px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
+                            isSelected
+                              ? 'bg-brand-500 text-white border-brand-600 shadow-md shadow-brand-500/25 font-black'
+                              : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
+                          }`}
+                        >
+                          <UsageIcon className={`w-3.5 h-3.5 ${isSelected ? 'text-white' : 'text-slate-600'}`} />
+                          <span className="truncate max-w-[150px] sm:max-w-[200px]">
+                            {l.unit} ({usage.label.split(' ')[0]})
+                          </span>
+                          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono font-bold ${
+                            isSelected ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-800'
+                          }`}>
+                            {formatFCFA(l.rent)}
+                          </span>
+                          <span className={`text-[10px] hidden md:inline ${isSelected ? 'text-white/80' : 'text-slate-400'}`}>
+                            • {landlord}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Hero Banner: Rent Due & Quick Payment */}
               <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-5 sm:p-7 text-white shadow-xl relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -1126,7 +1293,9 @@ function TenantPortalContent() {
                           : 'bg-slate-700 text-slate-200'
                       }`}>
                         <CheckCircle2 className="w-3 h-3" />
-                        {currentLease
+                        {selectedLeaseId === 'all' && myLeases.length > 1
+                          ? `${myLeases.length} Baux Actifs • Multi-Bailleurs`
+                          : currentLease
                           ? (receiptsList.length > 0 ? (receiptsList[0]?.isVerified ? 'Loyer à jour' : 'Règlement en attente') : 'Bail actif • En attente 1er loyer')
                           : 'En attente d’assignation'}
                       </span>
@@ -1136,7 +1305,12 @@ function TenantPortalContent() {
                             <span>Matricule : {user.matricule}</span>
                           </span>
                         )}
-                        {currentLease ? (
+                        {selectedLeaseId === 'all' && myLeases.length > 1 ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/30">
+                            <Store className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                            <span>Habitation, Magasins & Boutiques</span>
+                          </span>
+                        ) : currentLease ? (
                           <>
                             <span>{tenant.property} • {tenant.unit}</span>
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
@@ -1154,7 +1328,9 @@ function TenantPortalContent() {
                       Bonjour {user?.firstName || (user?.name ? user.name.split(' ')[0] : 'Locataire')} 👋{currentLease ? ', votre espace est parfaitement à jour' : ', bienvenue dans votre espace résident'}
                     </h1>
                     <p className="text-xs text-slate-400 mt-1.5 max-w-lg leading-relaxed">
-                      {currentLease ? (
+                      {selectedLeaseId === 'all' && myLeases.length > 1 ? (
+                        <>Total loyers mensuels cumulés : <strong className="text-slate-100 font-bold">{formatFCFA(totalCumulativeRent)}</strong> sur vos {myLeases.length} baux ({distinctLandlordsCount} bailleurs). Chaque loyer se déclare directement auprès du bailleur concerné.</>
+                      ) : currentLease ? (
                         <>Prochaine exigibilité de loyer : <strong className="text-slate-200">{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).</>
                       ) : (
                         <>Bienvenue dans votre Espace Résident. Vos quittances certifiées et informations contractuelles apparaîtront ici dès que votre bailleur vous aura assigné votre logement.</>
@@ -1166,7 +1342,7 @@ function TenantPortalContent() {
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                     <button
                       type="button"
-                      onClick={() => setDeclarationModalOpen(true)}
+                      onClick={() => openDeclarationModalForLease()}
                       className="w-full sm:w-auto py-3.5 px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs sm:text-sm font-black shadow-pink-glow active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <Smartphone className="w-4 h-4" />
@@ -1183,6 +1359,96 @@ function TenantPortalContent() {
                   </div>
                 </div>
               </div>
+
+              {/* GRILLE VOS BAUX & BAILLEURS RATTACHÉS (Affichée en vue d'ensemble multi-baux) */}
+              {selectedLeaseId === 'all' && myLeases.length > 1 && (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-black text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                      <Store className="w-4 h-4 text-brand-600" />
+                      <span>Vos Baux Actifs & Bailleurs ({myLeases.length})</span>
+                    </h3>
+                    <span className="text-xs text-slate-500 font-medium hidden sm:inline">
+                      Gestion indépendante bailleur par bailleur
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {myLeases.map((l) => {
+                      const usage = getUsageInfo(l.propertyUsage);
+                      const UsageIcon = usage.icon;
+                      const landlordName = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                      const landlordPhone = l.landlordPhone || '+229 01 95 44 44 30';
+                      return (
+                        <div
+                          key={l.id}
+                          className="bg-white rounded-3xl p-5 border border-slate-200/90 shadow-soft flex flex-col justify-between space-y-4 hover:border-brand-300 transition-all"
+                        >
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 ${usage.badgeColor}`}>
+                                <UsageIcon className="w-3 h-3" />
+                                <span>{usage.label}</span>
+                              </span>
+                              <span className="text-[10px] font-mono font-bold text-slate-400">{l.id}</span>
+                            </div>
+                            <div>
+                              <h4 className="font-black text-sm text-slate-900 leading-tight">{l.unit}</h4>
+                              <p className="text-xs text-slate-500 mt-0.5">{l.property} • {l.propertyLocation || 'Cotonou'}</p>
+                            </div>
+                            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-100 space-y-1.5 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-500">Bailleur :</span>
+                                <strong className="text-slate-900 truncate max-w-[130px]">{landlordName}</strong>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-500">Loyer mensuel :</span>
+                                <strong className="text-emerald-700 font-black">{formatFCFA(l.rent)}</strong>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-500">Échéance :</span>
+                                <span className="text-slate-700 font-bold">Le 5 du mois</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="space-y-2 pt-2 border-t border-slate-100">
+                            <button
+                              type="button"
+                              onClick={() => openDeclarationModalForLease(l.id)}
+                              className="w-full py-2.5 px-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <Smartphone className="w-3.5 h-3.5" />
+                              <span>Payer ce loyer</span>
+                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleSelectLease(l.id);
+                                  handleTabChange('bail');
+                                }}
+                                className="py-2 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold text-center transition-colors cursor-pointer"
+                              >
+                                Voir contrat
+                              </button>
+                              <a
+                                href={`https://wa.me/${landlordPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                                  `Bonjour ${landlordName}, je suis ${tenant.name} pour le bail ${l.id} (${l.unit}). Je vous contacte depuis mon espace locataire LOCAGESTION.`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="py-2 px-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold text-center border border-emerald-200 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <MessageCircle className="w-3 h-3 text-emerald-600" />
+                                <span>WhatsApp</span>
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Aperçu Rapide des Règlements & Bailleur */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -1716,6 +1982,65 @@ function TenantPortalContent() {
                 </span>
               </div>
 
+              {/* Filtre par Bail / Bailleur pour Locataire Multi-Baux */}
+              {myLeases.length > 1 && (
+                <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                      <Store className="w-3.5 h-3.5 text-brand-500" />
+                      <span>Filtrer par bail / bailleur :</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {receiptSelectedLeaseId === 'all'
+                        ? 'Affichage consolidé de tous vos baux'
+                        : `Bail sélectionné : ${receiptSelectedLeaseId}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                    <button
+                      type="button"
+                      onClick={() => setReceiptSelectedLeaseId('all')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        receiptSelectedLeaseId === 'all'
+                          ? 'bg-slate-900 text-white shadow-xs font-black'
+                          : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                      }`}
+                    >
+                      Toutes les quittances ({receiptsList.length})
+                    </button>
+                    {myLeases.map((l) => {
+                      const count = receiptsList.filter(
+                        (r) => r.leaseId === l.id || (r.unitNumber === l.unit && r.propertyName === l.property)
+                      ).length;
+                      const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                      const isSel = receiptSelectedLeaseId === l.id;
+                      return (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => setReceiptSelectedLeaseId(l.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border ${
+                            isSel
+                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-black'
+                              : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
+                        >
+                          <span>{l.unit}</span>
+                          <span className={`text-[10px] ml-1.5 px-1.5 py-0.2 rounded-full font-mono ${
+                            isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                            {count}
+                          </span>
+                          <span className={`text-[10px] ml-1 hidden sm:inline ${isSel ? 'text-white/80' : 'text-slate-400'}`}>
+                            ({landlord})
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Barre de Recherche, Filtres de Date & Tri Facile */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-3">
                 <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -1866,6 +2191,16 @@ function TenantPortalContent() {
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-400 mt-0.5 font-medium">
                           <span className="font-mono text-slate-600 font-bold">{rec.receiptNumber}</span>
                           <span>•</span>
+                          <span className="font-bold text-slate-800">{rec.propertyName} ({rec.unitNumber})</span>
+                          {rec.landlordName && (
+                            <>
+                              <span>•</span>
+                              <span className="text-slate-600 font-semibold bg-slate-100 px-1.5 py-0.2 rounded">
+                                Bailleur : {rec.landlordName}
+                              </span>
+                            </>
+                          )}
+                          <span>•</span>
                           <span>Payé le {rec.paymentDate} via {rec.method ? rec.method.toUpperCase() : 'WAVE'}</span>
                           <span>•</span>
                           <span className="text-emerald-600 font-bold flex items-center gap-1">
@@ -1983,6 +2318,53 @@ function TenantPortalContent() {
                   </div>
                 </div>
               </div>
+
+              {/* SÉLECTEUR DE BAIL ACTIF (Locataire Multi-Baux) */}
+              {myLeases.length > 1 && (
+                <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-soft space-y-2.5">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-brand-500" />
+                      <span>Sélectionnez le contrat à consulter ({myLeases.length} baux actifs) :</span>
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      Bail affiché : <strong className="text-slate-800">{currentLease?.id || 'N/A'}</strong>
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                    {myLeases.map((l) => {
+                      const usage = getUsageInfo(l.propertyUsage);
+                      const UsageIcon = usage.icon;
+                      const isSel = currentLease?.id === l.id;
+                      const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                      return (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => {
+                            setCurrentLease(l);
+                            setSelectedLeaseId(l.id);
+                          }}
+                          className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
+                            isSel
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-md font-black'
+                              : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
+                          }`}
+                        >
+                          <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-brand-400' : 'text-slate-500'}`} />
+                          <span>{l.unit} ({usage.label})</span>
+                          <span className={`text-[10px] font-mono font-black ${isSel ? 'text-emerald-400' : 'text-emerald-700'}`}>
+                            {formatFCFA(l.rent)}
+                          </span>
+                          <span className={`text-[10px] hidden sm:inline ${isSel ? 'text-white/70' : 'text-slate-400'}`}>
+                            • {landlord}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* SOUS-SECTION 1 : BAIL & ÉTAT DES LIEUX */}
               {(bailSubTab === 'tout' || bailSubTab === 'bail_etat') && (
@@ -3170,6 +3552,52 @@ function TenantPortalContent() {
             </div>
 
             <form onSubmit={handleDeclarePayment} className="p-6 space-y-4 text-xs">
+              {/* Sélecteur de Bailleur / Bail si compte multi-baux */}
+              {myLeases.length > 1 && (
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                      <Store className="w-4 h-4 text-brand-500" />
+                      <span>Quel loyer / bailleur réglez-vous ? *</span>
+                    </label>
+                    <span className="text-[10px] text-brand-600 font-bold bg-brand-50 px-2 py-0.5 rounded-full border border-brand-200">
+                      Multi-Baux Actif
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    {myLeases.map((l) => {
+                      const usage = getUsageInfo(l.propertyUsage);
+                      const isSel = declarationLeaseId === l.id;
+                      const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                      return (
+                        <button
+                          key={l.id}
+                          type="button"
+                          onClick={() => {
+                            setDeclarationLeaseId(l.id);
+                            const months = paymentType === 'current' ? 1 : paymentType === 'advance' ? selectedAdvanceMonths.length || 1 : 1 + selectedAdvanceMonths.length;
+                            setDeclaredAmount(String(months * (l.rent || 0)));
+                          }}
+                          className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                            isSel
+                              ? 'bg-brand-50 border-brand-500 ring-2 ring-brand-500/20 text-brand-950 font-bold shadow-xs'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className="font-black truncate">{l.unit}</span>
+                            <span className="text-[10px] font-mono text-emerald-700 font-bold">{formatFCFA(l.rent)}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 block truncate mt-0.5">
+                            Bailleur : {landlord}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
                   Moyen de paiement utilisé *
@@ -3218,6 +3646,54 @@ function TenantPortalContent() {
                     }`}
                   >
                     Virement
+                  </button>
+                </div>
+              </div>
+
+              {/* Coordonnées de paiement officielles du Bailleur sélectionné */}
+              <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200/90 text-xs space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-950 flex items-center gap-1">
+                    <CreditCard className="w-3.5 h-3.5 text-amber-600" />
+                    <span>
+                      Compte {declaredMethod.toUpperCase()} du bailleur (
+                      {(() => {
+                        const l = myLeases.find((item) => item.id === declarationLeaseId) || currentLease;
+                        return l?.landlordSignature?.signedBy || l?.landlordName || 'VOGLOSSOU JOHANE';
+                      })()}
+                      ) :
+                    </span>
+                  </span>
+                  <span className="text-[10px] font-mono font-bold text-amber-800 uppercase bg-amber-100 px-2 py-0.5 rounded">
+                    {declaredMethod}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between bg-white px-3 py-2 rounded-xl border border-amber-200 shadow-2xs">
+                  <span className="font-mono font-black text-slate-900 select-all truncate">
+                    {(() => {
+                      const l = myLeases.find((item) => item.id === declarationLeaseId) || currentLease;
+                      if (declaredMethod === 'wave') return l?.landlordPaymentMethods?.wave || l?.landlordPhone || '+229 01 95 44 44 30';
+                      if (declaredMethod === 'mtn') return l?.landlordPaymentMethods?.mtn || l?.landlordPhone || '+229 01 95 44 44 30';
+                      if (declaredMethod === 'moov') return l?.landlordPaymentMethods?.moov || l?.landlordPhone || '+229 01 95 44 44 30';
+                      return l?.landlordPaymentMethods?.bank || 'BJ061 01001 001234567890 45 (BOA Bénin)';
+                    })()}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const l = myLeases.find((item) => item.id === declarationLeaseId) || currentLease;
+                      let val = '';
+                      if (declaredMethod === 'wave') val = l?.landlordPaymentMethods?.wave || l?.landlordPhone || '+229 01 95 44 44 30';
+                      else if (declaredMethod === 'mtn') val = l?.landlordPaymentMethods?.mtn || l?.landlordPhone || '+229 01 95 44 44 30';
+                      else if (declaredMethod === 'moov') val = l?.landlordPaymentMethods?.moov || l?.landlordPhone || '+229 01 95 44 44 30';
+                      else val = l?.landlordPaymentMethods?.bank || 'BJ061 01001 001234567890 45 (BOA Bénin)';
+                      navigator.clipboard?.writeText(val);
+                      showToast(`Numéro/Compte ${declaredMethod.toUpperCase()} copié : ${val}`);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-[10px] transition-colors cursor-pointer ml-2 shrink-0 flex items-center gap-1"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copier</span>
                   </button>
                 </div>
               </div>
@@ -3527,6 +4003,28 @@ function TenantPortalContent() {
               onSubmit={handleSubmitIssue}
               className="p-6 space-y-4 text-xs"
             >
+              {myLeases.length > 1 && (
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">
+                    Dans quel logement / local se situe la panne ? *
+                  </label>
+                  <select
+                    value={incidentLeaseId}
+                    onChange={(e) => setIncidentLeaseId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  >
+                    {myLeases.map((l) => {
+                      const usage = getUsageInfo(l.propertyUsage);
+                      const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                      return (
+                        <option key={l.id} value={l.id}>
+                          {l.unit} ({usage.label}) — {l.property} (Bailleur : {landlord})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="font-bold text-slate-700 block mb-1">
                   Catégorie du problème *
