@@ -1131,6 +1131,11 @@ function TenantPortalContent() {
                           : 'En attente d’assignation'}
                       </span>
                       <span className="text-[11px] text-slate-300 font-medium flex items-center flex-wrap gap-1.5">
+                        {user?.matricule && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-mono font-black text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30 shadow-xs">
+                            <span>Matricule : {user.matricule}</span>
+                          </span>
+                        )}
                         {currentLease ? (
                           <>
                             <span>{tenant.property} • {tenant.unit}</span>

@@ -19,6 +19,8 @@
 11. [Instructions Strictes & Règles d'Or pour les Futurs Modèles IA](#11-instructions-strictes--règles-dor-pour-les-futurs-modèles-ia)
 12. [Règles de Sécurité Strictes & Modération IA Automatique](#12-règles-de-sécurité-strictes--modération-ia-automatique)
 13. [Règle d'Or d'Intégrité Absolue des Comptes & Scellement Immuable](#13-règle-dor-dintégrité-absolue-des-comptes--scellement-immuable)
+14. [Parcours d'Invitation, Vérification Email & Passeport Solvabilité](#14-parcours-dinvitation-vérification-email--passeport-solvabilité)
+15. [Règle d'Exécution Immédiate & Déploiement Instantané Universel (Web, Mobile & Appli)](#15-règle-dexécution-immédiate--déploiement-instantané-universel-web-mobile--appli)
 
 ---
 
@@ -477,6 +479,25 @@ Ces informations garantissent la force probante juridique des baux électronique
   - **70 - 84 :** Bleu (Bon payeur, retards occasionnels régularisés sous 5 jours).
   - **50 - 69 :** Orange (Paiements partiels ou retards fréquents au-delà du 10 du mois).
   - **0 - 49 :** Rouge (Impayés prolongés, mises en demeure).
+
+---
+
+## 15. Règle d'Exécution Immédiate & Déploiement Instantané Universel (Web, Mobile & Appli)
+
+> **RÈGLE FONDAMENTALE D'INGÉNIERIE & D'EXÉCUTION INSTANTANÉE**  
+> **Toute modification, correction ou mise à jour effectuée dans Antigravity sur le projet LOCAGESTION doit immédiatement et instantanément s'exécuter sur toute la plateforme, sur tous les espaces (Bailleur, Locataire, Démarcheur, Admin), sur Web, Mobile et Application afin que les utilisateurs aient en permanence et sans délai la dernière version à jour.**
+
+### ⚡ Directives d'Application Strictes :
+1. **Transversalité & Cohérence Omnicanale :**
+   - Aucune modification ne doit rester isolée sur un seul écran ou dans un seul espace.
+   - Toute donnée, information d'identité (nom, prénom, matricule, coordonnées), modalité contractuelle ou correctif visuel doit se propager instantanément et de façon cohérente à travers l'ensemble des modules : Espace Bailleur (`/`), Espace Résident / Locataire (`/portal`), Place de marché Annonces (`/listings`), Console Admin (`/admin`), formats d'export PDF officiels et messagerie.
+2. **Exécution & Validation Immédiates :**
+   - Chaque intervention doit être compilée (`npm run build`) et validée avec zéro erreur.
+   - Le service local en arrière-plan (daemon macOS sur le port 3001) doit être immédiatement testé et confirmé actif (`HTTP 200`).
+3. **Poussée Git & Déploiement Cloud Automatique :**
+   - Tout lot de modifications validé doit être immédiatement commité et poussé sur la branche principale (`git push origin main`), déclenchant ainsi le déploiement continu instantané sur la plateforme de production en ligne (`https://locagestion.site` / Vercel).
+4. **Synchronisation du Cache Utilisateur :**
+   - Les modifications doivent s'exécuter en temps réel sans nécessiter de purge manuelle de cache par les utilisateurs sur Web, navigateur mobile ou application PWA. L'endpoint d'API de synchronisation (`/api/sync`) doit être systématiquement notifié.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

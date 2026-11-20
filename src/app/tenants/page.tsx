@@ -41,6 +41,7 @@ import {
   MapPin,
   Compass,
   Navigation,
+  Fingerprint,
 } from 'lucide-react';
 import { ListingsService } from '@/lib/services/listings-service';
 import {
@@ -59,13 +60,20 @@ import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
-import { AuthService, areEmailsEqual, arePhoneNumbersEqual, isCanonicalJojoVog } from '@/lib/services/auth-service';
+import {
+  AuthService,
+  areEmailsEqual,
+  arePhoneNumbersEqual,
+  isCanonicalJojoVog,
+  generateUserMatricule,
+} from '@/lib/services/auth-service';
 import { Footer } from '@/components/layout/Footer';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 import { SkeletonTable } from '@/components/ui/SkeletonLoader';
 
 interface TenantDetail {
   id: string;
+  matricule?: string;
   firstName: string;
   lastName: string;
   fullName: string;
@@ -146,6 +154,19 @@ export default function TenantsPage() {
   const [activeTab, setActiveTab] = useState<'apercu' | 'solvabilite' | 'bail' | 'edl' | 'paiements'>('apercu');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBadge, setFilterBadge] = useState<string>('all');
+  const [copiedMatricule, setCopiedMatricule] = useState<string | null>(null);
+
+  const handleCopyMatricule = (mat: string) => {
+    if (!mat) return;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(mat);
+      }
+    } catch (e) {}
+    setCopiedMatricule(mat);
+    showToast(`Matricule certifié ${mat} copié !`);
+    setTimeout(() => setCopiedMatricule(null), 2500);
+  };
 
   // Modals state
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
@@ -435,8 +456,20 @@ export default function TenantsPage() {
         (l.deposit && l.rent ? Math.round(l.deposit / l.rent) : 0) ||
         (isJojo ? 3 : 0);
 
+      const resolvedMatricule =
+        (isJojo
+          ? 'LOCA-MAT-BJ-17635'
+          : (matchedUser?.matricule ||
+             l.tenantMatricule ||
+             (l as any).matricule ||
+             (matchedUser?.email ? generateUserMatricule(resolvedCountry || 'Bénin', 'locataire', matchedUser.email) : undefined) ||
+             (l.tenantEmail ? generateUserMatricule(resolvedCountry || 'Bénin', 'locataire', l.tenantEmail) : undefined)
+            )
+        ) || (l.tenantId ? `LOCA-MAT-BJ-${l.tenantId.slice(-5).toUpperCase()}` : 'LOCA-MAT-BJ-17635');
+
       return {
         id: l.id || `loc-${idx}`,
+        matricule: resolvedMatricule,
         firstName: resolvedFirstName,
         lastName: resolvedLastName,
         fullName: resolvedFullName,
@@ -504,6 +537,7 @@ export default function TenantsPage() {
   const filteredTenants = dynamicTenants.filter((t) => {
     const matchesSearch =
       t.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.matricule && t.matricule.toLowerCase().includes(searchQuery.toLowerCase())) ||
       t.property.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.property.unit.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.phone.includes(searchQuery);
@@ -699,10 +733,15 @@ export default function TenantsPage() {
                           </div>
 
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5 flex-wrap">
                               <h3 className="text-xs font-black text-slate-900 truncate">
                                 {t.fullName}
                               </h3>
+                              {t.matricule && (
+                                <span className="font-mono text-[9px] font-black px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                                  {t.matricule}
+                                </span>
+                              )}
                               <span className="text-[10px] font-extrabold text-slate-400">
                                 {t.scoring.score}/100
                               </span>
@@ -752,13 +791,29 @@ export default function TenantsPage() {
                             className="w-16 h-16 rounded-3xl object-cover ring-2 ring-brand-500/50 shadow-md"
                           />
                           <div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <h2 className="text-lg font-black tracking-tight">
                                 {selectedTenant.fullName}
                               </h2>
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-brand-500 text-white shadow-sm">
                                 Bail Actif
                               </span>
+                              {selectedTenant.matricule && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopyMatricule(selectedTenant.matricule!)}
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-indigo-500/25 hover:bg-indigo-500/35 text-indigo-200 border border-indigo-400/30 font-mono font-black text-[11px] shadow-sm tracking-wider cursor-pointer transition-colors group"
+                                  title="Cliquer pour copier le matricule certifié"
+                                >
+                                  <Fingerprint className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                                  <span>Matricule : {selectedTenant.matricule}</span>
+                                  {copiedMatricule === selectedTenant.matricule ? (
+                                    <Check className="w-3 h-3 text-emerald-400 shrink-0" />
+                                  ) : (
+                                    <Copy className="w-3 h-3 text-indigo-300 opacity-60 group-hover:opacity-100 shrink-0" />
+                                  )}
+                                </button>
+                              )}
                             </div>
                             {/* Lieu du logement loué bien visible tout de suite */}
                             <div className="flex items-center flex-wrap gap-1.5 mt-1 text-xs">
@@ -852,11 +907,32 @@ export default function TenantsPage() {
                                 <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
                                 <span>Lieu du Logement Loué (Issu du Contrat & de l'Annonce)</span>
                               </span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-bold text-slate-500">Réf Bail :</span>
-                                <span className="text-[11px] font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-200">
-                                  {selectedTenant.lease.id}
-                                </span>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                {selectedTenant.matricule && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyMatricule(selectedTenant.matricule!)}
+                                    className="flex items-center gap-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-2.5 py-0.5 rounded-full border border-indigo-200 cursor-pointer transition-colors group"
+                                    title="Cliquer pour copier le matricule certifié"
+                                  >
+                                    <Fingerprint className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                    <span className="text-[10px] font-bold text-slate-500">Matricule :</span>
+                                    <span className="text-[11px] font-black font-mono">
+                                      {selectedTenant.matricule}
+                                    </span>
+                                    {copiedMatricule === selectedTenant.matricule ? (
+                                      <Check className="w-3 h-3 text-emerald-600 shrink-0" />
+                                    ) : (
+                                      <Copy className="w-2.5 h-2.5 text-indigo-400 opacity-60 group-hover:opacity-100 shrink-0" />
+                                    )}
+                                  </button>
+                                )}
+                                <div className="flex items-center gap-1.5 bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-200">
+                                  <span className="text-[10px] font-bold text-slate-500">Réf Bail :</span>
+                                  <span className="text-[11px] font-black text-brand-600">
+                                    {selectedTenant.lease.id}
+                                  </span>
+                                </div>
                               </div>
                             </div>
 
@@ -897,7 +973,54 @@ export default function TenantsPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {/* Identité Locataire & Matricule */}
+                            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+                                Identité du Locataire
+                              </span>
+                              <div className="space-y-2 text-xs">
+                                <div>
+                                  <span className="font-black text-slate-900 text-sm block">
+                                    {selectedTenant.fullName}
+                                  </span>
+                                  <span className="text-[11px] text-slate-500 font-medium">
+                                    Locataire Résident
+                                  </span>
+                                </div>
+                                {selectedTenant.matricule && (
+                                  <div>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopyMatricule(selectedTenant.matricule!)}
+                                      className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 font-mono font-black text-[11px] transition-colors cursor-pointer group"
+                                      title="Copier le matricule certifié"
+                                    >
+                                      <Fingerprint className="w-3 h-3 text-indigo-600 shrink-0" />
+                                      <span>{selectedTenant.matricule}</span>
+                                      {copiedMatricule === selectedTenant.matricule ? (
+                                        <Check className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                                      ) : (
+                                        <Copy className="w-2.5 h-2.5 text-indigo-400 opacity-60 group-hover:opacity-100 shrink-0" />
+                                      )}
+                                    </button>
+                                  </div>
+                                )}
+                                <div className="space-y-1 pt-1 border-t border-slate-200">
+                                  <div className="flex items-center gap-1.5 text-slate-700 text-xs">
+                                    <Phone className="w-3 h-3 text-brand-500 shrink-0" />
+                                    <span>{selectedTenant.phone}</span>
+                                  </div>
+                                  {selectedTenant.email && (
+                                    <div className="flex items-center gap-1.5 text-slate-600 text-[11px] truncate">
+                                      <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                                      <span className="truncate">{selectedTenant.email}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
                             {/* Financial info */}
                             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
                               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
@@ -1094,8 +1217,12 @@ export default function TenantsPage() {
                                       </span>
                                     )}
                                   </div>
-                                  <span className="text-[11px] text-slate-400">
-                                    Réf: {selectedTenant.lease.id} • Prise d'effet le {selectedTenant.lease.startDate}
+                                  <span className="text-[11px] text-slate-400 block mt-0.5">
+                                    Réf: <strong className="text-slate-700">{selectedTenant.lease.id}</strong>
+                                    {selectedTenant.matricule && (
+                                      <> • Matricule : <strong className="text-indigo-700 font-mono">{selectedTenant.matricule}</strong></>
+                                    )}
+                                    {` • Prise d'effet le ${selectedTenant.lease.startDate}`}
                                     {currentLeaseObj?.resiliatedAt && ` • Résilié le ${currentLeaseObj.resiliatedAt}`}
                                     {currentLeaseObj?.reactivatedAt && ` • Réactivé le ${currentLeaseObj.reactivatedAt}`}
                                   </span>

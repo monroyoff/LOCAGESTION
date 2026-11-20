@@ -14,6 +14,7 @@ export interface Lease {
   tenant: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  tenantMatricule?: string;
   tenantAddress?: string;
   tenantIdType?: string;
   tenantIdNumber?: string;
@@ -152,6 +153,7 @@ export const INITIAL_LEASES: Lease[] = [
     tenantId: 'usr-tenant-jojovog',
     tenantEmail: 'jojovog007@gmail.com',
     tenantPhone: '+229 97 00 12 34',
+    tenantMatricule: 'LOCA-MAT-BJ-17635',
     tenantAddress: 'Haie Vive, Cotonou',
     property: 'CHAMBRE SALON SANITAIRE',
     unit: 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
@@ -249,9 +251,11 @@ export const LeaseService = {
               !jojoLease.landlordPaymentMethods ||
               !jojoLease.propertyLocation ||
               !jojoLease.advanceMonths ||
+              !jojoLease.tenantMatricule ||
               jojoLease.landlordPhone.includes('97 00 11 22'))
           ) {
             Object.assign(jojoLease, {
+              tenantMatricule: jojoLease.tenantMatricule || 'LOCA-MAT-BJ-17635',
               propertyAddress: jojoLease.propertyAddress || 'Haie Vive, Cotonou',
               propertyDistrict: jojoLease.propertyDistrict || 'Haie Vive',
               propertyCity: jojoLease.propertyCity || 'Cotonou',

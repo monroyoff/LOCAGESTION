@@ -607,6 +607,11 @@ export default function LeasesPage() {
                         <div className="space-y-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <h4 className="font-black text-base text-slate-900">{lease.tenant}</h4>
+                            {lease.tenantMatricule && (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 font-black border border-indigo-200">
+                                {lease.tenantMatricule}
+                              </span>
+                            )}
                             <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200">
                               {lease.id}
                             </span>
