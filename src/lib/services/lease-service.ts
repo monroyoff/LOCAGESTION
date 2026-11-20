@@ -23,6 +23,11 @@ export interface Lease {
   emergencyContactRelation?: string;
   property: string;
   unit: string;
+  propertyAddress?: string;
+  propertyCity?: string;
+  propertyDistrict?: string;
+  propertyLandmark?: string;
+  propertyLocation?: string; // Ex: "Haie Vive, Cotonou, Bénin"
   country?: string;
   governingLaw?: string;
   specialConditions?: string;
@@ -150,10 +155,15 @@ export const INITIAL_LEASES: Lease[] = [
     tenantAddress: 'Haie Vive, Cotonou',
     property: 'CHAMBRE SALON SANITAIRE',
     unit: 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
+    propertyAddress: 'Haie Vive, Cotonou',
+    propertyDistrict: 'Haie Vive',
+    propertyCity: 'Cotonou',
+    propertyLocation: 'Haie Vive, Cotonou, Bénin',
     country: 'Bénin',
     governingLaw: 'Loi n° 2018-12 du 02 juillet 2018 (Bénin)',
     rent: 25000,
     deposit: 75000,
+    advanceMonths: 3,
     charges: 0,
     utilitiesDeposit: 25000,
     totalDueAtEntry: 125000,
@@ -237,9 +247,16 @@ export const LeaseService = {
             jojoLease &&
             (!jojoLease.landlordPhone ||
               !jojoLease.landlordPaymentMethods ||
+              !jojoLease.propertyLocation ||
+              !jojoLease.advanceMonths ||
               jojoLease.landlordPhone.includes('97 00 11 22'))
           ) {
             Object.assign(jojoLease, {
+              propertyAddress: jojoLease.propertyAddress || 'Haie Vive, Cotonou',
+              propertyDistrict: jojoLease.propertyDistrict || 'Haie Vive',
+              propertyCity: jojoLease.propertyCity || 'Cotonou',
+              propertyLocation: jojoLease.propertyLocation || 'Haie Vive, Cotonou, Bénin',
+              advanceMonths: jojoLease.advanceMonths || 3,
               landlordId: 'usr-bailleur-voglossou',
               landlordName: 'VOGLOSSOU JOHANE',
               landlordPhone: '+229 01 95 44 44 30',

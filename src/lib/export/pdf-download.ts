@@ -39,6 +39,9 @@ export interface LeasePDFData {
   emergencyContactPhone?: string;
   propertyName: string;
   unit: string;
+  propertyLocation?: string;
+  propertyAddress?: string;
+  propertyCity?: string;
   country?: string;
   countryName?: string;
   landlordName?: string;
@@ -246,7 +249,7 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
 
   // 4. Objet de la Location
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(margin, y, contentWidth, 22, 2, 2, 'FD');
+  doc.roundedRect(margin, y, contentWidth, 26, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(15, 23, 42);
@@ -255,15 +258,20 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(51, 65, 85);
-  doc.text(`• Résidence : ${data.propertyName}`, margin + 4, y + 11);
+  doc.text(`• Bien / Résidence : ${data.propertyName}`, margin + 4, y + 11);
   doc.text(`• Lot d'habitation : ${data.unit}`, margin + 4, y + 15);
   doc.text(
-    `• Équipements : Compteur électrique individuel, sanitaires privés, approvisionnement en eau sécurisé.`,
+    `• Localisation du bien loué : ${data.propertyLocation || [data.propertyAddress, data.propertyCity, data.countryName || data.country].filter(Boolean).join(', ') || 'Haie Vive, Cotonou, Bénin'}`,
     margin + 4,
     y + 19
   );
+  doc.text(
+    `• Équipements : Compteur électrique individuel, sanitaires privés, approvisionnement en eau sécurisé.`,
+    margin + 4,
+    y + 23
+  );
 
-  y += 28;
+  y += 32;
 
   // 5. Conditions Financières (Cadre mis en avant)
   doc.setFillColor(254, 242, 242); // rose-50

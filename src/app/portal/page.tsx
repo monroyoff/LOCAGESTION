@@ -691,7 +691,8 @@ function TenantPortalContent() {
     email: user?.email || currentLease?.tenantEmail || '',
     property: currentLease?.property || 'Aucun logement lié',
     unit: currentLease?.unit || 'Non assigné',
-    address: currentLease?.tenantAddress || '',
+    address: currentLease?.propertyLocation || currentLease?.propertyAddress || currentLease?.tenantAddress || 'Haie Vive, Cotonou, Bénin',
+    propertyLocation: currentLease?.propertyLocation || 'Haie Vive, Cotonou, Bénin',
     monthlyRent: currentLease?.rent || 0,
     charges: currentLease?.charges || 0,
     deposit: currentLease?.deposit || 0,
@@ -1129,8 +1130,18 @@ function TenantPortalContent() {
                           ? (receiptsList.length > 0 ? (receiptsList[0]?.isVerified ? 'Loyer à jour' : 'Règlement en attente') : 'Bail actif • En attente 1er loyer')
                           : 'En attente d’assignation'}
                       </span>
-                      <span className="text-[11px] text-slate-300 font-medium">
-                        {currentLease ? `${tenant.property} • ${tenant.unit}` : 'Aucun logement lié'}
+                      <span className="text-[11px] text-slate-300 font-medium flex items-center flex-wrap gap-1.5">
+                        {currentLease ? (
+                          <>
+                            <span>{tenant.property} • {tenant.unit}</span>
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                              <MapPin className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                              <span>{tenant.propertyLocation}</span>
+                            </span>
+                          </>
+                        ) : (
+                          'Aucun logement lié'
+                        )}
                       </span>
                     </div>
 

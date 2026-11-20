@@ -29,6 +29,7 @@ import {
   ArrowUpDown,
   Home,
   Camera,
+  MapPin,
 } from 'lucide-react';
 import { InspectionModal, InspectionData } from '@/components/leases/InspectionModal';
 import { InspectionService } from '@/lib/services/inspection-service';
@@ -636,8 +637,14 @@ export default function LeasesPage() {
                             )}
                           </div>
 
-                          <span className="text-xs text-slate-700 font-bold block">
-                            {lease.property} • {lease.unit}
+                          <span className="text-xs text-slate-700 font-bold flex items-center flex-wrap gap-1.5">
+                            <span>{lease.property} • {lease.unit}</span>
+                            {lease.propertyLocation && (
+                              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                <MapPin className="w-3 h-3 text-emerald-600 shrink-0" />
+                                <span>{lease.propertyLocation}</span>
+                              </span>
+                            )}
                           </span>
 
                           <div className="flex flex-wrap items-center gap-2.5 text-[11px] text-slate-400">

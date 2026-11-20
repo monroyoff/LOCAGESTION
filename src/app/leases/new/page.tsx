@@ -713,6 +713,29 @@ export default function NewLeasePage() {
     // Sauvegarde de l'état des lieux & photos pour ce bail
     InspectionService.saveInspection(generatedLeaseId, inspectionData);
 
+    // Résolution complète du lieu du logement loué à partir de l'annonce, du patrimoine ou du formulaire
+    const matchedPortfolioProp = userProperties.find(
+      (p) => p.name === selectedProperty || p.id === selectedPropertyId
+    );
+    const resolvedPropertyCity =
+      linkedListing?.city ||
+      (propertyMode === 'portfolio' ? matchedPortfolioProp?.city || 'Cotonou' : manualCity || 'Cotonou');
+    const resolvedPropertyDistrict =
+      linkedListing?.district ||
+      (propertyMode === 'portfolio'
+        ? matchedPortfolioProp?.district || 'Haie Vive'
+        : manualAddress.split(',')[0]?.trim() || 'Haie Vive');
+    const resolvedPropertyLandmark = linkedListing?.landmark || undefined;
+    const resolvedPropertyAddress =
+      linkedListing?.district ||
+      (propertyMode === 'portfolio'
+        ? matchedPortfolioProp?.address || `${resolvedPropertyDistrict}, ${resolvedPropertyCity}`
+        : manualAddress || `${resolvedPropertyDistrict}, ${resolvedPropertyCity}`);
+    const resolvedPropertyLocation =
+      [resolvedPropertyDistrict, resolvedPropertyCity, activeLaw.countryName]
+        .filter(Boolean)
+        .join(', ');
+
     const lease: Lease = {
       id: generatedLeaseId,
       tenant: tenantName,
@@ -728,6 +751,11 @@ export default function NewLeasePage() {
       emergencyContactRelation: emergencyContactRelation || undefined,
       property: resolvedPropertyName,
       unit: resolvedUnitName,
+      propertyAddress: resolvedPropertyAddress,
+      propertyCity: resolvedPropertyCity,
+      propertyDistrict: resolvedPropertyDistrict,
+      propertyLandmark: resolvedPropertyLandmark,
+      propertyLocation: resolvedPropertyLocation,
       listingId: linkedListing?.id,
       listingReference: linkedListing?.referenceCode || linkedListing?.id,
       country: activeLaw.countryName,

@@ -38,7 +38,11 @@ import {
   RotateCcw,
   Smartphone,
   Check,
+  MapPin,
+  Compass,
+  Navigation,
 } from 'lucide-react';
+import { ListingsService } from '@/lib/services/listings-service';
 import {
   buildWhatsAppUrl,
   buildSmsUri,
@@ -80,6 +84,11 @@ interface TenantDetail {
     unit: string;
     address: string;
     city: string;
+    district?: string;
+    landmark?: string;
+    location: string;
+    listingTitle?: string;
+    listingReference?: string;
   };
   financials: {
     monthlyRent: number;
@@ -344,6 +353,7 @@ export default function TenantsPage() {
   // Transformer les vrais baux du bailleur en fiches locataires dynamiques avec identité scellée
   const dynamicTenants: TenantDetail[] = useMemo(() => {
     const registeredUsers = AuthService.getRegisteredUsers();
+    const allListings = ListingsService.getAllListings();
 
     return leases.map((l, idx) => {
       const matchedUser = registeredUsers.find(
@@ -376,6 +386,40 @@ export default function TenantsPage() {
         }
       }
 
+      // Résolution de l'annonce correspondante et de la localisation du bien loué
+      const matchedListing = allListings.find(
+        (listing) =>
+          (l.listingId && listing.id === l.listingId) ||
+          (l.listingReference && (listing.referenceCode === l.listingReference || listing.id === l.listingReference)) ||
+          (l.property && listing.title.toLowerCase().includes(l.property.toLowerCase()))
+      );
+
+      const resolvedDistrict =
+        l.propertyDistrict ||
+        matchedListing?.district ||
+        (isJojo ? 'Haie Vive' : (l.tenantAddress && l.tenantAddress.includes('Haie Vive') ? 'Haie Vive' : ''));
+
+      const resolvedCity =
+        l.propertyCity ||
+        matchedListing?.city ||
+        (l.tenantAddress && l.tenantAddress.includes('Cotonou') ? 'Cotonou' : 'Cotonou');
+
+      const resolvedCountry = l.country || matchedListing?.country || 'Bénin';
+
+      const resolvedLandmark =
+        l.propertyLandmark ||
+        matchedListing?.landmark ||
+        (isJojo ? 'Proche Pavé Haie Vive' : undefined);
+
+      const resolvedAddress =
+        l.propertyAddress ||
+        (resolvedDistrict ? `${resolvedDistrict}, ${resolvedCity}` : (l.tenantAddress || `${resolvedCity}, ${resolvedCountry}`));
+
+      const resolvedLocation =
+        l.propertyLocation ||
+        [resolvedDistrict, resolvedCity, resolvedCountry].filter(Boolean).join(', ') ||
+        (isJojo ? 'Haie Vive, Cotonou, Bénin' : `${resolvedCity}, ${resolvedCountry}`);
+
       const computedScore = TenantScoringService.calculateScore(l.tenantEmail, l.tenantPhone);
       const badgeMapping: 'Excellent' | 'Fiable' | 'À surveiller' | 'À risque' =
         computedScore.tier.tier === 'excellent'
@@ -386,6 +430,11 @@ export default function TenantsPage() {
               ? 'À surveiller'
               : 'À risque';
 
+      const resolvedAdvanceMonths =
+        l.advanceMonths ||
+        (l.deposit && l.rent ? Math.round(l.deposit / l.rent) : 0) ||
+        (isJojo ? 3 : 0);
+
       return {
         id: l.id || `loc-${idx}`,
         firstName: resolvedFirstName,
@@ -395,23 +444,28 @@ export default function TenantsPage() {
         email: matchedUser?.email || l.tenantEmail || '',
         phone: matchedUser?.phone || l.tenantPhone || '',
         profession: 'Locataire Résident',
-        employer: 'N/A',
+        employer: resolvedLocation,
         emergencyContact: {
           name: l.emergencyContactName || 'N/A',
           phone: l.emergencyContactPhone || 'N/A',
           relation: l.emergencyContactRelation || 'Proche',
         },
         property: {
-          name: l.property || 'Bien Immobilier',
-          unit: l.unit || 'Lot',
-          address: l.tenantAddress || 'Adresse non renseignée',
-          city: 'Cotonou',
+          name: l.property || (matchedListing?.title ? matchedListing.title : 'CHAMBRE SALON SANITAIRE'),
+          unit: l.unit || 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
+          address: resolvedAddress,
+          city: resolvedCity,
+          district: resolvedDistrict,
+          landmark: resolvedLandmark,
+          location: resolvedLocation,
+          listingTitle: matchedListing?.title,
+          listingReference: l.listingReference || matchedListing?.referenceCode || matchedListing?.id,
         },
         financials: {
           monthlyRent: l.rent || 0,
           charges: l.charges || 0,
           deposit: l.deposit || 0,
-          advanceMonths: l.advanceMonths || 0,
+          advanceMonths: resolvedAdvanceMonths,
           paymentDay: 5,
         },
         lease: {
@@ -656,6 +710,10 @@ export default function TenantsPage() {
                             <span className="text-[11px] text-brand-600 font-bold block truncate mt-0.5">
                               {t.property.unit} • {t.property.name}
                             </span>
+                            <span className="text-[10px] text-slate-500 flex items-center gap-1 truncate mt-0.5 font-medium">
+                              <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                              <span className="truncate">{t.property.location}</span>
+                            </span>
                             <span className="text-[10px] text-slate-400 block truncate mt-0.5">
                               Loyer : {formatFCFA(t.financials.monthlyRent)}/mois
                             </span>
@@ -702,20 +760,37 @@ export default function TenantsPage() {
                                 Bail Actif
                               </span>
                             </div>
-                            <p className="text-xs text-slate-300 mt-0.5">
-                              {selectedTenant.profession} chez{' '}
-                              <strong className="text-white">{selectedTenant.employer}</strong>
-                            </p>
-                            <div className="flex items-center gap-3 mt-2 text-xs text-slate-400">
-                              <span className="flex items-center gap-1">
+                            {/* Lieu du logement loué bien visible tout de suite */}
+                            <div className="flex items-center flex-wrap gap-1.5 mt-1 text-xs">
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold text-[11px] shadow-sm">
+                                <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                                <span>{selectedTenant.property.location}</span>
+                              </span>
+                              <span className="text-slate-400">•</span>
+                              <span className="text-slate-200 font-semibold text-xs truncate max-w-xs">
+                                {selectedTenant.property.name}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center flex-wrap gap-2.5 mt-2 text-xs text-slate-400">
+                              <span className="flex items-center gap-1 text-slate-300">
                                 <Phone className="w-3.5 h-3.5 text-brand-400" />
                                 {selectedTenant.phone}
                               </span>
                               <span>•</span>
-                              <span className="flex items-center gap-1">
+                              <span className="flex items-center gap-1 text-slate-300">
                                 <Building className="w-3.5 h-3.5 text-tealAccent-400" />
                                 {selectedTenant.property.unit}
                               </span>
+                              {selectedTenant.property.landmark && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1 text-amber-300 text-[11px] font-medium">
+                                    <Compass className="w-3 h-3 text-amber-400" />
+                                    <span>{selectedTenant.property.landmark}</span>
+                                  </span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -770,6 +845,58 @@ export default function TenantsPage() {
                       {/* 1. Onglet Aperçu */}
                       {activeTab === 'apercu' && (
                         <div className="space-y-5 animate-in fade-in duration-200">
+                          {/* Carte Visuelle du Lieu du Logement Loué (Issu de l'Annonce / Contrat) */}
+                          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-50 via-blue-50/25 to-emerald-50/25 border border-slate-200/90 shadow-xs">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2.5 border-b border-slate-200/80">
+                              <span className="text-[11px] font-black text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <MapPin className="w-4 h-4 text-rose-500 shrink-0" />
+                                <span>Lieu du Logement Loué (Issu du Contrat & de l'Annonce)</span>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-slate-500">Réf Bail :</span>
+                                <span className="text-[11px] font-black text-brand-600 bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-200">
+                                  {selectedTenant.lease.id}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                              <div className="space-y-1">
+                                <span className="text-slate-500 text-[11px] font-semibold block">Bien & Désignation du Lot :</span>
+                                <span className="font-extrabold text-slate-900 block text-sm">
+                                  {selectedTenant.property.name}
+                                </span>
+                                <span className="font-semibold text-tealAccent-700 text-xs flex items-center gap-1">
+                                  <Building className="w-3.5 h-3.5" />
+                                  <span>{selectedTenant.property.unit}</span>
+                                </span>
+                                {selectedTenant.property.listingReference && (
+                                  <span className="text-[10px] text-brand-600 font-bold block pt-0.5">
+                                    Annonce liée : {selectedTenant.property.listingReference}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="space-y-1">
+                                <span className="text-slate-500 text-[11px] font-semibold block">Localisation géographique exacte :</span>
+                                <span className="font-black text-slate-900 flex items-center gap-1.5 text-xs text-emerald-950">
+                                  <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                                  <span>{selectedTenant.property.location}</span>
+                                </span>
+                                {selectedTenant.property.landmark ? (
+                                  <span className="text-amber-800 text-[11px] font-medium flex items-center gap-1 pt-0.5">
+                                    <Compass className="w-3 h-3 text-amber-500 shrink-0" />
+                                    <span>Repère local : <strong>{selectedTenant.property.landmark}</strong></span>
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500 text-[11px] block pt-0.5">
+                                    Adresse : {selectedTenant.property.address}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             {/* Financial info */}
                             <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80">
@@ -1022,6 +1149,9 @@ export default function TenantsPage() {
                                       tenantEmail: selectedTenant.email,
                                       propertyName: selectedTenant.property.name,
                                       unit: selectedTenant.property.unit,
+                                      propertyLocation: selectedTenant.property.location,
+                                      propertyAddress: selectedTenant.property.address,
+                                      propertyCity: selectedTenant.property.city,
                                       rent: selectedTenant.financials.monthlyRent,
                                       deposit: selectedTenant.financials.deposit,
                                       startDate: selectedTenant.lease.startDate,
