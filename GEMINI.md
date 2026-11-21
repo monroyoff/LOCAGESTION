@@ -501,5 +501,25 @@ Ces informations garantissent la force probante juridique des baux électronique
    - Les modifications doivent s'exécuter en temps réel sans nécessiter de purge manuelle de cache par les utilisateurs sur Web, navigateur mobile ou application PWA. L'endpoint d'API de synchronisation (`/api/sync`) doit être systématiquement notifié.
 
 ---
+
+## 16. Certification TWA Android, Google Play Store & Digital Asset Links
+
+> **CONFORMITÉ APPLICATION MOBILE NATIVE ANDROID (TWA / GOOGLE PLAY STORE)**  
+> **L'application Android LOCAGESTION (`com.locagestion.app`) repose sur l'architecture Trusted Web Activity (TWA). Pour garantir un affichage en plein écran 100% natif (sans logo Chrome au démarrage ni barre d'adresse URL supérieure), la validation cryptographique Digital Asset Links doit être rigoureusement maintenue.**
+
+### 🔑 1. Double Empreinte SHA-256 Obligatoire
+Le fichier `public/.well-known/assetlinks.json` et la route API `src/app/.well-known/assetlinks.json/route.ts` doivent **impérativement** contenir les deux empreintes SHA-256 suivantes dans `sha256_cert_fingerprints` :
+1. **Clé officielle de signature Google Play Store :**  
+   `D1:83:13:89:32:2D:99:6A:3D:0D:46:6C:96:19:5B:CA:82:B4:93:F4:A2:52:57:6D:7C:91:AC:C9:CC:DC:15:F3`  
+   *(Appliquée automatiquement par Google Play lors du téléchargement de l'application depuis le Play Store).*
+2. **Clé d'importation / Keystore local (`signing.keystore`) :**  
+   `17:D7:54:87:D1:95:11:84:F3:97:FC:6C:52:5F:A5:12:ED:EE:E5:AF:D4:82:BC:EE:5A:62:3A:89:C4:B2:A3:8F`  
+   *(Utilisée pour les installations directes de test par fichier APK).*
+
+### 🚫 2. Interdiction Absolue de Redirection HTTP sur le Domaine Apex
+- L'URL `https://locagestion.site/.well-known/assetlinks.json` doit répondre **directement en HTTP 200 OK** avec le header `Content-Type: application/json`.
+- **Aucune redirection (301, 302, 307, 308)** vers `www.locagestion.site` n'est permise pour ce fichier. Dans Vercel, le domaine `locagestion.site` doit être configuré avec `"redirect": null` pour servir la production directement, car le protocole de vérification TWA Android rejette immédiatement toute redirection pour des raisons de sécurité.
+
+---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
 
