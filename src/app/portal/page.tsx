@@ -425,22 +425,33 @@ function TenantPortalContent() {
       if (pl && a.id === pl.id) return -1;
       if (pl && b.id === pl.id) return 1;
 
-      // 3. Priorité aux baux actifs
+      // 3. Priorité absolue aux baux d'habitation (résidence principale / logement réel du locataire)
+      const aIsHabitation = a.propertyUsage === 'habitation' || !a.propertyUsage;
+      const bIsHabitation = b.propertyUsage === 'habitation' || !b.propertyUsage;
+      if (aIsHabitation && !bIsHabitation) return -1;
+      if (bIsHabitation && !aIsHabitation) return 1;
+
+      // 4. Priorité aux baux actifs
       if (a.status === 'actif' && b.status !== 'actif') return -1;
       if (b.status === 'actif' && a.status !== 'actif') return 1;
 
-      // 4. Priorité aux baux contresignés par le locataire
+      // 5. Priorité aux baux contresignés par le locataire
       if (a.signedByTenant && !b.signedByTenant) return -1;
       if (b.signedByTenant && !a.signedByTenant) return 1;
 
-      // 5. Éliminer / reléguer tout ancien mock obsolète
+      // 6. Éliminer / reléguer tout ancien mock obsolète
       if (a.id === 'BAIL-2026-BJ-17635') return 1;
       if (b.id === 'BAIL-2026-BJ-17635') return -1;
 
-      // 6. Privilégier le bail le plus récent par date de signature ou de prise d'effet
-      const dateA = a.tenantSignedAt || a.startDate || '';
-      const dateB = b.tenantSignedAt || b.startDate || '';
-      return dateB.localeCompare(dateA);
+      // 7. Privilégier le bail le plus récent par date réelle (timestamps)
+      const parseDateNum = (s?: string) => {
+        if (!s) return 0;
+        const p = s.split('/');
+        return p.length === 3 ? new Date(Number(p[2]), Number(p[1]) - 1, Number(p[0])).getTime() : 0;
+      };
+      const timeA = parseDateNum(a.tenantSignedAt || a.startDate);
+      const timeB = parseDateNum(b.tenantSignedAt || b.startDate);
+      return timeB - timeA;
     });
 
     setMyLeases(matchingLeases);
@@ -477,6 +488,14 @@ function TenantPortalContent() {
 
   const totalCumulativeRent = useMemo(() => {
     return myLeases.reduce((acc, l) => acc + (l.rent || 0), 0);
+  }, [myLeases]);
+
+  const totalCumulativeCharges = useMemo(() => {
+    return myLeases.reduce((acc, l) => acc + (l.charges || 0), 0);
+  }, [myLeases]);
+
+  const totalCumulativeDeposit = useMemo(() => {
+    return myLeases.reduce((acc, l) => acc + (l.deposit || 0), 0);
   }, [myLeases]);
 
   const distinctLandlordsCount = useMemo(() => {
@@ -1580,17 +1599,23 @@ function TenantPortalContent() {
                 </div>
               </div>
 
-              {/* Fiche Logement Détaillée */}
+              {/* Fiche Logement Détaillée & Synthèse Multi-Baux */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft space-y-4">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                   <div className="flex items-center gap-2.5">
                     <Building2 className="w-5 h-5 text-slate-700 shrink-0" />
                     <h3 className="font-black text-base text-slate-900">
-                      Caractéristiques de Votre Logement Actuel
+                      {selectedLeaseId === 'all' && myLeases.length > 1
+                        ? `Synthèse Financière & Caractéristiques Cumulées (${myLeases.length} Baux en Cours)`
+                        : currentLease?.propertyUsage === 'magasin'
+                        ? `Caractéristiques du Local — ${currentLease?.unit || 'Magasin'}`
+                        : currentLease?.propertyUsage === 'boutique'
+                        ? `Caractéristiques du Local — ${currentLease?.unit || 'Boutique'}`
+                        : `Caractéristiques de Votre Logement Actuel`}
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {currentLease && inspectionData.photos.length > 0 && (
+                    {currentLease && inspectionData.photos.length > 0 && selectedLeaseId !== 'all' && (
                       <button
                         type="button"
                         onClick={() => setIsInspectionModalOpen(true)}
@@ -1601,37 +1626,134 @@ function TenantPortalContent() {
                       </button>
                     )}
                     <span className={`text-xs font-bold px-3 py-1 rounded-full border self-start sm:self-auto shrink-0 ${
-                      currentLease
+                      currentLease || myLeases.length > 0
                         ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                         : 'text-slate-600 bg-slate-100 border-slate-200'
                     }`}>
-                      {currentLease ? "Bail en cours d'exécution" : 'En attente de bail'}
+                      {selectedLeaseId === 'all' && myLeases.length > 1
+                        ? `${myLeases.length} Baux en cours d'exécution`
+                        : currentLease
+                        ? "Bail en cours d'exécution"
+                        : 'En attente de bail'}
                     </span>
                   </div>
                 </div>
 
-                {currentLease ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Loyer Mensuel Net</span>
-                      <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.monthlyRent)}</span>
-                      <span className="text-[10px] text-slate-500">Hors charges</span>
+                {myLeases.length > 0 ? (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-1">
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          {selectedLeaseId === 'all' && myLeases.length > 1 ? 'Loyer Mensuel Net Cumulé' : 'Loyer Mensuel Net'}
+                        </span>
+                        <span className="text-base font-black text-slate-900 mt-0.5 block">
+                          {formatFCFA(selectedLeaseId === 'all' && myLeases.length > 1 ? totalCumulativeRent : (currentLease?.rent || tenant.monthlyRent))}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {selectedLeaseId === 'all' && myLeases.length > 1 ? `Cumul de vos ${myLeases.length} baux` : 'Hors charges'}
+                        </span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          {selectedLeaseId === 'all' && myLeases.length > 1 ? 'Charges Locatives Totales' : 'Charges Locatives'}
+                        </span>
+                        <span className="text-base font-black text-slate-900 mt-0.5 block">
+                          {formatFCFA(selectedLeaseId === 'all' && myLeases.length > 1 ? totalCumulativeCharges : (currentLease?.charges !== undefined ? currentLease.charges : tenant.charges))}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {selectedLeaseId === 'all' && myLeases.length > 1 ? 'Cumul charges mensuelles' : 'Gardiennage & entretien'}
+                        </span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">
+                          {selectedLeaseId === 'all' && myLeases.length > 1 ? 'Dépôt de Garantie Total' : 'Dépôt de Garantie'}
+                        </span>
+                        <span className="text-base font-black text-slate-900 mt-0.5 block">
+                          {formatFCFA(selectedLeaseId === 'all' && myLeases.length > 1 ? totalCumulativeDeposit : (currentLease?.deposit !== undefined ? currentLease.deposit : tenant.deposit))}
+                        </span>
+                        <span className="text-[10px] text-slate-500">
+                          {selectedLeaseId === 'all' && myLeases.length > 1 ? 'Total cautions consignées' : 'Caution consignée'}
+                        </span>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Échéance Mensuelle</span>
+                        <span className="text-base font-black text-emerald-700 mt-0.5 block">{tenant.dueDate}</span>
+                        <span className="text-[10px] text-slate-500">Au plus tard</span>
+                      </div>
                     </div>
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Charges Locatives</span>
-                      <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.charges)}</span>
-                      <span className="text-[10px] text-slate-500">Gardiennage & entretien</span>
-                    </div>
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Dépôt de Garantie</span>
-                      <span className="text-base font-black text-slate-900 mt-0.5 block">{formatFCFA(tenant.deposit)}</span>
-                      <span className="text-[10px] text-slate-500">Caution consignée</span>
-                    </div>
-                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">Échéance Mensuelle</span>
-                      <span className="text-base font-black text-emerald-700 mt-0.5 block">{tenant.dueDate}</span>
-                      <span className="text-[10px] text-slate-500">Au plus tard</span>
-                    </div>
+
+                    {/* En vue d'ensemble : Détail clair de chaque contrat */}
+                    {selectedLeaseId === 'all' && myLeases.length > 1 && (
+                      <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                            Ventilation par contrat de location ({myLeases.length} baux actifs) :
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            Sélectionnez un bail pour voir ses spécificités isolées
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          {myLeases.map((l) => {
+                            const usage = getUsageInfo(l.propertyUsage);
+                            const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                            return (
+                              <div
+                                key={l.id}
+                                className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:border-brand-400 hover:shadow-xs transition-all space-y-2"
+                              >
+                                <div className="flex items-center justify-between gap-1.5">
+                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${usage.badgeColor}`}>
+                                    {usage.label}
+                                  </span>
+                                  <span className="text-[10px] font-mono font-bold text-slate-400">{l.id}</span>
+                                </div>
+                                <div>
+                                  <h4 className="text-xs font-black text-slate-900 truncate">{l.unit}</h4>
+                                  <p className="text-[11px] text-slate-500 truncate">{l.property}</p>
+                                </div>
+                                <div className="pt-1.5 border-t border-slate-200/60 flex items-center justify-between text-xs">
+                                  <div>
+                                    <span className="text-[10px] text-slate-400 block">Loyer net</span>
+                                    <strong className="text-slate-900 font-black">{formatFCFA(l.rent)}</strong>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="text-[10px] text-slate-400 block">Charges</span>
+                                    <span className="font-bold text-slate-700 text-[11px]">{formatFCFA(l.charges || 0)}</span>
+                                  </div>
+                                </div>
+                                <div className="text-[10px] text-slate-500 truncate">
+                                  Bailleur : <strong className="text-slate-700">{landlord}</strong>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectLease(l.id)}
+                                  className="w-full py-1.5 px-3 rounded-xl bg-white hover:bg-brand-50 hover:text-brand-600 border border-slate-200 text-[11px] font-bold text-slate-700 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                                >
+                                  <span>Afficher ce bail →</span>
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* En vue isolée d'un bail spécifique : Lien de retour vers la vue d'ensemble */}
+                    {selectedLeaseId !== 'all' && myLeases.length > 1 && (
+                      <div className="pt-2 flex items-center justify-between text-xs">
+                        <span className="text-slate-500 text-[11px]">
+                          Bailleur : <strong className="text-slate-800">{currentLease?.landlordSignature?.signedBy || currentLease?.landlordName || 'Bailleur'}</strong> • Réf : <span className="font-mono">{currentLease?.id}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectLease('all')}
+                          className="text-xs font-bold text-brand-600 hover:text-brand-700 cursor-pointer flex items-center gap-1"
+                        >
+                          <span>← Revenir à la synthèse cumulée</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="py-6 text-center space-y-2">
