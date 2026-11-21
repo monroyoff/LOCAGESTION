@@ -218,9 +218,9 @@ export function Header({
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
+      <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-3 sm:gap-6">
         {/* Left: Mobile Menu & Space Badge / Title (Emplacement cliquable pour retourner à l'accueil) */}
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <button
             onClick={onToggleSidebar}
             className="lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
@@ -230,7 +230,7 @@ export function Header({
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="min-w-0 flex flex-col justify-center">
+          <div className="flex flex-col justify-center">
             <button
               type="button"
               onClick={handleGoHome}
@@ -266,7 +266,7 @@ export function Header({
 
               {user?.matricule && (
                 <span
-                  className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-900 text-indigo-300 border border-slate-700 shrink-0 shadow-xs"
+                  className="hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-900 text-indigo-300 border border-slate-700 shrink-0 shadow-xs"
                   title="Votre Matricule Officiel Plateforme"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -285,7 +285,7 @@ export function Header({
         </div>
 
         {/* Middle: Global Search Bar (Affichée sur grand écran xl+, bouton compact en dessous) */}
-        <div className="hidden xl:flex items-center flex-1 max-w-xs mx-4">
+        <div className="hidden xl:flex items-center justify-center flex-1 max-w-xs mx-4">
           <button
             type="button"
             onClick={handleOpenSearch}
