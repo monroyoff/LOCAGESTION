@@ -121,6 +121,7 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 - Gestion d'immeubles, villas, résidences, appartements, boutiques et bureaux.
 - Fiche détaillée de la propriété : localisation, loyer moyen, historique des occupants, charges communes.
 - Modal de création de propriété avec répartition par lot.
+- **Compteur & Isolation Étanche du Patrimoine :** Le badge de comptage du patrimoine (`X Résidences`) et la liste affichée reflètent **exclusivement** les biens propres du bailleur authentifié (`userProperties.length`). Le compteur global de l'ensemble de la plateforme est strictement réservé au bandeau Super-Admin, empêchant toute fuite de volumétrie globale (ex: 6 résidences de test) dans l'en-tête d'un utilisateur individuel.
 
 ### 📝 3. Gestion des Baux (`/leases`)
 - Génération de contrat de bail juridique avec clauses spécifiques selon le pays du bien.

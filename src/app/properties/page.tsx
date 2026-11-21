@@ -57,10 +57,6 @@ export default function PropertiesPage() {
   const loadProperties = React.useCallback(() => {
     const list = PropertyService.getAllProperties();
     setProperties(list);
-    setSelectedProperty((prev) => {
-      if (prev && list.some((p) => p.id === prev.id)) return prev;
-      return list.length > 0 ? list[0] : null;
-    });
   }, []);
 
   React.useEffect(() => {
@@ -151,6 +147,13 @@ export default function PropertiesPage() {
     return PropertyService.getPropertiesForUser(user, isAdmin);
   }, [properties, user, isAdmin]);
 
+  React.useEffect(() => {
+    setSelectedProperty((prev) => {
+      if (prev && userProperties.some((p) => p.id === prev.id)) return prev;
+      return userProperties.length > 0 ? userProperties[0] : null;
+    });
+  }, [userProperties]);
+
   const filteredProperties = userProperties.filter((p) => {
     // Filtrage Super-Admin par bailleur spécifique
     if (selectedLandlordFilter !== 'all') {
@@ -169,6 +172,13 @@ export default function PropertiesPage() {
       (p.authorMatricule && p.authorMatricule.toLowerCase().includes(q))
     );
   });
+
+  const displayedPropertiesCount =
+    searchQuery.trim() || (isAdmin && selectedLandlordFilter !== 'all')
+      ? filteredProperties.length
+      : isAdmin
+      ? properties.length
+      : userProperties.length;
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] text-slate-900 flex">
@@ -212,7 +222,7 @@ export default function PropertiesPage() {
                   Patrimoine Immobilier & Lots
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand-50 text-brand-600 border border-brand-200">
-                  {properties.length} {properties.length > 1 ? 'Résidences' : 'Résidence'}
+                  {displayedPropertiesCount} {displayedPropertiesCount > 1 ? 'Résidences' : 'Résidence'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-1">

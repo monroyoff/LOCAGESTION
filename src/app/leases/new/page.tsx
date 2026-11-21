@@ -407,7 +407,7 @@ export default function NewLeasePage() {
 
   useEffect(() => {
     try {
-      const allProps = PropertyService.getAllProperties();
+      const allProps = PropertyService.getPropertiesForUser(user, false);
       if (allProps.length > 0) {
         setUserProperties(allProps);
         setSelectedPropertyId(allProps[0].id);
@@ -424,14 +424,15 @@ export default function NewLeasePage() {
           }
         }
       } else {
+        setUserProperties([]);
         setPropertyMode('manual');
       }
     } catch (e) {
       console.error('Erreur lecture propriétés pour bail:', e);
     }
-  }, []);
+  }, [user]);
 
-  const portfolioProperties = userProperties.length > 0 ? userProperties : MOCK_PROPERTIES;
+  const portfolioProperties = userProperties;
 
   // Bien sélectionné dans le patrimoine
   const currentProperty =

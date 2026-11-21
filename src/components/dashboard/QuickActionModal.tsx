@@ -38,10 +38,14 @@ export function QuickActionModal({
 
   useEffect(() => {
     try {
-      const allProps = PropertyService.getAllProperties();
+      const currentUser = AuthService.getCurrentUser();
+      const allProps = PropertyService.getPropertiesForUser(currentUser, false);
       if (allProps.length > 0) {
         setPropertiesList(allProps.map((p) => ({ id: p.id, name: p.name })));
         setPropertyChoice(allProps[0].name);
+      } else {
+        setPropertiesList([]);
+        setPropertyChoice('');
       }
     } catch {}
   }, []);
