@@ -22,6 +22,7 @@ import {
   ExternalLink,
   MessageSquare,
   ShieldAlert,
+  Phone,
 } from 'lucide-react';
 import { formatDateFR } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
@@ -87,6 +88,7 @@ export function Header({
     window.addEventListener('locagestion:tenant_notifs_updated', handleStorage);
     window.addEventListener('locagestion:tenant_notifications_updated', handleStorage);
     window.addEventListener('locagestion:notifications_updated', handleStorage);
+    window.addEventListener('locagestion:conversations_updated', handleStorage);
     window.addEventListener('locagestion:security_alerts_updated', handleStorage);
     window.addEventListener('locagestion:auth_changed', handleStorage);
     window.addEventListener('storage', handleStorage);
@@ -96,6 +98,7 @@ export function Header({
       window.removeEventListener('locagestion:tenant_notifs_updated', handleStorage);
       window.removeEventListener('locagestion:tenant_notifications_updated', handleStorage);
       window.removeEventListener('locagestion:notifications_updated', handleStorage);
+      window.removeEventListener('locagestion:conversations_updated', handleStorage);
       window.removeEventListener('locagestion:security_alerts_updated', handleStorage);
       window.removeEventListener('locagestion:auth_changed', handleStorage);
       window.removeEventListener('storage', handleStorage);
@@ -115,14 +118,12 @@ export function Header({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isNotifOpen]);
 
-  const unreadCount = isDemarcheur
-    ? 0
-    : isLandlord
+  const unreadCount = (isLandlord || isDemarcheur)
     ? notifications.filter((n) => !n.read).length
     : tenantNotifs.filter((n) => !n.read).length;
 
   const handleMarkAllRead = () => {
-    if (isLandlord) {
+    if (isLandlord || isDemarcheur) {
       LeaseService.markNotificationsAsRead();
       updateNotifications();
     } else {
@@ -242,13 +243,12 @@ export function Header({
                 {getPageTitle()}
               </h1>
               <span
-                className={`hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${
-                  isDemarcheur
-                    ? 'bg-amber-50 text-amber-700 border-amber-200'
-                    : isLandlord
+                className={`hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${isDemarcheur
+                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                  : isLandlord
                     ? 'bg-brand-50 text-brand-600 border-brand-200'
                     : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                }`}
+                  }`}
               >
                 {isDemarcheur ? (
                   <Sparkles className="w-3 h-3 text-amber-600" />
@@ -260,8 +260,8 @@ export function Header({
                 {isDemarcheur
                   ? 'Espace Démarcheur • UEMOA & CEMAC'
                   : isLandlord
-                  ? 'Espace Bailleur • UEMOA & CEMAC'
-                  : 'Locataire Titulaire'}
+                    ? 'Espace Bailleur • UEMOA & CEMAC'
+                    : 'Locataire Titulaire'}
               </span>
             </button>
 
@@ -366,26 +366,28 @@ export function Header({
                       notifications.map((n) => (
                         <div
                           key={n.id}
-                          className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${
-                            !n.read
-                              ? n.type === 'incident_reported' || n.type === 'listing_rejected'
-                                ? 'bg-rose-50/70 border border-rose-200/80'
-                                : n.type === 'listing_approved'
+                          className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${!n.read
+                            ? n.type === 'incident_reported' || n.type === 'listing_rejected'
+                              ? 'bg-rose-50/70 border border-rose-200/80'
+                              : n.type === 'listing_approved'
                                 ? 'bg-emerald-50/70 border border-emerald-200/80'
-                                : 'bg-amber-50/70 border border-amber-200/60'
-                              : 'hover:bg-slate-50'
-                          }`}
+                                : n.type === 'visit_requested'
+                                  ? 'bg-brand-50/80 border border-brand-200/90 shadow-xs'
+                                  : 'bg-amber-50/70 border border-amber-200/60'
+                            : 'hover:bg-slate-50'
+                            }`}
                         >
                           <div className="flex items-center justify-between">
                             <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
                               <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${
-                                  n.type === 'incident_reported' || n.type === 'listing_rejected'
-                                    ? 'bg-rose-500 animate-pulse'
-                                    : n.type === 'listing_approved'
+                                className={`w-2 h-2 rounded-full shrink-0 ${n.type === 'incident_reported' || n.type === 'listing_rejected'
+                                  ? 'bg-rose-500 animate-pulse'
+                                  : n.type === 'listing_approved'
                                     ? 'bg-emerald-500'
-                                    : 'bg-amber-500'
-                                }`}
+                                    : n.type === 'visit_requested'
+                                      ? 'bg-brand-500 animate-pulse'
+                                      : 'bg-amber-500'
+                                  }`}
                               />
                               {n.title}
                             </span>
@@ -393,6 +395,24 @@ export function Header({
                           </div>
 
                           <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
+
+                          {/* Badge Visite demandée */}
+                          {n.type === 'visit_requested' && (
+                            <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                              {n.visitDate && (
+                                <span className="text-[10px] font-bold text-brand-700 bg-brand-100/80 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  <Calendar className="w-3 h-3 text-brand-600" />
+                                  <span>{n.visitDate} ({n.visitTimeSlot || 'Créneau'})</span>
+                                </span>
+                              )}
+                              {n.visitorPhone && (
+                                <span className="text-[10px] font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-slate-500" />
+                                  <span>{n.visitorPhone}</span>
+                                </span>
+                              )}
+                            </div>
+                          )}
 
                           {/* Badge Photos si incident */}
                           {n.photos && n.photos.length > 0 && (
@@ -406,9 +426,26 @@ export function Header({
 
                           <div className="pt-1 flex items-center justify-between">
                             <span className="text-[10px] font-mono font-bold text-slate-400">
-                              {n.incidentId || n.leaseId || n.listingId}
+                              {n.incidentId || n.leaseId || n.listingId || n.convId}
                             </span>
-                            {n.type === 'incident_reported' ? (
+                            {n.type === 'visit_requested' ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsNotifOpen(false);
+                                  const url = n.convId
+                                    ? `/messages?convId=${encodeURIComponent(n.convId)}`
+                                    : n.listingId
+                                      ? `/messages?listingId=${encodeURIComponent(n.listingId)}`
+                                      : '/messages';
+                                  router.push(url);
+                                }}
+                                className="text-xs font-black text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
+                              >
+                                <span>Voir la demande & Répondre</span>
+                                <ExternalLink className="w-3 h-3" />
+                              </button>
+                            ) : n.type === 'incident_reported' ? (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -488,21 +525,21 @@ export function Header({
                           ? isNotice
                             ? 'bg-rose-50/80 border border-rose-200/90'
                             : isReminder
-                            ? 'bg-amber-50/80 border border-amber-200/90'
-                            : 'bg-emerald-50/70 border border-emerald-200/80'
+                              ? 'bg-amber-50/80 border border-amber-200/90'
+                              : 'bg-emerald-50/70 border border-emerald-200/80'
                           : 'hover:bg-slate-50 border border-transparent';
                         const dotColor = !n.read
                           ? isNotice
                             ? 'bg-rose-500 animate-pulse ring-2 ring-rose-200'
                             : isReminder
-                            ? 'bg-amber-500 animate-pulse ring-2 ring-amber-200'
-                            : 'bg-emerald-500 animate-pulse ring-2 ring-emerald-200'
+                              ? 'bg-amber-500 animate-pulse ring-2 ring-amber-200'
+                              : 'bg-emerald-500 animate-pulse ring-2 ring-emerald-200'
                           : 'bg-slate-300';
                         const linkColor = isNotice
                           ? 'text-rose-600 hover:text-rose-700'
                           : isReminder
-                          ? 'text-amber-600 hover:text-amber-700'
-                          : 'text-emerald-600 hover:text-emerald-700';
+                            ? 'text-amber-600 hover:text-amber-700'
+                            : 'text-emerald-600 hover:text-emerald-700';
 
                         return (
                           <div

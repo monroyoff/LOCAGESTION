@@ -13,6 +13,7 @@ import { PublishListingModal } from '@/components/listings/PublishListingModal';
 import { EditListingModal } from '@/components/listings/EditListingModal';
 import { SkeletonListingGrid } from '@/components/ui/SkeletonLoader';
 import { ListingsService, resolveListingAuthorCompany, resolveListingAuthorRole } from '@/lib/services/listings-service';
+import { LeaseService, LandlordNotification } from '@/lib/services/lease-service';
 import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier';
 import {
   getUserResidenceCountry,
@@ -601,6 +602,99 @@ export default function ListingsPage() {
     return computeEntryCost(l).total;
   };
 
+  const handleContactPublisher = (listing: RentalListing) => {
+    const publisherName = listing.authorCompany?.trim()
+      ? listing.authorCompany.trim()
+      : listing.authorName?.trim()
+      ? listing.authorName.trim()
+      : resolveListingAuthorCompany(listing) || 'Bailleur / Propriétaire';
+
+    const convId = `conv-listing-${listing.id}`;
+    const initialText = `Bonjour, je vous contacte au sujet de votre annonce « ${listing.title} » située à ${listing.district}, ${listing.city} (${listing.surface} m², ${formatFCFA(listing.monthlyRent)}/mois). Ce bien est-il toujours disponible ?`;
+
+    try {
+      const STORAGE_KEY_CONVERSATIONS = 'locagestion:conversations:v1';
+      const stored = localStorage.getItem(STORAGE_KEY_CONVERSATIONS);
+      let existingList: any[] = [];
+      if (stored) {
+        try {
+          existingList = JSON.parse(stored);
+        } catch {}
+      }
+      if (!Array.isArray(existingList)) existingList = [];
+
+      const existingIndex = existingList.findIndex(
+        (c) => c.id === convId || (c.listingId && c.listingId === listing.id)
+      );
+
+      const candidateName = user?.name || user?.firstName || 'Candidat Locataire';
+      const candidatePhone = user?.phone || '';
+      const candidateEmail = user?.email || '';
+
+      if (existingIndex >= 0) {
+        existingList[existingIndex] = {
+          ...existingList[existingIndex],
+          isArchived: false,
+          visitorName: candidateName,
+          visitorPhone: candidatePhone,
+          visitorEmail: candidateEmail,
+          publisherName,
+        };
+      } else {
+        const newConv = {
+          id: convId,
+          tenantName: publisherName,
+          publisherName,
+          visitorName: candidateName,
+          visitorPhone: candidatePhone,
+          visitorEmail: candidateEmail,
+          tenantAvatar:
+            listing.authorAvatar ||
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          isOnline: true,
+          propertyTitle: listing.title,
+          propertyUnit: `${listing.district}, ${listing.city}`,
+          propertySurface: `${listing.surface} m²`,
+          propertyPrice: listing.monthlyRent,
+          propertyThumbnail:
+            (listing.images && listing.images[0]) ||
+            'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
+          lastMessage: initialText,
+          lastMessageTime: 'À l’instant',
+          unreadCount: 0,
+          isRead: true,
+          isArchived: false,
+          listingId: listing.id,
+          authorId: listing.authorId,
+          authorName: listing.authorName,
+          authorCompany: listing.authorCompany,
+          authorEmail: listing.authorEmail,
+          authorPhone: listing.authorPhone,
+          authorRole: listing.authorRole,
+          messages: [
+            {
+              id: `m-${Date.now()}`,
+              sender: 'me',
+              senderName: candidateName,
+              text: initialText,
+              time: 'À l’instant',
+              status: 'sent',
+            },
+          ],
+        };
+        existingList.unshift(newConv);
+      }
+
+      localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(existingList));
+      window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+      console.error('Erreur ouverture discussion annonce:', e);
+    }
+
+    router.push(`/messages?convId=${encodeURIComponent(convId)}&listingId=${encodeURIComponent(listing.id)}`);
+  };
+
   const handleBookVisitSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedListingForVisit) return;
@@ -608,7 +702,143 @@ export default function ListingsPage() {
       alert("La date de visite ne peut pas être antérieure à la date d'aujourd'hui.");
       return;
     }
-    const msg = `Demande de visite confirmée pour le ${formatDateFR(visitDate)} (${visitTimeSlot}) — ${selectedListingForVisit.title} ! Notification envoyée au bailleur.`;
+
+    const listing = selectedListingForVisit;
+    const visitorName = user?.name || user?.firstName || 'Candidat Locataire';
+    const visitorPhone = user?.phone || 'Téléphone non précisé';
+    const visitorEmail = user?.email || 'Email non précisé';
+    const convId = `conv-listing-${listing.id}`;
+    const formattedVisitDate = formatDateFR(visitDate);
+    const nowFormatted = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const visitMessageText = `📅 DEMANDE DE VISITE OFFICIELLE\n\nBonjour, je souhaite planifier une visite pour votre bien « ${listing.title} » situé à ${listing.district}, ${listing.city}.\n\n🗓️ Date souhaitée : ${formattedVisitDate}\n⏰ Créneau horaire : ${visitTimeSlot}\n👤 Candidat : ${visitorName}\n📞 Téléphone : ${visitorPhone}\n\nMerci de bien vouloir me confirmer votre disponibilité.`;
+
+    // 1. Notification officielle pour le Bailleur / Démarcheur
+    const notifId = `notif-visit-${Date.now()}`;
+    const landlordNotif: LandlordNotification = {
+      id: notifId,
+      title: `📅 Demande de visite : ${listing.title}`,
+      message: `${visitorName} (${visitorPhone}) souhaite visiter votre bien « ${listing.title} » (${listing.district}, ${listing.city}) le ${formattedVisitDate} sur le créneau ${visitTimeSlot}.`,
+      time: 'À l’instant',
+      timestamp: nowFormatted,
+      type: 'visit_requested',
+      read: false,
+      listingId: listing.id,
+      convId: convId,
+      tenantName: visitorName,
+      property: listing.title,
+      unit: `${listing.district}, ${listing.city}`,
+      visitDate: formattedVisitDate,
+      visitTimeSlot: visitTimeSlot,
+      visitorName: visitorName,
+      visitorPhone: visitorPhone,
+      visitorEmail: visitorEmail,
+      authorId: listing.authorId,
+      authorName: listing.authorName,
+      authorCompany: listing.authorCompany,
+      authorEmail: listing.authorEmail,
+      authorPhone: listing.authorPhone,
+      authorRole: listing.authorRole,
+      emailSentTo: listing.authorEmail,
+    };
+
+    LeaseService.addLandlordNotification(landlordNotif);
+
+    // 2. Création / Envoi automatique dans la boîte de discussion
+    try {
+      const STORAGE_KEY_CONVERSATIONS = 'locagestion:conversations:v1';
+      const stored = localStorage.getItem(STORAGE_KEY_CONVERSATIONS);
+      let existingList: any[] = [];
+      if (stored) {
+        try {
+          existingList = JSON.parse(stored);
+        } catch {}
+      }
+      if (!Array.isArray(existingList)) existingList = [];
+
+      const publisherName = listing.authorCompany?.trim()
+        ? listing.authorCompany.trim()
+        : listing.authorName?.trim()
+        ? listing.authorName.trim()
+        : resolveListingAuthorCompany(listing) || 'Bailleur / Propriétaire';
+
+      const existingIndex = existingList.findIndex(
+        (c) => c.id === convId || (c.listingId && c.listingId === listing.id)
+      );
+
+      const newMsg = {
+        id: `m-${Date.now()}`,
+        sender: 'me',
+        senderName: visitorName,
+        text: visitMessageText,
+        time: 'À l’instant',
+        status: 'sent',
+      };
+
+      if (existingIndex >= 0) {
+        const existingConv = existingList[existingIndex];
+        existingList[existingIndex] = {
+          ...existingConv,
+          messages: [...(existingConv.messages || []), newMsg],
+          lastMessage: `📅 Demande de visite : ${formattedVisitDate} (${visitTimeSlot})`,
+          lastMessageTime: 'À l’instant',
+          isArchived: false,
+          visitorName,
+          visitorPhone,
+          visitorEmail,
+          publisherName,
+        };
+      } else {
+        const newConv = {
+          id: convId,
+          tenantName: publisherName,
+          publisherName,
+          visitorName,
+          visitorPhone,
+          visitorEmail,
+          tenantAvatar:
+            listing.authorAvatar ||
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          isOnline: true,
+          propertyTitle: listing.title,
+          propertyUnit: `${listing.district}, ${listing.city}`,
+          propertySurface: `${listing.surface} m²`,
+          propertyPrice: listing.monthlyRent,
+          propertyThumbnail:
+            (listing.images && listing.images[0]) ||
+            'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
+          lastMessage: `📅 Demande de visite : ${formattedVisitDate} (${visitTimeSlot})`,
+          lastMessageTime: 'À l’instant',
+          unreadCount: 0,
+          isRead: true,
+          isArchived: false,
+          listingId: listing.id,
+          authorId: listing.authorId,
+          authorName: listing.authorName,
+          authorCompany: listing.authorCompany,
+          authorEmail: listing.authorEmail,
+          authorPhone: listing.authorPhone,
+          authorRole: listing.authorRole,
+          messages: [newMsg],
+        };
+        existingList.unshift(newConv);
+      }
+
+      localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(existingList));
+      window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+      window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      window.dispatchEvent(new Event('storage'));
+    } catch (e) {
+      console.error('Erreur enregistrement message visite:', e);
+    }
+
+    const msg = `Demande de visite confirmée pour le ${formattedVisitDate} (${visitTimeSlot}) — ${listing.title} ! Notification et message envoyés avec succès au bailleur.`;
     showToast(msg);
     notifyAction(msg, 'Demande de visite transmise !', 'success');
     setSelectedListingForVisit(null);
@@ -1587,12 +1817,13 @@ export default function ListingsPage() {
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <Link
-                        href="/messages"
-                        className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold text-center transition-all shadow-sm"
+                      <button
+                        type="button"
+                        onClick={() => handleContactPublisher(listing)}
+                        className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold text-center transition-all shadow-sm cursor-pointer"
                       >
                         Contacter
-                      </Link>
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleOpenVisitModal(listing)}
@@ -2015,13 +2246,14 @@ export default function ListingsPage() {
                       <span>WhatsApp</span>
                     </a>
                   )}
-                  <Link
-                    href="/messages"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-pink-glow"
+                  <button
+                    type="button"
+                    onClick={() => handleContactPublisher(selectedListingForDetail)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold transition-all shadow-pink-glow cursor-pointer"
                   >
                     <MessageSquare className="w-3.5 h-3.5 text-white" />
                     <span>Discuter en direct</span>
-                  </Link>
+                  </button>
                 </div>
               </div>
             </div>
@@ -2036,12 +2268,17 @@ export default function ListingsPage() {
                 Fermer
               </button>
 
-              <Link
-                href="/messages"
-                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-center transition-all"
+              <button
+                type="button"
+                onClick={() => {
+                  const target = selectedListingForDetail;
+                  setSelectedListingForDetail(null);
+                  if (target) handleContactPublisher(target);
+                }}
+                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-center transition-all cursor-pointer"
               >
                 Contacter le bailleur
-              </Link>
+              </button>
 
               <button
                 type="button"

@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import {
@@ -34,6 +34,8 @@ import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
 import { notifyAction } from '@/lib/notifications/action-notifier';
 import { SkeletonTable } from '@/components/ui/SkeletonLoader';
+import { ListingsService } from '@/lib/services/listings-service';
+import { areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
 
 interface Message {
   id: string;
@@ -61,9 +63,58 @@ interface Conversation {
   isRead?: boolean;
   isArchived?: boolean;
   messages: Message[];
+  listingId?: string;
+  authorId?: string;
+  authorName?: string;
+  authorCompany?: string;
+  authorEmail?: string;
+  authorPhone?: string;
+  authorRole?: string;
+  publisherName?: string;
+  visitorName?: string;
+  visitorPhone?: string;
+  visitorEmail?: string;
 }
 
 const STORAGE_KEY_CONVERSATIONS = 'locagestion:conversations:v1';
+
+function getConversationContactName(
+  conv: Conversation,
+  currentUser?: any,
+  activeSpace?: string
+): string {
+  const isAuthor =
+    (currentUser?.id && conv.authorId && currentUser.id.toLowerCase() === conv.authorId.toLowerCase()) ||
+    (currentUser?.email && conv.authorEmail && areEmailsEqual(currentUser.email, conv.authorEmail)) ||
+    (currentUser?.phone && conv.authorPhone && arePhoneNumbersEqual(currentUser.phone, conv.authorPhone)) ||
+    (currentUser?.companyName && conv.authorCompany && currentUser.companyName.trim().toLowerCase() === conv.authorCompany.trim().toLowerCase()) ||
+    activeSpace === 'bailleur' ||
+    activeSpace === 'demarcheur';
+
+  if (isAuthor) {
+    return conv.visitorName || conv.tenantName || 'Candidat Locataire';
+  }
+  return conv.publisherName || conv.authorCompany || conv.authorName || conv.tenantName || 'Bailleur / Propriétaire';
+}
+
+function getConversationContactPhone(
+  conv: Conversation,
+  currentUser?: any,
+  activeSpace?: string
+): string {
+  const isAuthor =
+    (currentUser?.id && conv.authorId && currentUser.id.toLowerCase() === conv.authorId.toLowerCase()) ||
+    (currentUser?.email && conv.authorEmail && areEmailsEqual(currentUser.email, conv.authorEmail)) ||
+    (currentUser?.phone && conv.authorPhone && arePhoneNumbersEqual(currentUser.phone, conv.authorPhone)) ||
+    (currentUser?.companyName && conv.authorCompany && currentUser.companyName.trim().toLowerCase() === conv.authorCompany.trim().toLowerCase()) ||
+    activeSpace === 'bailleur' ||
+    activeSpace === 'demarcheur';
+
+  if (isAuthor) {
+    return conv.visitorPhone || conv.authorPhone || '+229 97 00 00 00';
+  }
+  return conv.authorPhone || '+229 97 00 00 00';
+}
 
 function isFakeConversation(c?: Partial<Conversation> | null): boolean {
   if (!c) return true;
@@ -93,8 +144,12 @@ function isFakeConversation(c?: Partial<Conversation> | null): boolean {
   return false;
 }
 
-export default function MessagesPage() {
+function MessagesContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryConvId = searchParams?.get('convId') || null;
+  const queryListingId = searchParams?.get('listingId') || null;
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
   const [activeTab, setActiveTab] = useState<'general' | 'archive'>('general');
@@ -126,6 +181,128 @@ export default function MessagesPage() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Synchronisation dynamique avec le stockage local & événements d'autres pages
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY_CONVERSATIONS);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const sanitized = parsed.filter((c) => !isFakeConversation(c));
+            setConversations(sanitized);
+          }
+        }
+      } catch {}
+    };
+
+    window.addEventListener('locagestion:conversations_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('locagestion:conversations_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
+
+  // Détection des paramètres URL (convId / listingId) pour ouvrir immédiatement le dialogue
+  useEffect(() => {
+    if (!queryConvId && !queryListingId) return;
+
+    // 1. Recherche dans l'état actuel
+    const matchInState = conversations.find(
+      (c) =>
+        (queryConvId && c.id === queryConvId) ||
+        (queryListingId && c.listingId === queryListingId)
+    );
+
+    if (matchInState) {
+      setSelectedConv(matchInState);
+      setMobileChatOpen(true);
+      return;
+    }
+
+    // 2. Recherche dans le localStorage
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY_CONVERSATIONS);
+      if (stored) {
+        const parsed: Conversation[] = JSON.parse(stored);
+        const matchInStorage = parsed.find(
+          (c) =>
+            (queryConvId && c.id === queryConvId) ||
+            (queryListingId && c.listingId === queryListingId)
+        );
+        if (matchInStorage) {
+          setSelectedConv(matchInStorage);
+          setMobileChatOpen(true);
+          return;
+        }
+      }
+    } catch {}
+
+    // 3. Si aucun échange trouvé mais un listingId est fourni, instanciation automatique
+    if (queryListingId) {
+      const allListings = ListingsService.getAllListings();
+      const listing = allListings.find((l) => l.id === queryListingId);
+      if (listing) {
+        const publisherName = listing.authorCompany?.trim()
+          ? listing.authorCompany.trim()
+          : listing.authorName?.trim()
+          ? listing.authorName.trim()
+          : 'Bailleur / Propriétaire';
+
+        const convId = queryConvId || `conv-listing-${listing.id}`;
+        const autoGreeting = `Bonjour, je vous contacte au sujet de votre annonce « ${listing.title} » située à ${listing.district}, ${listing.city} (${listing.surface} m², ${formatFCFA(listing.monthlyRent)}/mois). Ce bien est-il toujours disponible ?`;
+
+        const newConv: Conversation = {
+          id: convId,
+          tenantName: publisherName,
+          publisherName,
+          visitorName: user?.name || user?.firstName || 'Candidat Locataire',
+          visitorPhone: user?.phone || '',
+          visitorEmail: user?.email || '',
+          tenantAvatar: listing.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          isOnline: true,
+          propertyTitle: listing.title,
+          propertyUnit: `${listing.district}, ${listing.city}`,
+          propertySurface: `${listing.surface} m²`,
+          propertyPrice: listing.monthlyRent,
+          propertyThumbnail: (listing.images && listing.images[0]) || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
+          lastMessage: autoGreeting,
+          lastMessageTime: 'À l’instant',
+          unreadCount: 0,
+          isRead: true,
+          isArchived: false,
+          listingId: listing.id,
+          authorId: listing.authorId,
+          authorName: listing.authorName,
+          authorCompany: listing.authorCompany,
+          authorEmail: listing.authorEmail,
+          authorPhone: listing.authorPhone,
+          authorRole: listing.authorRole,
+          messages: [
+            {
+              id: `m-${Date.now()}`,
+              sender: 'me',
+              senderName: user?.name || user?.firstName || 'Moi',
+              text: autoGreeting,
+              time: 'À l’instant',
+              status: 'sent',
+            },
+          ],
+        };
+
+        const updated = [newConv, ...conversations.filter((c) => c.id !== newConv.id)];
+        setConversations(updated);
+        try {
+          localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+        } catch {}
+        setSelectedConv(newConv);
+        setMobileChatOpen(true);
+      }
+    }
+  }, [queryConvId, queryListingId, conversations, user]);
+
   React.useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 300);
     return () => clearTimeout(timer);
@@ -136,6 +313,7 @@ export default function MessagesPage() {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(updated));
+        window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
       } catch {}
     }
   };
@@ -380,7 +558,7 @@ export default function MessagesPage() {
                     <div className="relative -ml-5 shrink-0">
                       <img
                         src={conv.tenantAvatar}
-                        alt={conv.tenantName}
+                        alt={getConversationContactName(conv, user, activeSpace)}
                         className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
                       />
                       {conv.isOnline && (
@@ -393,7 +571,7 @@ export default function MessagesPage() {
                       <div className="flex items-center justify-between gap-1 mb-0.5">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <h4 className="text-xs font-bold text-slate-900 truncate">
-                            {conv.tenantName}
+                            {getConversationContactName(conv, user, activeSpace)}
                           </h4>
                           {conv.isOnline && (
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
@@ -465,7 +643,7 @@ export default function MessagesPage() {
                   <div className="relative -ml-3.5 sm:-ml-4 shrink-0">
                     <img
                       src={selectedConv.tenantAvatar}
-                      alt={selectedConv.tenantName}
+                      alt={getConversationContactName(selectedConv, user, activeSpace)}
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
                     />
                     {selectedConv.isOnline && (
@@ -477,7 +655,7 @@ export default function MessagesPage() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
                     <h3 className="text-xs sm:text-sm font-black text-slate-900 truncate">
-                      {selectedConv.tenantName}
+                      {getConversationContactName(selectedConv, user, activeSpace)}
                     </h3>
                     {selectedConv.isOnline && (
                       <span className="text-[9px] sm:text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1.5 sm:px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
@@ -500,8 +678,8 @@ export default function MessagesPage() {
               {/* Top Action Icons (Phone, Options) */}
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <a
-                  href={`tel:+2290195444430`}
-                  title="Appeler"
+                  href={`tel:${getConversationContactPhone(selectedConv, user, activeSpace).replace(/\s+/g, '')}`}
+                  title={`Appeler (${getConversationContactPhone(selectedConv, user, activeSpace)})`}
                   className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 transition-colors cursor-pointer shrink-0"
                 >
                   <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -669,7 +847,7 @@ export default function MessagesPage() {
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder={`Répondre à ${selectedConv.tenantName}...`}
+                placeholder={`Répondre à ${getConversationContactName(selectedConv, user, activeSpace)}...`}
                 className="flex-1 min-w-0 px-3 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
               />
 
@@ -696,6 +874,20 @@ export default function MessagesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#F4F6F9] p-8 flex items-center justify-center">
+          <SkeletonTable rows={4} />
+        </div>
+      }
+    >
+      <MessagesContent />
+    </Suspense>
   );
 }
 

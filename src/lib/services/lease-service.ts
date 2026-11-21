@@ -127,11 +127,13 @@ export interface LandlordNotification {
     | 'lease_reactivated'
     | 'notice_received'
     | 'listing_approved'
-    | 'listing_rejected';
+    | 'listing_rejected'
+    | 'visit_requested';
   read: boolean;
   leaseId?: string;
   incidentId?: string;
   listingId?: string;
+  convId?: string;
   paymentId?: string;
   tenantName?: string;
   unit?: string;
@@ -139,6 +141,17 @@ export interface LandlordNotification {
   urgency?: string;
   category?: string;
   photos?: string[];
+  visitDate?: string;
+  visitTimeSlot?: string;
+  visitorName?: string;
+  visitorPhone?: string;
+  visitorEmail?: string;
+  authorId?: string;
+  authorName?: string;
+  authorCompany?: string;
+  authorEmail?: string;
+  authorPhone?: string;
+  authorRole?: string;
   emailSentTo?: string;
   emailDelivered?: {
     to: string;
@@ -855,7 +868,7 @@ export const LeaseService = {
     return updatedLease;
   },
 
-  // Notifications Bailleur
+  // Notifications Bailleur & Démarcheur
   getLandlordNotifications(user?: AuthUser | null): LandlordNotification[] {
     if (typeof window === 'undefined') return [];
     try {
@@ -870,6 +883,25 @@ export const LeaseService = {
         const landlordLeaseIds = new Set(landlordLeases.map((l) => l.id));
 
         return parsed.filter((n) => {
+          // Demandes de visite d'annonces
+          if (n.type === 'visit_requested') {
+            if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
+            if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
+            if (n.authorPhone && user.phone && arePhoneNumbersEqual(n.authorPhone, user.phone)) return true;
+            if (n.authorCompany && user.companyName && n.authorCompany.trim().toLowerCase() === user.companyName.trim().toLowerCase()) return true;
+            const userName = (user.name || user.firstName || '').trim().toLowerCase();
+            if (n.authorName && userName && n.authorName.trim().toLowerCase() === userName) return true;
+            if (user.role === 'bailleur' || user.role === 'demarcheur') return true;
+          }
+
+          // Approbation ou rejet d'annonce
+          if (n.type === 'listing_approved' || n.type === 'listing_rejected') {
+            if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
+            if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
+            if (user.role === 'bailleur' || user.role === 'demarcheur') return true;
+          }
+
+          // Gestion des baux et propriétés
           if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
           if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
           if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
@@ -886,10 +918,12 @@ export const LeaseService = {
   addLandlordNotification(notif: LandlordNotification): void {
     if (typeof window === 'undefined') return;
     try {
-      const current = this.getLandlordNotifications();
-      const updated = [notif, ...current];
+      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      const current: LandlordNotification[] = stored ? JSON.parse(stored) : [];
+      const updated = [notif, ...current.filter((n) => n.id !== notif.id)];
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
       notifyStorageChange();
+      window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
     } catch (e) {
       console.error('Erreur ajout notification:', e);
     }
@@ -898,10 +932,14 @@ export const LeaseService = {
   markNotificationsAsRead(): void {
     if (typeof window === 'undefined') return;
     try {
-      const current = this.getLandlordNotifications();
-      const updated = current.map((n) => ({ ...n, read: true }));
-      localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
-      notifyStorageChange();
+      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      if (stored) {
+        const current: LandlordNotification[] = JSON.parse(stored);
+        const updated = current.map((n) => ({ ...n, read: true }));
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
+        notifyStorageChange();
+        window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      }
     } catch (e) {
       console.error('Erreur mise à jour notifications:', e);
     }
