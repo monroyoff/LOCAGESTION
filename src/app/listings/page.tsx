@@ -1378,8 +1378,8 @@ export default function ListingsPage() {
                         {/* Contenu */}
                         <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
                           <div className="space-y-2">
-                            {/* Ligne Référence Officielle */}
-                            <div className="flex items-center justify-between gap-2">
+                            {/* Ligne Référence Officielle (Strictement sur une seule ligne) */}
+                            <div className="flex items-center justify-between gap-1.5 flex-nowrap overflow-x-auto no-scrollbar py-0.5">
                               <div
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -1388,20 +1388,20 @@ export default function ListingsPage() {
                                     showToast(`Référence ${listing.referenceCode || listing.id} copiée !`);
                                   }
                                 }}
-                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-black border border-slate-200 cursor-pointer group/ref"
+                                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-black border border-slate-200 cursor-pointer group/ref shrink-0 whitespace-nowrap"
                                 title="Cliquer pour copier la référence"
                               >
                                 <span className="text-[9px] font-sans font-bold text-slate-400 uppercase">Réf</span>
-                                <span className="group-hover/ref:text-brand-600 transition-colors">
+                                <span className="group-hover/ref:text-brand-600 transition-colors whitespace-nowrap">
                                   {listing.referenceCode || listing.id}
                                 </span>
-                                <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500" />
+                                <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500 shrink-0" />
                               </div>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                              <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200 shrink-0 whitespace-nowrap">
                                   Statut: {resolveListingAuthorRole(listing)}
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-400">
+                                <span className="text-[10px] font-bold text-slate-400 shrink-0 whitespace-nowrap">
                                   {listing.propertyType}
                                 </span>
                               </div>
@@ -1946,8 +1946,8 @@ export default function ListingsPage() {
 
                       {/* Listing Content */}
                       <div className="p-5 space-y-3">
-                        {/* Ligne Référence Officielle & Certification Bailleur */}
-                        <div className="flex items-center justify-between gap-2">
+                        {/* Ligne Référence Officielle & Certification Bailleur (Strictement sur une seule ligne) */}
+                        <div className="flex items-center justify-between gap-1.5 flex-nowrap overflow-x-auto no-scrollbar py-0.5">
                           <div
                             onClick={(e) => {
                               e.stopPropagation();
@@ -1956,26 +1956,26 @@ export default function ListingsPage() {
                                 showToast(`Référence ${listing.referenceCode || listing.id} copiée !`);
                               }
                             }}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-black border border-slate-200/90 shadow-2xs transition-all cursor-pointer group/ref"
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-black border border-slate-200/90 shadow-2xs transition-all cursor-pointer group/ref shrink-0 whitespace-nowrap"
                             title="Cliquer pour copier la référence officielle"
                           >
                             <span className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Réf</span>
-                            <span className="text-slate-900 group-hover/ref:text-brand-600 transition-colors">
+                            <span className="text-slate-900 group-hover/ref:text-brand-600 transition-colors whitespace-nowrap">
                               {listing.referenceCode || listing.id}
                             </span>
-                            <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500 transition-colors" />
+                            <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500 transition-colors shrink-0" />
                           </div>
 
-                          <div className="flex items-center gap-1.5 flex-wrap">
+                          <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
                             {isListingFromLast7Days(listing) && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black border border-rose-200 shadow-2xs">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black border border-rose-200 shadow-2xs shrink-0 whitespace-nowrap">
                                 ✨ Récent (-7j)
                               </span>
                             )}
                             {listing.isVerified && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200/70">
-                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Bailleur Vérifié</span>
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200/70 shrink-0 whitespace-nowrap">
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                <span className="whitespace-nowrap">Bailleur Vérifié</span>
                               </span>
                             )}
                           </div>
