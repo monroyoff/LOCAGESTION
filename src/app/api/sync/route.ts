@@ -9,6 +9,7 @@ const LEASES_FILE = 'leases.json';
 const NOTIFS_FILE = 'notifications.json';
 const USERS_FILE = 'users.json';
 const LISTINGS_FILE = 'listings.json';
+const PROPERTIES_FILE = 'properties.json';
 
 // In-memory global store to guarantee cross-request persistence in serverless instances
 const memoryStore: Record<string, any[]> =
@@ -86,6 +87,7 @@ export async function GET(req: NextRequest) {
     const notifications = readJsonFile<any[]>(NOTIFS_FILE, []);
     const users = readJsonFile<any[]>(USERS_FILE, []);
     const listings = readJsonFile<any[]>(LISTINGS_FILE, []);
+    const properties = readJsonFile<any[]>(PROPERTIES_FILE, []);
 
     // Filtrage contextuel si locataire spécifique demandé, sinon envoi complet pour synchronisation globale
     return NextResponse.json({
@@ -94,6 +96,7 @@ export async function GET(req: NextRequest) {
       notifications,
       users,
       listings,
+      properties,
       timestamp: new Date().toISOString(),
     });
   } catch (e) {
@@ -114,6 +117,7 @@ export async function POST(req: NextRequest) {
       notifications: incomingNotifs,
       user: incomingUser,
       removedListingId,
+      properties: incomingProperties,
     } = body;
 
     // 1. Synchronisation et fusion des baux
@@ -235,16 +239,39 @@ export async function POST(req: NextRequest) {
       writeJsonFile(LISTINGS_FILE, filtered);
     }
 
+    // 5. Synchronisation et fusion des propriétés / patrimoine immobilier
+    if (Array.isArray(incomingProperties) && incomingProperties.length > 0) {
+      const currentProperties = readJsonFile<any[]>(PROPERTIES_FILE, []);
+      const propsMap = new Map<string, any>();
+      currentProperties.forEach((p) => {
+        if (p && p.id) propsMap.set(p.id, p);
+      });
+      incomingProperties.forEach((p) => {
+        if (p && p.id) {
+          const existing = propsMap.get(p.id);
+          if (existing) {
+            propsMap.set(p.id, { ...existing, ...p });
+          } else {
+            propsMap.set(p.id, p);
+          }
+        }
+      });
+      const updatedProperties = Array.from(propsMap.values());
+      writeJsonFile(PROPERTIES_FILE, updatedProperties);
+    }
+
     // Retourner l'état unifié complet
     const finalLeases = readJsonFile<any[]>(LEASES_FILE, []);
     const finalNotifs = readJsonFile<any[]>(NOTIFS_FILE, []);
     const finalUsers = readJsonFile<any[]>(USERS_FILE, []);
+    const finalProperties = readJsonFile<any[]>(PROPERTIES_FILE, []);
 
     return NextResponse.json({
       success: true,
       leases: finalLeases,
       notifications: finalNotifs,
       users: finalUsers,
+      properties: finalProperties,
       timestamp: new Date().toISOString(),
     });
   } catch (e) {

@@ -25,11 +25,11 @@ import {
   ShieldAlert,
   Users,
 } from 'lucide-react';
-import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
 import { formatFCFA } from '@/lib/money/format';
 import { Property, UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
 import { AuthService, areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
+import { PropertyService } from '@/lib/services/property-service';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { PropertyDetailModal } from '@/components/properties/PropertyDetailModal';
 import { NewPropertyModal } from '@/components/properties/NewPropertyModal';
@@ -54,77 +54,29 @@ export default function PropertiesPage() {
   const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
   const [selectedLandlordFilter, setSelectedLandlordFilter] = useState<string>('all');
 
-  React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem('locagestion:properties:v1');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Récupération des utilisateurs connus pour rétro-affecter les propriétaires si manquant
-          const knownUsers = AuthService.getAllKnownUsers();
-          const defaultBailleur = knownUsers.find((u) => u.role === 'bailleur') || knownUsers[0];
-
-          let changed = false;
-          const sanitized = parsed.map((p: Property) => {
-            let propertyChanged = false;
-
-            // Rétro-affectation de l'auteur si absent
-            if (!p.authorName) {
-              propertyChanged = true;
-              p = {
-                ...p,
-                authorId: user?.id || defaultBailleur?.id || 'usr_bailleur_1',
-                authorName: user?.name || defaultBailleur?.name || 'Bailleur Propriétaire',
-                authorEmail: user?.email || defaultBailleur?.email || '',
-                authorPhone: user?.phone || defaultBailleur?.phone || '',
-                authorCompany: user?.companyName || defaultBailleur?.companyName || '',
-                authorMatricule: user?.matricule || defaultBailleur?.matricule || '',
-                authorRole: 'bailleur',
-                createdAt: p.createdAt || '15/01/2025',
-              };
-            }
-
-            // Nettoyage et assainissement des biens existants pour éliminer tout locataire fictif automatique ("Locataire Lot X")
-            const updatedUnits = (p.unitsList || []).map((u) => {
-              if (
-                u.tenant &&
-                (u.tenant.startsWith('Locataire Lot') ||
-                  u.tenant.toLowerCase().includes('fictif') ||
-                  u.tenant.toLowerCase() === 'locataire lot 1')
-              ) {
-                propertyChanged = true;
-                return {
-                  ...u,
-                  tenant: 'Disponible',
-                  status: 'vacant' as const,
-                };
-              }
-              return u;
-            });
-
-            if (propertyChanged) {
-              changed = true;
-              const realOccupiedCount = updatedUnits.filter((u) => u.status === 'occupe').length;
-              return {
-                ...p,
-                occupiedUnits: realOccupiedCount,
-                unitsList: updatedUnits,
-              };
-            }
-            return p;
-          });
-
-          if (changed) {
-            localStorage.setItem('locagestion:properties:v1', JSON.stringify(sanitized));
-          }
-          setProperties(sanitized);
-          setSelectedProperty(sanitized[0]);
-        }
-      }
-    } catch (e) {
-      console.error('Erreur lecture propriétés:', e);
-    }
+  const loadProperties = React.useCallback(() => {
+    const list = PropertyService.getAllProperties();
+    setProperties(list);
+    setSelectedProperty((prev) => {
+      if (prev && list.some((p) => p.id === prev.id)) return prev;
+      return list.length > 0 ? list[0] : null;
+    });
   }, []);
+
+  React.useEffect(() => {
+    loadProperties();
+    PropertyService.syncWithServer().then(() => {
+      loadProperties();
+    });
+
+    const handleUpdate = () => loadProperties();
+    window.addEventListener('locagestion:properties_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('locagestion:properties_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, [loadProperties]);
 
   // Modals State
   const [detailModalProperty, setDetailModalProperty] = useState<Property | null>(null);
@@ -142,16 +94,8 @@ export default function PropertiesPage() {
 
   // Suppression d'un bien
   const handleDeleteProperty = (propertyId: string, propertyName: string) => {
-    setProperties((prev) => {
-      const updated = prev.filter((p) => p.id !== propertyId);
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('locagestion:properties:v1', JSON.stringify(updated));
-      }
-      if (selectedProperty?.id === propertyId) {
-        setSelectedProperty(updated.length > 0 ? updated[0] : null);
-      }
-      return updated;
-    });
+    PropertyService.deleteProperty(propertyId);
+    loadProperties();
     const msg = `Le bien « ${propertyName} » a été supprimé du patrimoine avec succès.`;
     showToast(msg);
     notifyDelete(msg, 'Bien supprimé du patrimoine');
@@ -159,14 +103,9 @@ export default function PropertiesPage() {
 
   // Ajout d'un nouveau bien
   const handleAddProperty = (newProp: Property) => {
-    setProperties((prev) => {
-      const updated = [newProp, ...prev];
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('locagestion:properties:v1', JSON.stringify(updated));
-      }
-      return updated;
-    });
-    setSelectedProperty(newProp);
+    const saved = PropertyService.saveProperty(newProp, user);
+    setSelectedProperty(saved);
+    loadProperties();
     const msg = `La résidence « ${newProp.name} » a été ajoutée au patrimoine avec succès !`;
     showToast(msg);
     notifySave(msg, 'Résidence enregistrée !');
@@ -208,20 +147,11 @@ export default function PropertiesPage() {
     return Array.from(map.values());
   }, [properties]);
 
-  const filteredProperties = properties.filter((p) => {
-    // Si l'utilisateur est un bailleur et non-admin : cloisonnement étanche de son parc immobilier
-    if (user && !isAdmin && user.role === 'bailleur') {
-      const isOwner =
-        (user.id && p.authorId && user.id === p.authorId) ||
-        (user.email && p.authorEmail && areEmailsEqual(user.email, p.authorEmail)) ||
-        (user.phone && p.authorPhone && arePhoneNumbersEqual(user.phone, p.authorPhone)) ||
-        (user.matricule && p.authorMatricule && user.matricule === p.authorMatricule);
-      const isDemoOwner =
-        (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) ||
-        (user.email && areEmailsEqual(user.email, 'mamadou.diallo@locagestion.site'));
-      if (!isOwner && !isDemoOwner) return false;
-    }
+  const userProperties = React.useMemo(() => {
+    return PropertyService.getPropertiesForUser(user, isAdmin);
+  }, [properties, user, isAdmin]);
 
+  const filteredProperties = userProperties.filter((p) => {
     // Filtrage Super-Admin par bailleur spécifique
     if (selectedLandlordFilter !== 'all') {
       const key = p.authorId || p.authorMatricule || p.authorName || 'Bailleur Inconnu';

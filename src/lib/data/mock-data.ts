@@ -2,7 +2,85 @@ import { Property, Tenant, PaymentTransaction, DashboardKPIs, RentalListing } fr
 
 export const MOCK_FEATURED_PROPERTY: Property | null = null;
 
-export const MOCK_PROPERTIES: Property[] = [];
+export const MOCK_PROPERTIES: Property[] = [
+  {
+    id: 'prop-voglossou-allada-01',
+    name: 'Chambre Salon Sanitaire Allada',
+    type: 'Chambre salon sanitaire',
+    address: 'Zone résidentielle Dogoudo, Allada',
+    city: 'Allada',
+    district: 'Dogoudo',
+    country: 'Bénin',
+    totalUnits: 1,
+    occupiedUnits: 1,
+    monthlyRevenue: 25000,
+    imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&auto=format&fit=crop&q=80',
+    ],
+    description: 'Chambre spacieuse avec salon sanitaire autonome à Dogoudo, Allada. Compteur d’électricité personnel Cash Power, accès bitumé et sécurisé.',
+    amenities: [
+      'Compteur électricité personnel Cash Power',
+      'Chambre spacieuse et aérée',
+      'Sanitaire moderne privatif',
+      'Accès bitumé et sécurisé',
+    ],
+    unitsList: [
+      {
+        unit: 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
+        type: 'Chambre Salon Sanitaire • 45 m²',
+        surface: 45,
+        rent: 25000,
+        tenant: 'Jojo VOG',
+        status: 'occupe',
+      },
+    ],
+    authorId: 'usr-bailleur-voglossou',
+    authorName: 'VOGLOSSOU JOHANE',
+    authorEmail: 'jobovog@gmail.com',
+    authorPhone: '+229 01 95 44 44 30',
+    authorCompany: 'MONROY AGENCY',
+    authorMatricule: 'LOCA-MAT-BJ-84291',
+    authorRole: 'bailleur',
+    createdAt: '01/11/2026',
+  },
+  {
+    id: 'prop-diallo-cotonou-01',
+    name: 'Résidence Palmier Royal',
+    type: 'Immeuble',
+    address: 'Boulevard Saint-Michel, Haie Vive',
+    city: 'Cotonou',
+    district: 'Haie Vive',
+    country: 'Bénin',
+    totalUnits: 3,
+    occupiedUnits: 2,
+    monthlyRevenue: 450000,
+    imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&auto=format&fit=crop&q=80',
+    ],
+    description: 'Immeuble de haut standing à Haie Vive.',
+    amenities: [
+      'Compteurs prépayés individuels',
+      'Réserve d’eau et surpresseur',
+      'Gardien permanent 24/7',
+    ],
+    unitsList: [
+      { unit: 'Lot 101', type: '2 Pièces', surface: 50, rent: 150000, tenant: 'Clarisse Bakayoko', status: 'occupe' },
+      { unit: 'Lot 102', type: '3 Pièces', surface: 75, rent: 300000, tenant: 'Ibrahim Touré', status: 'occupe' },
+      { unit: 'Lot 103', type: 'Studio', surface: 30, rent: 100000, tenant: 'Disponible', status: 'vacant' },
+    ],
+    authorId: 'usr-bailleur-1',
+    authorName: 'Mamadou Diallo',
+    authorEmail: 'mamadou.diallo@locagestion.site',
+    authorPhone: '+229 97 00 00 00',
+    authorCompany: 'LOCA IMMO',
+    authorMatricule: 'LOCA-MAT-BJ-00001',
+    authorRole: 'bailleur',
+    createdAt: '15/01/2026',
+  },
+];
 
 export const MOCK_KPIS: DashboardKPIs = {
   collectedRent: {

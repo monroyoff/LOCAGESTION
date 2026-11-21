@@ -18,6 +18,7 @@ import { Property } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 import { getUserResidenceCountry, getUserResidenceCity } from '@/lib/services/geo-service';
 import { AuthService } from '@/lib/services/auth-service';
+import { PropertyService } from '@/lib/services/property-service';
 
 interface NewPropertyModalProps {
   isOpen: boolean;
@@ -165,7 +166,8 @@ export function NewPropertyModal({
       createdAt: new Date().toLocaleDateString('fr-FR'),
     };
 
-    onAddProperty(newProperty);
+    const saved = PropertyService.saveProperty(newProperty, currentUser);
+    onAddProperty(saved);
     onClose();
   };
 

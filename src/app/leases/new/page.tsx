@@ -71,6 +71,7 @@ import {
   Lease,
 } from '@/lib/services/lease-service';
 import { AuthService, generateUserMatricule, isCanonicalJojoVog } from '@/lib/services/auth-service';
+import { PropertyService } from '@/lib/services/property-service';
 import {
   ParaphStyle,
   PARAPH_STYLES,
@@ -403,29 +404,24 @@ export default function NewLeasePage() {
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('locagestion:properties:v1');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setUserProperties(parsed);
-          setSelectedPropertyId(parsed[0].id);
-          setSelectedProperty(parsed[0].name);
-          setPropertyMode('portfolio');
-          if (parsed[0].country) {
-            setSelectedCountryName(parsed[0].country);
+      const allProps = PropertyService.getAllProperties();
+      if (allProps.length > 0) {
+        setUserProperties(allProps);
+        setSelectedPropertyId(allProps[0].id);
+        setSelectedProperty(allProps[0].name);
+        setPropertyMode('portfolio');
+        if (allProps[0].country) {
+          setSelectedCountryName(allProps[0].country);
+        }
+        const defaultUnit = allProps[0].unitsList?.find((u: any) => u.status === 'vacant') || allProps[0].unitsList?.[0];
+        if (defaultUnit) {
+          setUnitNumber(`${defaultUnit.unit} (${defaultUnit.type})`);
+          if (defaultUnit.rent) {
+            setMonthlyRent(String(defaultUnit.rent));
           }
-          const defaultUnit = parsed[0].unitsList?.find((u: any) => u.status === 'vacant') || parsed[0].unitsList?.[0];
-          if (defaultUnit) {
-            setUnitNumber(`${defaultUnit.unit} (${defaultUnit.type})`);
-            if (defaultUnit.rent) {
-              setMonthlyRent(String(defaultUnit.rent));
-            }
-          }
-        } else {
-          setPropertyMode('manual');
         }
       } else {
-        setPropertyMode(MOCK_PROPERTIES.length > 0 ? 'portfolio' : 'manual');
+        setPropertyMode('manual');
       }
     } catch (e) {
       console.error('Erreur lecture propriétés pour bail:', e);
@@ -3185,37 +3181,12 @@ export default function NewLeasePage() {
 
             // Mettre à jour le lot loué dans le patrimoine pour le marquer comme désormais occupé par ce locataire
             try {
-              const stored = localStorage.getItem('locagestion:properties:v1');
-              if (stored) {
-                const props = JSON.parse(stored);
-                if (Array.isArray(props)) {
-                  const updated = props.map((p: Property) => {
-                    if (p.id === selectedPropertyId || p.name === transmittedLease.property) {
-                      const updatedUnits = (p.unitsList || []).map((u) => {
-                        if (
-                          transmittedLease.unit &&
-                          (transmittedLease.unit.includes(u.unit) || u.unit.includes(transmittedLease.unit))
-                        ) {
-                          return {
-                            ...u,
-                            status: 'occupe' as const,
-                            tenant: transmittedLease.tenant,
-                          };
-                        }
-                        return u;
-                      });
-                      const occupied = updatedUnits.filter((u) => u.status === 'occupe').length;
-                      return {
-                        ...p,
-                        occupiedUnits: occupied,
-                        unitsList: updatedUnits,
-                      };
-                    }
-                    return p;
-                  });
-                  localStorage.setItem('locagestion:properties:v1', JSON.stringify(updated));
-                }
-              }
+              PropertyService.updateUnitStatus(
+                selectedPropertyId || transmittedLease.property,
+                transmittedLease.unit,
+                'occupe',
+                transmittedLease.tenant
+              );
             } catch (e) {
               console.error('Erreur mise à jour occupation bien:', e);
             }

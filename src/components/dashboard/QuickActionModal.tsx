@@ -13,6 +13,9 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { LeaseService } from '@/lib/services/lease-service';
+import { PropertyService } from '@/lib/services/property-service';
+import { AuthService } from '@/lib/services/auth-service';
+import { Property } from '@/lib/types';
 
 interface QuickActionModalProps {
   actionType: 'new_lease' | 'new_payment' | 'new_property' | null;
@@ -35,13 +38,10 @@ export function QuickActionModal({
 
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('locagestion:properties:v1');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setPropertiesList(parsed.map((p: any) => ({ id: p.id, name: p.name })));
-          setPropertyChoice(parsed[0].name);
-        }
+      const allProps = PropertyService.getAllProperties();
+      if (allProps.length > 0) {
+        setPropertiesList(allProps.map((p) => ({ id: p.id, name: p.name })));
+        setPropertyChoice(allProps[0].name);
       }
     } catch {}
   }, []);
@@ -59,7 +59,47 @@ export function QuickActionModal({
       onSuccess(msg);
       notifySave(msg, 'Bail généré avec succès !');
     } else {
-      const msg = `Nouvelle résidence enregistrée dans le parc immobilier.`;
+      const propName = propertyChoice.trim() || 'Nouvelle Résidence';
+      const rentVal = parseInt(amount, 10) || 0;
+      const currentUser = AuthService.getCurrentUser();
+
+      const newProp: Property = {
+        id: `prop-${Date.now()}`,
+        name: propName,
+        type: 'Résidence',
+        address: 'Centre-ville',
+        city: currentUser?.residenceCity || 'Cotonou',
+        district: currentUser?.residenceDistrict || 'Centre',
+        country: currentUser?.projectCountry || currentUser?.residenceCountry || 'Bénin',
+        totalUnits: 1,
+        occupiedUnits: tenantName.trim() ? 1 : 0,
+        monthlyRevenue: rentVal,
+        imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
+        images: ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80'],
+        description: `Propriété ${propName} enregistrée via action rapide.`,
+        amenities: ['Compteurs individuels', 'Sécurisé'],
+        unitsList: [
+          {
+            unit: unitChoice.trim() || 'Lot 1',
+            type: 'Chambre Salon Sanitaire',
+            surface: 45,
+            rent: rentVal,
+            tenant: tenantName.trim() || 'Disponible',
+            status: tenantName.trim() ? 'occupe' : 'vacant',
+          },
+        ],
+        authorId: currentUser?.id,
+        authorName: currentUser?.name || 'Bailleur Propriétaire',
+        authorEmail: currentUser?.email,
+        authorPhone: currentUser?.phone,
+        authorCompany: currentUser?.companyName,
+        authorMatricule: currentUser?.matricule,
+        authorRole: 'bailleur',
+        createdAt: new Date().toLocaleDateString('fr-FR'),
+      };
+
+      PropertyService.saveProperty(newProp, currentUser);
+      const msg = `La résidence « ${propName} » a été enregistrée dans votre patrimoine avec succès.`;
       onSuccess(msg);
       notifySave(msg, 'Résidence enregistrée !');
     }
