@@ -36,11 +36,15 @@ import { notifyAction } from '@/lib/notifications/action-notifier';
 import { SkeletonTable } from '@/components/ui/SkeletonLoader';
 import { ListingsService } from '@/lib/services/listings-service';
 import { areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
+import { LeaseService, LandlordNotification } from '@/lib/services/lease-service';
 
 interface Message {
   id: string;
   sender: 'them' | 'me';
+  senderRole?: 'bailleur' | 'locataire' | 'demarcheur' | 'visitor';
   senderName: string;
+  senderAvatar?: string;
+  senderId?: string;
   text?: string;
   imageUrl?: string;
   time: string;
@@ -51,6 +55,12 @@ interface Conversation {
   id: string;
   tenantName: string;
   tenantAvatar: string;
+  publisherName?: string;
+  publisherAvatar?: string;
+  visitorName?: string;
+  visitorAvatar?: string;
+  visitorPhone?: string;
+  visitorEmail?: string;
   isOnline: boolean;
   propertyTitle: string;
   propertyUnit: string;
@@ -60,6 +70,8 @@ interface Conversation {
   lastMessage: string;
   lastMessageTime: string;
   unreadCount?: number;
+  hasUnread?: boolean;
+  unreadBy?: 'bailleur' | 'locataire';
   isRead?: boolean;
   isArchived?: boolean;
   messages: Message[];
@@ -70,10 +82,6 @@ interface Conversation {
   authorEmail?: string;
   authorPhone?: string;
   authorRole?: string;
-  publisherName?: string;
-  visitorName?: string;
-  visitorPhone?: string;
-  visitorEmail?: string;
 }
 
 const STORAGE_KEY_CONVERSATIONS = 'locagestion:conversations:v1';
@@ -95,6 +103,64 @@ function getConversationContactName(
     return conv.visitorName || conv.tenantName || 'Candidat Locataire';
   }
   return conv.publisherName || conv.authorCompany || conv.authorName || conv.tenantName || 'Bailleur / Propriétaire';
+}
+
+function getConversationContactAvatar(
+  conv: Conversation,
+  currentUser?: any,
+  activeSpace?: string
+): string {
+  const isAuthor =
+    (currentUser?.id && conv.authorId && currentUser.id.toLowerCase() === conv.authorId.toLowerCase()) ||
+    (currentUser?.email && conv.authorEmail && areEmailsEqual(currentUser.email, conv.authorEmail)) ||
+    (currentUser?.phone && conv.authorPhone && arePhoneNumbersEqual(currentUser.phone, conv.authorPhone)) ||
+    (currentUser?.companyName && conv.authorCompany && currentUser.companyName.trim().toLowerCase() === conv.authorCompany.trim().toLowerCase()) ||
+    activeSpace === 'bailleur' ||
+    activeSpace === 'demarcheur';
+
+  if (isAuthor) {
+    // Le bailleur voit la photo du candidat/locataire
+    return (
+      conv.visitorAvatar ||
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
+    );
+  }
+
+  // Le candidat voit le logo du bailleur/propriétaire
+  return (
+    conv.publisherAvatar ||
+    conv.tenantAvatar ||
+    'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400'
+  );
+}
+
+function isMessageSentByCurrentUser(
+  msg: Message,
+  currentUser?: any,
+  activeSpace?: string,
+  conv?: Conversation | null
+): boolean {
+  const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
+
+  if (msg.senderRole) {
+    if (isBailleurSide) {
+      return msg.senderRole === 'bailleur' || msg.senderRole === 'demarcheur';
+    } else {
+      return msg.senderRole === 'locataire' || msg.senderRole === 'visitor';
+    }
+  }
+
+  if (conv?.visitorName && msg.senderName === conv.visitorName) {
+    return !isBailleurSide;
+  }
+
+  if (currentUser?.name && msg.senderName) {
+    if (msg.senderName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) {
+      return true;
+    }
+  }
+
+  return msg.sender === 'me';
 }
 
 function getConversationContactPhone(
@@ -204,6 +270,26 @@ function MessagesContent() {
     };
   }, []);
 
+  const selectAndMarkAsRead = (conv: Conversation) => {
+    const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
+    const hasUnread = conv.hasUnread || (conv.unreadCount && conv.unreadCount > 0);
+
+    if (hasUnread) {
+      const updatedConv: Conversation = {
+        ...conv,
+        unreadCount: 0,
+        hasUnread: false,
+        isRead: true,
+      };
+      setSelectedConv(updatedConv);
+      const updatedList = conversations.map((c) => (c.id === conv.id ? updatedConv : c));
+      saveConversations(updatedList);
+    } else {
+      setSelectedConv(conv);
+    }
+    setMobileChatOpen(true);
+  };
+
   // Détection des paramètres URL (convId / listingId) pour ouvrir immédiatement le dialogue
   useEffect(() => {
     if (!queryConvId && !queryListingId) return;
@@ -216,8 +302,7 @@ function MessagesContent() {
     );
 
     if (matchInState) {
-      setSelectedConv(matchInState);
-      setMobileChatOpen(true);
+      selectAndMarkAsRead(matchInState);
       return;
     }
 
@@ -232,8 +317,7 @@ function MessagesContent() {
             (queryListingId && c.listingId === queryListingId)
         );
         if (matchInStorage) {
-          setSelectedConv(matchInStorage);
-          setMobileChatOpen(true);
+          selectAndMarkAsRead(matchInStorage);
           return;
         }
       }
@@ -257,10 +341,12 @@ function MessagesContent() {
           id: convId,
           tenantName: publisherName,
           publisherName,
+          publisherAvatar: listing.authorAvatar || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
           visitorName: user?.name || user?.firstName || 'Candidat Locataire',
+          visitorAvatar: user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
           visitorPhone: user?.phone || '',
           visitorEmail: user?.email || '',
-          tenantAvatar: listing.authorAvatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          tenantAvatar: user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
           isOnline: true,
           propertyTitle: listing.title,
           propertyUnit: `${listing.district}, ${listing.city}`,
@@ -283,7 +369,9 @@ function MessagesContent() {
             {
               id: `m-${Date.now()}`,
               sender: 'me',
+              senderRole: (activeSpace === 'bailleur' || activeSpace === 'demarcheur') ? 'bailleur' : 'locataire',
               senderName: user?.name || user?.firstName || 'Moi',
+              senderAvatar: user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
               text: autoGreeting,
               time: 'À l’instant',
               status: 'sent',
@@ -297,8 +385,7 @@ function MessagesContent() {
           localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(updated));
           window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
         } catch {}
-        setSelectedConv(newConv);
-        setMobileChatOpen(true);
+        selectAndMarkAsRead(newConv);
       }
     }
   }, [queryConvId, queryListingId, conversations, user]);
@@ -337,10 +424,22 @@ function MessagesContent() {
     e.preventDefault();
     if (!inputText.trim() || !selectedConv) return;
 
+    const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
+    const myRole = isBailleurSide ? ('bailleur' as const) : ('locataire' as const);
+    const myName = user?.name || user?.firstName || (isBailleurSide ? 'Bailleur' : 'Locataire');
+    const myAvatar =
+      user?.avatarUrl ||
+      (isBailleurSide
+        ? selectedConv.publisherAvatar || selectedConv.tenantAvatar
+        : selectedConv.visitorAvatar) ||
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+
     const newMessage: Message = {
       id: `m-${Date.now()}`,
       sender: 'me',
-      senderName: user?.name || 'Moi',
+      senderRole: myRole,
+      senderName: myName,
+      senderAvatar: myAvatar,
       text: inputText,
       time: 'À l’instant',
       status: 'sent',
@@ -351,11 +450,44 @@ function MessagesContent() {
       messages: [...selectedConv.messages, newMessage],
       lastMessage: inputText,
       lastMessageTime: 'À l’instant',
+      unreadCount: 1,
+      hasUnread: true,
+      unreadBy: isBailleurSide ? 'locataire' : 'bailleur',
     };
 
     setSelectedConv(updatedConv);
     saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     setInputText('');
+
+    // Si c'est un locataire/candidat qui répond ou écrit au bailleur, notifier le bailleur dans sa cloche
+    if (!isBailleurSide) {
+      const landlordNotif: LandlordNotification = {
+        id: `notif-msg-${Date.now()}`,
+        title: `💬 Nouveau message : ${selectedConv.propertyTitle}`,
+        message: `${myName} vous a répondu : « ${inputText.slice(0, 70)}${inputText.length > 70 ? '...' : ''} »`,
+        time: 'À l’instant',
+        timestamp: new Date().toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        type: 'message_received',
+        read: false,
+        listingId: selectedConv.listingId,
+        convId: selectedConv.id,
+        tenantName: myName,
+        property: selectedConv.propertyTitle,
+        unit: selectedConv.propertyUnit,
+        visitorName: selectedConv.visitorName,
+        visitorPhone: selectedConv.visitorPhone,
+        authorId: selectedConv.authorId,
+        authorEmail: selectedConv.authorEmail,
+        authorPhone: selectedConv.authorPhone,
+      };
+      LeaseService.addLandlordNotification(landlordNotif);
+    }
   };
 
   const handleAttachDocument = () => {
@@ -537,10 +669,7 @@ function MessagesContent() {
                 return (
                   <div
                     key={conv.id}
-                    onClick={() => {
-                      setSelectedConv(conv);
-                      setMobileChatOpen(true);
-                    }}
+                    onClick={() => selectAndMarkAsRead(conv)}
                     className={`p-3 rounded-2xl transition-all cursor-pointer flex items-center gap-3 relative ${
                       isSelected
                         ? 'bg-slate-100/90 shadow-sm'
@@ -557,7 +686,7 @@ function MessagesContent() {
                     {/* Contact Mini Avatar Overlap */}
                     <div className="relative -ml-5 shrink-0">
                       <img
-                        src={conv.tenantAvatar}
+                        src={getConversationContactAvatar(conv, user, activeSpace)}
                         alt={getConversationContactName(conv, user, activeSpace)}
                         className="w-8 h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
                       />
@@ -642,7 +771,7 @@ function MessagesContent() {
                   />
                   <div className="relative -ml-3.5 sm:-ml-4 shrink-0">
                     <img
-                      src={selectedConv.tenantAvatar}
+                      src={getConversationContactAvatar(selectedConv, user, activeSpace)}
                       alt={getConversationContactName(selectedConv, user, activeSpace)}
                       className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover ring-2 ring-white shadow-sm"
                     />
@@ -740,7 +869,7 @@ function MessagesContent() {
             {/* Chat Messages Stream */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-3 sm:space-y-4 bg-[#FAFBFD]">
               {selectedConv.messages.map((msg) => {
-                const isMe = msg.sender === 'me';
+                const isMe = isMessageSentByCurrentUser(msg, user, activeSpace, selectedConv);
 
                 return (
                   <div
@@ -752,9 +881,9 @@ function MessagesContent() {
                     {/* Left avatar for received message */}
                     {!isMe && (
                       <img
-                        src={selectedConv.tenantAvatar}
+                        src={msg.senderAvatar || getConversationContactAvatar(selectedConv, user, activeSpace)}
                         alt={msg.senderName}
-                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0 mb-1"
+                        className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0 mb-1 ring-1 ring-slate-200"
                       />
                     )}
 
@@ -786,7 +915,7 @@ function MessagesContent() {
                         )}
 
                         {/* Text */}
-                        {msg.text && <p>{msg.text}</p>}
+                        {msg.text && <p className="whitespace-pre-wrap">{msg.text}</p>}
 
                         {/* Timestamp & Checkmarks */}
                         <div
@@ -803,7 +932,14 @@ function MessagesContent() {
                     {/* Right avatar for sent message */}
                     {isMe && (
                       <img
-                        src={user?.avatarUrl || "https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80"}
+                        src={
+                          msg.senderAvatar ||
+                          user?.avatarUrl ||
+                          ((activeSpace === 'bailleur' || activeSpace === 'demarcheur')
+                            ? selectedConv.publisherAvatar || selectedConv.tenantAvatar
+                            : selectedConv.visitorAvatar) ||
+                          "https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80"
+                        }
                         alt={user?.name || "Moi"}
                         className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover shrink-0 mb-1 ring-1 ring-brand-500/50"
                       />

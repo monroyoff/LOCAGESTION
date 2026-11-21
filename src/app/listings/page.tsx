@@ -630,27 +630,52 @@ export default function ListingsPage() {
       const candidateName = user?.name || user?.firstName || 'Candidat Locataire';
       const candidatePhone = user?.phone || '';
       const candidateEmail = user?.email || '';
+      const candidateAvatar = user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+      const publisherAvatar = listing.authorAvatar || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400';
+
+      const newMsg = {
+        id: `m-${Date.now()}`,
+        sender: 'them' as const,
+        senderRole: 'locataire' as const,
+        senderName: candidateName,
+        senderAvatar: candidateAvatar,
+        text: initialText,
+        time: 'À l’instant',
+        status: 'sent' as const,
+      };
 
       if (existingIndex >= 0) {
         existingList[existingIndex] = {
           ...existingList[existingIndex],
+          messages: [...(existingList[existingIndex].messages || []), newMsg],
+          lastMessage: initialText,
+          lastMessageTime: 'À l’instant',
           isArchived: false,
           visitorName: candidateName,
           visitorPhone: candidatePhone,
           visitorEmail: candidateEmail,
+          visitorAvatar: candidateAvatar,
           publisherName,
+          publisherAvatar,
+          tenantAvatar: candidateAvatar,
+          unreadCount: (existingList[existingIndex].unreadCount || 0) + 1,
+          hasUnread: true,
+          unreadBy: 'bailleur',
         };
       } else {
         const newConv = {
           id: convId,
           tenantName: publisherName,
           publisherName,
+          publisherAvatar,
           visitorName: candidateName,
           visitorPhone: candidatePhone,
           visitorEmail: candidateEmail,
-          tenantAvatar:
-            listing.authorAvatar ||
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          visitorAvatar: candidateAvatar,
+          tenantAvatar: candidateAvatar,
+          unreadCount: 1,
+          hasUnread: true,
+          unreadBy: 'bailleur',
           isOnline: true,
           propertyTitle: listing.title,
           propertyUnit: `${listing.district}, ${listing.city}`,
@@ -661,8 +686,7 @@ export default function ListingsPage() {
             'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
           lastMessage: initialText,
           lastMessageTime: 'À l’instant',
-          unreadCount: 0,
-          isRead: true,
+          isRead: false,
           isArchived: false,
           listingId: listing.id,
           authorId: listing.authorId,
@@ -671,22 +695,49 @@ export default function ListingsPage() {
           authorEmail: listing.authorEmail,
           authorPhone: listing.authorPhone,
           authorRole: listing.authorRole,
-          messages: [
-            {
-              id: `m-${Date.now()}`,
-              sender: 'me',
-              senderName: candidateName,
-              text: initialText,
-              time: 'À l’instant',
-              status: 'sent',
-            },
-          ],
+          messages: [newMsg],
         };
         existingList.unshift(newConv);
       }
 
       localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(existingList));
+
+      // Notification pour le Bailleur / Démarcheur dans sa cloche
+      const notifId = `notif-msg-${Date.now()}`;
+      const landlordNotif: LandlordNotification = {
+        id: notifId,
+        title: `💬 Nouveau message : ${listing.title}`,
+        message: `${candidateName} (${candidatePhone || 'En direct'}) vous a contacté au sujet de « ${listing.title} » (${listing.district}, ${listing.city}).`,
+        time: 'À l’instant',
+        timestamp: new Date().toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        type: 'message_received',
+        read: false,
+        listingId: listing.id,
+        convId: convId,
+        tenantName: candidateName,
+        property: listing.title,
+        unit: `${listing.district}, ${listing.city}`,
+        visitorName: candidateName,
+        visitorPhone: candidatePhone,
+        visitorEmail: candidateEmail,
+        authorId: listing.authorId,
+        authorName: listing.authorName,
+        authorCompany: listing.authorCompany,
+        authorEmail: listing.authorEmail,
+        authorPhone: listing.authorPhone,
+        authorRole: listing.authorRole,
+        emailSentTo: listing.authorEmail,
+      };
+      LeaseService.addLandlordNotification(landlordNotif);
+
       window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+      window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
       window.dispatchEvent(new Event('storage'));
     } catch (e) {
       console.error('Erreur ouverture discussion annonce:', e);
@@ -772,13 +823,18 @@ export default function ListingsPage() {
         (c) => c.id === convId || (c.listingId && c.listingId === listing.id)
       );
 
+      const visitorAvatar = user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
+      const publisherAvatar = listing.authorAvatar || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400';
+
       const newMsg = {
         id: `m-${Date.now()}`,
-        sender: 'me',
+        sender: 'them' as const,
+        senderRole: 'locataire' as const,
         senderName: visitorName,
+        senderAvatar: visitorAvatar,
         text: visitMessageText,
         time: 'À l’instant',
-        status: 'sent',
+        status: 'sent' as const,
       };
 
       if (existingIndex >= 0) {
@@ -792,19 +848,28 @@ export default function ListingsPage() {
           visitorName,
           visitorPhone,
           visitorEmail,
+          visitorAvatar,
           publisherName,
+          publisherAvatar,
+          tenantAvatar: visitorAvatar,
+          unreadCount: (existingConv.unreadCount || 0) + 1,
+          hasUnread: true,
+          unreadBy: 'bailleur',
         };
       } else {
         const newConv = {
           id: convId,
           tenantName: publisherName,
           publisherName,
+          publisherAvatar,
           visitorName,
           visitorPhone,
           visitorEmail,
-          tenantAvatar:
-            listing.authorAvatar ||
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+          visitorAvatar,
+          tenantAvatar: visitorAvatar,
+          unreadCount: 1,
+          hasUnread: true,
+          unreadBy: 'bailleur',
           isOnline: true,
           propertyTitle: listing.title,
           propertyUnit: `${listing.district}, ${listing.city}`,
@@ -815,8 +880,7 @@ export default function ListingsPage() {
             'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
           lastMessage: `📅 Demande de visite : ${formattedVisitDate} (${visitTimeSlot})`,
           lastMessageTime: 'À l’instant',
-          unreadCount: 0,
-          isRead: true,
+          isRead: false,
           isArchived: false,
           listingId: listing.id,
           authorId: listing.authorId,

@@ -371,7 +371,7 @@ export function Header({
                               ? 'bg-rose-50/70 border border-rose-200/80'
                               : n.type === 'listing_approved'
                                 ? 'bg-emerald-50/70 border border-emerald-200/80'
-                                : n.type === 'visit_requested'
+                                : n.type === 'visit_requested' || n.type === 'message_received'
                                   ? 'bg-brand-50/80 border border-brand-200/90 shadow-xs'
                                   : 'bg-amber-50/70 border border-amber-200/60'
                             : 'hover:bg-slate-50'
@@ -384,7 +384,7 @@ export function Header({
                                   ? 'bg-rose-500 animate-pulse'
                                   : n.type === 'listing_approved'
                                     ? 'bg-emerald-500'
-                                    : n.type === 'visit_requested'
+                                    : n.type === 'visit_requested' || n.type === 'message_received'
                                       ? 'bg-brand-500 animate-pulse'
                                       : 'bg-amber-500'
                                   }`}
@@ -396,8 +396,8 @@ export function Header({
 
                           <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
 
-                          {/* Badge Visite demandée */}
-                          {n.type === 'visit_requested' && (
+                          {/* Badge Visite demandée ou Message reçu */}
+                          {(n.type === 'visit_requested' || n.type === 'message_received') && (
                             <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                               {n.visitDate && (
                                 <span className="text-[10px] font-bold text-brand-700 bg-brand-100/80 px-2 py-0.5 rounded-md flex items-center gap-1">
@@ -428,7 +428,7 @@ export function Header({
                             <span className="text-[10px] font-mono font-bold text-slate-400">
                               {n.incidentId || n.leaseId || n.listingId || n.convId}
                             </span>
-                            {n.type === 'visit_requested' ? (
+                            {n.type === 'visit_requested' || n.type === 'message_received' ? (
                               <button
                                 type="button"
                                 onClick={() => {
@@ -442,7 +442,7 @@ export function Header({
                                 }}
                                 className="text-xs font-black text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
                               >
-                                <span>Voir la demande & Répondre</span>
+                                <span>{n.type === 'visit_requested' ? 'Voir la demande & Répondre' : 'Lire le message & Répondre'}</span>
                                 <ExternalLink className="w-3 h-3" />
                               </button>
                             ) : n.type === 'incident_reported' ? (

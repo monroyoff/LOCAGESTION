@@ -133,6 +133,43 @@ export function Sidebar({
   const [currentPortalTab, setCurrentPortalTab] = useState<string | null>(null);
   const [tenantNoticesCount, setTenantNoticesCount] = useState(0);
   const [landlordNoticesCount, setLandlordNoticesCount] = useState(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+
+  useEffect(() => {
+    const updateUnreadMessages = () => {
+      if (typeof window === 'undefined') return;
+      try {
+        const stored = localStorage.getItem('locagestion:conversations:v1');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const isLandlordSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
+            const count = parsed.filter((c: any) => {
+              if (c.isArchived) return false;
+              if (isLandlordSide) {
+                return (c.unreadCount && c.unreadCount > 0 && c.unreadBy !== 'locataire') || (c.hasUnread && c.unreadBy !== 'locataire');
+              } else {
+                return (c.unreadCount && c.unreadCount > 0 && c.unreadBy === 'locataire') || (c.hasUnread && c.unreadBy === 'locataire');
+              }
+            }).length;
+            setUnreadMessagesCount(count);
+            return;
+          }
+        }
+      } catch {}
+      setUnreadMessagesCount(0);
+    };
+
+    updateUnreadMessages();
+    window.addEventListener('locagestion:conversations_updated', updateUnreadMessages);
+    window.addEventListener('locagestion:notifications_updated', updateUnreadMessages);
+    window.addEventListener('storage', updateUnreadMessages);
+    return () => {
+      window.removeEventListener('locagestion:conversations_updated', updateUnreadMessages);
+      window.removeEventListener('locagestion:notifications_updated', updateUnreadMessages);
+      window.removeEventListener('storage', updateUnreadMessages);
+    };
+  }, [activeSpace]);
 
   useEffect(() => {
     const updateNoticesCount = () => {
@@ -260,6 +297,8 @@ export function Sidebar({
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
+      badgeCount: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
+      badgeColor: 'bg-brand-500',
     },
     {
       name: 'Relances & Préavis',
@@ -318,6 +357,8 @@ export function Sidebar({
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
+      badgeCount: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
+      badgeColor: 'bg-brand-500',
     },
     {
       name: 'Publier une annonce',
@@ -387,6 +428,8 @@ export function Sidebar({
       href: '/messages',
       icon: MessageSquare,
       active: pathname.startsWith('/messages'),
+      badgeCount: unreadMessagesCount > 0 ? unreadMessagesCount : undefined,
+      badgeColor: 'bg-brand-500',
     },
   ];
 

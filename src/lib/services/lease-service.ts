@@ -128,7 +128,8 @@ export interface LandlordNotification {
     | 'notice_received'
     | 'listing_approved'
     | 'listing_rejected'
-    | 'visit_requested';
+    | 'visit_requested'
+    | 'message_received';
   read: boolean;
   leaseId?: string;
   incidentId?: string;
@@ -883,8 +884,8 @@ export const LeaseService = {
         const landlordLeaseIds = new Set(landlordLeases.map((l) => l.id));
 
         return parsed.filter((n) => {
-          // Demandes de visite d'annonces
-          if (n.type === 'visit_requested') {
+          // Demandes de visite d'annonces et messages reçus
+          if (n.type === 'visit_requested' || n.type === 'message_received') {
             if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
             if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
             if (n.authorPhone && user.phone && arePhoneNumbersEqual(n.authorPhone, user.phone)) return true;
