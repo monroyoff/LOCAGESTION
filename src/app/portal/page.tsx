@@ -1030,8 +1030,8 @@ function TenantPortalContent() {
             <SkeletonPortalDashboard />
           ) : (
             <>
-              {/* Top Segmented Navigation Tabs */}
-              <div className="resident-subbar flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
+              {/* Top Segmented Navigation Tabs (Masqué sur mobile, visible sur tablette et desktop) */}
+              <div className="resident-subbar hidden md:flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
             <button
               type="button"
               onClick={() => handleTabChange('accueil')}
