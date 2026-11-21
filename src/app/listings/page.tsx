@@ -257,6 +257,55 @@ export default function ListingsPage() {
     }
   }, []);
 
+  // Ouverture automatique de l'annonce détaillée si le paramètre ?detail= ou ?listingId= est présent
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const detailId =
+      params.get('detail') ||
+      params.get('listingId') ||
+      params.get('viewDetail') ||
+      params.get('id');
+
+    if (detailId) {
+      const cleanId = detailId.trim().toLowerCase();
+      const all = listings.length > 0 ? listings : ListingsService.getAllListings();
+      const found = all.find(
+        (l) =>
+          (l.id && l.id.toLowerCase() === cleanId) ||
+          (l.referenceCode && l.referenceCode.toLowerCase() === cleanId) ||
+          (cleanId.startsWith('conv-listing-') && l.id && l.id.toLowerCase() === cleanId.replace('conv-listing-', '')) ||
+          (cleanId.startsWith('loca-') && l.referenceCode && l.referenceCode.toLowerCase() === cleanId) ||
+          (cleanId.length >= 4 && l.id && l.id.toLowerCase().includes(cleanId)) ||
+          (cleanId.length >= 4 && l.referenceCode && l.referenceCode.toLowerCase().includes(cleanId))
+      );
+
+      if (found) {
+        setSelectedListingForDetail(found);
+        setCurrentDetailPhotoIdx(0);
+      }
+    }
+  }, [listings]);
+
+  const handleCloseDetailModal = () => {
+    setSelectedListingForDetail(null);
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      if (
+        url.searchParams.has('detail') ||
+        url.searchParams.has('listingId') ||
+        url.searchParams.has('viewDetail') ||
+        url.searchParams.has('id')
+      ) {
+        url.searchParams.delete('detail');
+        url.searchParams.delete('listingId');
+        url.searchParams.delete('viewDetail');
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url.toString());
+      }
+    }
+  };
+
   const handleSwitchView = (view: 'all' | 'my_listings') => {
     setActiveView(view);
     if (typeof window !== 'undefined') {
@@ -647,6 +696,7 @@ export default function ListingsPage() {
       if (existingIndex >= 0) {
         existingList[existingIndex] = {
           ...existingList[existingIndex],
+          listingId: existingList[existingIndex].listingId || listing.id,
           messages: [...(existingList[existingIndex].messages || []), newMsg],
           lastMessage: initialText,
           lastMessageTime: 'À l’instant',
@@ -841,6 +891,7 @@ export default function ListingsPage() {
         const existingConv = existingList[existingIndex];
         existingList[existingIndex] = {
           ...existingConv,
+          listingId: existingConv.listingId || listing.id,
           messages: [...(existingConv.messages || []), newMsg],
           lastMessage: `📅 Demande de visite : ${formattedVisitDate} (${visitTimeSlot})`,
           lastMessageTime: 'À l’instant',
@@ -2080,7 +2131,7 @@ export default function ListingsPage() {
               </div>
               <button
                 type="button"
-                onClick={() => setSelectedListingForDetail(null)}
+                onClick={handleCloseDetailModal}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -2326,7 +2377,7 @@ export default function ListingsPage() {
             <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-end gap-2.5">
               <button
                 type="button"
-                onClick={() => setSelectedListingForDetail(null)}
+                onClick={handleCloseDetailModal}
                 className="w-full sm:w-auto py-2.5 px-4 rounded-xl border border-slate-200 font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
               >
                 Fermer
@@ -2336,7 +2387,7 @@ export default function ListingsPage() {
                 type="button"
                 onClick={() => {
                   const target = selectedListingForDetail;
-                  setSelectedListingForDetail(null);
+                  handleCloseDetailModal();
                   if (target) handleContactPublisher(target);
                 }}
                 className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-center transition-all cursor-pointer"
@@ -2348,7 +2399,7 @@ export default function ListingsPage() {
                 type="button"
                 onClick={() => {
                   const target = selectedListingForDetail;
-                  setSelectedListingForDetail(null);
+                  handleCloseDetailModal();
                   if (target) handleOpenVisitModal(target);
                 }}
                 className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-black shadow-pink-glow transition-all cursor-pointer"

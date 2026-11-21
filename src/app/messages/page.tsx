@@ -28,6 +28,7 @@ import {
   MessageCircle,
   UserCheck,
   Home,
+  Eye,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -420,6 +421,62 @@ function MessagesContent() {
     return matchesTab && matchesSearch;
   });
 
+  const handleGoToListing = () => {
+    if (!selectedConv) return;
+    const allListings = ListingsService.getAllListings();
+
+    // 1. Recherche par listingId direct
+    let targetId = selectedConv.listingId;
+
+    // 2. Recherche par pattern convId `conv-listing-${id}`
+    if (!targetId && selectedConv.id && selectedConv.id.startsWith('conv-listing-')) {
+      targetId = selectedConv.id.replace('conv-listing-', '');
+    }
+
+    // 3. Correspondance précise dans allListings par id ou référence
+    if (targetId) {
+      const cleanTarget = targetId.toLowerCase().trim();
+      const match = allListings.find(
+        (l) =>
+          (l.id && l.id.toLowerCase() === cleanTarget) ||
+          (l.referenceCode && l.referenceCode.toLowerCase() === cleanTarget) ||
+          (cleanTarget.length >= 4 && l.id && l.id.toLowerCase().includes(cleanTarget)) ||
+          (cleanTarget.length >= 4 && l.referenceCode && l.referenceCode.toLowerCase().includes(cleanTarget))
+      );
+      if (match) {
+        router.push(`/listings?detail=${encodeURIComponent(match.id)}`);
+        return;
+      }
+    }
+
+    // 4. Recherche par titre, quartier, vignette ou loyer
+    const cleanTitle = (selectedConv.propertyTitle || '').trim().toLowerCase();
+    const cleanUnit = (selectedConv.propertyUnit || '').trim().toLowerCase();
+    const matchedListing = allListings.find((l) => {
+      const matchTitle = cleanTitle && (l.title || '').trim().toLowerCase() === cleanTitle;
+      const matchUnit = cleanUnit && (
+        `${l.district}, ${l.city}`.toLowerCase().includes(cleanUnit) ||
+        cleanUnit.includes((l.district || '').toLowerCase())
+      );
+      const matchThumb = selectedConv.propertyThumbnail && (
+        l.images && l.images.some((img) => img === selectedConv.propertyThumbnail)
+      );
+      return (matchTitle && matchUnit) || (matchTitle && matchThumb) || matchTitle;
+    });
+
+    if (matchedListing) {
+      router.push(`/listings?detail=${encodeURIComponent(matchedListing.id)}`);
+      return;
+    }
+
+    // 5. Redirection de secours avec l'identifiant disponible
+    if (targetId) {
+      router.push(`/listings?detail=${encodeURIComponent(targetId)}`);
+    } else {
+      router.push('/listings');
+    }
+  };
+
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim() || !selectedConv) return;
@@ -763,11 +820,16 @@ function MessagesContent() {
 
               {/* Contact & Apartment Info */}
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
-                <div className="relative shrink-0 flex items-center">
+                <button
+                  type="button"
+                  onClick={handleGoToListing}
+                  title="Voir l'annonce du bien"
+                  className="relative shrink-0 flex items-center group cursor-pointer text-left focus:outline-none"
+                >
                   <img
                     src={selectedConv.propertyThumbnail}
                     alt={selectedConv.propertyTitle}
-                    className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl object-cover ring-1 ring-slate-200"
+                    className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl object-cover ring-1 ring-slate-200 group-hover:ring-2 group-hover:ring-brand-500 transition-all group-hover:scale-105 shadow-xs"
                   />
                   <div className="relative -ml-3.5 sm:-ml-4 shrink-0">
                     <img
@@ -779,7 +841,7 @@ function MessagesContent() {
                       <span className="absolute bottom-0 right-0 w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />
                     )}
                   </div>
-                </div>
+                </button>
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 min-w-0">
@@ -792,20 +854,36 @@ function MessagesContent() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 mt-0.5 min-w-0 overflow-hidden">
-                    <span className="truncate shrink min-w-0">
+                  <button
+                    type="button"
+                    onClick={handleGoToListing}
+                    title="Cliquer pour accéder à l'annonce du bien"
+                    className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-500 hover:text-brand-600 mt-0.5 min-w-0 overflow-hidden group cursor-pointer text-left transition-colors focus:outline-none"
+                  >
+                    <span className="truncate shrink min-w-0 group-hover:underline">
                       {selectedConv.propertyUnit}
                     </span>
                     <span className="text-slate-300 shrink-0">•</span>
-                    <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-700 font-extrabold text-[10px] sm:text-[11px] whitespace-nowrap shrink-0">
+                    <span className="px-1.5 py-0.5 rounded-md bg-slate-100 group-hover:bg-brand-50 text-slate-700 group-hover:text-brand-700 font-extrabold text-[10px] sm:text-[11px] whitespace-nowrap shrink-0 transition-colors border border-slate-200/60 group-hover:border-brand-200">
                       {formatFCFA(selectedConv.propertyPrice)}/mois
                     </span>
-                  </div>
+                    <ExternalLink className="w-2.5 h-2.5 text-slate-400 group-hover:text-brand-600 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity ml-0.5" />
+                  </button>
                 </div>
               </div>
 
-              {/* Top Action Icons (Phone, Options) */}
+              {/* Top Action Icons (Voir Annonce, Phone, Options) */}
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleGoToListing}
+                  title="Accéder à l'annonce du bien"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3 sm:py-2 rounded-xl sm:rounded-2xl bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-700 text-[10px] sm:text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer active:scale-95"
+                >
+                  <Eye className="w-3.5 h-3.5 text-brand-600 shrink-0" />
+                  <span className="hidden sm:inline">Voir l’annonce</span>
+                </button>
+
                 <a
                   href={`tel:${getConversationContactPhone(selectedConv, user, activeSpace).replace(/\s+/g, '')}`}
                   title={`Appeler (${getConversationContactPhone(selectedConv, user, activeSpace)})`}
@@ -827,6 +905,18 @@ function MessagesContent() {
                   {/* Dropdown Menu */}
                   {optionsMenuOpen && (
                     <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 p-1.5 z-50 text-xs font-bold text-slate-700 animate-in fade-in zoom-in-95 duration-150">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOptionsMenuOpen(false);
+                          handleGoToListing();
+                        }}
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-brand-50 text-brand-700 flex items-center gap-2 cursor-pointer font-bold"
+                      >
+                        <Eye className="w-4 h-4 text-brand-600" />
+                        <span>Voir l’annonce du bien</span>
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => {
