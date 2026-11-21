@@ -230,15 +230,15 @@ export function Header({
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="min-w-0">
+          <div className="min-w-0 flex flex-col justify-center">
             <button
               type="button"
               onClick={handleGoHome}
-              className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap text-left cursor-pointer group active:scale-95 transition-all py-1 focus:outline-hidden touch-manipulation"
+              className="flex items-center gap-1.5 sm:gap-2.5 text-left cursor-pointer group active:scale-95 transition-all py-0.5 focus:outline-hidden touch-manipulation select-none"
               title="Retourner à l'accueil"
               aria-label="Retourner à l'accueil"
             >
-              <h1 className="text-sm sm:text-base lg:text-xl font-black text-slate-900 tracking-tight truncate max-w-[180px] xs:max-w-none group-hover:text-brand-600 transition-colors">
+              <h1 className="text-sm sm:text-base lg:text-xl font-black text-slate-900 tracking-tight shrink-0 whitespace-nowrap group-hover:text-brand-600 transition-colors">
                 {getPageTitle()}
               </h1>
               <span
@@ -266,7 +266,7 @@ export function Header({
 
               {user?.matricule && (
                 <span
-                  className="hidden lg:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-900 text-indigo-300 border border-slate-700 shrink-0 shadow-xs"
+                  className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-900 text-indigo-300 border border-slate-700 shrink-0 shadow-xs"
                   title="Votre Matricule Officiel Plateforme"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
