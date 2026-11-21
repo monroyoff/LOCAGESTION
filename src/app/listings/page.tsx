@@ -300,6 +300,8 @@ export default function ListingsPage() {
           (l.id && l.id.toLowerCase() === cleanId) ||
           (l.referenceCode && l.referenceCode.toLowerCase() === cleanId) ||
           (cleanId.startsWith('conv-listing-') && l.id && l.id.toLowerCase() === cleanId.replace('conv-listing-', '')) ||
+          (cleanId.startsWith('a-') && l.referenceCode && l.referenceCode.toLowerCase() === cleanId) ||
+          (cleanId.startsWith('ref-ann-') && l.referenceCode && l.referenceCode.toLowerCase() === cleanId) ||
           (cleanId.startsWith('loca-') && l.referenceCode && l.referenceCode.toLowerCase() === cleanId) ||
           (cleanId.length >= 4 && l.id && l.id.toLowerCase().includes(cleanId)) ||
           (cleanId.length >= 4 && l.referenceCode && l.referenceCode.toLowerCase().includes(cleanId))

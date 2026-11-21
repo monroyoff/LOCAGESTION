@@ -131,7 +131,7 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 ### 👥 4. Gestion des Locataires (`/tenants`)
 - Fiches locataires complètes avec scoring de fiabilité (Excellent, Fiable, À surveiller, À risque).
 - Suivi du loyer, date d'entrée, coordonnées téléphoniques directes et statut de paiement.
-- **Moteur de Recherche Multi-Critères :** Filtrage instantané et souple par **Matricule officiel** (ex: `LOCA-MAT-BJ-17635`, `17635`), **Référence de bail** (ex: `BAIL-2026-421`, `421`), **Référence d'annonce** (ex: `REF-ANN-BJ-17635`, `17635`), **Nom & Prénom** (dans l'ordre direct ou inversé), **Lieu géographique** (quartier, ville, pays, repère local, adresse), désignation du bien et contacts.
+- **Moteur de Recherche Multi-Critères :** Filtrage instantané et souple par **Matricule officiel** (ex: `LOCA-MAT-BJ-17635`, `17635`), **Référence de bail** (ex: `BAIL-2026-421`, `421`), **Référence d'annonce** (ex: `A-BJ-17635`, `17635`), **Nom & Prénom** (dans l'ordre direct ou inversé), **Lieu géographique** (quartier, ville, pays, repère local, adresse), désignation du bien et contacts.
 
 ### 💳 5. Paiements & Quittances Numériques (`/payments`)
 - Suivi des flux financiers par canal : Wave, MTN Mobile Money, Moov Money, Orange Money, Virement, Espèces.
@@ -151,9 +151,9 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 - Assignation d'artisans locaux, devis et clôture contradictoire.
 
 ### 🌐 8. Portail Annonces & Visites (`/listings`)
-- Moteur de recherche multi-critères : Référence d'annonce (`REF-ANN-BJ-17635`), Pays, Ville, Quartier, Repère local, Type de bien, Budget max en FCFA, Nombre de chambres.
+- Moteur de recherche multi-critères : Référence d'annonce (`A-BJ-17635`), Pays, Ville, Quartier, Repère local, Type de bien, Budget max en FCFA, Nombre de chambres.
 - Filtre rapide **« 7 derniers jours »** et tri **« Plus récents d'abord »**.
-- Référence unique certifiée par annonce : format distinctif `REF-ANN-<PAYS>-<NUMERO>` (ex: `REF-ANN-BJ-17635`), intégrant les initiales officielles du pays du bien.
+- Référence unique certifiée par annonce : format distinctif, court et pro `A-<PAYS>-<NUMERO>` (ex: `A-BJ-17635`), intégrant les initiales officielles du pays du bien.
 - Calcul de proximité GPS en kilomètres entre le visiteur et le logement.
 - Prise de rendez-vous de visite en direct.
 - Espace **"Mes publications"** avec gestion de cycle de vie (Modifier, Mettre en pause, Supprimer).

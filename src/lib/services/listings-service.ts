@@ -290,8 +290,8 @@ export function resolveCountryInitials(countryOrCode?: string): string {
 }
 
 /**
- * Génère une référence officielle d'annonce unique et facilement lisible
- * Format: REF-ANN-<INITIALE_PAYS>-XXXXX (ex: REF-ANN-BJ-17635, REF-ANN-CI-84291)
+ * Génère une référence officielle d'annonce unique, courte, simple et pro
+ * Format: A-<INITIALE_PAYS>-XXXXX (ex: A-BJ-17635, A-CI-84291)
  * Strictement distinct des matricules de comptes utilisateurs (LOCA-MAT-*)
  */
 export function generateListingReference(idOrRef?: string, countryOrCode?: string): string {
@@ -299,8 +299,8 @@ export function generateListingReference(idOrRef?: string, countryOrCode?: strin
   let numPart = '';
 
   if (idOrRef) {
-    // Si l'ancien ref contient déjà un code pays à 2 lettres (ex: LOCA-BJ-17635 ou REF-ANN-CI-84291)
-    const matchCountryInRef = idOrRef.match(/(?:LOCA|REF-ANN)-([A-Za-z]{2})-\d+/i);
+    // Si l'ancien ref contient déjà un code pays à 2 lettres (ex: A-BJ-17635, REF-ANN-BJ-17635 ou LOCA-BJ-17635)
+    const matchCountryInRef = idOrRef.match(/(?:LOCA|REF-ANN|A)-([A-Za-z]{2})-\d+/i);
     if (matchCountryInRef && matchCountryInRef[1]) {
       cc = matchCountryInRef[1].toUpperCase();
     }
@@ -315,7 +315,7 @@ export function generateListingReference(idOrRef?: string, countryOrCode?: strin
     numPart = Math.floor(10000 + Math.random() * 90000).toString();
   }
 
-  return `REF-ANN-${cc}-${numPart}`;
+  return `A-${cc}-${numPart}`;
 }
 
 /**
@@ -477,9 +477,9 @@ export const ListingsService = {
               }
             }
 
-            // 2. Attribution d'une référence unique plateforme au format officiel REF-ANN-<PAYS>-XXXXX
-            // Migration automatique si absente ou si ancien format (LOCA-* ou REF-ANN sans initiale pays)
-            const isProperRef = item.referenceCode && /^REF-ANN-[A-Z]{2}-\d+$/i.test(item.referenceCode.trim());
+            // 2. Attribution d'une référence unique plateforme au format officiel A-<PAYS>-XXXXX (court, simple et pro)
+            // Migration automatique si absente ou si ancien format (LOCA-*, REF-ANN-*, etc.)
+            const isProperRef = item.referenceCode && /^A-[A-Z]{2}-\d+$/i.test(item.referenceCode.trim());
             if (!isProperRef) {
               hasUpdated = true;
               item.referenceCode = generateListingReference(item.referenceCode || item.id, item.countryCode || item.country);
@@ -510,7 +510,7 @@ export const ListingsService = {
       (m) => !isFakeListing(m) && !customIds.has(m.id) && !trashIds.has(m.id)
     );
     return [...custom, ...nonDuplicatedMock].map((item) => {
-      const isProperRef = item.referenceCode && /^REF-ANN-[A-Z]{2}-\d+$/i.test(item.referenceCode.trim());
+      const isProperRef = item.referenceCode && /^A-[A-Z]{2}-\d+$/i.test(item.referenceCode.trim());
       if (!isProperRef) {
         item.referenceCode = generateListingReference(item.referenceCode || item.id, item.countryCode || item.country);
       }

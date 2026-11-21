@@ -348,7 +348,7 @@ export default function AdminDashboardPage() {
       // Annonce bloquée avant persistance publique : création d'une fiche synthétique d'audit
       const syntheticListing: RentalListing = {
         id: alert.listingId || alert.id,
-        referenceCode: alert.listingReference || alert.listingId || 'REF-ANN-BJ-ALERT',
+        referenceCode: alert.listingReference || alert.listingId || 'A-BJ-ALERT',
         title: alert.listingTitle,
         propertyType: 'Appartement',
         country: alert.country || 'Bénin',

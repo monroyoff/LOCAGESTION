@@ -248,7 +248,7 @@ export interface RentalListing {
   authorRole?: UserSpace;
   authorAvatar?: string;
   createdAt?: string;
-  referenceCode?: string; // Référence unique plateforme (ex: REF-ANN-84291)
+  referenceCode?: string; // Référence unique plateforme (ex: A-BJ-84291)
   viewsCount?: number;
   inquiriesCount?: number;
 }
