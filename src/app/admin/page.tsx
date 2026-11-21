@@ -435,9 +435,11 @@ export default function AdminDashboardPage() {
 
     if (searchListingRef.trim()) {
       const q = searchListingRef.trim().toLowerCase();
+      const cleanQ = q.replace(/[^a-z0-9]/gi, '');
       const refCode = (l.referenceCode || '').toLowerCase();
+      const cleanRef = refCode.replace(/[^a-z0-9]/gi, '');
       const idMatch = l.id.toLowerCase().includes(q);
-      const refMatch = refCode.includes(q);
+      const refMatch = refCode.includes(q) || (cleanQ.length >= 3 && cleanRef.includes(cleanQ));
       const titleMatch = l.title.toLowerCase().includes(q);
       const cityMatch = l.city.toLowerCase().includes(q);
       const districtMatch = (l.district || '').toLowerCase().includes(q);
@@ -453,9 +455,11 @@ export default function AdminDashboardPage() {
   const filteredTrashListings = trashListings.filter((l) => {
     if (!searchTrashQuery.trim()) return true;
     const q = searchTrashQuery.trim().toLowerCase();
+    const cleanQ = q.replace(/[^a-z0-9]/gi, '');
     const refCode = (l.referenceCode || '').toLowerCase();
+    const cleanRef = refCode.replace(/[^a-z0-9]/gi, '');
     const idMatch = l.id.toLowerCase().includes(q);
-    const refMatch = refCode.includes(q);
+    const refMatch = refCode.includes(q) || (cleanQ.length >= 3 && cleanRef.includes(cleanQ));
     const titleMatch = l.title.toLowerCase().includes(q);
     const cityMatch = l.city.toLowerCase().includes(q);
     const authorMatch =

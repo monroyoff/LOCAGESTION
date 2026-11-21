@@ -488,7 +488,7 @@ export function PublishListingModal({
             LeaseService.addLandlordNotification({
               id: `notif-appr-${Date.now()}`,
               title: '✅ Annonce Validée par l\'IA & En Ligne !',
-              message: `Votre annonce « ${proposedTitle} » a été vérifiée en 2.3s par l'IA et mise en ligne avec succès sur toute la plateforme.`,
+              message: `Votre annonce « ${proposedTitle} » (Réf: ${candidateReference}) a été vérifiée en 2.3s par l'IA et mise en ligne avec succès sur toute la plateforme.`,
               type: 'listing_approved',
               read: false,
               listingId: newListing.id,
@@ -497,7 +497,7 @@ export function PublishListingModal({
 
             // Notification Toast Vert Centrale
             notifyPublish(
-              `Votre annonce « ${proposedTitle} » a été vérifiée par l'IA et est désormais en ligne sur toute la plateforme !`,
+              `Votre annonce « ${proposedTitle} » (Réf: ${candidateReference}) a été validée et est désormais en ligne sur toute la plateforme !`,
               'Annonce Validée & En Ligne !'
             );
 

@@ -327,15 +327,18 @@ export default function NewLeasePage() {
   const filteredListings = useMemo(() => {
     const q = listingSearchQuery.trim().toLowerCase();
     if (!q) return allListings.slice(0, 10);
+    const cleanQ = q.replace(/[^a-z0-9]/gi, '');
     return allListings.filter((l) => {
       const ref = (l.referenceCode || l.id || '').toLowerCase();
+      const cleanRef = ref.replace(/[^a-z0-9]/gi, '');
       const title = (l.title || '').toLowerCase();
       const city = (l.city || '').toLowerCase();
       const district = (l.district || '').toLowerCase();
       const country = (l.country || '').toLowerCase();
       const author = (l.authorName || l.authorCompany || '').toLowerCase();
+      const refMatch = ref.includes(q) || (cleanQ.length >= 3 && cleanRef.includes(cleanQ));
       return (
-        ref.includes(q) ||
+        refMatch ||
         title.includes(q) ||
         city.includes(q) ||
         district.includes(q) ||

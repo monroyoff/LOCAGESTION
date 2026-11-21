@@ -12,7 +12,14 @@ import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
 import { EditListingModal } from '@/components/listings/EditListingModal';
 import { SkeletonListingGrid } from '@/components/ui/SkeletonLoader';
-import { ListingsService, resolveListingAuthorCompany, resolveListingAuthorRole } from '@/lib/services/listings-service';
+import {
+  ListingsService,
+  resolveListingAuthorCompany,
+  resolveListingAuthorRole,
+  getListingAgeInDays,
+  getListingTimestamp,
+  isListingFromLast7Days,
+} from '@/lib/services/listings-service';
 import { LeaseService, LandlordNotification } from '@/lib/services/lease-service';
 import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier';
 import {
@@ -98,6 +105,8 @@ export default function ListingsPage() {
   const [selectedListingForEdit, setSelectedListingForEdit] = useState<RentalListing | null>(null);
   const [listingToDelete, setListingToDelete] = useState<RentalListing | null>(null);
   const [myListingsFilter, setMyListingsFilter] = useState<'all' | 'disponible' | 'en_pause' | 'reserve_loue'>('all');
+  const [myListingsSearch, setMyListingsSearch] = useState('');
+  const [myListings7DaysOnly, setMyListings7DaysOnly] = useState(false);
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -118,8 +127,9 @@ export default function ListingsPage() {
   const [customMinPrice, setCustomMinPrice] = useState<string>('');
   const [customMaxPrice, setCustomMaxPrice] = useState<string>('');
   const [selectedPropertyType, setSelectedPropertyType] = useState('Tous');
-  // Tri prioritaire par proximité géographique / GPS
-  const [sortBy, setSortBy] = useState<'proximity' | 'featured' | 'price_asc' | 'price_desc' | 'surface_desc'>('proximity');
+  // Filtre par récence (7 derniers jours) et Tri
+  const [dateFilter, setDateFilter] = useState<'all' | '7_days'>('all');
+  const [sortBy, setSortBy] = useState<'proximity' | 'featured' | 'recent' | 'price_asc' | 'price_desc' | 'surface_desc'>('proximity');
 
   // Géolocalisation dynamique de l'utilisateur
   const [userLocation, setUserLocation] = useState<UserGeoLocation | null>(null);
@@ -235,13 +245,28 @@ export default function ListingsPage() {
     };
   }, []);
 
-  // Synchronisation de l'affichage avec l'URL (?view=my_listings) et les événements globaux
+  // Synchronisation de l'affichage avec l'URL (?view=my_listings, ?q=, ?dateFilter=, ?sortBy=) et les événements globaux
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('view') === 'my_listings') {
         setActiveView('my_listings');
       }
+      const q = params.get('q') || params.get('search') || params.get('ref');
+      if (q) setSearchQuery(q);
+      const c = params.get('country');
+      if (c && (c in COUNTRIES_CITIES || c === 'all')) setSelectedCountry(c);
+      const city = params.get('city');
+      if (city && (ALL_CITIES.includes(city) || city === 'all')) setSelectedCity(city);
+      const type = params.get('type');
+      if (type && PROPERTY_TYPES.includes(type)) setSelectedPropertyType(type);
+      const df = params.get('dateFilter');
+      if (df === '7_days' || df === 'all') setDateFilter(df as 'all' | '7_days');
+      const sb = params.get('sortBy');
+      if (sb && ['proximity', 'featured', 'recent', 'price_asc', 'price_desc', 'surface_desc'].includes(sb)) {
+        setSortBy(sb as any);
+      }
+
       const handleSwitch = (e: Event) => {
         const custom = e as CustomEvent<{ view?: string }>;
         if (custom.detail?.view === 'my_listings') {
@@ -352,17 +377,37 @@ export default function ListingsPage() {
   }, [listings, user, activeSpace]);
 
   const filteredMyListings = useMemo(() => {
+    let list = myListings;
     if (myListingsFilter === 'disponible') {
-      return myListings.filter((l) => l.status === 'disponible');
+      list = list.filter((l) => l.status === 'disponible');
+    } else if (myListingsFilter === 'en_pause') {
+      list = list.filter((l) => l.status === 'en_pause');
+    } else if (myListingsFilter === 'reserve_loue') {
+      list = list.filter((l) => l.status === 'reserve' || l.status === 'loue');
     }
-    if (myListingsFilter === 'en_pause') {
-      return myListings.filter((l) => l.status === 'en_pause');
+
+    if (myListings7DaysOnly) {
+      list = list.filter((l) => getListingAgeInDays(l) <= 7);
     }
-    if (myListingsFilter === 'reserve_loue') {
-      return myListings.filter((l) => l.status === 'reserve' || l.status === 'loue');
+
+    if (myListingsSearch.trim()) {
+      const q = myListingsSearch.trim().toLowerCase();
+      const cleanQ = q.replace(/[^a-z0-9]/gi, '');
+      list = list.filter((l) => {
+        const refCode = (l.referenceCode || '').toLowerCase();
+        const cleanRef = refCode.replace(/[^a-z0-9]/gi, '');
+        return (
+          refCode.includes(q) ||
+          (cleanQ.length >= 3 && cleanRef.includes(cleanQ)) ||
+          l.title.toLowerCase().includes(q) ||
+          l.city.toLowerCase().includes(q) ||
+          (l.district || '').toLowerCase().includes(q)
+        );
+      });
     }
-    return myListings;
-  }, [myListings, myListingsFilter]);
+
+    return list.sort((a, b) => getListingTimestamp(b) - getListingTimestamp(a));
+  }, [myListings, myListingsFilter, myListingsSearch, myListings7DaysOnly]);
 
   const handleTogglePause = (id: string) => {
     const updated = ListingsService.togglePause(id);
@@ -524,6 +569,14 @@ export default function ListingsPage() {
         }
       }
 
+      // 0. Filtre par récence (7 derniers jours)
+      if (dateFilter === '7_days') {
+        const ageInDays = getListingAgeInDays(l);
+        if (ageInDays > 7) {
+          return false;
+        }
+      }
+
       // 1. Country Filter (Par défaut strict Bénin selon le profil utilisateur)
       if (selectedCountry !== 'all' && l.country !== selectedCountry) {
         return false;
@@ -549,6 +602,8 @@ export default function ListingsPage() {
 
       // 5. Text Search (title, district, landmark, amenities, city, country, author, reference)
       if (q) {
+        const cleanQ = q.replace(/[^a-z0-9]/gi, '');
+        const cleanRef = (l.referenceCode || '').toLowerCase().replace(/[^a-z0-9]/gi, '');
         const matchesTitle = l.title.toLowerCase().includes(q);
         const matchesDistrict = (l.district || '').toLowerCase().includes(q);
         const matchesLandmark = (l.landmark || '').toLowerCase().includes(q);
@@ -559,7 +614,9 @@ export default function ListingsPage() {
           (l.authorName || '').toLowerCase().includes(q) ||
           (l.authorCompany || '').toLowerCase().includes(q);
         const matchesRef =
-          (l.referenceCode || '').toLowerCase().includes(q) || l.id.toLowerCase().includes(q);
+          (l.referenceCode || '').toLowerCase().includes(q) ||
+          l.id.toLowerCase().includes(q) ||
+          (cleanQ.length >= 3 && cleanRef.includes(cleanQ));
 
         if (
           !matchesTitle &&
@@ -597,19 +654,26 @@ export default function ListingsPage() {
     });
 
     return list.sort((a, b) => {
+      // 0. Tri par récence ("Plus récents" en priorité si sélectionné)
+      if (sortBy === 'recent') {
+        const timeA = getListingTimestamp(a);
+        const timeB = getListingTimestamp(b);
+        return timeB - timeA;
+      }
       // 1. Tri prioritaire par proximité géographique / GPS
       if (sortBy === 'proximity') {
         const distA = a.distanceKm ?? 9999;
         const distB = b.distanceKm ?? 9999;
-        return distA - distB;
+        if (distA !== distB) return distA - distB;
+        return getListingTimestamp(b) - getListingTimestamp(a);
       }
       if (sortBy === 'price_asc') return a.monthlyRent - b.monthlyRent;
       if (sortBy === 'price_desc') return b.monthlyRent - a.monthlyRent;
       if (sortBy === 'surface_desc') return b.surface - a.surface;
-      // Default: verified first, then proximity
+      // Default: verified first, then recency, then proximity
       if (a.isVerified && !b.isVerified) return -1;
       if (!a.isVerified && b.isVerified) return 1;
-      return (a.distanceKm ?? 9999) - (b.distanceKm ?? 9999);
+      return getListingTimestamp(b) - getListingTimestamp(a);
     });
   }, [
     listings,
@@ -619,6 +683,7 @@ export default function ListingsPage() {
     minRent,
     maxRent,
     searchQuery,
+    dateFilter,
     sortBy,
     userCoords,
   ]);
@@ -633,6 +698,7 @@ export default function ListingsPage() {
     setCustomMinPrice('');
     setCustomMaxPrice('');
     setSelectedPropertyType('Tous');
+    setDateFilter('all');
     setSortBy('proximity');
     showToast(`Filtres réinitialisés sur votre pays de résidence d'inscription (${defaultCountry}) et proximité.`);
   };
@@ -640,6 +706,13 @@ export default function ListingsPage() {
   const hasActiveFilters =
     searchQuery.trim() !== '' ||
     selectedCountry !== getUserResidenceCountry() ||
+    selectedCity !== 'all' ||
+    selectedPropertyType !== 'Tous' ||
+    pricePresetIdx !== 0 ||
+    customMinPrice !== '' ||
+    customMaxPrice !== '' ||
+    dateFilter !== 'all' ||
+    sortBy !== 'proximity';
     selectedCity !== 'all' ||
     pricePresetIdx !== 0 ||
     customMinPrice !== '' ||
@@ -1117,7 +1190,7 @@ export default function ListingsPage() {
                 </div>
               </div>
 
-              {/* Filtres par statut */}
+              {/* Filtres par statut & Recherche par Référence */}
               <div className="flex items-center justify-between gap-3 flex-wrap">
                 <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-slate-200/80 shadow-xs flex-wrap">
                   <button
@@ -1168,8 +1241,42 @@ export default function ListingsPage() {
                   </button>
                 </div>
 
-                <div className="text-xs text-slate-500">
-                  Affichage de <span className="font-bold text-slate-800">{filteredMyListings.length}</span> publication{filteredMyListings.length > 1 ? 's' : ''}
+                {/* Recherche & Filtre Récence pour Mes publications */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="relative min-w-[200px]">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={myListingsSearch}
+                      onChange={(e) => setMyListingsSearch(e.target.value)}
+                      placeholder="Réf (ex: LOCA-BJ-...), titre..."
+                      className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 font-medium"
+                    />
+                    {myListingsSearch && (
+                      <button onClick={() => setMyListingsSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setMyListings7DaysOnly((prev) => !prev)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      myListings7DaysOnly
+                        ? 'bg-rose-500 text-white shadow-xs'
+                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                    }`}
+                    title="Afficher uniquement mes annonces des 7 derniers jours"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>7 derniers jours</span>
+                    {myListings7DaysOnly && <Check className="w-3 h-3 ml-0.5" />}
+                  </button>
+
+                  <div className="text-xs text-slate-500 ml-1">
+                    <span className="font-bold text-slate-800">{filteredMyListings.length}</span> publication{filteredMyListings.length > 1 ? 's' : ''}
+                  </div>
                 </div>
               </div>
 
@@ -1504,8 +1611,8 @@ export default function ListingsPage() {
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Référence (ex: LOCA-BJ-...), quartier, repère, meublé..."
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
+                    placeholder="Référence officielle (ex: LOCA-BJ-...), quartier, repère..."
+                    className="w-full pl-9 pr-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium"
                   />
                   {searchQuery && (
                     <button
@@ -1515,6 +1622,51 @@ export default function ListingsPage() {
                       <X className="w-3 h-3" />
                     </button>
                   )}
+                </div>
+
+                {/* Boutons d'accès rapide : 7 derniers jours & Plus récents */}
+                <div className="flex items-center gap-2 pt-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = dateFilter === '7_days' ? 'all' : '7_days';
+                      setDateFilter(next);
+                      if (next === '7_days') {
+                        showToast('Filtre activé : Annonces publiées lors des 7 derniers jours.');
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      dateFilter === '7_days'
+                        ? 'bg-rose-500 text-white shadow-sm ring-2 ring-rose-300'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                    }`}
+                    title="Afficher uniquement les annonces publiées ces 7 derniers jours"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    <span>7 derniers jours</span>
+                    {dateFilter === '7_days' && <Check className="w-3 h-3 ml-0.5" />}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const next = sortBy === 'recent' ? 'proximity' : 'recent';
+                      setSortBy(next);
+                      if (next === 'recent') {
+                        showToast('Tri activé : les annonces les plus récentes s’affichent en premier.');
+                      }
+                    }}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      sortBy === 'recent'
+                        ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                    }`}
+                    title="Trier les annonces des plus récentes aux plus anciennes"
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>Plus récents</span>
+                    {sortBy === 'recent' && <Check className="w-3 h-3 ml-0.5" />}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1594,6 +1746,7 @@ export default function ListingsPage() {
                     onChange={(e) => setSortBy(e.target.value as any)}
                     className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
                   >
+                    <option value="recent">⏱️ Plus récents d’abord</option>
                     <option value="proximity">📍 Plus proches de moi (GPS)</option>
                     <option value="featured">⭐ En vedette</option>
                     <option value="price_asc">💰 Loyer croissant</option>
@@ -1661,6 +1814,26 @@ export default function ListingsPage() {
                   <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
                     <span>Type : {selectedPropertyType}</span>
                     <button onClick={() => setSelectedPropertyType('Tous')} className="hover:text-rose-500">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {dateFilter === '7_days' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold border border-rose-200">
+                    <Calendar className="w-3 h-3 text-rose-500" />
+                    <span>7 derniers jours</span>
+                    <button onClick={() => setDateFilter('all')} className="hover:text-rose-900 ml-0.5">
+                      <X className="w-3 h-3" />
+                    </button>
+                  </span>
+                )}
+
+                {sortBy === 'recent' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-200">
+                    <Clock className="w-3 h-3 text-indigo-500" />
+                    <span>Tri : Plus récents</span>
+                    <button onClick={() => setSortBy('proximity')} className="hover:text-indigo-900 ml-0.5">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -1791,12 +1964,19 @@ export default function ListingsPage() {
                             <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500 transition-colors" />
                           </div>
 
-                          {listing.isVerified && (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200/70">
-                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                              <span>Bailleur Vérifié</span>
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {isListingFromLast7Days(listing) && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black border border-rose-200 shadow-2xs">
+                                ✨ Récent (-7j)
+                              </span>
+                            )}
+                            {listing.isVerified && (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200/70">
+                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Bailleur Vérifié</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         <h3
@@ -1825,9 +2005,17 @@ export default function ListingsPage() {
                               </span>
                             )}
                           </div>
-                          <p className="text-[11px] text-slate-400 italic">
-                            Repère : « {listing.landmark} »
-                          </p>
+                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                            <p className="italic truncate">
+                              Repère : « {listing.landmark} »
+                            </p>
+                            {listing.createdAt && (
+                              <span className="shrink-0 font-medium text-[10px] text-slate-400 flex items-center gap-1">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                <span>{listing.createdAt}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Fonctionnalité Clé : Boîte Coût Total d'Entrée */}

@@ -13,11 +13,19 @@ import {
   ArrowRight,
   Check,
   Sparkles,
+  Calendar,
+  Clock,
+  Copy,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { RentalListing } from '@/lib/types';
-import { ListingsService } from '@/lib/services/listings-service';
+import {
+  ListingsService,
+  getListingAgeInDays,
+  getListingTimestamp,
+  isListingFromLast7Days,
+} from '@/lib/services/listings-service';
 import { getUserResidenceCountry } from '@/lib/services/geo-service';
 
 interface GlobalSearchModalProps {
@@ -54,6 +62,8 @@ export function GlobalSearchModal({
   const [selectedType, setSelectedType] = useState('Tous');
   const [pricePresetIdx, setPricePresetIdx] = useState(0);
   const [customMaxPrice, setCustomMaxPrice] = useState('');
+  const [dateFilter, setDateFilter] = useState<'all' | '7_days'>('all');
+  const [sortByRecent, setSortByRecent] = useState(false);
 
   // Auto focus input when modal opens and synchronize default residence country
   useEffect(() => {
@@ -129,7 +139,7 @@ export function GlobalSearchModal({
 
   // Real-time matching listings calculation
   const matchingListings = useMemo(() => {
-    return ListingsService.getAllListings().filter((l) => {
+    const list = ListingsService.getAllListings().filter((l) => {
       const q = query.toLowerCase().trim();
 
       // PRIORITÉ ABSOLUE : RECHERCHE PAR RÉFÉRENCE UNIQUE OU ID
@@ -155,6 +165,11 @@ export function GlobalSearchModal({
         }
       }
 
+      // Filtre 7 derniers jours
+      if (dateFilter === '7_days' && getListingAgeInDays(l) > 7) {
+        return false;
+      }
+
       // Country
       if (selectedCountry !== 'all' && l.country !== selectedCountry) {
         return false;
@@ -176,6 +191,8 @@ export function GlobalSearchModal({
       }
       // Query text
       if (q) {
+        const cleanQ = q.replace(/[^a-z0-9]/gi, '');
+        const cleanRef = (l.referenceCode || '').toLowerCase().replace(/[^a-z0-9]/gi, '');
         const matchesTitle = l.title.toLowerCase().includes(q);
         const matchesDistrict = (l.district || '').toLowerCase().includes(q);
         const matchesLandmark = (l.landmark || '').toLowerCase().includes(q);
@@ -186,7 +203,9 @@ export function GlobalSearchModal({
           (l.authorName || '').toLowerCase().includes(q) ||
           (l.authorCompany || '').toLowerCase().includes(q);
         const matchesRef =
-          (l.referenceCode || '').toLowerCase().includes(q) || l.id.toLowerCase().includes(q);
+          (l.referenceCode || '').toLowerCase().includes(q) ||
+          l.id.toLowerCase().includes(q) ||
+          (cleanQ.length >= 3 && cleanRef.includes(cleanQ));
 
         if (
           !matchesTitle &&
@@ -203,7 +222,12 @@ export function GlobalSearchModal({
       }
       return true;
     });
-  }, [selectedCountry, selectedCity, selectedType, minRent, maxRent, query]);
+
+    if (sortByRecent) {
+      return list.sort((a, b) => getListingTimestamp(b) - getListingTimestamp(a));
+    }
+    return list;
+  }, [selectedCountry, selectedCity, selectedType, minRent, maxRent, query, dateFilter, sortByRecent]);
 
   // Check if any filter is active
   const hasActiveFilters =
@@ -212,7 +236,9 @@ export function GlobalSearchModal({
     selectedCity !== 'all' ||
     selectedType !== 'Tous' ||
     pricePresetIdx !== 0 ||
-    customMaxPrice !== '';
+    customMaxPrice !== '' ||
+    dateFilter !== 'all' ||
+    sortByRecent !== false;
 
   // Reset all filters
   const resetFilters = () => {
@@ -222,6 +248,8 @@ export function GlobalSearchModal({
     setSelectedType('Tous');
     setPricePresetIdx(0);
     setCustomMaxPrice('');
+    setDateFilter('all');
+    setSortByRecent(false);
   };
 
   // Submit and Navigate to /listings with query params
@@ -233,6 +261,8 @@ export function GlobalSearchModal({
     if (selectedCity !== 'all') params.set('city', selectedCity);
     if (selectedType !== 'Tous') params.set('type', selectedType);
     if (maxRent > 0) params.set('maxPrice', maxRent.toString());
+    if (dateFilter === '7_days') params.set('dateFilter', '7_days');
+    if (sortByRecent) params.set('sortBy', 'recent');
 
     onClose();
     router.push(`/listings?${params.toString()}`);
@@ -289,7 +319,7 @@ export function GlobalSearchModal({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Ex: Haie Vive, Ouaga 2000, ACI 2000, Plateau, Piscine, Clim..."
+                placeholder="Réf officielle (ex: LOCA-BJ-...), quartier, repère..."
                 className="w-full pl-10 pr-10 py-3 rounded-2xl bg-slate-50 border border-slate-200 text-sm font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
               />
               {query && (
@@ -301,6 +331,37 @@ export function GlobalSearchModal({
                   <X className="w-4 h-4" />
                 </button>
               )}
+            </div>
+
+            {/* Quick Actions : 7 derniers jours & Plus récents */}
+            <div className="flex items-center gap-2 pt-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setDateFilter((prev) => (prev === '7_days' ? 'all' : '7_days'))}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  dateFilter === '7_days'
+                    ? 'bg-rose-500 text-white shadow-sm ring-2 ring-rose-300'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>7 derniers jours</span>
+                {dateFilter === '7_days' && <Check className="w-3 h-3 ml-0.5" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSortByRecent((prev) => !prev)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  sortByRecent
+                    ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>Plus récents</span>
+                {sortByRecent && <Check className="w-3 h-3 ml-0.5" />}
+              </button>
             </div>
           </div>
 
@@ -470,6 +531,16 @@ export function GlobalSearchModal({
                       className="w-11 h-11 rounded-lg object-cover flex-shrink-0"
                     />
                     <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-slate-100 text-slate-700 text-[9px] font-mono font-bold border border-slate-200">
+                          Réf: {item.referenceCode || item.id}
+                        </span>
+                        {isListingFromLast7Days(item) && (
+                          <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-emerald-50 text-emerald-700 text-[9px] font-extrabold border border-emerald-200">
+                            ✨ -7j
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs font-bold text-slate-900 truncate">
                         {item.title}
                       </p>

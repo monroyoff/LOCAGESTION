@@ -288,6 +288,41 @@ export function getListingAgeInDays(listing: RentalListing): number {
   return Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 }
 
+/**
+ * Retourne le timestamp précis de publication pour le tri chronologique
+ */
+export function getListingTimestamp(listing: RentalListing): number {
+  if (listing.id && listing.id.startsWith('list-')) {
+    const rawTs = parseInt(listing.id.replace('list-', ''), 10);
+    if (!isNaN(rawTs) && rawTs > 1600000000000 && rawTs < 2500000000000) {
+      return rawTs;
+    }
+  }
+  if (listing.createdAt) {
+    if (listing.createdAt.includes('/')) {
+      const parts = listing.createdAt.split('/');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        const t = new Date(y, m, d).getTime();
+        if (!isNaN(t)) return t;
+      }
+    } else {
+      const parsed = Date.parse(listing.createdAt);
+      if (!isNaN(parsed)) return parsed;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Indique si une annonce a été publiée lors des 7 derniers jours
+ */
+export function isListingFromLast7Days(listing: RentalListing): boolean {
+  return getListingAgeInDays(listing) <= 7;
+}
+
 export const ListingsService = {
   /**
    * Purge automatique de toutes les annonces de plus de 30 jours
@@ -405,7 +440,12 @@ export const ListingsService = {
     const nonDuplicatedMock = MOCK_RENTAL_LISTINGS.filter(
       (m) => !isFakeListing(m) && !customIds.has(m.id) && !trashIds.has(m.id)
     );
-    return [...custom, ...nonDuplicatedMock];
+    return [...custom, ...nonDuplicatedMock].map((item) => {
+      if (!item.referenceCode || !item.referenceCode.trim()) {
+        item.referenceCode = generateListingReference(item.id, item.countryCode);
+      }
+      return item;
+    });
   },
 
   getPublicListings(): RentalListing[] {
