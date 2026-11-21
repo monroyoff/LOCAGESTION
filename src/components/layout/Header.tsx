@@ -344,8 +344,8 @@ export function Header({
               type="button"
               onClick={() => setIsNotifOpen(!isNotifOpen)}
               className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 hover:border-brand-300 shadow-sm transition-colors cursor-pointer relative"
-              aria-label={isLandlord ? 'Notifications Bailleur/Démarcheur' : 'Mes Notifications Résident'}
-              title={isLandlord ? 'Notifications Bailleur/Démarcheur' : 'Mes Notifications Résident'}
+              aria-label={isTenant ? 'Notifications Locataire' : isDemarcheur ? 'Notifications Démarcheur' : 'Notifications Bailleur'}
+              title={isTenant ? 'Notifications Locataire' : isDemarcheur ? 'Notifications Démarcheur' : 'Notifications Bailleur'}
             >
               <Bell className="w-4 h-4 text-slate-600" />
               {unreadCount > 0 && (
@@ -362,7 +362,7 @@ export function Header({
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-amber-400" />
                     <span className="text-xs font-black tracking-tight">
-                      {isLandlord ? 'Notifications Bailleur/Démarcheur' : 'Mes Notifications Résident'}
+                      {isTenant ? 'Notifications Locataire' : isDemarcheur ? 'Notifications Démarcheur' : 'Notifications Bailleur'}
                     </span>
                     {unreadCount > 0 && (
                       <span className="text-[10px] font-black px-2 py-0.2 rounded-full bg-amber-500 text-white">
