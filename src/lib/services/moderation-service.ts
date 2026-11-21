@@ -240,8 +240,9 @@ export const ModerationService = {
           });
           let hasMutated = false;
           cleaned.forEach((alert: SecurityAlert) => {
-            if (!alert.listingReference) {
-              alert.listingReference = generateListingReference(alert.listingId || alert.id, alert.country);
+            const isProperRef = alert.listingReference && /^REF-ANN-[A-Z]{2}-\d+$/i.test(alert.listingReference.trim());
+            if (!isProperRef) {
+              alert.listingReference = generateListingReference(alert.listingReference || alert.listingId || alert.id, alert.country);
               hasMutated = true;
             }
           });

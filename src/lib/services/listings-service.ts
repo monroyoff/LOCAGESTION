@@ -232,23 +232,90 @@ export function resolveListingAuthorRole(listing?: Partial<RentalListing> | null
   return 'Bailleur';
 }
 
+const COUNTRY_INITIALS_MAP: Record<string, string> = {
+  // Zone UEMOA
+  'bénin': 'BJ',
+  'benin': 'BJ',
+  'bj': 'BJ',
+  'burkina faso': 'BF',
+  'burkina': 'BF',
+  'bf': 'BF',
+  'côte d’ivoire': 'CI',
+  'côte d\'ivoire': 'CI',
+  'cote d\'ivoire': 'CI',
+  'cote d’ivoire': 'CI',
+  'ci': 'CI',
+  'guinée-bissau': 'GW',
+  'guinee-bissau': 'GW',
+  'gw': 'GW',
+  'mali': 'ML',
+  'ml': 'ML',
+  'niger': 'NE',
+  'ne': 'NE',
+  'sénégal': 'SN',
+  'senegal': 'SN',
+  'sn': 'SN',
+  'togo': 'TG',
+  'tg': 'TG',
+  // Zone CEMAC
+  'cameroun': 'CM',
+  'cameroon': 'CM',
+  'cm': 'CM',
+  'centrafrique': 'CF',
+  'cf': 'CF',
+  'congo': 'CG',
+  'cg': 'CG',
+  'gabon': 'GA',
+  'ga': 'GA',
+  'guinée équatoriale': 'GQ',
+  'guinee equatoriale': 'GQ',
+  'gq': 'GQ',
+  'tchad': 'TD',
+  'td': 'TD',
+};
+
+/**
+ * Résout les initiales officielles ISO à 2 lettres du pays (ex: 'BJ', 'CI', 'SN')
+ */
+export function resolveCountryInitials(countryOrCode?: string): string {
+  if (!countryOrCode) return 'BJ';
+  const clean = countryOrCode.trim().toLowerCase();
+  if (COUNTRY_INITIALS_MAP[clean]) {
+    return COUNTRY_INITIALS_MAP[clean];
+  }
+  if (clean.length === 2 && /^[a-z]{2}$/i.test(clean)) {
+    return clean.toUpperCase();
+  }
+  return 'BJ';
+}
+
 /**
  * Génère une référence officielle d'annonce unique et facilement lisible
- * Format: LOCA-ANN-XXXXX ou LOCA-BJ-XXXXX
+ * Format: REF-ANN-<INITIALE_PAYS>-XXXXX (ex: REF-ANN-BJ-17635, REF-ANN-CI-84291)
+ * Strictement distinct des matricules de comptes utilisateurs (LOCA-MAT-*)
  */
-export function generateListingReference(id?: string, countryCode?: string): string {
-  const cc = (countryCode || 'ANN').toUpperCase();
+export function generateListingReference(idOrRef?: string, countryOrCode?: string): string {
+  let cc = resolveCountryInitials(countryOrCode);
   let numPart = '';
-  if (id) {
-    const digitsOnly = id.replace(/[^0-9]/g, '');
+
+  if (idOrRef) {
+    // Si l'ancien ref contient déjà un code pays à 2 lettres (ex: LOCA-BJ-17635 ou REF-ANN-CI-84291)
+    const matchCountryInRef = idOrRef.match(/(?:LOCA|REF-ANN)-([A-Za-z]{2})-\d+/i);
+    if (matchCountryInRef && matchCountryInRef[1]) {
+      cc = matchCountryInRef[1].toUpperCase();
+    }
+
+    const digitsOnly = idOrRef.replace(/[^0-9]/g, '');
     if (digitsOnly.length >= 4) {
       numPart = digitsOnly.slice(-5);
     }
   }
+
   if (!numPart || numPart.length < 4) {
     numPart = Math.floor(10000 + Math.random() * 90000).toString();
   }
-  return `LOCA-${cc}-${numPart}`;
+
+  return `REF-ANN-${cc}-${numPart}`;
 }
 
 /**
@@ -410,10 +477,12 @@ export const ListingsService = {
               }
             }
 
-            // 2. Attribution d'une référence unique plateforme
-            if (!item.referenceCode || !item.referenceCode.trim()) {
+            // 2. Attribution d'une référence unique plateforme au format officiel REF-ANN-<PAYS>-XXXXX
+            // Migration automatique si absente ou si ancien format (LOCA-* ou REF-ANN sans initiale pays)
+            const isProperRef = item.referenceCode && /^REF-ANN-[A-Z]{2}-\d+$/i.test(item.referenceCode.trim());
+            if (!isProperRef) {
               hasUpdated = true;
-              item.referenceCode = generateListingReference(item.id, item.countryCode);
+              item.referenceCode = generateListingReference(item.referenceCode || item.id, item.countryCode || item.country);
             }
 
             activeListings.push(item);
@@ -441,8 +510,9 @@ export const ListingsService = {
       (m) => !isFakeListing(m) && !customIds.has(m.id) && !trashIds.has(m.id)
     );
     return [...custom, ...nonDuplicatedMock].map((item) => {
-      if (!item.referenceCode || !item.referenceCode.trim()) {
-        item.referenceCode = generateListingReference(item.id, item.countryCode);
+      const isProperRef = item.referenceCode && /^REF-ANN-[A-Z]{2}-\d+$/i.test(item.referenceCode.trim());
+      if (!isProperRef) {
+        item.referenceCode = generateListingReference(item.referenceCode || item.id, item.countryCode || item.country);
       }
       return item;
     });
@@ -488,7 +558,7 @@ export const ListingsService = {
   createListing(newListing: RentalListing): RentalListing {
     const itemWithRef: RentalListing = {
       ...newListing,
-      referenceCode: newListing.referenceCode || generateListingReference(newListing.id, newListing.countryCode),
+      referenceCode: newListing.referenceCode || generateListingReference(newListing.id, newListing.countryCode || newListing.country),
     };
     const current = this.getCustomListings().filter((l) => !isFakeListing(l));
     const updated = [itemWithRef, ...current.filter((l) => l.id !== itemWithRef.id)];
