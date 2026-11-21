@@ -161,10 +161,17 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 - Prise de rendez-vous de visite en direct.
 - Espace **"Mes publications"** avec gestion de cycle de vie (Modifier, Mettre en pause, Supprimer).
 
-### 💬 9. Messagerie Directe & Notifications (`/messages`)
+### 💬 9. Messagerie Directe & Notifications (`/messages`, Cloche Header)
 - Chat bidirectionnel temps réel entre Bailleur, Locataire et Démarcheur.
 - Mini-carte de contexte intégrée dans le header : avatar du contact, statut en ligne, vignette du logement concerné, prix du loyer en FCFA.
 - Header mobile-responsive ultra-optimisé (aucun chevauchement d'éléments).
+- **Horodatage Précis & Résolu des Notifications :** Les notifications de la cloche (bailleurs et locataires) n'affichent plus de mention figée « À l'instant ». Elles enregistrent un horodatage ISO `createdAt` et une heure `time` (HH:mm) réels. Le formateur `formatNotificationTime` calcule dynamiquement :
+  - Moins de 2 min : `À l’instant (HH:mm)`
+  - Moins d'une heure : `Il y a X min (HH:mm)`
+  - Aujourd'hui : `Aujourd’hui à HH:mm`
+  - Hier : `Hier à HH:mm`
+  - Antérieur : `JJ/MM à HH:mm`
+  Une migration automatique rétrocompatible rétablit l'heure exacte des anciennes notifications stockées localement à partir de leur ID ou horodatage d'origine.
 
 ### 🔍 10. Guichet Public de Vérification (`/verify/[code]`)
 - Page publique autonome permettant à toute autorité de vérifier la validité d'une quittance scellée par son numéro unique ou via scan du QR Code.
