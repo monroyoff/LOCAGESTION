@@ -88,7 +88,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
         </div>
 
         {/* Receipt Body (Printable Paper Style) */}
-        <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800 bg-[#FAFBFD]">
+        <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800 bg-white receipt-paper" data-document-paper="true">
           {payment.isAdvance && (
             <div className="p-3.5 bg-purple-50 rounded-2xl border border-purple-200 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
