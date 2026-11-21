@@ -176,10 +176,50 @@ export function Header({
     return isDemarcheur ? 'Annonces & Visites' : 'Tableau de bord';
   };
 
+  // Navigation universelle vers l'accueil au clic sur le titre de l'en-tête (Web & Mobile)
+  const handleGoHome = (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (isTenant) {
+      if (pathname === '/portal') {
+        if (onPortalTabChange) {
+          onPortalTabChange('accueil');
+        }
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.delete('tab');
+          url.hash = '';
+          window.history.pushState({}, '', url.toString());
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } else {
+        router.push('/portal');
+      }
+    } else if (isDemarcheur) {
+      if (pathname === '/listings') {
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } else {
+        router.push('/listings');
+      }
+    } else {
+      if (pathname === '/') {
+        if (typeof window !== 'undefined') {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+      } else {
+        router.push('/');
+      }
+    }
+  };
+
   return (
     <>
       <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-2.5 sm:gap-4">
-        {/* Left: Mobile Menu & Space Badge / Title (Emplacement réservé exclusivement au menu) */}
+        {/* Left: Mobile Menu & Space Badge / Title (Emplacement cliquable pour retourner à l'accueil) */}
         <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <button
             onClick={onToggleSidebar}
@@ -191,8 +231,14 @@ export function Header({
           </button>
 
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap">
-              <h1 className="text-sm sm:text-base lg:text-xl font-black text-slate-900 tracking-tight truncate max-w-[180px] xs:max-w-none">
+            <button
+              type="button"
+              onClick={handleGoHome}
+              className="flex items-center gap-1.5 sm:gap-2 flex-wrap sm:flex-nowrap text-left cursor-pointer group active:scale-95 transition-all py-1 focus:outline-hidden touch-manipulation"
+              title="Retourner à l'accueil"
+              aria-label="Retourner à l'accueil"
+            >
+              <h1 className="text-sm sm:text-base lg:text-xl font-black text-slate-900 tracking-tight truncate max-w-[180px] xs:max-w-none group-hover:text-brand-600 transition-colors">
                 {getPageTitle()}
               </h1>
               <span
@@ -227,7 +273,7 @@ export function Header({
                   <span>Matricule : {user.matricule}</span>
                 </span>
               )}
-            </div>
+            </button>
 
             <div className="hidden sm:flex items-center gap-2 text-xs text-slate-500 font-medium">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
