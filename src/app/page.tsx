@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { StatCards } from '@/components/dashboard/StatCards';
-import { HeroPropertyCard } from '@/components/dashboard/HeroPropertyCard';
 import { OccupancyStatusBanner } from '@/components/dashboard/OccupancyStatusBanner';
 import { RentCollectionBreakdown } from '@/components/dashboard/RentCollectionBreakdown';
 import { RecentPaymentsTable } from '@/components/dashboard/RecentPaymentsTable';
@@ -151,8 +150,6 @@ export default function DashboardPage() {
     };
   }, [user]);
 
-  const featuredProperty = userProperties.length > 0 ? userProperties[0] : null;
-
   const handleDashboardCardClick = (cardId: string) => {
     if (cardId === 'collected') {
       setDashboardPaymentTab('paye');
@@ -265,29 +262,18 @@ export default function DashboardPage() {
             />
           </section>
 
-          {/* 3. Statut du Parc Immobilier & Visuel Héro Bien Phare */}
+          {/* 3. Statut du Parc Immobilier & Taux d'Occupation */}
           {/* SUR MOBILE : order-3 (juste après Opérations & Suivi des Loyers) */}
           {/* SUR DESKTOP (lg+) : lg:order-2 */}
           <section
-            className="flex flex-col gap-5 order-3 lg:order-2"
+            className="order-3 lg:order-2"
             aria-label="Parc et occupation"
             id="statut-du-parc-immobilier"
           >
-            {/* Bandeau d'Occupation & Statut du Parc */}
-            <div className="order-1 lg:order-2">
-              <OccupancyStatusBanner
-                occupancy={dashboardKPIs.occupancyRate}
-                onFilterStatus={() => router.push('/properties')}
-              />
-            </div>
-
-            {/* Visuel Héro Bien Phare du Mois */}
-            <div className="order-2 lg:order-1">
-              <HeroPropertyCard
-                property={featuredProperty}
-                onViewDetails={() => router.push('/properties')}
-              />
-            </div>
+            <OccupancyStatusBanner
+              occupancy={dashboardKPIs.occupancyRate}
+              onFilterStatus={() => router.push('/properties')}
+            />
           </section>
 
           {/* 4. Donut Recouvrement & Encaissements Mensuels */}
