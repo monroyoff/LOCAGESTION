@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { useSpace } from '@/lib/context/space-context';
-import { formatFCFA, computeEntryCost } from '@/lib/money/format';
+import { formatFCFA, computeEntryCost, formatDateFR } from '@/lib/money/format';
 import { RentalListing } from '@/lib/types';
 import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
@@ -197,13 +197,26 @@ export default function ListingsPage() {
     }
     return [];
   });
+  const getTodayIsoDate = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [selectedListingForDetail, setSelectedListingForDetail] = useState<RentalListing | null>(null);
   const [currentDetailPhotoIdx, setCurrentDetailPhotoIdx] = useState(0);
   const [selectedListingForVisit, setSelectedListingForVisit] = useState<RentalListing | null>(null);
-  const [visitDate, setVisitDate] = useState('2026-11-04');
+  const [visitDate, setVisitDate] = useState<string>(getTodayIsoDate);
   const [visitTimeSlot, setVisitTimeSlot] = useState('15:00 - 17:00');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const handleOpenVisitModal = (listing: RentalListing) => {
+    setVisitDate(getTodayIsoDate());
+    setSelectedListingForVisit(listing);
+  };
 
   // Charger les annonces centralisées via ListingsService
   useEffect(() => {
@@ -591,7 +604,11 @@ export default function ListingsPage() {
   const handleBookVisitSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedListingForVisit) return;
-    const msg = `Demande de visite confirmée pour le ${visitDate} (${visitTimeSlot}) — ${selectedListingForVisit.title} ! Notification envoyée au bailleur.`;
+    if (visitDate < getTodayIsoDate()) {
+      alert("La date de visite ne peut pas être antérieure à la date d'aujourd'hui.");
+      return;
+    }
+    const msg = `Demande de visite confirmée pour le ${formatDateFR(visitDate)} (${visitTimeSlot}) — ${selectedListingForVisit.title} ! Notification envoyée au bailleur.`;
     showToast(msg);
     notifyAction(msg, 'Demande de visite transmise !', 'success');
     setSelectedListingForVisit(null);
@@ -1578,7 +1595,7 @@ export default function ListingsPage() {
                       </Link>
                       <button
                         type="button"
-                        onClick={() => setSelectedListingForVisit(listing)}
+                        onClick={() => handleOpenVisitModal(listing)}
                         className="flex-1 py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold text-center shadow-pink-glow transition-all cursor-pointer"
                       >
                         Demander visite
@@ -1676,16 +1693,25 @@ export default function ListingsPage() {
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-1">
-                  Date de visite souhaitée *
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="font-bold text-slate-700 block">
+                    Date de visite souhaitée *
+                  </label>
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                    Dès aujourd’hui ({formatDateFR(new Date())})
+                  </span>
+                </div>
                 <input
                   type="date"
+                  min={getTodayIsoDate()}
                   value={visitDate}
                   onChange={(e) => setVisitDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900"
                   required
                 />
+                <span className="text-[10px] text-slate-400 mt-1 block">
+                  La planification démarre au plus tôt à la date du jour d’action ({formatDateFR(new Date())}).
+                </span>
               </div>
 
               <div>
@@ -2022,7 +2048,7 @@ export default function ListingsPage() {
                 onClick={() => {
                   const target = selectedListingForDetail;
                   setSelectedListingForDetail(null);
-                  setSelectedListingForVisit(target);
+                  if (target) handleOpenVisitModal(target);
                 }}
                 className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-black shadow-pink-glow transition-all cursor-pointer"
               >

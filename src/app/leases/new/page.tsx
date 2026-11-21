@@ -784,7 +784,7 @@ export default function NewLeasePage() {
         typeof window !== 'undefined'
           ? `${window.location.origin}/portal?tab=bail&leaseId=${generatedLeaseId}&code=${tenantMode === 'new' ? generatedInvitationCode : ''}&tenant=${encodeURIComponent(tenantName)}`
           : `https://locagestion.site/portal?tab=bail&leaseId=${generatedLeaseId}`,
-      startDate: '2026-11-01',
+      startDate: new Date().toISOString().split('T')[0],
       endDate: '2029-10-31',
       durationMonths: parseInt(durationMonths, 10) || 36,
       status: 'en_attente_signature',
@@ -3380,7 +3380,7 @@ export default function NewLeasePage() {
                     rent: parsedRent,
                     deposit: parsedDeposit,
                     utilitiesDeposit: hasUtilitiesDeposit ? parsedUtilitiesDeposit : 0,
-                    startDate: '2026-11-01',
+                    startDate: new Date().toISOString().split('T')[0],
                   });
                 }}
                 className="flex-1 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
@@ -3442,7 +3442,7 @@ export default function NewLeasePage() {
                       rent: parsedRent,
                       deposit: parsedDeposit,
                       utilitiesDeposit: hasUtilitiesDeposit ? parsedUtilitiesDeposit : 0,
-                      startDate: '2026-11-01',
+                      startDate: new Date().toISOString().split('T')[0],
                     });
                   }}
                   className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"

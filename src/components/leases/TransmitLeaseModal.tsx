@@ -112,7 +112,7 @@ export function TransmitLeaseModal({
     deposit: leaseData?.deposit || 0,
     utilitiesDeposit: leaseData?.utilitiesDeposit || 0,
     totalDueAtEntry: leaseData?.totalDueAtEntry || 0,
-    startDate: leaseData?.startDate || '2026-11-01',
+    startDate: leaseData?.startDate || new Date().toISOString().split('T')[0],
     endDate: leaseData?.endDate || '2029-10-31',
     status: 'en_attente_signature',
     governingLaw: leaseData?.governingLaw,
