@@ -67,7 +67,7 @@ export function HeroPropertyCard({ property, onViewDetails }: HeroPropertyCardPr
             Bien Phare du Mois
           </span>
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/50 backdrop-blur-md text-white text-[11px] font-bold border border-white/10">
-            {property.totalUnits} Lots R+3
+            {property.totalUnits} {property.totalUnits > 1 ? 'Lots' : 'Lot'}
           </span>
         </div>
 
@@ -92,9 +92,15 @@ export function HeroPropertyCard({ property, onViewDetails }: HeroPropertyCardPr
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
               Rendement & Occupation
             </span>
-            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+            <span className={`inline-flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+              occupancyPercentage === 100
+                ? 'text-emerald-600 bg-emerald-50 border-emerald-200'
+                : occupancyPercentage > 0
+                ? 'text-amber-600 bg-amber-50 border-amber-200'
+                : 'text-slate-600 bg-slate-50 border-slate-200'
+            }`}>
               <CheckCircle2 className="w-3.5 h-3.5" />
-              100% Loué
+              {occupancyPercentage === 100 ? '100% Loué' : `${occupancyPercentage}% Loué`}
             </span>
           </div>
 
@@ -113,7 +119,7 @@ export function HeroPropertyCard({ property, onViewDetails }: HeroPropertyCardPr
             <div className="flex items-center justify-between text-xs font-bold">
               <span className="text-slate-600">Taux de remplissage :</span>
               <span className="text-brand-600">
-                {property.occupiedUnits} / {property.totalUnits} lots occupés ({occupancyPercentage}%)
+                {property.occupiedUnits} / {property.totalUnits} {property.totalUnits > 1 ? 'lots occupés' : 'lot occupé'} ({occupancyPercentage}%)
               </span>
             </div>
             <div className="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
@@ -127,12 +133,14 @@ export function HeroPropertyCard({ property, onViewDetails }: HeroPropertyCardPr
           {/* Highlights Grid */}
           <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span className="text-[11px] text-slate-400 block font-medium">Loyer min / max</span>
-              <span className="text-xs font-bold text-slate-800">180k – 450k FCFA</span>
+              <span className="text-[11px] text-slate-400 block font-medium">Loyer mensuel</span>
+              <span className="text-xs font-bold text-slate-800">{formatFCFA(property.monthlyRevenue)}</span>
             </div>
             <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100">
-              <span className="text-[11px] text-slate-400 block font-medium">Retards constatés</span>
-              <span className="text-xs font-bold text-emerald-600">0 impayé</span>
+              <span className="text-[11px] text-slate-400 block font-medium">Statut locatif</span>
+              <span className="text-xs font-bold text-emerald-600">
+                {property.occupiedUnits > 0 ? `${property.occupiedUnits} actif` : 'Disponible'}
+              </span>
             </div>
           </div>
         </div>

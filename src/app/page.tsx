@@ -13,11 +13,9 @@ import { RecentPaymentsTable } from '@/components/dashboard/RecentPaymentsTable'
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderModal';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
-import {
-  MOCK_KPIS,
-  MOCK_FEATURED_PROPERTY,
-} from '@/lib/data/mock-data';
-import { UserSpace, PaymentTransaction, DashboardKPIs } from '@/lib/types';
+import { MOCK_KPIS } from '@/lib/data/mock-data';
+import { UserSpace, PaymentTransaction, DashboardKPIs, Property } from '@/lib/types';
+import { PropertyService } from '@/lib/services/property-service';
 import { useSpace } from '@/lib/context/space-context';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
 import { IncidentService } from '@/lib/services/incident-service';
@@ -32,24 +30,12 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { user, activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
+  const [userProperties, setUserProperties] = useState<Property[]>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 350);
     return () => clearTimeout(timer);
   }, []);
-
-  useEffect(() => {
-    const refreshPayments = () => {
-      setPayments(PaymentService.getVerifiedPaymentsForLandlord(user));
-    };
-    refreshPayments();
-    window.addEventListener('locagestion:payments_updated', refreshPayments);
-    window.addEventListener('storage', refreshPayments);
-    return () => {
-      window.removeEventListener('locagestion:payments_updated', refreshPayments);
-      window.removeEventListener('storage', refreshPayments);
-    };
-  }, [user]);
 
   useEffect(() => {
     if (isDemarcheur) {
@@ -65,6 +51,107 @@ export default function DashboardPage() {
   const [pendingIncidents, setPendingIncidents] = useState(0);
   const [dashboardKPIs, setDashboardKPIs] = useState<DashboardKPIs>(MOCK_KPIS);
   const [dashboardPaymentTab, setDashboardPaymentTab] = useState<'all' | 'paye' | 'en_retard' | 'partiel'>('all');
+
+  // Synchronisation dynamique complète des données du patrimoine et finances du bailleur
+  useEffect(() => {
+    const refreshDashboardData = () => {
+      const props = PropertyService.getPropertiesForUser(user, false);
+      setUserProperties(props);
+
+      const userPayments = PaymentService.getVerifiedPaymentsForLandlord(user);
+      setPayments(userPayments);
+
+      const active = IncidentService.getIncidents().filter((i) => i.status !== 'resolu').length;
+      setPendingIncidents(active);
+      const totalExpenses = IncidentService.getTotalArtisanExpenses();
+
+      const totalUnits = props.reduce(
+        (acc, p) => acc + (p.totalUnits || (p.unitsList ? p.unitsList.length : 1)),
+        0
+      );
+      const occupiedUnits = props.reduce(
+        (acc, p) =>
+          acc +
+          (p.occupiedUnits ||
+            (p.unitsList ? p.unitsList.filter((u) => u.status === 'occupe').length : 0)),
+        0
+      );
+      const vacantUnits = Math.max(0, totalUnits - occupiedUnits);
+      const occupancyPercentage = totalUnits > 0 ? Math.round((occupiedUnits / totalUnits) * 100) : 0;
+
+      const paidPayments = userPayments.filter((p) => p.status === 'paye');
+      const collectedAmount = paidPayments.reduce((acc, p) => acc + (p.amount || 0), 0);
+      const totalMonthlyPotential = props.reduce(
+        (acc, p) => acc + (p.monthlyRevenue || 0),
+        0
+      );
+      const averageRentAmount = totalUnits > 0 ? Math.round(totalMonthlyPotential / totalUnits) : 0;
+
+      setDashboardKPIs({
+        collectedRent: {
+          amount: collectedAmount,
+          variationPct: 0,
+          periodLabel: 'ce mois',
+        },
+        totalExpenses: {
+          amount: totalExpenses,
+          variationPct: 0,
+          periodLabel: 'ce mois',
+        },
+        averageRent: {
+          amount: averageRentAmount,
+          variationPct: 0,
+          periodLabel: 'par lot',
+        },
+        netIncome: {
+          amount: Math.max(0, collectedAmount - totalExpenses),
+          variationPct: 0,
+          periodLabel: 'marge nette',
+        },
+        occupancyRate: {
+          totalUnits,
+          occupiedUnits,
+          vacantUnits,
+          reservedUnits: 0,
+          inMaintenanceUnits: 0,
+          percentage: occupancyPercentage,
+        },
+        rentBreakdown: {
+          paidAmount: collectedAmount,
+          paidCount: paidPayments.length,
+          paidPct:
+            totalMonthlyPotential > 0
+              ? Math.min(100, Math.round((collectedAmount / totalMonthlyPotential) * 100))
+              : collectedAmount > 0
+              ? 100
+              : 0,
+          partialAmount: 0,
+          partialCount: 0,
+          partialPct: 0,
+          overdueAmount: Math.max(0, totalMonthlyPotential - collectedAmount),
+          overdueCount: Math.max(0, occupiedUnits - paidPayments.length),
+          overduePct:
+            totalMonthlyPotential > 0
+              ? Math.max(0, 100 - Math.round((collectedAmount / totalMonthlyPotential) * 100))
+              : 0,
+        },
+      });
+    };
+
+    refreshDashboardData();
+    window.addEventListener('locagestion:properties_updated', refreshDashboardData);
+    window.addEventListener('locagestion:payments_updated', refreshDashboardData);
+    window.addEventListener('locagestion:incidents_updated', refreshDashboardData);
+    window.addEventListener('storage', refreshDashboardData);
+    return () => {
+      window.removeEventListener('locagestion:properties_updated', refreshDashboardData);
+      window.removeEventListener('locagestion:payments_updated', refreshDashboardData);
+      window.removeEventListener('locagestion:incidents_updated', refreshDashboardData);
+      window.removeEventListener('storage', refreshDashboardData);
+    };
+  }, [user]);
+
+  const featuredProperty = userProperties.length > 0 ? userProperties[0] : null;
 
   const handleDashboardCardClick = (cardId: string) => {
     if (cardId === 'collected') {
@@ -84,32 +171,6 @@ export default function DashboardPage() {
       router.push('/payments?status=paye');
     }
   };
-
-  useEffect(() => {
-    const updateIncidentData = () => {
-      const active = IncidentService.getIncidents().filter((i) => i.status !== 'resolu').length;
-      setPendingIncidents(active);
-      const totalExpenses = IncidentService.getTotalArtisanExpenses();
-      setDashboardKPIs((prev) => ({
-        ...prev,
-        totalExpenses: {
-          ...prev.totalExpenses,
-          amount: totalExpenses,
-        },
-        netIncome: {
-          ...prev.netIncome,
-          amount: prev.collectedRent.amount - totalExpenses,
-        },
-      }));
-    };
-    updateIncidentData();
-    window.addEventListener('locagestion:incidents_updated', updateIncidentData);
-    window.addEventListener('storage', updateIncidentData);
-    return () => {
-      window.removeEventListener('locagestion:incidents_updated', updateIncidentData);
-      window.removeEventListener('storage', updateIncidentData);
-    };
-  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -215,7 +276,7 @@ export default function DashboardPage() {
             {/* Bandeau d'Occupation & Statut du Parc */}
             <div className="order-1 lg:order-2">
               <OccupancyStatusBanner
-                occupancy={MOCK_KPIS.occupancyRate}
+                occupancy={dashboardKPIs.occupancyRate}
                 onFilterStatus={() => router.push('/properties')}
               />
             </div>
@@ -223,7 +284,7 @@ export default function DashboardPage() {
             {/* Visuel Héro Bien Phare du Mois */}
             <div className="order-2 lg:order-1">
               <HeroPropertyCard
-                property={MOCK_FEATURED_PROPERTY}
+                property={featuredProperty}
                 onViewDetails={() => router.push('/properties')}
               />
             </div>
@@ -231,7 +292,7 @@ export default function DashboardPage() {
 
           {/* 4. Donut Recouvrement & Encaissements Mensuels */}
           <section aria-label="Finances et encaissements" className="order-4 lg:order-3">
-            <RentCollectionBreakdown breakdown={MOCK_KPIS.rentBreakdown} />
+            <RentCollectionBreakdown breakdown={dashboardKPIs.rentBreakdown} />
           </section>
 
           {/* 5. Alerte Pannes & Interventions Signalées */}
