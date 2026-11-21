@@ -2,6 +2,8 @@
 
 import { LeaseService, LandlordNotification } from './lease-service';
 import { TenantNotificationService } from './tenant-notification-service';
+import { AuthUser } from '../types';
+import { areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
 
 export type IncidentUrgency = 'normale' | 'urgente' | 'critique';
 export type IncidentStatus = 'en_attente' | 'pris_en_charge' | 'en_cours_reparation' | 'resolu';
@@ -61,6 +63,41 @@ export const IncidentService = {
 
   getIncidentById(id: string): ReportedIncident | undefined {
     return this.getIncidents().find((inc) => inc.id === id);
+  },
+
+  getIncidentsForTenant(user?: AuthUser | null): ReportedIncident[] {
+    if (!user) return [];
+    const all = this.getIncidents();
+    const userEmail = user.email?.trim().toLowerCase();
+    const userPhone = user.phone?.trim();
+    const userName = user.name?.trim().toLowerCase();
+
+    return all.filter((inc) => {
+      if (userEmail && inc.tenantEmail && areEmailsEqual(userEmail, inc.tenantEmail)) return true;
+      if (userPhone && inc.tenantPhone && arePhoneNumbersEqual(userPhone, inc.tenantPhone)) return true;
+      if (
+        userName &&
+        inc.tenantName &&
+        (userName === inc.tenantName.trim().toLowerCase() ||
+          userName.split(/\s+/).sort().join(' ') === inc.tenantName.trim().toLowerCase().split(/\s+/).sort().join(' '))
+      ) {
+        return true;
+      }
+      return false;
+    });
+  },
+
+  getIncidentsForLandlord(user?: AuthUser | null): ReportedIncident[] {
+    if (!user) return [];
+    if (user.role === 'admin' || user.email === 'admin@locagestion.site') return this.getIncidents();
+    const all = this.getIncidents();
+    const landlordLeases = LeaseService.getLeasesForLandlord(user);
+    if (landlordLeases.length === 0) {
+      if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return all;
+      return [];
+    }
+    const propNames = new Set(landlordLeases.map((l) => l.property.toLowerCase().trim()));
+    return all.filter((inc) => propNames.has((inc.property || '').toLowerCase().trim()));
   },
 
   saveAllIncidents(incidents: ReportedIncident[]): void {

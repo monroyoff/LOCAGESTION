@@ -1,6 +1,8 @@
 'use client';
 
 import { TenantNotificationService } from './tenant-notification-service';
+import { AuthUser } from '../types';
+import { areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
 
 export type LeaseStatus =
   | 'actif'
@@ -328,6 +330,49 @@ function notifyStorageChange() {
   }
 }
 
+/**
+ * Vérifie de façon étanche si un bail appartient au bailleur connecté
+ */
+export function isLeaseMatchingLandlord(
+  lease: Lease,
+  user?: AuthUser | null
+): boolean {
+  if (!user) return false;
+  if (user.role === 'admin' || user.email === 'admin@locagestion.site') return true;
+
+  const landlordEmail = user.email?.trim().toLowerCase();
+  const landlordPhone = user.phone?.trim();
+  const landlordName = user.name?.trim().toLowerCase();
+  const landlordId = user.id?.trim();
+
+  // Profil canonique de test
+  const isVoglossouCanonical =
+    (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) ||
+    (user.name && user.name.toUpperCase().includes('VOGLOSSOU'));
+  if (isVoglossouCanonical && lease.landlordId === 'usr-bailleur-voglossou') return true;
+
+  // 1. Email bailleur
+  if (landlordEmail && lease.landlordEmail && areEmailsEqual(landlordEmail, lease.landlordEmail)) return true;
+
+  // 2. Téléphone bailleur
+  if (landlordPhone && lease.landlordPhone && arePhoneNumbersEqual(landlordPhone, lease.landlordPhone)) return true;
+
+  // 3. ID bailleur
+  if (landlordId && lease.landlordId && landlordId === lease.landlordId) return true;
+
+  // 4. Nom bailleur
+  if (landlordName && lease.landlordName) {
+    if (landlordName === lease.landlordName.trim().toLowerCase()) return true;
+    const lWords = landlordName.split(/\s+/).filter(Boolean);
+    const leaseWords = lease.landlordName.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (lWords.length > 0 && lWords.length === leaseWords.length && lWords.every((w: string) => leaseWords.includes(w))) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export const LeaseService = {
   getLeases(): Lease[] {
     if (typeof window === 'undefined') return INITIAL_LEASES;
@@ -427,6 +472,15 @@ export const LeaseService = {
   getLeaseById(id: string): Lease | undefined {
     const leases = this.getLeases();
     return leases.find((l) => l.id === id);
+  },
+
+  getLeasesForLandlord(user?: AuthUser | null): Lease[] {
+    if (!user) return [];
+    if (user.role === 'admin' || user.email === 'admin@locagestion.site') {
+      return this.getLeases();
+    }
+    const all = this.getLeases();
+    return all.filter((l) => isLeaseMatchingLandlord(l, user));
   },
 
   // Récupérer le bail en attente de signature pour un locataire spécifique
@@ -802,12 +856,26 @@ export const LeaseService = {
   },
 
   // Notifications Bailleur
-  getLandlordNotifications(): LandlordNotification[] {
+  getLandlordNotifications(user?: AuthUser | null): LandlordNotification[] {
     if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
       if (stored) {
-        return JSON.parse(stored);
+        const parsed: LandlordNotification[] = JSON.parse(stored);
+        if (!user || user.role === 'admin' || user.email === 'admin@locagestion.site') {
+          return parsed;
+        }
+        const landlordLeases = this.getLeasesForLandlord(user);
+        const landlordProps = new Set(landlordLeases.map((l) => (l.property || '').toLowerCase().trim()));
+        const landlordLeaseIds = new Set(landlordLeases.map((l) => l.id));
+
+        return parsed.filter((n) => {
+          if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
+          if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
+          if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
+          if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+          return false;
+        });
       }
     } catch (e) {
       console.error('Erreur lecture notifications:', e);

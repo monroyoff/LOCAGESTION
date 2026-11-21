@@ -1,16 +1,1 @@
-[
-  {
-    "id": "notif-jojovog-lease-active",
-    "title": "Bail contresigné et actif !",
-    "message": "Votre contrat de bail pour CHAMBRE SALON SANITAIRE (Lot 1 (Chambre Salon Sanitaire • 45 m²)) a été contresigné avec succès et est désormais en cours d'exécution.",
-    "time": "Récent",
-    "unread": false,
-    "read": true,
-    "leaseId": "BAIL-2026-421",
-    "tenantName": "Jojo VOG",
-    "tenantEmail": "jojovog007@gmail.com",
-    "tenantPhone": "+229 97 00 12 34",
-    "recipientEmail": "jojovog007@gmail.com",
-    "recipientPhone": "+229 97 00 12 34"
-  }
-]
+[]

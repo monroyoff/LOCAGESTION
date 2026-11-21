@@ -96,7 +96,11 @@ function IncidentsPageContent() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadIncidents = () => {
-    setIncidents(IncidentService.getIncidents());
+    if (isTenant) {
+      setIncidents(IncidentService.getIncidentsForTenant(user));
+    } else {
+      setIncidents(IncidentService.getIncidentsForLandlord(user));
+    }
   };
 
   useEffect(() => {
@@ -108,7 +112,7 @@ function IncidentsPageContent() {
       window.removeEventListener('locagestion:incidents_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, []);
+  }, [user, isTenant]);
 
   // Détection du paramètre d'URL pour ouvrir directement le modal de signalement
   useEffect(() => {

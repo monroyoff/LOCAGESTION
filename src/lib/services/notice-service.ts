@@ -2,6 +2,8 @@
 
 import { LeaseService } from './lease-service';
 import { TenantNotificationService } from './tenant-notification-service';
+import { AuthUser } from '../types';
+import { areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
 
 export type NoticeReasonType =
   | 'reprise_personnelle'
@@ -201,16 +203,54 @@ export class NoticeService {
     }
   }
 
-  static getTenantNotices(tenantName: string = ''): Notice[] {
-    if (!tenantName.trim()) return [];
+  static getTenantNotices(userOrTenantName?: AuthUser | string | null): Notice[] {
+    if (!userOrTenantName) return [];
     const notices = this.getNotices();
-    return notices.filter(
-      (n) =>
-        !isFakeNotice(n) &&
-        (n.tenantName.toLowerCase().trim() === tenantName.toLowerCase().trim() ||
-          n.tenantName.toLowerCase().includes(tenantName.toLowerCase()) ||
-          tenantName.toLowerCase().includes(n.tenantName.toLowerCase()))
-    );
+
+    if (typeof userOrTenantName === 'string') {
+      const tenantName = userOrTenantName.trim().toLowerCase();
+      if (!tenantName) return [];
+      return notices.filter(
+        (n) =>
+          !isFakeNotice(n) &&
+          (n.tenantName.toLowerCase().trim() === tenantName ||
+            n.tenantName.toLowerCase().includes(tenantName) ||
+            tenantName.includes(n.tenantName.toLowerCase()))
+      );
+    }
+
+    const u = userOrTenantName as AuthUser;
+    const uEmail = u.email?.trim().toLowerCase();
+    const uPhone = u.phone?.trim();
+    const uName = u.name?.trim().toLowerCase();
+
+    return notices.filter((n) => {
+      if (isFakeNotice(n)) return false;
+      if (uEmail && n.tenantEmail && areEmailsEqual(uEmail, n.tenantEmail)) return true;
+      if (uPhone && n.tenantPhone && arePhoneNumbersEqual(uPhone, n.tenantPhone)) return true;
+      if (
+        uName &&
+        n.tenantName &&
+        (uName === n.tenantName.trim().toLowerCase() ||
+          uName.split(/\s+/).sort().join(' ') === n.tenantName.trim().toLowerCase().split(/\s+/).sort().join(' '))
+      ) {
+        return true;
+      }
+      return false;
+    });
+  }
+
+  static getLandlordNotices(user?: AuthUser | null): Notice[] {
+    if (!user) return [];
+    if (user.role === 'admin' || user.email === 'admin@locagestion.site') return this.getNotices();
+    const all = this.getNotices();
+    const landlordLeases = LeaseService.getLeasesForLandlord(user);
+    if (landlordLeases.length === 0) {
+      if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return all;
+      return [];
+    }
+    const propNames = new Set(landlordLeases.map((l) => l.property.toLowerCase().trim()));
+    return all.filter((n) => propNames.has((n.propertyName || '').toLowerCase().trim()));
   }
 
   static saveNotices(notices: Notice[]): void {

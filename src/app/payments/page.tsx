@@ -37,10 +37,12 @@ import { downloadCSV } from '@/lib/export/csv-export';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 import { SkeletonKPIGrid, SkeletonTable } from '@/components/ui/SkeletonLoader';
+import { useSpace } from '@/lib/context/space-context';
 
 function PaymentsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useSpace();
   const statusParam = searchParams?.get('status') || '';
   const tabParam = searchParams?.get('tab') || '';
   const verifyParam = searchParams?.get('verify') || '';
@@ -64,7 +66,7 @@ function PaymentsPageContent() {
     statusParam === 'paye' || tabParam === 'paye' ? 'paye' : 'all'
   );
 
-  // Paiements en direct depuis PaymentService
+  // Paiements en direct depuis PaymentService (strictement partitionnés par bailleur)
   const [verifiedPayments, setVerifiedPayments] = useState<PaymentTransaction[]>([]);
   const [declaredPayments, setDeclaredPayments] = useState<PaymentTransaction[]>([]);
 
@@ -76,8 +78,8 @@ function PaymentsPageContent() {
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const loadAllPayments = () => {
-    setVerifiedPayments(PaymentService.getVerifiedPayments());
-    setDeclaredPayments(PaymentService.getDeclaredPayments());
+    setVerifiedPayments(PaymentService.getVerifiedPaymentsForLandlord(user));
+    setDeclaredPayments(PaymentService.getDeclaredPaymentsForLandlord(user));
   };
 
   useEffect(() => {
@@ -88,7 +90,7 @@ function PaymentsPageContent() {
       window.removeEventListener('locagestion:payments_updated', loadAllPayments);
       window.removeEventListener('storage', loadAllPayments);
     };
-  }, []);
+  }, [user]);
 
   // Détection des paramètres d'URL (ex: depuis la notification "Vérifier le paiement" ou clic KPI "Loyers Encaissés")
   useEffect(() => {
@@ -100,7 +102,7 @@ function PaymentsPageContent() {
     }
 
     if (verifyParam) {
-      const declared = PaymentService.getDeclaredPayments();
+      const declared = PaymentService.getDeclaredPaymentsForLandlord(user);
       const found =
         declared.find((p) => p.id === verifyParam || p.receiptNumber === verifyParam) ||
         declared.find((p) => !p.isVerified) ||
@@ -113,7 +115,7 @@ function PaymentsPageContent() {
     if (actionParam === 'new' || actionParam === 'declare' || actionParam === 'new_payment') {
       setQuickAction('new_payment');
     }
-  }, [statusParam, tabParam, verifyParam, actionParam]);
+  }, [statusParam, tabParam, verifyParam, actionParam, user]);
 
   const pendingPayments = declaredPayments.filter((p) => !p.isVerified && p.status !== 'en_retard');
 

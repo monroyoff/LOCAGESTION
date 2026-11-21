@@ -70,6 +70,7 @@ import {
 import { Footer } from '@/components/layout/Footer';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 import { SkeletonTable } from '@/components/ui/SkeletonLoader';
+import { useSpace } from '@/lib/context/space-context';
 
 interface TenantDetail {
   id: string;
@@ -142,6 +143,7 @@ const MOCK_TENANTS: TenantDetail[] = [];
 
 export default function TenantsPage() {
   const router = useRouter();
+  const { user } = useSpace();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
   const [isLoading, setIsLoading] = useState(true);
@@ -337,7 +339,7 @@ export default function TenantsPage() {
 
   useEffect(() => {
     const refreshLeases = () => {
-      setLeases(LeaseService.getLeases());
+      setLeases(LeaseService.getLeasesForLandlord(user));
     };
     refreshLeases();
     window.addEventListener('locagestion:leases_updated', refreshLeases);
@@ -346,7 +348,7 @@ export default function TenantsPage() {
       window.removeEventListener('locagestion:leases_updated', refreshLeases);
       window.removeEventListener('storage', refreshLeases);
     };
-  }, []);
+  }, [user]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -356,7 +358,7 @@ export default function TenantsPage() {
   const handleTerminateTenantLease = (leaseId: string, tenantName: string, reason?: string) => {
     LeaseService.terminateLease(leaseId, reason);
     setLastResiliatedId(leaseId);
-    setLeases(LeaseService.getLeases());
+    setLeases(LeaseService.getLeasesForLandlord(user));
     const msg = `Bail ${leaseId} (${tenantName}) résilié. Le logement est dissocié.`;
     showToast(`⚠️ ${msg}`);
     notifyDelete(msg, 'Bail résilié !');
@@ -365,7 +367,7 @@ export default function TenantsPage() {
   const handleReactivateTenantLease = (leaseId: string, tenantName: string) => {
     LeaseService.reactivateLease(leaseId);
     setLastResiliatedId(null);
-    setLeases(LeaseService.getLeases());
+    setLeases(LeaseService.getLeasesForLandlord(user));
     const msg = `Bail ${leaseId} (${tenantName}) réactivé avec succès ! Liaison rétablie sans autres démarches.`;
     showToast(`✅ ${msg}`);
     notifySave(msg, 'Bail réactivé avec succès !');

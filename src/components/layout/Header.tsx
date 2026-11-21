@@ -74,7 +74,7 @@ export function Header({
   const notifRef = useRef<HTMLDivElement | null>(null);
 
   const updateNotifications = () => {
-    setNotifications(LeaseService.getLandlordNotifications());
+    setNotifications(LeaseService.getLandlordNotifications(user));
     setTenantNotifs(TenantNotificationService.getNotifications(user));
     setUnreadAlertsCount(ModerationService.getUnreadAlertsCount());
   };

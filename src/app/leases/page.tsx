@@ -69,7 +69,7 @@ export default function LeasesPage() {
   const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'active' | 'resiliated'>('all');
 
   const refreshLeases = () => {
-    setLeases(LeaseService.getLeases());
+    setLeases(LeaseService.getLeasesForLandlord(spaceCtx.user));
   };
 
   useEffect(() => {
@@ -86,7 +86,7 @@ export default function LeasesPage() {
       window.removeEventListener('locagestion:leases_updated', handleStorageUpdate);
       window.removeEventListener('storage', handleStorageUpdate);
     };
-  }, []);
+  }, [spaceCtx.user]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);

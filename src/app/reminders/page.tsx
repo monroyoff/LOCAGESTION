@@ -80,7 +80,7 @@ export default function RemindersCenterPage() {
 
   useEffect(() => {
     const handleUpdate = () => {
-      setNotices(NoticeService.getNotices());
+      setNotices(NoticeService.getLandlordNotices(user));
     };
     handleUpdate();
     window.addEventListener('locagestion:notices_updated', handleUpdate);
@@ -89,10 +89,10 @@ export default function RemindersCenterPage() {
       window.removeEventListener('locagestion:notices_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, []);
+  }, [user]);
 
   const refreshNotices = () => {
-    setNotices(NoticeService.getNotices());
+    setNotices(NoticeService.getLandlordNotices(user));
   };
 
   const showToast = (msg: string) => {

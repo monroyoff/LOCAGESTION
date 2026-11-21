@@ -128,8 +128,11 @@ export interface PaymentTransaction {
   notes?: string;
   isVerified: boolean;
   tenantEmail?: string;
+  tenantMatricule?: string;
   landlordName?: string;
   landlordId?: string;
+  landlordEmail?: string;
+  landlordPhone?: string;
   isAdvance?: boolean;
   advanceMonthsCount?: number;
   advanceMonthsList?: string[];

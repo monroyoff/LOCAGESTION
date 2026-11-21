@@ -40,7 +40,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const refreshPayments = () => {
-      setPayments(PaymentService.getVerifiedPayments());
+      setPayments(PaymentService.getVerifiedPaymentsForLandlord(user));
     };
     refreshPayments();
     window.addEventListener('locagestion:payments_updated', refreshPayments);
@@ -49,7 +49,7 @@ export default function DashboardPage() {
       window.removeEventListener('locagestion:payments_updated', refreshPayments);
       window.removeEventListener('storage', refreshPayments);
     };
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     if (isDemarcheur) {

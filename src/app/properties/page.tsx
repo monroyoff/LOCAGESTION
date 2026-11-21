@@ -29,7 +29,7 @@ import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
 import { formatFCFA } from '@/lib/money/format';
 import { Property, UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
-import { AuthService } from '@/lib/services/auth-service';
+import { AuthService, areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { PropertyDetailModal } from '@/components/properties/PropertyDetailModal';
 import { NewPropertyModal } from '@/components/properties/NewPropertyModal';
@@ -209,6 +209,19 @@ export default function PropertiesPage() {
   }, [properties]);
 
   const filteredProperties = properties.filter((p) => {
+    // Si l'utilisateur est un bailleur et non-admin : cloisonnement étanche de son parc immobilier
+    if (user && !isAdmin && user.role === 'bailleur') {
+      const isOwner =
+        (user.id && p.authorId && user.id === p.authorId) ||
+        (user.email && p.authorEmail && areEmailsEqual(user.email, p.authorEmail)) ||
+        (user.phone && p.authorPhone && arePhoneNumbersEqual(user.phone, p.authorPhone)) ||
+        (user.matricule && p.authorMatricule && user.matricule === p.authorMatricule);
+      const isDemoOwner =
+        (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) ||
+        (user.email && areEmailsEqual(user.email, 'mamadou.diallo@locagestion.site'));
+      if (!isOwner && !isDemoOwner) return false;
+    }
+
     // Filtrage Super-Admin par bailleur spécifique
     if (selectedLandlordFilter !== 'all') {
       const key = p.authorId || p.authorMatricule || p.authorName || 'Bailleur Inconnu';

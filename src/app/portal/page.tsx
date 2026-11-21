@@ -130,7 +130,7 @@ function TenantPortalContent() {
 
   useEffect(() => {
     const loadNotices = () => {
-      setTenantNotices(NoticeService.getTenantNotices(user?.name || ''));
+      setTenantNotices(NoticeService.getTenantNotices(user));
     };
     loadNotices();
     window.addEventListener('locagestion:notices_updated', loadNotices);
@@ -156,7 +156,7 @@ function TenantPortalContent() {
 
   useEffect(() => {
     const loadIncidents = () => {
-      setReportedIncidents(IncidentService.getIncidents());
+      setReportedIncidents(IncidentService.getIncidentsForTenant(user));
     };
     loadIncidents();
     window.addEventListener('locagestion:incidents_updated', loadIncidents);
@@ -165,7 +165,7 @@ function TenantPortalContent() {
       window.removeEventListener('locagestion:incidents_updated', loadIncidents);
       window.removeEventListener('storage', loadIncidents);
     };
-  }, []);
+  }, [user]);
 
   const [selectedReceipt, setSelectedReceipt] = useState<PaymentTransaction | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -802,16 +802,8 @@ function TenantPortalContent() {
   useEffect(() => {
     const syncReceipts = () => {
       try {
-        const declared = PaymentService.getDeclaredPayments();
-        const tenantDeclared = declared.filter((p) => {
-          if (!user && !currentLease) return false;
-          if (user?.email && p.tenantEmail && p.tenantEmail.trim().toLowerCase() === user.email.trim().toLowerCase()) return true;
-          if (user?.phone && p.tenantPhone && p.tenantPhone.replace(/\D/g, '') === user.phone.replace(/\D/g, '')) return true;
-          if (user?.name && p.tenantName && p.tenantName.trim().toLowerCase() === user.name.trim().toLowerCase()) return true;
-          if (currentLease && ((p.propertyName === currentLease.property && p.unitNumber === currentLease.unit) || (p.tenantName && p.tenantName.trim().toLowerCase() === currentLease.tenant.trim().toLowerCase()))) return true;
-          return false;
-        });
-        setReceiptsList(tenantDeclared);
+        const tenantPayments = PaymentService.getPaymentsForTenant(user, currentLease);
+        setReceiptsList(tenantPayments);
       } catch (err) {
         console.error('Erreur synchronisation quittances:', err);
       }
@@ -893,31 +885,6 @@ function TenantPortalContent() {
       return receiptSortOrder === 'desc' ? timeB - timeA : timeA - timeB;
     });
 
-  useEffect(() => {
-    const loadReceipts = () => {
-      if (typeof window !== 'undefined') {
-        try {
-          const saved = localStorage.getItem('locagestion:declared_payments');
-          if (saved) {
-            const parsed = JSON.parse(saved);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setReceiptsList(parsed);
-            }
-          }
-        } catch (err) {
-          console.error('Erreur lecture paiements déclarés:', err);
-        }
-      }
-    };
-    loadReceipts();
-    window.addEventListener('locagestion:payments_updated', loadReceipts);
-    window.addEventListener('storage', loadReceipts);
-    return () => {
-      window.removeEventListener('locagestion:payments_updated', loadReceipts);
-      window.removeEventListener('storage', loadReceipts);
-    };
-  }, []);
-
   const handleDeclarePayment = (e: React.FormEvent) => {
     e.preventDefault();
     const isAdvance = paymentType === 'advance' || paymentType === 'both';
@@ -929,11 +896,12 @@ function TenantPortalContent() {
     const newTx: PaymentTransaction = {
       id: `decl-${Date.now()}`,
       receiptNumber: `DEC-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-      tenantId: 'ten-01',
-      tenantName: tenant.name,
-      tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-      tenantPhone: tenant.phone,
-      tenantEmail: tenant.email,
+      tenantId: user?.id || (targetPaymentLease as any)?.tenantId || 'usr-tenant',
+      tenantName: user?.name || tenant.name,
+      tenantAvatar: user?.avatarUrl || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+      tenantPhone: user?.phone || tenant.phone,
+      tenantEmail: user?.email || tenant.email,
+      tenantMatricule: user?.matricule || (targetPaymentLease as any)?.tenantMatricule,
       propertyName: targetPaymentLease?.property || tenant.property,
       unitNumber: targetPaymentLease?.unit || tenant.unit,
       leaseId: targetPaymentLease?.id,
@@ -4364,7 +4332,7 @@ function TenantPortalContent() {
         isOpen={departureModalOpen}
         onClose={() => setDepartureModalOpen(false)}
         onSuccess={() => {
-          setTenantNotices(NoticeService.getTenantNotices(user?.name || ''));
+          setTenantNotices(NoticeService.getTenantNotices(user));
           showToast('Préavis de départ volontaire transmis au bailleur.');
         }}
         tenantName={tenant.name}
