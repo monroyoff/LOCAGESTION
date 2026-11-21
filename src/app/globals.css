@@ -116,9 +116,9 @@ body {
 .skeleton-shimmer {
   background: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0.05) 0%,
-    rgba(255, 255, 255, 0.15) 50%,
-    rgba(255, 255, 255, 0.05) 100%
+    rgba(226, 232, 240, 0.7) 0%,
+    rgba(248, 250, 252, 0.95) 50%,
+    rgba(226, 232, 240, 0.7) 100%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite ease-in-out;
@@ -133,145 +133,5 @@ body {
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite ease-in-out;
-}
-
-/* ============================================================================ */
-/* STAYWISE DARK THEME (Inspiré de l'écran de connexion & Mobile PropTech)       */
-/* ============================================================================ */
-
-/* 1. Global Page Background & Root Canvas */
-html,
-body,
-.bg-\[\#F4F6F9\],
-.bg-\[\#f6f8fb\],
-.bg-\[\#FAFBFD\]:not(.receipt-paper):not([data-document-paper]) {
-  background-color: #0e1117 !important;
-  color: #f8fafc !important;
-}
-
-/* 2. Sticky Header (Dark Glassmorphism) */
-header.sticky {
-  background-color: rgba(14, 17, 23, 0.95) !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-
-header.sticky h1 {
-  color: #ffffff !important;
-}
-
-header.sticky button:not(.bg-brand-500):not(.bg-brand-600) {
-  background-color: #171b24 !important;
-  border-color: rgba(255, 255, 255, 0.1) !important;
-  color: #ffffff !important;
-}
-
-header.sticky button svg {
-  color: #e2e8f0 !important;
-}
-
-/* 3. Cards & Main Containers (Écrins sombres #171b24 avec liseré subtil) */
-main div.bg-white:not(.receipt-paper):not([data-document-paper]):not(.no-dark),
-div.bg-white.rounded-3xl:not(.receipt-paper):not([data-document-paper]):not(.no-dark),
-div.bg-white.rounded-2xl:not(.receipt-paper):not([data-document-paper]):not(.no-dark),
-div.bg-white.border:not(.receipt-paper):not([data-document-paper]):not(.no-dark),
-.resident-subbar {
-  background-color: #171b24 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5) !important;
-  color: #f8fafc !important;
-}
-
-/* 4. Sub-cards, table headers, and nested panels */
-main div.bg-slate-50:not(.receipt-paper):not([data-document-paper]),
-main div.bg-slate-100:not(.receipt-paper):not([data-document-paper]),
-div.bg-slate-50\/50,
-div.bg-slate-100\/50 {
-  background-color: rgba(255, 255, 255, 0.04) !important;
-  border-color: rgba(255, 255, 255, 0.06) !important;
-}
-
-/* 5. Typography Adaptations */
-main h1:not(.text-brand-500):not(.text-emerald-500):not(.text-amber-500):not(.text-rose-500),
-main h2:not(.text-brand-500):not(.text-emerald-500):not(.text-amber-500):not(.text-rose-500),
-main h3:not(.text-brand-500):not(.text-emerald-500):not(.text-amber-500):not(.text-rose-500),
-main h4:not(.text-brand-500):not(.text-emerald-500):not(.text-amber-500):not(.text-rose-500),
-main h5:not(.text-brand-500):not(.text-emerald-500):not(.text-amber-500):not(.text-rose-500),
-.text-slate-900:not(.receipt-paper *):not([data-document-paper] *),
-.text-slate-800:not(.receipt-paper *):not([data-document-paper] *) {
-  color: #ffffff !important;
-}
-
-.text-slate-700:not(.receipt-paper *):not([data-document-paper] *),
-.text-slate-600:not(.receipt-paper *):not([data-document-paper] *) {
-  color: #cbd5e1 !important;
-}
-
-.text-slate-500:not(.receipt-paper *):not([data-document-paper] *),
-.text-slate-400:not(.receipt-paper *):not([data-document-paper] *) {
-  color: #94a3b8 !important;
-}
-
-/* 6. Form Inputs & Selects */
-main input:not([type="checkbox"]):not([type="radio"]):not(.receipt-paper *),
-main select:not(.receipt-paper *),
-main textarea:not(.receipt-paper *) {
-  background-color: rgba(255, 255, 255, 0.05) !important;
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  color: #ffffff !important;
-}
-
-main input::placeholder,
-main textarea::placeholder {
-  color: #64748b !important;
-}
-
-/* 7. Borders & Dividers */
-.border-slate-200:not(.receipt-paper *):not([data-document-paper] *),
-.border-slate-100:not(.receipt-paper *):not([data-document-paper] *),
-.border-slate-200\/80:not(.receipt-paper *):not([data-document-paper] *),
-.border-slate-200\/90:not(.receipt-paper *):not([data-document-paper] *) {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-.divide-slate-100 > :not([hidden]) ~ :not([hidden]),
-.divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-/* 8. Tables */
-table th:not(.receipt-paper *) {
-  background-color: rgba(255, 255, 255, 0.04) !important;
-  color: #94a3b8 !important;
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-table td:not(.receipt-paper *) {
-  border-color: rgba(255, 255, 255, 0.06) !important;
-}
-
-table tr:hover:not(.receipt-paper *) {
-  background-color: rgba(255, 255, 255, 0.03) !important;
-}
-
-/* 9. Modals (Dark Luxe Modal) */
-div[role="dialog"] div.bg-white,
-.fixed.inset-0 div.bg-white:not(.receipt-paper):not([data-document-paper]) {
-  background-color: #171b24 !important;
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  color: #ffffff !important;
-}
-
-/* 10. Document Paper Exception (Quittances Officielles restent blanches et fidèles au papier physique) */
-.receipt-paper,
-[data-document-paper],
-.receipt-modal-paper {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-}
-
-.receipt-paper *,
-[data-document-paper] *,
-.receipt-modal-paper * {
-  color: inherit;
 }
 

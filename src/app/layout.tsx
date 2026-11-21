@@ -83,13 +83,9 @@ export default function RootLayout({
   return (
     <html lang="fr" className="h-full" suppressHydrationWarning>
       <body
-        className="h-full bg-[#0e1117] text-white antialiased selection:bg-brand-500 selection:text-white relative min-h-screen"
+        className="h-full bg-[#F4F6F9] text-slate-900 antialiased selection:bg-brand-500 selection:text-white"
         suppressHydrationWarning
       >
-        {/* Ambient atmospheric glows StayWise (identiques à l'écran de connexion) */}
-        <div className="fixed top-0 left-1/4 w-[500px] h-[500px] bg-brand-500/10 rounded-full blur-[140px] pointer-events-none -z-10" />
-        <div className="fixed bottom-0 right-1/4 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none -z-10" />
-
         <SpaceProvider>
           <GlobalSyncProvider>
             {children}
