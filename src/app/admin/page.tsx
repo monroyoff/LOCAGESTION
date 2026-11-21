@@ -53,10 +53,17 @@ import { ListingsService, getListingAgeInDays, resolveListingAuthorRole } from '
 import { AuthService, SYSTEM_ADMIN_USER, getRoleLabel, areEmailsEqual } from '@/lib/services/auth-service';
 import { SecurityAlert, RentalListing, AuthUser, UserSpace, TrashListing } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
+import { SkeletonAdminDashboard } from '@/components/ui/SkeletonLoader';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
   const { user, logout } = useSpace();
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 250);
+    return () => clearTimeout(timer);
+  }, []);
 
   const [alerts, setAlerts] = useState<SecurityAlert[]>([]);
   const [listings, setListings] = useState<RentalListing[]>([]);
@@ -116,6 +123,14 @@ export default function AdminDashboardPage() {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-white">
         <p className="text-sm font-bold text-slate-400">Accès restreint au Super-Administrateur...</p>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#F4F6F9]">
+        <SkeletonAdminDashboard />
       </div>
     );
   }

@@ -58,6 +58,7 @@ import {
   buildLeaseInvitationTextMessage,
 } from '@/lib/services/notification-dispatch-service';
 import { formatFCFA } from '@/lib/money/format';
+import { SkeletonStepperForm } from '@/components/ui/SkeletonLoader';
 import { UserSpace, Property, RentalListing } from '@/lib/types';
 import { ListingsService } from '@/lib/services/listings-service';
 import { MOCK_PROPERTIES } from '@/lib/data/mock-data';
@@ -120,6 +121,12 @@ export default function NewLeasePage() {
   const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSpace, setActiveSpace] = useState<UserSpace>('bailleur');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 250);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Stepper state (1 to 5)
   const [currentStep, setCurrentStep] = useState(1);
@@ -887,7 +894,11 @@ export default function NewLeasePage() {
             </div>
           </div>
 
-          {/* Stepper Progress Bar */}
+          {isLoading ? (
+            <SkeletonStepperForm />
+          ) : (
+            <>
+              {/* Stepper Progress Bar */}
           <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-soft">
             <div className="grid grid-cols-5 gap-2 text-center">
               {steps.map((s) => {
@@ -3158,7 +3169,9 @@ export default function NewLeasePage() {
               )}
             </div>
           </div>
-        </main>
+        </>
+      )}
+    </main>
       </div>
 
       {/* Modal de Transmission du Bail au Locataire */}

@@ -16,6 +16,7 @@ import {
 import { formatFCFA } from '@/lib/money/format';
 import { PaymentService } from '@/lib/services/payment-service';
 import { PaymentTransaction } from '@/lib/types';
+import { SkeletonCertificate } from '@/components/ui/SkeletonLoader';
 
 interface VerifyPageProps {
   params: {
@@ -26,22 +27,28 @@ interface VerifyPageProps {
 export default function VerifyReceiptPage({ params }: VerifyPageProps) {
   const code = params.code || 'QUITT-2026';
   const [matchedPayment, setMatchedPayment] = useState<PaymentTransaction | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      const allPayments = [
-        ...PaymentService.getVerifiedPayments(),
-        ...PaymentService.getDeclaredPayments(),
-      ];
-      const found = allPayments.find(
-        (p) => p.id === code || p.receiptNumber === code
-      );
-      if (found) {
-        setMatchedPayment(found);
+    const timer = setTimeout(() => {
+      try {
+        const allPayments = [
+          ...PaymentService.getVerifiedPayments(),
+          ...PaymentService.getDeclaredPayments(),
+        ];
+        const found = allPayments.find(
+          (p) => p.id === code || p.receiptNumber === code
+        );
+        if (found) {
+          setMatchedPayment(found);
+        }
+      } catch (e) {
+        console.error('Erreur recherche quittance:', e);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (e) {
-      console.error('Erreur recherche quittance:', e);
-    }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [code]);
 
   const landlordName = matchedPayment?.landlordName || 'Cabinet de Gestion Immobilière';
@@ -71,8 +78,11 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
       </div>
 
       {/* Verification Card */}
-      <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xl space-y-6 relative overflow-hidden">
-        {/* Certificate banner */}
+      {isLoading ? (
+        <SkeletonCertificate />
+      ) : (
+        <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xl space-y-6 relative overflow-hidden">
+          {/* Certificate banner */}
         <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
             <ShieldCheck className="w-6 h-6 stroke-[2.5]" />
@@ -150,6 +160,7 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
           </Link>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -5,13 +5,15 @@ import React from 'react';
 export function Skeleton({
   className = '',
   style,
+  dark = false,
 }: {
   className?: string;
   style?: React.CSSProperties;
+  dark?: boolean;
 }) {
   return (
     <div
-      className={`skeleton-shimmer rounded-2xl ${className}`}
+      className={`${dark ? 'skeleton-shimmer-dark' : 'skeleton-shimmer'} rounded-2xl ${className}`}
       style={style}
       aria-hidden="true"
     />
@@ -188,10 +190,10 @@ export function SkeletonPortalDashboard() {
       {/* Bannière de Bienvenue */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-3xl p-6 text-white space-y-3">
         <div className="flex items-center gap-3">
-          <Skeleton className="w-12 h-12 rounded-2xl bg-white/20" />
+          <Skeleton dark className="w-12 h-12 rounded-2xl" />
           <div className="space-y-1.5 flex-1">
-            <Skeleton className="w-48 h-5 rounded-lg bg-white/20" />
-            <Skeleton className="w-64 h-3.5 rounded-md bg-white/10" />
+            <Skeleton dark className="w-48 h-5 rounded-lg" />
+            <Skeleton dark className="w-64 h-3.5 rounded-md" />
           </div>
         </div>
       </div>
@@ -224,6 +226,109 @@ export function SkeletonNotificationsList({ count = 3 }: { count?: number }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+/**
+ * Skeleton pour les formulaires étape par étape / Wizards (ex: Création de bail /leases/new)
+ */
+export function SkeletonStepperForm() {
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto animate-in fade-in duration-200">
+      {/* Stepper Header */}
+      <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xs flex items-center justify-between gap-2 overflow-x-auto">
+        {[1, 2, 3, 4, 5].map((s) => (
+          <div key={s} className="flex items-center gap-2 shrink-0">
+            <Skeleton className="w-9 h-9 rounded-full" />
+            <Skeleton className="hidden sm:block w-20 h-4 rounded-md" />
+          </div>
+        ))}
+      </div>
+
+      {/* Main Form Card */}
+      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-xs space-y-6">
+        <div className="space-y-2 pb-4 border-b border-slate-100">
+          <Skeleton className="w-56 h-6 rounded-lg" />
+          <Skeleton className="w-80 h-4 rounded-md" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Skeleton className="w-28 h-4 rounded-md" />
+            <Skeleton className="w-full h-12 rounded-2xl" />
+          </div>
+          <div className="space-y-2">
+            <Skeleton className="w-28 h-4 rounded-md" />
+            <Skeleton className="w-full h-12 rounded-2xl" />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Skeleton className="w-32 h-4 rounded-md" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[1, 2, 3, 4, 5, 6].map((k) => (
+              <Skeleton key={k} className="h-20 rounded-2xl" />
+            ))}
+          </div>
+        </div>
+
+        <div className="pt-4 flex items-center justify-between border-t border-slate-100">
+          <Skeleton className="w-24 h-10 rounded-xl" />
+          <Skeleton className="w-36 h-10 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton pour le guichet public de vérification (/verify/[code])
+ */
+export function SkeletonCertificate() {
+  return (
+    <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xl space-y-6 animate-in fade-in duration-200">
+      <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center gap-3.5">
+        <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
+        <div className="space-y-2 flex-1">
+          <Skeleton className="w-36 h-3.5 rounded-md" />
+          <Skeleton className="w-56 h-5 rounded-lg" />
+          <Skeleton className="w-full h-3 rounded-md" />
+        </div>
+      </div>
+
+      <div className="space-y-3 pt-2">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div key={i} className="flex justify-between py-2 border-b border-slate-100">
+            <Skeleton className="w-28 h-3.5 rounded-md" />
+            <Skeleton className="w-36 h-3.5 rounded-md" />
+          </div>
+        ))}
+      </div>
+
+      <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-2">
+        <Skeleton className="w-32 h-3.5 rounded-md" />
+        <Skeleton className="w-full h-3 rounded-md" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Skeleton pour la Console Super-Admin (/admin)
+ */
+export function SkeletonAdminDashboard() {
+  return (
+    <div className="space-y-6 max-w-7xl mx-auto p-4 sm:p-8 animate-in fade-in duration-200">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+        <div className="space-y-2">
+          <Skeleton className="w-48 h-7 rounded-xl" />
+          <Skeleton className="w-72 h-4 rounded-md" />
+        </div>
+        <Skeleton className="w-32 h-10 rounded-2xl" />
+      </div>
+      <SkeletonKPIGrid />
+      <SkeletonTable rows={5} />
     </div>
   );
 }
