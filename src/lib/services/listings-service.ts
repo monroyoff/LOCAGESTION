@@ -421,7 +421,9 @@ export const ListingsService = {
             message: `Votre annonce « ${l.title} » (Réf: ${l.referenceCode || l.id}) a été automatiquement retirée après 30 jours de diffusion pour optimiser le stockage de la plateforme. Vous pouvez la republier à tout moment.`,
             type: 'listing_rejected',
             read: false,
-            timestamp: 'À l\'instant',
+            createdAt: new Date().toISOString(),
+            timestamp: new Date().toISOString(),
+            time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
           });
         } else {
           activeListings.push(l);
@@ -461,7 +463,9 @@ export const ListingsService = {
                 message: `Votre annonce « ${l.title} » (Réf: ${l.referenceCode || l.id}) a été automatiquement retirée après 30 jours de diffusion pour économiser l'espace de stockage.`,
                 type: 'listing_rejected',
                 read: false,
-                timestamp: 'À l\'instant',
+                createdAt: new Date().toISOString(),
+                timestamp: new Date().toISOString(),
+                time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
               });
               return; // Non conservé
             }
@@ -700,12 +704,15 @@ export const ListingsService = {
         const notifsKey = 'locagestion:landlord_notifications';
         const existingNotifsStr = localStorage.getItem(notifsKey);
         const existingNotifs = existingNotifsStr ? JSON.parse(existingNotifsStr) : [];
+        const nowIso = new Date().toISOString();
+        const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
         const newNotif = {
           id: `notif-unpublish-${Date.now()}`,
           title: 'Annonce automatiquement retirée d’Internet ✓',
           message: notifMsg,
-          time: 'À l’instant',
-          timestamp: new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          createdAt: nowIso,
+          time: timeStr,
+          timestamp: new Date().toLocaleDateString('fr-FR') + ' à ' + timeStr,
           type: 'listing_unpublished',
           read: false,
           leaseId,
@@ -758,7 +765,9 @@ export const ListingsService = {
         message: `Votre annonce « ${target.title} » (Réf: ${target.referenceCode || target.id}) a été restaurée avec succès par le Super Admin. Elle est de nouveau visible et active sur la plateforme.`,
         type: 'listing_approved',
         read: false,
-        timestamp: "À l'instant",
+        createdAt: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       });
     } catch (e) {
       console.error('Erreur notification restauration:', e);

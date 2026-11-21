@@ -757,6 +757,9 @@ export default function ListingsPage() {
       const candidateAvatar = user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
       const publisherAvatar = listing.authorAvatar || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400';
 
+      const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      const nowIso = new Date().toISOString();
+
       const newMsg = {
         id: `m-${Date.now()}`,
         sender: 'them' as const,
@@ -764,7 +767,7 @@ export default function ListingsPage() {
         senderName: candidateName,
         senderAvatar: candidateAvatar,
         text: initialText,
-        time: 'À l’instant',
+        time: nowTime,
         status: 'sent' as const,
       };
 
@@ -774,7 +777,7 @@ export default function ListingsPage() {
           listingId: existingList[existingIndex].listingId || listing.id,
           messages: [...(existingList[existingIndex].messages || []), newMsg],
           lastMessage: initialText,
-          lastMessageTime: 'À l’instant',
+          lastMessageTime: nowTime,
           isArchived: false,
           visitorName: candidateName,
           visitorPhone: candidatePhone,
@@ -810,7 +813,7 @@ export default function ListingsPage() {
             (listing.images && listing.images[0]) ||
             'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
           lastMessage: initialText,
-          lastMessageTime: 'À l’instant',
+          lastMessageTime: nowTime,
           isRead: false,
           isArchived: false,
           listingId: listing.id,
@@ -833,7 +836,8 @@ export default function ListingsPage() {
         id: notifId,
         title: `💬 Nouveau message : ${listing.title}`,
         message: `${candidateName} (${candidatePhone || 'En direct'}) vous a contacté au sujet de « ${listing.title} » (${listing.district}, ${listing.city}).`,
-        time: 'À l’instant',
+        createdAt: nowIso,
+        time: nowTime,
         timestamp: new Date().toLocaleDateString('fr-FR', {
           day: '2-digit',
           month: '2-digit',
@@ -895,13 +899,17 @@ export default function ListingsPage() {
 
     const visitMessageText = `📅 DEMANDE DE VISITE OFFICIELLE\n\nBonjour, je souhaite planifier une visite pour votre bien « ${listing.title} » situé à ${listing.district}, ${listing.city}.\n\n🗓️ Date souhaitée : ${formattedVisitDate}\n⏰ Créneau horaire : ${visitTimeSlot}\n👤 Candidat : ${visitorName}\n📞 Téléphone : ${visitorPhone}\n\nMerci de bien vouloir me confirmer votre disponibilité.`;
 
+    const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const nowIso = new Date().toISOString();
+
     // 1. Notification officielle pour le Bailleur / Démarcheur
     const notifId = `notif-visit-${Date.now()}`;
     const landlordNotif: LandlordNotification = {
       id: notifId,
       title: `📅 Demande de visite : ${listing.title}`,
       message: `${visitorName} (${visitorPhone}) souhaite visiter votre bien « ${listing.title} » (${listing.district}, ${listing.city}) le ${formattedVisitDate} sur le créneau ${visitTimeSlot}.`,
-      time: 'À l’instant',
+      createdAt: nowIso,
+      time: nowTime,
       timestamp: nowFormatted,
       type: 'visit_requested',
       read: false,
@@ -958,7 +966,7 @@ export default function ListingsPage() {
         senderName: visitorName,
         senderAvatar: visitorAvatar,
         text: visitMessageText,
-        time: 'À l’instant',
+        time: nowTime,
         status: 'sent' as const,
       };
 
@@ -969,7 +977,7 @@ export default function ListingsPage() {
           listingId: existingConv.listingId || listing.id,
           messages: [...(existingConv.messages || []), newMsg],
           lastMessage: `📅 Demande de visite : ${formattedVisitDate} (${visitTimeSlot})`,
-          lastMessageTime: 'À l’instant',
+          lastMessageTime: nowTime,
           isArchived: false,
           visitorName,
           visitorPhone,
@@ -1005,7 +1013,7 @@ export default function ListingsPage() {
             (listing.images && listing.images[0]) ||
             'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
           lastMessage: `📅 Demande de visite : ${formattedVisitDate} (${visitTimeSlot})`,
-          lastMessageTime: 'À l’instant',
+          lastMessageTime: nowTime,
           isRead: false,
           isArchived: false,
           listingId: listing.id,

@@ -248,7 +248,8 @@ export function EditListingModal({
           message: `Votre annonce « ${proposedTitle} » doit compter au moins 2 photos ou vidéos.`,
           type: 'listing_rejected',
           read: false,
-          timestamp: 'À l\'instant',
+          createdAt: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
         });
 
         notifyAction({
@@ -306,7 +307,8 @@ export function EditListingModal({
               message: `Votre annonce « ${proposedTitle} » a été rejetée : ${moderation.violations.map((v) => v.message).join(' ')}`,
               type: 'listing_rejected',
               read: false,
-              timestamp: 'À l\'instant',
+              createdAt: new Date().toISOString(),
+              timestamp: new Date().toISOString(),
             });
 
             notifyAction({
@@ -362,7 +364,8 @@ export function EditListingModal({
               type: 'listing_approved',
               read: false,
               listingId: listing.id,
-              timestamp: 'À l\'instant',
+              createdAt: new Date().toISOString(),
+              timestamp: new Date().toISOString(),
             });
 
             notifyUpdate(

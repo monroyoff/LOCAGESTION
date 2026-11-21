@@ -2,6 +2,7 @@
 
 import { AuthUser } from '../types';
 import { AuthService, areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
+import { resolveNotificationDate } from '../money/format';
 
 export type TenantNotificationType =
   | 'receipt_issued'
@@ -20,6 +21,7 @@ export interface TenantNotification {
   message: string;
   time?: string;
   timestamp?: string;
+  createdAt?: string;
   type: TenantNotificationType;
   read: boolean;
   link: string;
@@ -136,10 +138,39 @@ export const TenantNotificationService = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          return parsed.map((n) => ({
-            ...n,
-            read: n.read !== undefined ? Boolean(n.read) : !Boolean(n.unread),
-          }));
+          let needsSave = false;
+          const mapped = parsed.map((n) => {
+            const isTimeInstant = n.time && n.time.toLowerCase().includes('instant');
+            const isTimestampInstant = n.timestamp && n.timestamp.toLowerCase().includes('instant');
+            let createdAt = n.createdAt;
+            let time = n.time;
+            let timestamp = n.timestamp;
+
+            if (!createdAt || isTimeInstant || isTimestampInstant) {
+              const resolved = resolveNotificationDate(n);
+              needsSave = true;
+              createdAt = createdAt || resolved.toISOString();
+              const h = String(resolved.getHours()).padStart(2, '0');
+              const m = String(resolved.getMinutes()).padStart(2, '0');
+              time = !isTimeInstant && time ? time : `${h}:${m}`;
+              timestamp = !isTimestampInstant && timestamp ? timestamp : resolved.toISOString();
+            }
+
+            return {
+              ...n,
+              createdAt,
+              time,
+              timestamp,
+              read: n.read !== undefined ? Boolean(n.read) : !Boolean(n.unread),
+            };
+          });
+
+          if (needsSave && typeof window !== 'undefined') {
+            try {
+              localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(mapped));
+            } catch (e) {}
+          }
+          return mapped;
         }
       }
     } catch (e) {
@@ -248,23 +279,21 @@ export const TenantNotificationService = {
       id?: string;
       read?: boolean;
       timestamp?: string;
+      createdAt?: string;
     }
   ): TenantNotification {
     const all = this.getAllRawNotifications();
-    const nowStr = new Date().toLocaleDateString('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const nowIso = now.toISOString();
 
     const newNotif: TenantNotification = {
       id: data.id || `tnotif-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
       title: data.title,
       message: data.message,
-      time: 'À l’instant',
-      timestamp: data.timestamp || nowStr,
+      time: (data.time && !data.time.toLowerCase().includes('instant')) ? data.time : timeStr,
+      timestamp: (data.timestamp && !data.timestamp.toLowerCase().includes('instant')) ? data.timestamp : nowIso,
+      createdAt: data.createdAt || nowIso,
       type: data.type,
       read: data.read ?? false,
       link: data.link,

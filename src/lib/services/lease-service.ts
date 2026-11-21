@@ -3,6 +3,7 @@
 import { TenantNotificationService } from './tenant-notification-service';
 import { AuthUser } from '../types';
 import { areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
+import { resolveNotificationDate } from '../money/format';
 
 export type LeaseStatus =
   | 'actif'
@@ -118,6 +119,7 @@ export interface LandlordNotification {
   message: string;
   time?: string;
   timestamp?: string;
+  createdAt?: string;
   type:
     | 'lease_signed'
     | 'lease_transmitted'
@@ -738,12 +740,16 @@ export const LeaseService = {
       }
     }
 
+    const nowIso = new Date().toISOString();
+    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
     // Créer la notification pour informer le bailleur dans l'app et par mail
     const notification: LandlordNotification = {
       id: `notif-${Date.now()}`,
       title: 'Bail contresigné par le locataire !',
       message: `${tenantName} a apposé sa signature électronique sur le contrat ${leaseId} (${updatedLease.unit}). Le bail est désormais actif et opposable.`,
-      time: 'À l’instant',
+      createdAt: nowIso,
+      time: timeStr,
       timestamp: nowFormatted,
       type: 'lease_signed',
       read: false,
@@ -791,12 +797,16 @@ export const LeaseService = {
     leases[leaseIndex] = updatedLease;
     this.saveAllLeases(leases);
 
+    const nowIso = new Date().toISOString();
+    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
     // Notification de résiliation pour le bailleur
     this.addLandlordNotification({
       id: `notif-${Date.now()}`,
       title: 'Bail résilié',
       message: `Le contrat ${leaseId} (${updatedLease.unit} - ${updatedLease.tenant}) a été résilié. Le logement est désormais dissocié.`,
-      time: 'À l’instant',
+      createdAt: nowIso,
+      time: timeStr,
       timestamp: nowFormatted,
       type: 'lease_terminated',
       read: false,
@@ -843,12 +853,16 @@ export const LeaseService = {
     leases[leaseIndex] = updatedLease;
     this.saveAllLeases(leases);
 
+    const nowIso = new Date().toISOString();
+    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
     // Notification de réactivation
     this.addLandlordNotification({
       id: `notif-${Date.now()}`,
       title: 'Bail réactivé',
       message: `Le contrat ${leaseId} (${updatedLease.unit} - ${updatedLease.tenant}) a été réactivé avec succès. La liaison locataire est rétablie sans autres démarches.`,
-      time: 'À l’instant',
+      createdAt: nowIso,
+      time: timeStr,
       timestamp: nowFormatted,
       type: 'lease_reactivated',
       read: false,
@@ -877,12 +891,46 @@ export const LeaseService = {
       let parsed: LandlordNotification[] = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(parsed)) parsed = [];
 
+      // Migration automatique des anciennes notifications ayant "À l'instant"
+      let needsSave = false;
+      parsed = parsed.map((n) => {
+        const isTimeInstant = n.time && n.time.toLowerCase().includes('instant');
+        const isTimestampInstant = n.timestamp && n.timestamp.toLowerCase().includes('instant');
+        let createdAt = n.createdAt;
+        let time = n.time;
+        let timestamp = n.timestamp;
+
+        if (!createdAt || isTimeInstant || isTimestampInstant) {
+          const resolved = resolveNotificationDate(n);
+          needsSave = true;
+          createdAt = createdAt || resolved.toISOString();
+          const h = String(resolved.getHours()).padStart(2, '0');
+          const m = String(resolved.getMinutes()).padStart(2, '0');
+          time = !isTimeInstant && time ? time : `${h}:${m}`;
+          timestamp = !isTimestampInstant && timestamp ? timestamp : resolved.toISOString();
+        }
+
+        return {
+          ...n,
+          createdAt,
+          time,
+          timestamp,
+        };
+      });
+      if (needsSave && typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(parsed));
+        } catch (e) {}
+      }
+
       // Synthèse des messages reçus non lus depuis les conversations
       try {
         const convsStored = localStorage.getItem('locagestion:conversations:v1');
         if (convsStored) {
           const convs = JSON.parse(convsStored);
           if (Array.isArray(convs)) {
+            const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+            const nowIso = new Date().toISOString();
             convs.forEach((c: any) => {
               const isUnreadForLandlord =
                 (c.unreadCount && c.unreadCount > 0 && c.unreadBy !== 'locataire') ||
@@ -891,17 +939,19 @@ export const LeaseService = {
                 const existingNotifIdx = parsed.findIndex(
                   (n) => n.convId === c.id || n.id === `notif-conv-${c.id}`
                 );
+                const convTime = (c.lastMessageTime && !c.lastMessageTime.toLowerCase().includes('instant')) ? c.lastMessageTime : nowTime;
                 if (existingNotifIdx >= 0) {
                   // S'assurer que le statut non lu est synchronisé
                   parsed[existingNotifIdx].read = false;
                   parsed[existingNotifIdx].message = `${c.visitorName || c.tenantName || 'Candidat'} : « ${c.lastMessage || 'Nouveau message reçu'} »`;
-                  parsed[existingNotifIdx].time = c.lastMessageTime || 'À l’instant';
+                  parsed[existingNotifIdx].time = convTime;
                 } else {
                   parsed.unshift({
                     id: `notif-conv-${c.id}`,
                     title: `💬 Nouveau message : ${c.propertyTitle || 'Bien en location'}`,
                     message: `${c.visitorName || c.tenantName || 'Candidat'} : « ${c.lastMessage || 'Nouveau message reçu'} »`,
-                    time: c.lastMessageTime || 'À l’instant',
+                    createdAt: nowIso,
+                    time: convTime,
                     timestamp: new Date().toLocaleDateString('fr-FR', {
                       day: '2-digit',
                       month: '2-digit',
@@ -1004,7 +1054,18 @@ export const LeaseService = {
     try {
       const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
       const current: LandlordNotification[] = stored ? JSON.parse(stored) : [];
-      const updated = [notif, ...current.filter((n) => n.id !== notif.id)];
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const nowIso = now.toISOString();
+
+      const enriched: LandlordNotification = {
+        ...notif,
+        createdAt: notif.createdAt || nowIso,
+        time: (notif.time && !notif.time.toLowerCase().includes('instant')) ? notif.time : timeStr,
+        timestamp: (notif.timestamp && !notif.timestamp.toLowerCase().includes('instant')) ? notif.timestamp : nowIso,
+      };
+
+      const updated = [enriched, ...current.filter((n) => n.id !== notif.id)];
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
       notifyStorageChange();
       window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));

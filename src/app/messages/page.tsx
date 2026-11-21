@@ -389,7 +389,7 @@ function MessagesContent() {
           propertyPrice: listing.monthlyRent,
           propertyThumbnail: (listing.images && listing.images[0]) || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400',
           lastMessage: autoGreeting,
-          lastMessageTime: 'À l’instant',
+          lastMessageTime: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
           unreadCount: 0,
           isRead: true,
           isArchived: false,
@@ -408,7 +408,7 @@ function MessagesContent() {
               senderName: user?.name || user?.firstName || 'Moi',
               senderAvatar: user?.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
               text: autoGreeting,
-              time: 'À l’instant',
+              time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
               status: 'sent',
             },
           ],
@@ -525,6 +525,9 @@ function MessagesContent() {
         : selectedConv.visitorAvatar) ||
       'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150';
 
+    const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const nowIso = new Date().toISOString();
+
     const newMessage: Message = {
       id: `m-${Date.now()}`,
       sender: 'me',
@@ -532,7 +535,7 @@ function MessagesContent() {
       senderName: myName,
       senderAvatar: myAvatar,
       text: inputText,
-      time: 'À l’instant',
+      time: nowTime,
       status: 'sent',
     };
 
@@ -540,7 +543,7 @@ function MessagesContent() {
       ...selectedConv,
       messages: [...selectedConv.messages, newMessage],
       lastMessage: inputText,
-      lastMessageTime: 'À l’instant',
+      lastMessageTime: nowTime,
       unreadCount: 1,
       hasUnread: true,
       unreadBy: isBailleurSide ? 'locataire' : 'bailleur',
@@ -559,7 +562,8 @@ function MessagesContent() {
       TenantNotificationService.addNotification({
         title: `💬 Réponse de votre bailleur : ${selectedConv.propertyTitle}`,
         message: `${myName} vous a répondu : « ${inputText.slice(0, 70)}${inputText.length > 70 ? '...' : ''} »`,
-        time: 'À l’instant',
+        createdAt: nowIso,
+        time: nowTime,
         type: 'reminder_received',
         read: false,
         link: `/messages?convId=${encodeURIComponent(selectedConv.id)}`,
@@ -578,7 +582,8 @@ function MessagesContent() {
         id: `notif-msg-${Date.now()}`,
         title: `💬 Nouveau message : ${selectedConv.propertyTitle}`,
         message: `${myName} vous a répondu : « ${inputText.slice(0, 70)}${inputText.length > 70 ? '...' : ''} »`,
-        time: 'À l’instant',
+        createdAt: nowIso,
+        time: nowTime,
         timestamp: new Date().toLocaleDateString('fr-FR', {
           day: '2-digit',
           month: '2-digit',
@@ -612,12 +617,13 @@ function MessagesContent() {
 
   const handleAttachDocument = () => {
     if (!selectedConv) return;
+    const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     const docMessage: Message = {
       id: `m-doc-${Date.now()}`,
       sender: 'me',
       senderName: user?.name || 'Moi',
       text: '📄 Pièce jointe : Document_Officiel_Certifie.pdf (Transmis)',
-      time: 'À l’instant',
+      time: nowTime,
       status: 'sent',
     };
 
@@ -625,7 +631,7 @@ function MessagesContent() {
       ...selectedConv,
       messages: [...selectedConv.messages, docMessage],
       lastMessage: '📄 Quittance de loyer transmise',
-      lastMessageTime: 'À l’instant',
+      lastMessageTime: nowTime,
     };
 
     setSelectedConv(updatedConv);
@@ -635,12 +641,13 @@ function MessagesContent() {
 
   const handleAttachPhoto = () => {
     if (!selectedConv) return;
+    const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     const photoMessage: Message = {
       id: `m-img-${Date.now()}`,
       sender: 'me',
       senderName: user?.name || 'Moi',
       text: 'Voici la photo récente du logement et des équipements :',
-      time: 'À l’instant',
+      time: nowTime,
       status: 'sent',
       imageUrl: selectedConv.propertyThumbnail,
     };
@@ -649,7 +656,7 @@ function MessagesContent() {
       ...selectedConv,
       messages: [...selectedConv.messages, photoMessage],
       lastMessage: '📷 Photo du logement envoyée',
-      lastMessageTime: 'À l’instant',
+      lastMessageTime: nowTime,
     };
 
     setSelectedConv(updatedConv);

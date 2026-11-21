@@ -24,7 +24,7 @@ import {
   ShieldAlert,
   Phone,
 } from 'lucide-react';
-import { formatDateFR } from '@/lib/money/format';
+import { formatDateFR, formatNotificationTime } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
 import { ModerationService } from '@/lib/services/moderation-service';
@@ -419,7 +419,7 @@ export function Header({
                               <span className="truncate">{n.title}</span>
                             </span>
                             <div className="flex items-center gap-1.5 shrink-0">
-                              <span className="text-[10px] text-slate-400 font-medium">{n.timestamp || n.time}</span>
+                              <span className="text-[10px] text-slate-400 font-medium shrink-0">{formatNotificationTime(n)}</span>
                               <button
                                 type="button"
                                 onClick={(e) => {
@@ -531,7 +531,7 @@ export function Header({
                                 <span className={`w-2 h-2 rounded-full shrink-0 ${dotColor}`} />
                                 {n.title}
                               </span>
-                              <span className="text-[10px] text-slate-400 font-medium shrink-0">{n.time}</span>
+                              <span className="text-[10px] text-slate-400 font-medium shrink-0">{formatNotificationTime(n)}</span>
                             </div>
 
                             <p className="text-xs text-slate-600 leading-snug">{n.message}</p>

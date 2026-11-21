@@ -348,7 +348,8 @@ export function PublishListingModal({
           message: `Votre annonce « ${proposedTitle} » a été rejetée par l'IA : minimum 2 photos ou vidéos requises (${finalImages.length}/2).`,
           type: 'listing_rejected',
           read: false,
-          timestamp: 'À l\'instant',
+          createdAt: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
         });
 
         notifyAction({
@@ -412,7 +413,8 @@ export function PublishListingModal({
               message: `Votre annonce « ${proposedTitle} » n'a pas été mise en ligne : ${moderation.violations.map((v) => v.message).join(' ')}`,
               type: 'listing_rejected',
               read: false,
-              timestamp: 'À l\'instant',
+              createdAt: new Date().toISOString(),
+              timestamp: new Date().toISOString(),
             });
 
             // Notification Toast Rouge Centrale
@@ -492,7 +494,8 @@ export function PublishListingModal({
               type: 'listing_approved',
               read: false,
               listingId: newListing.id,
-              timestamp: 'À l\'instant',
+              createdAt: new Date().toISOString(),
+              timestamp: new Date().toISOString(),
             });
 
             // Notification Toast Vert Centrale
