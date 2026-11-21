@@ -1186,16 +1186,84 @@ function TenantPortalContent() {
                 </div>
               )}
 
-              {/* Bouton Accueil sur Mobile (juste en haut de la hero section - uniquement sur mobile < 640px) */}
-              <div className="sm:hidden flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('accueil')}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-black text-white text-xs font-black shadow-md active:scale-95 transition-all cursor-pointer"
-                >
-                  <Home className="w-4 h-4 text-white" />
-                  <span>Accueil</span>
-                </button>
+              {/* Hero Banner: Rent Due & Quick Payment (Placé en tête au tout début à l'ouverture, compact et pro sur mobile) */}
+              <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-2xl sm:rounded-3xl p-3.5 sm:p-7 text-white shadow-lg sm:shadow-xl relative overflow-hidden">
+                <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-6">
+                  <div>
+                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2 flex-wrap">
+                      <span className={`px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[10px] font-bold shadow-xs flex items-center gap-1 ${
+                        currentLease
+                          ? (receiptsList.length > 0 && receiptsList[0]?.isVerified ? 'bg-emerald-500 text-white' : 'bg-brand-500 text-white')
+                          : 'bg-slate-700 text-slate-200'
+                      }`}>
+                        <CheckCircle2 className="w-3 h-3" />
+                        {selectedLeaseId === 'all' && myLeases.length > 1
+                          ? `${myLeases.length} Baux Actifs • Multi-Bailleurs`
+                          : currentLease
+                          ? (receiptsList.length > 0 ? (receiptsList[0]?.isVerified ? 'Loyer à jour' : 'Règlement en attente') : 'Bail actif • En attente 1er loyer')
+                          : 'En attente d’assignation'}
+                      </span>
+                      <span className="text-[10px] sm:text-[11px] text-slate-300 font-medium flex items-center flex-wrap gap-1 sm:gap-1.5">
+                        {user?.matricule && (
+                          <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-mono font-black text-indigo-300 bg-indigo-500/20 px-1.5 sm:px-2 py-0.5 rounded-md border border-indigo-500/30 shadow-xs">
+                            <span>Matricule : {user.matricule}</span>
+                          </span>
+                        )}
+                        {selectedLeaseId === 'all' && myLeases.length > 1 ? (
+                          <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-purple-300 bg-purple-500/20 px-1.5 sm:px-2 py-0.5 rounded-md border border-purple-500/30">
+                            <Store className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                            <span>Habitation, Magasins & Boutiques</span>
+                          </span>
+                        ) : currentLease ? (
+                          <>
+                            <span>{tenant.property} • {tenant.unit}</span>
+                            <span className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-1.5 sm:px-2 py-0.5 rounded-md border border-emerald-500/30">
+                              <MapPin className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                              <span>{tenant.propertyLocation}</span>
+                            </span>
+                          </>
+                        ) : (
+                          'Aucun logement lié'
+                        )}
+                      </span>
+                    </div>
+
+                    <h1 className="text-sm sm:text-lg lg:text-xl font-black tracking-tight text-white leading-snug">
+                      Bonjour {user?.firstName || (user?.name ? user.name.split(' ')[0] : 'Locataire')} 👋{currentLease ? ', votre espace est parfaitement à jour' : ', bienvenue dans votre espace résident'}
+                    </h1>
+                    <p className="text-[11px] sm:text-xs text-slate-300 sm:text-slate-400 mt-1 sm:mt-1.5 max-w-lg leading-snug sm:leading-relaxed">
+                      {selectedLeaseId === 'all' && myLeases.length > 1 ? (
+                        <>Total loyers mensuels cumulés : <strong className="text-slate-100 font-bold">{formatFCFA(totalCumulativeRent)}</strong> sur vos {myLeases.length} baux ({distinctLandlordsCount} bailleurs). Chaque loyer se déclare directement auprès du bailleur concerné.</>
+                      ) : currentLease ? (
+                        <>Prochaine exigibilité de loyer : <strong className="text-slate-200">{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).</>
+                      ) : (
+                        <>Bienvenue dans votre Espace Résident. Vos quittances certifiées et informations contractuelles apparaîtront ici dès que votre bailleur vous aura assigné votre logement.</>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Actions Principales du Locataire : 2 colonnes ultra-ergonomiques sur mobile, flex sur desktop */}
+                  <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3 shrink-0 pt-0.5 sm:pt-0 w-full sm:w-auto">
+                    <button
+                      type="button"
+                      onClick={() => openDeclarationModalForLease()}
+                      className="w-full sm:w-auto py-2.5 sm:py-3.5 px-2.5 sm:px-6 rounded-xl sm:rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-[11px] sm:text-sm font-black shadow-pink-glow active:scale-95 transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer text-center"
+                    >
+                      <Smartphone className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                      <span className="truncate">Déclarer un loyer</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReportIssueModalOpen(true)}
+                      className="w-full sm:w-auto py-2.5 sm:py-3.5 px-2.5 sm:px-5 rounded-xl sm:rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-[11px] sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer text-center"
+                    >
+                      <Wrench className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-300 shrink-0" />
+                      <span className="truncate">Signaler une panne</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* SÉLECTEUR MULTI-BAUX & MULTI-BAILLEURS (Compte Locataire Unique) */}
@@ -1274,86 +1342,6 @@ function TenantPortalContent() {
                   </div>
                 </div>
               )}
-
-              {/* Hero Banner: Rent Due & Quick Payment */}
-              <div className="bg-gradient-to-br from-slate-900 via-[#141824] to-slate-900 rounded-3xl p-5 sm:p-7 text-white shadow-xl relative overflow-hidden">
-                <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-500/20 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-                  <div>
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-xs flex items-center gap-1 ${
-                        currentLease
-                          ? (receiptsList.length > 0 && receiptsList[0]?.isVerified ? 'bg-emerald-500 text-white' : 'bg-brand-500 text-white')
-                          : 'bg-slate-700 text-slate-200'
-                      }`}>
-                        <CheckCircle2 className="w-3 h-3" />
-                        {selectedLeaseId === 'all' && myLeases.length > 1
-                          ? `${myLeases.length} Baux Actifs • Multi-Bailleurs`
-                          : currentLease
-                          ? (receiptsList.length > 0 ? (receiptsList[0]?.isVerified ? 'Loyer à jour' : 'Règlement en attente') : 'Bail actif • En attente 1er loyer')
-                          : 'En attente d’assignation'}
-                      </span>
-                      <span className="text-[11px] text-slate-300 font-medium flex items-center flex-wrap gap-1.5">
-                        {user?.matricule && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-mono font-black text-indigo-300 bg-indigo-500/20 px-2 py-0.5 rounded-md border border-indigo-500/30 shadow-xs">
-                            <span>Matricule : {user.matricule}</span>
-                          </span>
-                        )}
-                        {selectedLeaseId === 'all' && myLeases.length > 1 ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded-md border border-purple-500/30">
-                            <Store className="w-2.5 h-2.5 text-purple-400 shrink-0" />
-                            <span>Habitation, Magasins & Boutiques</span>
-                          </span>
-                        ) : currentLease ? (
-                          <>
-                            <span>{tenant.property} • {tenant.unit}</span>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
-                              <MapPin className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
-                              <span>{tenant.propertyLocation}</span>
-                            </span>
-                          </>
-                        ) : (
-                          'Aucun logement lié'
-                        )}
-                      </span>
-                    </div>
-
-                    <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white leading-snug">
-                      Bonjour {user?.firstName || (user?.name ? user.name.split(' ')[0] : 'Locataire')} 👋{currentLease ? ', votre espace est parfaitement à jour' : ', bienvenue dans votre espace résident'}
-                    </h1>
-                    <p className="text-xs text-slate-400 mt-1.5 max-w-lg leading-relaxed">
-                      {selectedLeaseId === 'all' && myLeases.length > 1 ? (
-                        <>Total loyers mensuels cumulés : <strong className="text-slate-100 font-bold">{formatFCFA(totalCumulativeRent)}</strong> sur vos {myLeases.length} baux ({distinctLandlordsCount} bailleurs). Chaque loyer se déclare directement auprès du bailleur concerné.</>
-                      ) : currentLease ? (
-                        <>Prochaine exigibilité de loyer : <strong className="text-slate-200">{tenant.dueDate}</strong> ({formatFCFA(tenant.monthlyRent)} charges comprises).</>
-                      ) : (
-                        <>Bienvenue dans votre Espace Résident. Vos quittances certifiées et informations contractuelles apparaîtront ici dès que votre bailleur vous aura assigné votre logement.</>
-                      )}
-                    </p>
-                  </div>
-
-                  {/* Actions Principales du Locataire */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => openDeclarationModalForLease()}
-                      className="w-full sm:w-auto py-3.5 px-6 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs sm:text-sm font-black shadow-pink-glow active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Smartphone className="w-4 h-4" />
-                      <span>Déclarer un paiement de loyer</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setReportIssueModalOpen(true)}
-                      className="w-full sm:w-auto py-3.5 px-5 rounded-2xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs sm:text-sm font-bold active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      <Wrench className="w-4 h-4 text-brand-300" />
-                      <span>Signaler une panne</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
 
               {/* GRILLE VOS BAUX & BAILLEURS RATTACHÉS (Affichée en vue d'ensemble multi-baux) */}
               {selectedLeaseId === 'all' && myLeases.length > 1 && (
