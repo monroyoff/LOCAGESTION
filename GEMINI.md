@@ -127,6 +127,8 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 - Signature électronique bilatérale horodatée (Bailleur & Locataire) avec empreinte cryptographique SHA-256.
 - États des lieux d'entrée et de sortie contradictoires (`/leases` via `InspectionModal`).
 - Transmission dématérialisée du bail par WhatsApp ou Email.
+- **Champ permanent Référence d'annonce :** Présence systématique d'un champ dédié permettant d'insérer la référence d'une annonce (ex: `A-BJ-17635`) quel que soit le mode de rédaction du bail (conclusion issue d'une annonce ou directe).
+- **Dépublication & Retrait Automatique d'Internet :** Dès lors qu'une référence d'annonce est liée à un contrat et que ce dernier est contresigné par le locataire, l'annonce est immédiatement et automatiquement retirée de la diffusion en ligne (`/listings`) avec motif d'attribution et notification horodatée.
 
 ### 👥 4. Gestion des Locataires (`/tenants`)
 - Fiches locataires complètes avec scoring de fiabilité (Excellent, Fiable, À surveiller, À risque).

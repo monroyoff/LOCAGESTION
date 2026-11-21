@@ -730,7 +730,7 @@ export const LeaseService = {
       try {
         const { ListingsService } = require('./listings-service');
         ListingsService.removeListingAfterLeaseSigned(
-          updatedLease.listingId || updatedLease.listingReference!,
+          updatedLease.listingReference || updatedLease.listingId!,
           updatedLease.id
         );
       } catch (err) {

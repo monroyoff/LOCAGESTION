@@ -134,6 +134,7 @@ export default function LeasesPage() {
       landlordSignedAt: lease.landlordSignedAt,
       tenantSignedAt: lease.tenantSignedAt,
       hashSha256: lease.hashSha256,
+      listingReference: lease.listingReference,
     });
     showToast(`Contrat ${lease.id} (${lease.tenant}) téléchargé en PDF officiel !`);
   };
@@ -615,6 +616,12 @@ export default function LeasesPage() {
                             <span className="text-[11px] font-mono px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-bold border border-slate-200">
                               {lease.id}
                             </span>
+                            {lease.listingReference && (
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-purple-50 text-purple-700 font-bold border border-purple-200 flex items-center gap-1 shrink-0" title="Issu de l'annonce immobilière">
+                                <span className="text-[9px] uppercase font-sans text-purple-400 font-bold">Annonce</span>
+                                <span className="font-black">{lease.listingReference}</span>
+                              </span>
+                            )}
 
                             {/* Statut Badge */}
                             {isPending ? (

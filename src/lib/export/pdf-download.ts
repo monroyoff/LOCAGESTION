@@ -57,6 +57,7 @@ export interface LeasePDFData {
   landlordSignedAt?: string;
   tenantSignedAt?: string;
   hashSha256?: string;
+  listingReference?: string;
 }
 
 export interface ReceiptPDFData {
@@ -248,8 +249,10 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
   y += 40;
 
   // 4. Objet de la Location
+  const hasListingRef = Boolean(data.listingReference);
+  const objectRectHeight = hasListingRef ? 30 : 26;
   doc.setFillColor(248, 250, 252);
-  doc.roundedRect(margin, y, contentWidth, 26, 2, 2, 'FD');
+  doc.roundedRect(margin, y, contentWidth, objectRectHeight, 2, 2, 'FD');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(15, 23, 42);
@@ -265,13 +268,26 @@ export function generateLeasePDF(data: LeasePDFData, customFilename?: string): v
     margin + 4,
     y + 19
   );
-  doc.text(
-    `• Équipements : Compteur électrique individuel, sanitaires privés, approvisionnement en eau sécurisé.`,
-    margin + 4,
-    y + 23
-  );
-
-  y += 32;
+  if (data.listingReference) {
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(109, 40, 217); // purple-700
+    doc.text(`• Référence Annonce Liée : ${data.listingReference} (Logement retiré de diffusion suite à ce bail)`, margin + 4, y + 23);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(51, 65, 85);
+    doc.text(
+      `• Équipements : Compteur électrique individuel, sanitaires privés, approvisionnement en eau sécurisé.`,
+      margin + 4,
+      y + 27
+    );
+    y += 36;
+  } else {
+    doc.text(
+      `• Équipements : Compteur électrique individuel, sanitaires privés, approvisionnement en eau sécurisé.`,
+      margin + 4,
+      y + 23
+    );
+    y += 32;
+  }
 
   // 5. Conditions Financières (Cadre mis en avant)
   doc.setFillColor(254, 242, 242); // rose-50

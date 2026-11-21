@@ -673,17 +673,52 @@ export const ListingsService = {
     if (!listingIdOrRef || typeof window === 'undefined') return false;
     const all = this.getAllListings();
     const cleanQuery = listingIdOrRef.trim().toLowerCase();
-    const target = all.find(
-      (l) =>
-        l.id.toLowerCase() === cleanQuery ||
-        (l.referenceCode && l.referenceCode.trim().toLowerCase() === cleanQuery)
-    );
+    const cleanDigits = cleanQuery.replace(/[^0-9]/g, '');
+    const cleanAlpha = cleanQuery.replace(/[^a-z0-9]/gi, '');
+
+    const target = all.find((l) => {
+      if (l.id.toLowerCase() === cleanQuery) return true;
+      const ref = (l.referenceCode || '').trim().toLowerCase();
+      if (ref && ref === cleanQuery) return true;
+      const cleanRefAlpha = ref.replace(/[^a-z0-9]/gi, '');
+      if (cleanAlpha.length >= 3 && cleanRefAlpha === cleanAlpha) return true;
+      if (cleanDigits.length >= 4 && (ref.includes(cleanDigits) || l.id.includes(cleanDigits))) return true;
+      return false;
+    });
+
     if (target) {
+      // 1. Déplacer vers la corbeille avec motif d'attribution de bail
       this.deleteListing(
         target.id,
         'Utilisateur',
-        `Annonce conclue : Bail ${leaseId} contresigné électroniquement par le locataire.`
+        `Logement loué : Bail ${leaseId} contresigné électroniquement par le locataire.`
       );
+
+      // 2. Notification de dépublication automatique pour le bailleur et le démarcheur
+      try {
+        const notifMsg = `L'annonce « ${target.title} » (Réf: ${target.referenceCode || target.id}) a été automatiquement retirée d'Internet suite à la contresignature du contrat de bail ${leaseId}.`;
+        const notifsKey = 'locagestion:landlord_notifications';
+        const existingNotifsStr = localStorage.getItem(notifsKey);
+        const existingNotifs = existingNotifsStr ? JSON.parse(existingNotifsStr) : [];
+        const newNotif = {
+          id: `notif-unpublish-${Date.now()}`,
+          title: 'Annonce automatiquement retirée d’Internet ✓',
+          message: notifMsg,
+          time: 'À l’instant',
+          timestamp: new Date().toLocaleDateString('fr-FR') + ' à ' + new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+          type: 'listing_unpublished',
+          read: false,
+          leaseId,
+          listingId: target.id,
+          listingReference: target.referenceCode || target.id,
+        };
+        localStorage.setItem(notifsKey, JSON.stringify([newNotif, ...existingNotifs]));
+        window.dispatchEvent(new Event('locagestion:notifications_updated'));
+      } catch (e) {
+        console.error('Erreur notification dépublication:', e);
+      }
+
+      notifyListingsChange();
       return true;
     }
     return false;

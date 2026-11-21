@@ -185,10 +185,10 @@ export function TenantSignLeaseModal({
       const result = LeaseService.signLeaseByTenant(lease.id, tenantName, dataUrl);
 
       // Retrait automatique de l'annonce si le bail était lié à une annonce
-      if (lease.listingId || lease.listingReference) {
+      if (lease.listingReference || lease.listingId) {
         try {
           ListingsService.removeListingAfterLeaseSigned(
-            lease.listingId || lease.listingReference!,
+            lease.listingReference || lease.listingId!,
             lease.id
           );
         } catch (e) {
