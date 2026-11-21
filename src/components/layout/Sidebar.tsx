@@ -29,6 +29,7 @@ import {
   Repeat,
   Plus,
   Layers,
+  Camera,
 } from 'lucide-react';
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
@@ -49,7 +50,7 @@ interface NavItem {
   badgeCount?: number;
   badgeColor?: string;
   mobileOnly?: boolean;
-  portalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis';
+  portalTab?: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis';
 }
 
 interface SidebarProps {
@@ -57,8 +58,8 @@ interface SidebarProps {
   onClose: () => void;
   activeSpace?: UserSpace;
   onSpaceChange?: (space: UserSpace) => void;
-  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis';
-  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis') => void;
+  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis';
+  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis') => void;
 }
 
 export function Sidebar({
@@ -342,6 +343,14 @@ export function Sidebar({
       icon: FileText,
       portalTab: 'bail',
       active: pathname === '/portal' && effectivePortalTab === 'bail',
+      mobileOnly: true,
+    },
+    {
+      name: 'États des Lieux',
+      href: '/portal?tab=edl',
+      icon: Camera,
+      portalTab: 'edl',
+      active: pathname === '/portal' && effectivePortalTab === 'edl',
       mobileOnly: true,
     },
     {

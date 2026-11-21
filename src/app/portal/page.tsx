@@ -48,6 +48,7 @@ import {
   RotateCcw,
   Search,
   Filter,
+  Layers,
   ArrowUpDown,
   BellRing,
   FileWarning,
@@ -109,8 +110,8 @@ function TenantPortalContent() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, switchSpace } = useSpace();
 
-  // Primary Tab state: 'accueil' (Mon Logement), 'quittances' (Mes Quittances & Reçus), 'bail' (Mon Bail & Contrat), 'solvabilite' (Passeport), 'preavis' (Relances & Préavis)
-  const [activeTab, setActiveTab] = useState<'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis'>('accueil');
+  // Primary Tab state: 'accueil' (Mon Logement), 'quittances' (Mes Quittances & Reçus), 'bail' (Mon Bail & Contrat), 'edl' (États des Lieux), 'solvabilite' (Passeport), 'preavis' (Relances & Préavis)
+  const [activeTab, setActiveTab] = useState<'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis'>('accueil');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -118,8 +119,13 @@ function TenantPortalContent() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Sub-tab inside "Mon Bail & Contrat" to switch between Bail & État des Lieux et Mon Bailleur
-  const [bailSubTab, setBailSubTab] = useState<'tout' | 'bail_etat' | 'bailleur'>('tout');
+  // Sub-tab inside "Mon Bail & Contrat" to switch between Bail, État des Lieux et Mon Bailleur
+  const [bailSubTab, setBailSubTab] = useState<'tout' | 'bail_etat' | 'edl' | 'bailleur'>('tout');
+
+  // Multi-Baux & Pluralité des États des Lieux
+  const [selectedEdlLeaseId, setSelectedEdlLeaseId] = useState<string>('all');
+  const [selectedInspectionLease, setSelectedInspectionLease] = useState<Lease | null>(null);
+  const [edlRefreshTick, setEdlRefreshTick] = useState(0);
 
   const [declarationModalOpen, setDeclarationModalOpen] = useState(false);
   const [reportIssueModalOpen, setReportIssueModalOpen] = useState(false);
@@ -224,6 +230,7 @@ function TenantPortalContent() {
       if (
         queryTab === 'quittances' ||
         queryTab === 'bail' ||
+        queryTab === 'edl' ||
         queryTab === 'solvabilite' ||
         queryTab === 'preavis' ||
         queryTab === 'accueil'
@@ -251,6 +258,7 @@ function TenantPortalContent() {
         if (
           target === 'quittances' ||
           target === 'bail' ||
+          target === 'edl' ||
           target === 'solvabilite' ||
           target === 'preavis' ||
           target === 'accueil'
@@ -273,7 +281,7 @@ function TenantPortalContent() {
     }
   }, []);
 
-  const handleTabChange = (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis') => {
+  const handleTabChange = (tab: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis') => {
     setActiveTab(tab);
     if (typeof window !== 'undefined') {
       const url = new URL(window.location.href);
@@ -557,10 +565,13 @@ function TenantPortalContent() {
     const handleInspectionUpdate = () => {
       const leaseId = currentLease?.id || pendingLease?.id || '';
       setInspectionData(InspectionService.getInspectionByLeaseId(leaseId));
+      setEdlRefreshTick((t) => t + 1);
     };
     window.addEventListener('locagestion:inspections_updated', handleInspectionUpdate);
+    window.addEventListener('storage', handleInspectionUpdate);
     return () => {
       window.removeEventListener('locagestion:inspections_updated', handleInspectionUpdate);
+      window.removeEventListener('storage', handleInspectionUpdate);
     };
   }, [currentLease, pendingLease]);
 
@@ -843,6 +854,239 @@ function TenantPortalContent() {
   const [receiptSortOrder, setReceiptSortOrder] = useState<'desc' | 'asc'>('desc');
   const [receiptSearchTerm, setReceiptSearchTerm] = useState<string>('');
 
+  // Actions & Rendu des États des Lieux Multi-Baux
+  const handleOpenInspectionModal = (targetLease: Lease) => {
+    setSelectedInspectionLease(targetLease);
+    setIsInspectionModalOpen(true);
+  };
+
+  const handleDownloadInspectionPDF = (targetLease: Lease) => {
+    const data = InspectionService.getInspectionByLeaseId(targetLease.id);
+    generateInspectionPDF({
+      id: targetLease.id,
+      tenantName: targetLease.tenant || tenant.name,
+      propertyName: targetLease.property,
+      unit: targetLease.unit,
+      date: data.date,
+      meterCashPower: data.meterCashPower,
+      meterWater: data.meterWater,
+      keysDelivered: data.keysDelivered,
+      generalState:
+        data.generalState === 'neuf'
+          ? 'Neuf / Rénovation complète'
+          : data.generalState === 'tres_bon'
+          ? 'Très bon état d’usage'
+          : data.generalState === 'bon'
+          ? 'Bon état général'
+          : 'À rafraîchir',
+    });
+    showToast(`Procès-verbal officiel d'état des lieux (${targetLease.id}) téléchargé en PDF !`);
+  };
+
+  const renderLeaseInspectionCard = (targetLease: Lease, showContractBadge = true) => {
+    const leaseInspection = InspectionService.getInspectionByLeaseId(targetLease.id);
+    const photosCount = leaseInspection.photos?.length || 0;
+    const hasPhotos = photosCount > 0;
+    const landlordName = targetLease.landlordSignature?.signedBy || targetLease.landlordName || 'Bailleur';
+    const usage = getUsageInfo(targetLease.propertyUsage);
+    const UsageIcon = usage.icon;
+
+    return (
+      <div
+        key={`edl-card-${targetLease.id}`}
+        className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5 animate-in fade-in duration-200"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div className="flex items-start sm:items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 shadow-xs">
+              <Camera className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-black text-base sm:text-lg text-slate-900 leading-tight">
+                  État des Lieux & Constat Photos
+                </h3>
+                {showContractBadge && (
+                  <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border flex items-center gap-1 shrink-0 ${usage.badgeColor}`}>
+                    <UsageIcon className="w-3 h-3" />
+                    <span>{usage.label}</span>
+                  </span>
+                )}
+                {hasPhotos ? (
+                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Certifié Contradictoire</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1 shrink-0">
+                    <Clock className="w-3.5 h-3.5 text-slate-500" />
+                    <span>En attente de relevé</span>
+                  </span>
+                )}
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shrink-0">
+                  <Lock className="w-3 h-3 text-amber-600" />
+                  <span>Consultation Locataire (Non modifiable)</span>
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Dossier contradictoire et documents établis par votre bailleur (<strong>{landlordName}</strong>) pour le logement <strong>{targetLease.unit}</strong> ({targetLease.property}) • Réf Bail : <span className="font-mono font-bold text-slate-800">{targetLease.id}</span>.
+              </p>
+            </div>
+          </div>
+
+          {/* Actions Buttons */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => handleOpenInspectionModal(targetLease)}
+              className="py-2.5 px-4 sm:px-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 text-center"
+            >
+              <Eye className="w-4 h-4 shrink-0" />
+              <span>Consulter l'état des lieux & photos ({photosCount})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleDownloadInspectionPDF(targetLease)}
+              className="py-2.5 px-4 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs text-center"
+              title="Télécharger le PV officiel"
+            >
+              <Download className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Télécharger PV (PDF)</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Récapitulatif technique : Compteurs, Clés & État */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0">
+              <Zap className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Compteur Électricité</span>
+              <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{leaseInspection.meterCashPower || 'Relevé contradictoire'}</span>
+              <span className="text-[10px] text-slate-500 block">Relevé contradictoire</span>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-blue-100 text-blue-700 shrink-0">
+              <Droplet className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Compteur d'Eau</span>
+              <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{leaseInspection.meterWater || 'Index initial'}</span>
+              <span className="text-[10px] text-slate-500 block">Index initial</span>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
+              <Key className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Clés & Accès</span>
+              <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{leaseInspection.keysDelivered || 'Inventaire remis'}</span>
+              <span className="text-[10px] text-slate-500 block">Inventaire remis</span>
+            </div>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
+            <div className="p-2 rounded-xl bg-purple-100 text-purple-700 shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">État Général</span>
+              <span className="text-xs font-black text-slate-900 block mt-0.5 capitalize">
+                {leaseInspection.generalState === 'neuf'
+                  ? 'Neuf / Rénové'
+                  : leaseInspection.generalState === 'tres_bon'
+                  ? 'Très bon état'
+                  : leaseInspection.generalState === 'bon'
+                  ? 'Bon état général'
+                  : 'À rafraîchir'}
+              </span>
+              <span className="text-[10px] text-emerald-600 font-bold block">Conforme au bail</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Galerie des Photos Horodatées de l'État des Lieux */}
+        {hasPhotos ? (
+          <div className="space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Photos de l'État des Lieux du Bailleur ({photosCount} clichés horodatés)
+                </span>
+                <span className="text-[10px] text-slate-400 hidden sm:inline">• Cliquez pour agrandir en HD</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleOpenInspectionModal(targetLease)}
+                className="text-xs font-black text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Ouvrir l'inspection complète</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+              {leaseInspection.photos.slice(0, 6).map((photo) => (
+                <div
+                  key={photo.id}
+                  onClick={() => setSelectedInspectionPhoto(photo)}
+                  className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 aspect-square cursor-pointer shadow-xs hover:shadow-md transition-all"
+                  title={`${photo.label} (${photo.room})`}
+                >
+                  <img
+                    src={photo.url}
+                    alt={photo.label}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30 opacity-80 group-hover:opacity-90 transition-opacity" />
+                  <div className="absolute top-1.5 left-1.5">
+                    <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-white border border-white/20">
+                      {photo.room}
+                    </span>
+                  </div>
+                  <div className="absolute bottom-1.5 left-1.5 right-1.5">
+                    <p className="text-[10px] font-bold text-white line-clamp-1 leading-tight">
+                      {photo.label}
+                    </p>
+                    <span className="text-[9px] text-slate-300 font-mono block">
+                      {photo.timestamp.split(' à ')[0]}
+                    </span>
+                  </div>
+                  <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1 rounded text-white">
+                    <ZoomIn className="w-3 h-3" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2.5 text-slate-600">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                Les photos et relevés détaillés pour le contrat <strong>{targetLease.id}</strong> ({targetLease.unit}) sont en attente de dépôt par votre bailleur (<strong>{landlordName}</strong>).
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleOpenInspectionModal(targetLease)}
+              className="px-3.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-bold shrink-0 cursor-pointer self-start sm:self-auto"
+            >
+              Consulter la fiche
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const parseFrDate = (dateStr?: string) => {
     if (!dateStr) return 0;
     const parts = dateStr.split('/');
@@ -1078,6 +1322,28 @@ function TenantPortalContent() {
             >
               <FileText className="w-4 h-4" />
               <span>Mon Bail & Contrat</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('edl')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'edl'
+                  ? 'bg-black text-white shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <Camera className="w-4 h-4" />
+              <span>États des Lieux</span>
+              {myLeases.length > 0 && (
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                    activeTab === 'edl' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                  }`}
+                >
+                  {myLeases.length}
+                </span>
+              )}
             </button>
 
             <button
@@ -1605,14 +1871,20 @@ function TenantPortalContent() {
                     </h3>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {currentLease && inspectionData.photos.length > 0 && selectedLeaseId !== 'all' && (
+                    {currentLease && (
                       <button
                         type="button"
-                        onClick={() => setIsInspectionModalOpen(true)}
+                        onClick={() => handleOpenInspectionModal(currentLease)}
                         className="px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs active:scale-95"
+                        title="Consulter l'état des lieux contradictoire de ce bail"
                       >
                         <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>État des lieux ({inspectionData.photos.length} photos)</span>
+                        <span>
+                          État des lieux
+                          {InspectionService.getInspectionByLeaseId(currentLease.id).photos.length > 0
+                            ? ` (${InspectionService.getInspectionByLeaseId(currentLease.id).photos.length} photos)`
+                            : ''}
+                        </span>
                       </button>
                     )}
                     <span className={`text-xs font-bold px-3 py-1 rounded-full border self-start sm:self-auto shrink-0 ${
@@ -1759,188 +2031,82 @@ function TenantPortalContent() {
               </div>
 
               {/* ==================================================================== */}
-              {/* SECTION : ÉTAT DES LIEUX & CONSTAT PHOTOS DU LOGEMENT (Lecture Seule) */}
+              {/* SECTION : ÉTATS DES LIEUX & CONSTATS PHOTOS (Multi-Baux Compatible)  */}
               {/* ==================================================================== */}
-              {currentLease && inspectionData.photos.length > 0 && (
-                <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-5 animate-in fade-in duration-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-                  <div className="flex items-start sm:items-center gap-3 min-w-0">
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 shadow-xs">
-                      <Camera className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-black text-base sm:text-lg text-slate-900 leading-tight">
-                          État des Lieux & Constat Photos
-                        </h3>
-                        <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
-                          <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                          <span>Certifié Contradictoire</span>
+              {myLeases.length > 0 && (
+                <div className="space-y-4">
+                  {/* Sélecteur de contrats si pluralité de baux signés */}
+                  {myLeases.length > 1 && (
+                    <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-soft space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+                        <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
+                          <Camera className="w-4 h-4 text-emerald-600" />
+                          <span>États des lieux par contrat ({myLeases.length} baux souscrits) :</span>
                         </span>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 flex items-center gap-1 shrink-0">
-                          <Lock className="w-3 h-3 text-amber-600" />
-                          <span>Consultation Locataire (Non modifiable)</span>
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleTabChange('edl')}
+                          className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer self-start sm:self-auto"
+                        >
+                          <span>Ouvrir l'Espace États des Lieux complet →</span>
+                        </button>
                       </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Dossier contradictoire et documents établis par votre bailleur (<strong>{tenant.landlord.name}</strong>) pour le logement <strong>{tenant.unit}</strong> ({tenant.property}).
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Actions Buttons */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 shrink-0 w-full sm:w-auto">
-                    <button
-                      type="button"
-                      onClick={() => setIsInspectionModalOpen(true)}
-                      className="py-2.5 px-4 sm:px-5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95 text-center"
-                    >
-                      <Eye className="w-4 h-4 shrink-0" />
-                      <span>Consulter l'état des lieux & photos ({inspectionData.photos.length})</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        generateInspectionPDF({
-                          id: currentLease?.id || tenant.leaseRef,
-                          tenantName: tenant.name,
-                          propertyName: tenant.property,
-                          unit: tenant.unit,
-                          date: inspectionData.date,
-                          meterCashPower: inspectionData.meterCashPower,
-                          meterWater: inspectionData.meterWater,
-                          keysDelivered: inspectionData.keysDelivered,
-                          generalState:
-                            inspectionData.generalState === 'neuf'
-                              ? 'Neuf / Rénovation complète'
-                              : inspectionData.generalState === 'tres_bon'
-                              ? 'Très bon état d’usage'
-                              : inspectionData.generalState === 'bon'
-                              ? 'Bon état général'
-                              : 'À rafraîchir',
-                        });
-                        showToast(`Procès-verbal officiel d'état des lieux téléchargé en PDF !`);
-                      }}
-                      className="py-2.5 px-4 rounded-2xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs text-center"
-                      title="Télécharger le PV officiel"
-                    >
-                      <Download className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>Télécharger PV (PDF)</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Récapitulatif technique : Compteurs, Clés & État */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-                    <div className="p-2 rounded-xl bg-amber-100 text-amber-700 shrink-0">
-                      <Zap className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Compteur Électricité</span>
-                      <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{inspectionData.meterCashPower}</span>
-                      <span className="text-[10px] text-slate-500 block">Relevé contradictoire</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-                    <div className="p-2 rounded-xl bg-blue-100 text-blue-700 shrink-0">
-                      <Droplet className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Compteur d'Eau</span>
-                      <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{inspectionData.meterWater}</span>
-                      <span className="text-[10px] text-slate-500 block">Index initial</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-                    <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 shrink-0">
-                      <Key className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Clés & Accès</span>
-                      <span className="text-xs font-black text-slate-900 block mt-0.5 truncate">{inspectionData.keysDelivered}</span>
-                      <span className="text-[10px] text-slate-500 block">Inventaire remis</span>
-                    </div>
-                  </div>
-
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 flex items-start gap-3">
-                    <div className="p-2 rounded-xl bg-purple-100 text-purple-700 shrink-0">
-                      <CheckCircle2 className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">État Général</span>
-                      <span className="text-xs font-black text-slate-900 block mt-0.5 capitalize">
-                        {inspectionData.generalState === 'neuf'
-                          ? 'Neuf / Rénové'
-                          : inspectionData.generalState === 'tres_bon'
-                          ? 'Très bon état'
-                          : inspectionData.generalState === 'bon'
-                          ? 'Bon état général'
-                          : 'À rafraîchir'}
-                      </span>
-                      <span className="text-[10px] text-emerald-600 font-bold block">Conforme au bail</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Galerie des Photos Horodatées de l'État des Lieux */}
-                <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-slate-800 uppercase tracking-wider">
-                        Photos de l'État des Lieux du Bailleur ({inspectionData.photos.length} clichés horodatés)
-                      </span>
-                      <span className="text-[10px] text-slate-400 hidden sm:inline">• Cliquez pour agrandir en HD</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsInspectionModalOpen(true)}
-                      className="text-xs font-black text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
-                    >
-                      <span>Ouvrir l'inspection complète</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-                    {inspectionData.photos.slice(0, 6).map((photo) => (
-                      <div
-                        key={photo.id}
-                        onClick={() => setSelectedInspectionPhoto(photo)}
-                        className="group relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 aspect-square cursor-pointer shadow-xs hover:shadow-md transition-all"
-                        title={`${photo.label} (${photo.room})`}
-                      >
-                        <img
-                          src={photo.url}
-                          alt={photo.label}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-black/30 opacity-80 group-hover:opacity-90 transition-opacity" />
-                        <div className="absolute top-1.5 left-1.5">
-                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-white border border-white/20">
-                            {photo.room}
-                          </span>
-                        </div>
-                        <div className="absolute bottom-1.5 left-1.5 right-1.5">
-                          <p className="text-[10px] font-bold text-white line-clamp-1 leading-tight">
-                            {photo.label}
-                          </p>
-                          <span className="text-[9px] text-slate-300 font-mono block">
-                            {photo.timestamp.split(' à ')[0]}
-                          </span>
-                        </div>
-                        <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 p-1 rounded text-white">
-                          <ZoomIn className="w-3 h-3" />
-                        </div>
+                      <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedEdlLeaseId('all')}
+                          className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
+                            selectedEdlLeaseId === 'all'
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-md font-black'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
+                        >
+                          <Layers className="w-3.5 h-3.5" />
+                          <span>Tous les états des lieux ({myLeases.length})</span>
+                        </button>
+                        {myLeases.map((l) => {
+                          const isSel = selectedEdlLeaseId === l.id;
+                          const usage = getUsageInfo(l.propertyUsage);
+                          const UsageIcon = usage.icon;
+                          const lPhotos = InspectionService.getInspectionByLeaseId(l.id).photos.length;
+                          return (
+                            <button
+                              key={`edl-btn-${l.id}`}
+                              type="button"
+                              onClick={() => setSelectedEdlLeaseId(l.id)}
+                              className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
+                                isSel
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
+                                  : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
+                              }`}
+                            >
+                              <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
+                              <span>{l.unit}</span>
+                              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                                {l.id}
+                              </span>
+                              {lPhotos > 0 && (
+                                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isSel ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+                                  {lPhotos} ph.
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  )}
+
+                  {/* Cartes d'États des Lieux */}
+                  {selectedEdlLeaseId === 'all'
+                    ? myLeases.map((l) => renderLeaseInspectionCard(l, myLeases.length > 1))
+                    : (() => {
+                        const targetL = myLeases.find((l) => l.id === selectedEdlLeaseId) || myLeases[0];
+                        return renderLeaseInspectionCard(targetL, myLeases.length > 1);
+                      })()}
                 </div>
-              </div>
-            )}
+              )}
 
             {/* Artisans mandatés actifs pour le locataire */}
               {reportedIncidents.filter((i) => i.status !== 'resolu' && i.assignedTechnician).length > 0 && (
@@ -2369,7 +2535,7 @@ function TenantPortalContent() {
                   </div>
 
                   {/* Sub-Tabs Selector */}
-                  <div className="grid grid-cols-3 sm:flex items-center gap-1 p-1 bg-slate-100 rounded-2xl border border-slate-200/60 w-full sm:w-auto shrink-0">
+                  <div className="grid grid-cols-2 sm:flex items-center gap-1 p-1 bg-slate-100 rounded-2xl border border-slate-200/60 w-full sm:w-auto shrink-0">
                     <button
                       type="button"
                       onClick={() => setBailSubTab('tout')}
@@ -2391,6 +2557,17 @@ function TenantPortalContent() {
                       }`}
                     >
                       Mon Contrat
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBailSubTab('edl')}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer text-center ${
+                        bailSubTab === 'edl'
+                          ? 'bg-emerald-600 text-white shadow-sm font-black'
+                          : 'text-slate-500 hover:text-slate-900'
+                      }`}
+                    >
+                      État des Lieux ({myLeases.length})
                     </button>
                     <button
                       type="button"
@@ -2667,6 +2844,15 @@ function TenantPortalContent() {
                 </div>
               )}
 
+              {/* SOUS-SECTION ÉTAT DES LIEUX ASSOCIÉ AU CONTRAT */}
+              {(bailSubTab === 'tout' || bailSubTab === 'edl') && (
+                currentLease ? (
+                  <div className="space-y-4">
+                    {renderLeaseInspectionCard(currentLease, myLeases.length > 1)}
+                  </div>
+                ) : null
+              )}
+
               {/* SOUS-SECTION 2 : MON BAILLEUR & GESTIONNAIRE */}
               {(bailSubTab === 'tout' || bailSubTab === 'bailleur') && (
                 currentLease ? (
@@ -2883,6 +3069,125 @@ function TenantPortalContent() {
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* ==================================================================== */}
+          {/* ONGLET 3 BIS : ÉTATS DES LIEUX CONTRADICTOIRES (Multi-Baux)          */}
+          {/* ==================================================================== */}
+          {activeTab === 'edl' && (
+            <div className="space-y-6 animate-in fade-in duration-200">
+              {/* Header Box */}
+              <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft space-y-4">
+                <div className="flex items-center gap-2 pb-3 mb-2 border-b border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('accueil')}
+                    className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold active:scale-95 transition-all cursor-pointer"
+                  >
+                    <Home className="w-4 h-4 text-slate-600" />
+                    <span>← Retour à l’Accueil</span>
+                  </button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start sm:items-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 border border-emerald-100 shadow-xs">
+                      <Camera className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                          États des Lieux Contradictoires
+                        </h2>
+                        <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          {myLeases.length} {myLeases.length > 1 ? 'Contrats Actifs' : 'Contrat Actif'}
+                        </span>
+                        <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                          Scellé Numérique UEMOA / CEMAC
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Procès-verbaux d'entrée, relevés de compteurs (Cash Power, eau), inventaire des clés et photographies horodatées certifiées pour chacun de vos logements et locaux loués.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sélecteur de contrats si pluralité */}
+                {myLeases.length > 1 && (
+                  <div className="pt-3 border-t border-slate-100 space-y-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
+                      Filtrer par contrat de location ({myLeases.length} baux en cours) :
+                    </span>
+                    <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedEdlLeaseId('all')}
+                        className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
+                          selectedEdlLeaseId === 'all'
+                            ? 'bg-slate-900 text-white border-slate-900 shadow-md font-black'
+                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                        }`}
+                      >
+                        <Layers className="w-3.5 h-3.5" />
+                        <span>Tous les contrats ({myLeases.length})</span>
+                      </button>
+                      {myLeases.map((l) => {
+                        const isSel = selectedEdlLeaseId === l.id;
+                        const usage = getUsageInfo(l.propertyUsage);
+                        const UsageIcon = usage.icon;
+                        const lPhotos = InspectionService.getInspectionByLeaseId(l.id).photos.length;
+                        return (
+                          <button
+                            key={`tab-edl-btn-${l.id}`}
+                            type="button"
+                            onClick={() => setSelectedEdlLeaseId(l.id)}
+                            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
+                              isSel
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
+                                : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
+                            }`}
+                          >
+                            <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
+                            <span>{l.unit}</span>
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
+                              {l.id}
+                            </span>
+                            {lPhotos > 0 && (
+                              <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isSel ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
+                                {lPhotos} ph.
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Liste des Cartes d'États des Lieux */}
+              {myLeases.length > 0 ? (
+                <div className="space-y-6">
+                  {selectedEdlLeaseId === 'all'
+                    ? myLeases.map((l) => renderLeaseInspectionCard(l, myLeases.length > 1))
+                    : (() => {
+                        const targetL = myLeases.find((l) => l.id === selectedEdlLeaseId) || myLeases[0];
+                        return renderLeaseInspectionCard(targetL, myLeases.length > 1);
+                      })()}
+                </div>
+              ) : (
+                <div className="rounded-3xl p-8 sm:p-12 border border-slate-200/80 bg-white shadow-soft text-center space-y-3">
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Camera className="w-6 h-6" />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-800">Aucun état des lieux pour le moment</h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    Les procès-verbaux contradictoires, relevés de compteurs et photos apparaîtront ici dès que vos contrats de bail seront transmis et signés.
+                  </p>
+                </div>
+              )}
             </div>
           )}
 
@@ -4455,15 +4760,20 @@ function TenantPortalContent() {
         monthlyRent={tenant.monthlyRent}
       />
 
-      {/* Modal d'État des Lieux en Lecture Seule pour le Locataire */}
+      {/* Modal d'État des Lieux en Lecture Seule pour le Locataire (Multi-Baux Compatible) */}
       <InspectionModal
         isOpen={isInspectionModalOpen}
-        onClose={() => setIsInspectionModalOpen(false)}
-        leaseId={currentLease?.id || pendingLease?.id || ''}
-        propertyName={tenant.property}
-        unitNumber={tenant.unit}
-        tenantName={tenant.name}
-        inspectionData={inspectionData}
+        onClose={() => {
+          setIsInspectionModalOpen(false);
+          setSelectedInspectionLease(null);
+        }}
+        leaseId={selectedInspectionLease?.id || currentLease?.id || pendingLease?.id || ''}
+        propertyName={selectedInspectionLease?.property || currentLease?.property || tenant.property}
+        unitNumber={selectedInspectionLease?.unit || currentLease?.unit || tenant.unit}
+        tenantName={selectedInspectionLease?.tenant || currentLease?.tenant || tenant.name}
+        inspectionData={InspectionService.getInspectionByLeaseId(
+          selectedInspectionLease?.id || currentLease?.id || pendingLease?.id || ''
+        )}
         readOnly={true}
       />
 

@@ -77,6 +77,7 @@ L'architecture applicative repose sur **3 espaces strictement cloisonnés** déf
   - Préavis de départ avec suivi de la restitution du dépôt de garantie sous 30 jours.
   - Discussion directe avec son bailleur dans `/messages`.
   - **Passeport Solvabilité Fonctionnel :** Score déterministe démarrant obligatoirement à 100/100 en VERT vif pour tout nouveau compte locataire créé. Évolution et dégradation selon les 4 paliers officiels (Vert 85-100, Bleu 70-84, Orange 50-69, Rouge 0-49) selon la ponctualité des règlements à l'échéance du 5 de chaque mois.
+  - **Espace États des Lieux Multi-Contrats :** Prise en compte intégrale de la pluralité des contrats de bail (un locataire peut avoir souscrit plusieurs baux : ex: habitation + local commercial/magasin). Onglet dédié `États des Lieux` (`/portal?tab=edl`), sous-onglet dédié dans `Mon Bail & Contrat`, et sélecteur de contrat dans le dashboard d'accueil permettant d'isoler ou de cumuler les procès-verbaux, relevés contradictoires (Cash Power, eau), remise des clés, téléchargements PDF et galeries de clichés horodatés propres à chaque contrat.
 
 ### 3. Espace Démarcheur / Agent Immobilier (`role: 'demarcheur'`)
 - **Point d'entrée :** `/listings`.

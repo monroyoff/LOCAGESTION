@@ -42,8 +42,8 @@ interface HeaderProps {
   onToggleSidebar: () => void;
   onOpenQuickAction?: (action: 'new_lease' | 'new_payment' | 'new_property') => void;
   onOpenTenantAction?: (action: 'declare_payment' | 'report_issue') => void;
-  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis';
-  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'solvabilite' | 'preavis') => void;
+  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis';
+  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis') => void;
 }
 
 export function Header({
@@ -187,6 +187,7 @@ export function Header({
     if (isTenant) {
       if (activePortalTab === 'quittances') return 'Mes Quittances & Reçus';
       if (activePortalTab === 'bail') return 'Mon Bail & Contrat';
+      if (activePortalTab === 'edl') return 'États des Lieux Contradictoires';
       if (activePortalTab === 'solvabilite') return 'Mon Passeport Solvabilité';
       if (activePortalTab === 'preavis') return 'Relances & Préavis';
       return 'Mon Espace Locataire';
