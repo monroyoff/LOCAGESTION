@@ -8,6 +8,9 @@ export async function GET() {
         namespace: 'android_app',
         package_name: 'com.locagestion.app',
         sha256_cert_fingerprints: [
+          // 1. Clé officielle de signature d'application Google Play Store
+          'D1:83:13:89:32:2D:99:6A:3D:0D:46:6C:96:19:5B:CA:82:B4:93:F4:A2:52:57:6D:7C:91:AC:C9:CC:DC:15:F3',
+          // 2. Clé d'importation / Keystore local (APK de test direct)
           '17:D7:54:87:D1:95:11:84:F3:97:FC:6C:52:5F:A5:12:ED:EE:E5:AF:D4:82:BC:EE:5A:62:3A:89:C4:B2:A3:8F',
         ],
       },
@@ -19,8 +22,7 @@ export async function GET() {
     headers: {
       'Content-Type': 'application/json',
       'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'public, max-age=86400',
+      'Cache-Control': 'public, max-age=3600',
     },
   });
 }
-
