@@ -66,6 +66,18 @@ export async function POST(req: NextRequest) {
       body.isIdentitySealed = true;
     }
 
+    // RÈGLE D'OR : Le compte locataire theodoradjigla@gmail.com est irrévocablement lié à LOCA-MAT-BJ-24702 et scellé
+    if (cleanEmail === 'theodoradjigla@gmail.com') {
+      body.matricule = 'LOCA-MAT-BJ-24702';
+      body.firstName = 'Théodora';
+      body.lastName = 'DJIGLA';
+      body.name = 'Théodora DJIGLA';
+      body.phone = body.phone || '+229 01 97 30 73 74';
+      body.password = body.password || 'Jesusmonroi@2026';
+      body.emailVerified = true;
+      body.isIdentitySealed = true;
+    }
+
     const idx = users.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === cleanEmail);
 
     if (idx !== -1) {

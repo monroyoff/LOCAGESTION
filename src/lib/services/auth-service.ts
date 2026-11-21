@@ -74,6 +74,9 @@ export function generateUserMatricule(country?: string, role?: string, seed?: st
   if (cleanSeed.includes('jojovog007') || cleanSeed.includes('usr-tenant-jojovog')) {
     return 'LOCA-MAT-BJ-17635';
   }
+  if (cleanSeed.includes('theodoradjigla') || cleanSeed.includes('usr-tenant-theodora')) {
+    return 'LOCA-MAT-BJ-24702';
+  }
   if (cleanSeed.includes('koffi.mensah') || cleanSeed.includes('usr-tenant-koffi')) {
     return 'LOCA-MAT-CI-48219';
   }
@@ -166,6 +169,28 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
     registeredAt: '18/11/2026',
     password: 'Lolo1000$',
+    accountStatus: 'active',
+    isIdentitySealed: true,
+    emailVerified: true,
+  },
+  {
+    id: 'usr-tenant-theodora',
+    matricule: 'LOCA-MAT-BJ-24702',
+    name: 'Théodora DJIGLA',
+    firstName: 'Théodora',
+    lastName: 'DJIGLA',
+    email: 'theodoradjigla@gmail.com',
+    phone: '+229 01 97 30 73 74',
+    role: 'locataire',
+    birthDate: '10/05/1995',
+    birthPlace: 'Cotonou',
+    residenceCountry: 'Bénin',
+    residenceCity: 'Cotonou',
+    residenceDistrict: 'Cotonou',
+    projectCountry: 'Bénin',
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+    registeredAt: '21/11/2026',
+    password: 'Jesusmonroi@2026',
     accountStatus: 'active',
     isIdentitySealed: true,
     emailVerified: true,
@@ -481,6 +506,11 @@ export const AuthService = {
               sanitized[i].password = 'Forever1122$';
               hasMutated = true;
             }
+            if (areEmailsEqual(sanitized[i].email, 'theodoradjigla@gmail.com') && (sanitized[i].password !== 'Jesusmonroi@2026' || !sanitized[i].emailVerified)) {
+              sanitized[i].password = 'Jesusmonroi@2026';
+              sanitized[i].emailVerified = true;
+              hasMutated = true;
+            }
             if (JSON.stringify(sanitized[i]) !== beforeJson) {
               hasMutated = true;
             }
@@ -504,6 +534,8 @@ export const AuthService = {
                 targetPassword = 'Lolo1000$';
               } else if (areEmailsEqual(existing.email, 'jobovog@gmail.com')) {
                 targetPassword = 'Forever1122$';
+              } else if (areEmailsEqual(existing.email, 'theodoradjigla@gmail.com')) {
+                targetPassword = 'Jesusmonroi@2026';
               }
 
               const reconciled: AuthUser = {

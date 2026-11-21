@@ -186,6 +186,18 @@ export async function POST(req: NextRequest) {
         incomingUser.isIdentitySealed = true;
       }
 
+      // CAS PARTICULIER STRICT THÉODORA DJIGLA (LOCATAIRE) : matricule LOCA-MAT-BJ-24702, mot de passe scellé Jesusmonroi@2026
+      if (cleanEmail === 'theodoradjigla@gmail.com') {
+        incomingUser.matricule = 'LOCA-MAT-BJ-24702';
+        incomingUser.firstName = 'Théodora';
+        incomingUser.lastName = 'DJIGLA';
+        incomingUser.name = 'Théodora DJIGLA';
+        incomingUser.phone = incomingUser.phone || '+229 01 97 30 73 74';
+        incomingUser.password = incomingUser.password || 'Jesusmonroi@2026';
+        incomingUser.emailVerified = true;
+        incomingUser.isIdentitySealed = true;
+      }
+
       if (idx !== -1) {
         // Préserver le matricule existant et l'identité scellée
         const existing = currentUsers[idx];

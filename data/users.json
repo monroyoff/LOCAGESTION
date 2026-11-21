@@ -20,7 +20,30 @@
     "registeredAt": "18/11/2026",
     "password": "Forever1122$",
     "accountStatus": "active",
-    "isIdentitySealed": true
+    "isIdentitySealed": true,
+    "emailVerified": true
+  },
+  {
+    "id": "usr-tenant-theodora",
+    "matricule": "LOCA-MAT-BJ-24702",
+    "name": "Théodora DJIGLA",
+    "firstName": "Théodora",
+    "lastName": "DJIGLA",
+    "email": "theodoradjigla@gmail.com",
+    "phone": "+229 01 97 30 73 74",
+    "role": "locataire",
+    "birthDate": "10/05/1995",
+    "birthPlace": "Cotonou",
+    "residenceCountry": "Bénin",
+    "residenceCity": "Cotonou",
+    "residenceDistrict": "Cotonou",
+    "projectCountry": "Bénin",
+    "avatarUrl": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80",
+    "registeredAt": "21/11/2026",
+    "password": "Jesusmonroi@2026",
+    "accountStatus": "active",
+    "isIdentitySealed": true,
+    "emailVerified": true
   },
   {
     "id": "usr-tenant-jojovog",
@@ -41,6 +64,7 @@
     "registeredAt": "18/11/2026",
     "password": "Lolo1000$",
     "accountStatus": "active",
-    "isIdentitySealed": true
+    "isIdentitySealed": true,
+    "emailVerified": true
   }
 ]
