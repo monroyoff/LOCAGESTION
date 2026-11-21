@@ -1,5 +1,8 @@
 'use client';
 
+import { AuthUser } from '../types';
+import { AuthService, areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
+
 export type TenantNotificationType =
   | 'receipt_issued'
   | 'lease_available'
@@ -23,72 +26,218 @@ export interface TenantNotification {
   tenantName?: string;
   tenantEmail?: string;
   tenantPhone?: string;
+  recipientEmail?: string;
+  recipientPhone?: string;
+  recipientName?: string;
+  tenantMatricule?: string;
+  recipientMatricule?: string;
   actor?: string; // Nom du bailleur ou expéditeur
   actionLabel?: string;
   metadata?: Record<string, any>;
+  isGlobal?: boolean;
 }
 
 export const STORAGE_KEY_TENANT_NOTIFS = 'locagestion:tenant_notifications:v1';
 
-export const INITIAL_TENANT_NOTIFICATIONS: TenantNotification[] = [
-  {
-    id: 'tnotif-jojovog-lease-active',
-    title: 'Bail contresigné et actif !',
-    message: "Votre contrat de bail pour Appartement meublé (Lot 1 (Appartement)) a été contresigné avec succès et est désormais en cours d'exécution.",
-    time: 'Récent',
-    timestamp: '18/11/2026 14:00',
-    type: 'lease_available',
-    read: false,
-    link: '/portal?tab=bail',
-    tenantName: 'Jojo VOG',
-    tenantEmail: 'jojovog007@gmail.com',
-    tenantPhone: '+229 97 00 12 34',
-    actor: 'Le Bailleur',
-  },
-];
+export const INITIAL_TENANT_NOTIFICATIONS: TenantNotification[] = [];
 
 function dispatchUpdateEvent() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event('locagestion:tenant_notifications_updated'));
+    window.dispatchEvent(new Event('locagestion:tenant_notifs_updated'));
     window.dispatchEvent(new Event('storage'));
   }
 }
 
+/**
+ * Vérifie de façon étanche et déterministe si une notification est adressée à l'utilisateur ciblé
+ */
+export function isNotificationForUser(
+  notif: TenantNotification | Record<string, any>,
+  targetUser?: AuthUser | null,
+  filterText?: string | null
+): boolean {
+  if (!notif) return false;
+
+  // Notification globale pour tous les locataires (annonces système officielles)
+  if (notif.isGlobal) return true;
+
+  // Filtrage libre par recherche textuelle (si renseigné)
+  if (filterText && filterText.trim()) {
+    const q = filterText.toLowerCase().trim();
+    const matchesEmail =
+      (notif.tenantEmail && notif.tenantEmail.toLowerCase().includes(q)) ||
+      (notif.recipientEmail && notif.recipientEmail.toLowerCase().includes(q));
+    const matchesPhone =
+      (notif.tenantPhone && notif.tenantPhone.includes(q)) ||
+      (notif.recipientPhone && notif.recipientPhone.includes(q));
+    const matchesName =
+      (notif.tenantName && notif.tenantName.toLowerCase().includes(q)) ||
+      (notif.recipientName && notif.recipientName.toLowerCase().includes(q));
+    const matchesMatricule =
+      (notif.tenantMatricule && notif.tenantMatricule.toLowerCase().includes(q)) ||
+      (notif.recipientMatricule && notif.recipientMatricule.toLowerCase().includes(q));
+    return Boolean(matchesEmail || matchesPhone || matchesName || matchesMatricule);
+  }
+
+  // Filtrage strict par compte utilisateur authentifié
+  if (!targetUser) return false;
+
+  const userEmail = targetUser.email?.trim().toLowerCase();
+  const userPhone = targetUser.phone?.trim();
+  const userName = targetUser.name?.trim().toLowerCase();
+  const userMatricule = targetUser.matricule?.trim().toUpperCase();
+
+  const notifEmail = (notif.tenantEmail || notif.recipientEmail)?.trim().toLowerCase();
+  const notifPhone = notif.tenantPhone || notif.recipientPhone;
+  const notifName = (notif.tenantName || notif.recipientName)?.trim().toLowerCase();
+  const notifMatricule = (notif.tenantMatricule || notif.recipientMatricule)?.trim().toUpperCase();
+
+  // 1. Email : correspondance stricte
+  if (userEmail && notifEmail && areEmailsEqual(userEmail, notifEmail)) {
+    return true;
+  }
+
+  // 2. Numéro de téléphone : correspondance avec ou sans indicatif
+  if (userPhone && notifPhone && arePhoneNumbersEqual(userPhone, notifPhone)) {
+    return true;
+  }
+
+  // 3. Matricule officiel
+  if (userMatricule && notifMatricule && userMatricule === notifMatricule) {
+    return true;
+  }
+
+  // 4. Nom complet (ordre direct ou inversé)
+  if (userName && notifName) {
+    if (userName === notifName) return true;
+    const userWords = userName.split(/\s+/).filter(Boolean);
+    const notifWords = notifName.split(/\s+/).filter(Boolean);
+    if (
+      userWords.length > 0 &&
+      userWords.length === notifWords.length &&
+      userWords.every((w: string) => notifWords.includes(w))
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export const TenantNotificationService = {
   /**
-   * Récupère toutes les notifications destinées au locataire
+   * Récupère toutes les notifications brutes du localStorage
    */
-  getNotifications(tenantFilter?: string): TenantNotification[] {
-    if (typeof window === 'undefined') return INITIAL_TENANT_NOTIFICATIONS;
+  getAllRawNotifications(): TenantNotification[] {
+    if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem(STORAGE_KEY_TENANT_NOTIFS);
-      let list: TenantNotification[] = [];
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) list = parsed;
+        if (Array.isArray(parsed)) {
+          return parsed.map((n) => ({
+            ...n,
+            read: n.read !== undefined ? Boolean(n.read) : !Boolean(n.unread),
+          }));
+        }
       }
-
-      if (list.length === 0 && INITIAL_TENANT_NOTIFICATIONS.length > 0) {
-        list = [...INITIAL_TENANT_NOTIFICATIONS];
-        try {
-          localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(list));
-        } catch (e) {}
-      }
-
-      if (tenantFilter && tenantFilter.trim()) {
-        const filterLower = tenantFilter.toLowerCase().trim();
-        return list.filter(
-          (n) =>
-            !n.tenantName ||
-            n.tenantName.toLowerCase().includes(filterLower) ||
-            (n.tenantEmail && n.tenantEmail.toLowerCase().includes(filterLower))
-        );
-      }
-      return list;
     } catch (e) {
-      console.error('Erreur lecture notifications locataire:', e);
+      console.error('Erreur lecture notifications brutes:', e);
     }
-    return INITIAL_TENANT_NOTIFICATIONS;
+    return [];
+  },
+
+  /**
+   * Récupère les notifications filtrées de façon strictement étanche pour le locataire
+   */
+  getNotifications(userOrFilter?: AuthUser | string | null): TenantNotification[] {
+    if (typeof window === 'undefined') return [];
+    const all = this.getAllRawNotifications();
+
+    let targetUser: AuthUser | null = null;
+    let filterText: string | null = null;
+
+    if (userOrFilter && typeof userOrFilter === 'object') {
+      targetUser = userOrFilter as AuthUser;
+    } else if (typeof userOrFilter === 'string' && userOrFilter.trim()) {
+      filterText = userOrFilter.trim();
+    } else {
+      targetUser = AuthService.getCurrentUser();
+    }
+
+    if (filterText) {
+      return all.filter((n) => isNotificationForUser(n, null, filterText));
+    }
+
+    if (targetUser) {
+      return all.filter((n) => isNotificationForUser(n, targetUser, null));
+    }
+
+    // Aucun utilisateur ciblé ni connecté : liste vide sécurisée
+    return [];
+  },
+
+  /**
+   * Compteur de notifications non lues pour l'utilisateur
+   */
+  getUnreadCount(userOrFilter?: AuthUser | string | null): number {
+    return this.getNotifications(userOrFilter).filter((n) => !n.read).length;
+  },
+
+  /**
+   * Marquer une notification comme lue
+   */
+  markAsRead(id: string): void {
+    const all = this.getAllRawNotifications();
+    const updated = all.map((n) => (n.id === id ? { ...n, read: true } : n));
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+      } catch (e) {}
+    }
+    dispatchUpdateEvent();
+  },
+
+  /**
+   * Marquer toutes les notifications de l'utilisateur comme lues
+   */
+  markAllAsRead(userOrFilter?: AuthUser | string | null): void {
+    let targetUser: AuthUser | null = null;
+    if (userOrFilter && typeof userOrFilter === 'object') {
+      targetUser = userOrFilter as AuthUser;
+    } else {
+      targetUser = AuthService.getCurrentUser();
+    }
+
+    const all = this.getAllRawNotifications();
+    const updated = all.map((n) => {
+      if (targetUser && isNotificationForUser(n, targetUser)) {
+        return { ...n, read: true };
+      }
+      return n;
+    });
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+      } catch (e) {}
+    }
+    dispatchUpdateEvent();
+  },
+
+  /**
+   * Supprimer une notification
+   */
+  deleteNotification(id: string): void {
+    const all = this.getAllRawNotifications();
+    const updated = all.filter((n) => n.id !== id);
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+      } catch (e) {}
+    }
+    dispatchUpdateEvent();
   },
 
   /**
@@ -101,7 +250,7 @@ export const TenantNotificationService = {
       timestamp?: string;
     }
   ): TenantNotification {
-    const list = this.getNotifications();
+    const all = this.getAllRawNotifications();
     const nowStr = new Date().toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
@@ -122,13 +271,15 @@ export const TenantNotificationService = {
       tenantName: data.tenantName,
       tenantEmail: data.tenantEmail,
       tenantPhone: data.tenantPhone,
+      recipientEmail: data.tenantEmail,
+      recipientPhone: data.tenantPhone,
       actor: data.actor || 'Bailleur',
       actionLabel: data.actionLabel || 'Consulter',
       metadata: data.metadata,
+      isGlobal: (data as any).isGlobal ?? false,
     };
 
-    // Insérer en première position (ordre antichronologique)
-    const updated = [newNotif, ...list.filter((n) => n.id !== newNotif.id)];
+    const updated = [newNotif, ...all.filter((n) => n.id !== newNotif.id)];
 
     if (typeof window !== 'undefined') {
       try {
@@ -146,55 +297,6 @@ export const TenantNotificationService = {
 
     dispatchUpdateEvent();
     return newNotif;
-  },
-
-  /**
-   * Marquer une notification comme lue
-   */
-  markAsRead(id: string): void {
-    const list = this.getNotifications();
-    const updated = list.map((n) => (n.id === id ? { ...n, read: true } : n));
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
-      } catch (e) {}
-    }
-    dispatchUpdateEvent();
-  },
-
-  /**
-   * Marquer toutes les notifications comme lues
-   */
-  markAllAsRead(): void {
-    const list = this.getNotifications();
-    const updated = list.map((n) => ({ ...n, read: true }));
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
-      } catch (e) {}
-    }
-    dispatchUpdateEvent();
-  },
-
-  /**
-   * Supprimer une notification
-   */
-  deleteNotification(id: string): void {
-    const list = this.getNotifications();
-    const updated = list.filter((n) => n.id !== id);
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
-      } catch (e) {}
-    }
-    dispatchUpdateEvent();
-  },
-
-  /**
-   * Compteur de notifications non lues
-   */
-  getUnreadCount(tenantFilter?: string): number {
-    return this.getNotifications(tenantFilter).filter((n) => !n.read).length;
   },
 
   // =========================================================================
@@ -406,6 +508,8 @@ export const TenantNotificationService = {
     period: string;
     advanceMonthsCount: number;
     tenantName: string;
+    tenantEmail?: string;
+    tenantPhone?: string;
   }) {
     return this.addNotification({
       title: `Paiement d’Avance Transmis (${params.advanceMonthsCount} mois) 🚀`,
@@ -413,9 +517,10 @@ export const TenantNotificationService = {
       type: 'advance_payment_declared',
       link: '/portal?tab=quittances',
       tenantName: params.tenantName,
+      tenantEmail: params.tenantEmail,
+      tenantPhone: params.tenantPhone,
       actor: 'Système LOCAGESTION',
       actionLabel: 'Voir mes déclarations',
     });
   },
 };
-

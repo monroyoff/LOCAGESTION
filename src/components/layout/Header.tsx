@@ -75,7 +75,7 @@ export function Header({
 
   const updateNotifications = () => {
     setNotifications(LeaseService.getLandlordNotifications());
-    setTenantNotifs(TenantNotificationService.getNotifications());
+    setTenantNotifs(TenantNotificationService.getNotifications(user));
     setUnreadAlertsCount(ModerationService.getUnreadAlertsCount());
   };
 
@@ -88,6 +88,7 @@ export function Header({
     window.addEventListener('locagestion:tenant_notifications_updated', handleStorage);
     window.addEventListener('locagestion:notifications_updated', handleStorage);
     window.addEventListener('locagestion:security_alerts_updated', handleStorage);
+    window.addEventListener('locagestion:auth_changed', handleStorage);
     window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('locagestion:leases_updated', handleStorage);
@@ -96,9 +97,10 @@ export function Header({
       window.removeEventListener('locagestion:tenant_notifications_updated', handleStorage);
       window.removeEventListener('locagestion:notifications_updated', handleStorage);
       window.removeEventListener('locagestion:security_alerts_updated', handleStorage);
+      window.removeEventListener('locagestion:auth_changed', handleStorage);
       window.removeEventListener('storage', handleStorage);
     };
-  }, []);
+  }, [user]);
 
   // Fermeture du menu de notifications au clic extérieur
   useEffect(() => {
@@ -124,8 +126,8 @@ export function Header({
       LeaseService.markNotificationsAsRead();
       updateNotifications();
     } else {
-      TenantNotificationService.markAllAsRead();
-      setTenantNotifs(TenantNotificationService.getNotifications());
+      TenantNotificationService.markAllAsRead(user);
+      setTenantNotifs(TenantNotificationService.getNotifications(user));
     }
   };
 
@@ -491,7 +493,7 @@ export function Header({
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     TenantNotificationService.deleteNotification(n.id);
-                                    setTenantNotifs(TenantNotificationService.getNotifications());
+                                    setTenantNotifs(TenantNotificationService.getNotifications(user));
                                   }}
                                   className="p-1 rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
                                   title="Supprimer la notification"
@@ -503,7 +505,7 @@ export function Header({
                                   onClick={() => {
                                     setIsNotifOpen(false);
                                     TenantNotificationService.markAsRead(n.id);
-                                    setTenantNotifs(TenantNotificationService.getNotifications());
+                                    setTenantNotifs(TenantNotificationService.getNotifications(user));
                                     if (n.link?.includes('tab=preavis') && onPortalTabChange) {
                                       onPortalTabChange('preavis');
                                     } else if (n.link?.includes('tab=quittances') && onPortalTabChange) {

@@ -584,16 +584,20 @@ function TenantPortalContent() {
 
   useEffect(() => {
     const loadNotifs = () => {
-      setPortalNotifs(TenantNotificationService.getNotifications());
+      setPortalNotifs(TenantNotificationService.getNotifications(user));
     };
     loadNotifs();
     window.addEventListener('locagestion:tenant_notifs_updated', loadNotifs);
+    window.addEventListener('locagestion:tenant_notifications_updated', loadNotifs);
+    window.addEventListener('locagestion:auth_changed', loadNotifs);
     window.addEventListener('storage', loadNotifs);
     return () => {
       window.removeEventListener('locagestion:tenant_notifs_updated', loadNotifs);
+      window.removeEventListener('locagestion:tenant_notifications_updated', loadNotifs);
+      window.removeEventListener('locagestion:auth_changed', loadNotifs);
       window.removeEventListener('storage', loadNotifs);
     };
-  }, []);
+  }, [user]);
 
   // Calcul dynamique des mois et libellé de période
   const resolvedMonthsCount =
@@ -979,6 +983,8 @@ function TenantPortalContent() {
         period: resolvedPeriodLabel,
         advanceMonthsCount: resolvedMonthsCount,
         tenantName: tenant.name,
+        tenantEmail: user?.email || tenant.email,
+        tenantPhone: user?.phone || tenant.phone,
       });
     } else {
       TenantNotificationService.addNotification({
@@ -987,6 +993,8 @@ function TenantPortalContent() {
         type: 'receipt_issued',
         link: '/portal?tab=quittances',
         tenantName: tenant.name,
+        tenantEmail: user?.email || tenant.email,
+        tenantPhone: user?.phone || tenant.phone,
         actor: 'Système LOCAGESTION',
       });
     }
@@ -3178,8 +3186,8 @@ function TenantPortalContent() {
                     <button
                       type="button"
                       onClick={() => {
-                        TenantNotificationService.markAllAsRead();
-                        setPortalNotifs(TenantNotificationService.getNotifications());
+                        TenantNotificationService.markAllAsRead(user);
+                        setPortalNotifs(TenantNotificationService.getNotifications(user));
                       }}
                       className="text-xs font-bold text-brand-600 hover:text-brand-700 cursor-pointer"
                     >
@@ -3227,7 +3235,7 @@ function TenantPortalContent() {
                             type="button"
                             onClick={() => {
                               TenantNotificationService.markAsRead(n.id);
-                              setPortalNotifs(TenantNotificationService.getNotifications());
+                              setPortalNotifs(TenantNotificationService.getNotifications(user));
                               if (n.link.includes('tab=quittances')) handleTabChange('quittances');
                               else if (n.link.includes('tab=bail')) handleTabChange('bail');
                               else if (n.link.includes('tab=preavis')) handleTabChange('preavis');
