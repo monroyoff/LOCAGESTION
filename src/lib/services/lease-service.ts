@@ -874,46 +874,129 @@ export const LeaseService = {
     if (typeof window === 'undefined') return [];
     try {
       const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
-      if (stored) {
-        const parsed: LandlordNotification[] = JSON.parse(stored);
-        if (!user || user.role === 'admin' || user.email === 'admin@locagestion.site') {
-          return parsed;
+      let parsed: LandlordNotification[] = stored ? JSON.parse(stored) : [];
+      if (!Array.isArray(parsed)) parsed = [];
+
+      // Synthèse des messages reçus non lus depuis les conversations
+      try {
+        const convsStored = localStorage.getItem('locagestion:conversations:v1');
+        if (convsStored) {
+          const convs = JSON.parse(convsStored);
+          if (Array.isArray(convs)) {
+            convs.forEach((c: any) => {
+              const isUnreadForLandlord =
+                (c.unreadCount && c.unreadCount > 0 && c.unreadBy !== 'locataire') ||
+                (c.hasUnread && c.unreadBy !== 'locataire');
+              if (isUnreadForLandlord) {
+                const existingNotifIdx = parsed.findIndex(
+                  (n) => n.convId === c.id || n.id === `notif-conv-${c.id}`
+                );
+                if (existingNotifIdx >= 0) {
+                  // S'assurer que le statut non lu est synchronisé
+                  parsed[existingNotifIdx].read = false;
+                  parsed[existingNotifIdx].message = `${c.visitorName || c.tenantName || 'Candidat'} : « ${c.lastMessage || 'Nouveau message reçu'} »`;
+                  parsed[existingNotifIdx].time = c.lastMessageTime || 'À l’instant';
+                } else {
+                  parsed.unshift({
+                    id: `notif-conv-${c.id}`,
+                    title: `💬 Nouveau message : ${c.propertyTitle || 'Bien en location'}`,
+                    message: `${c.visitorName || c.tenantName || 'Candidat'} : « ${c.lastMessage || 'Nouveau message reçu'} »`,
+                    time: c.lastMessageTime || 'À l’instant',
+                    timestamp: new Date().toLocaleDateString('fr-FR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    }),
+                    type: 'message_received',
+                    read: false,
+                    convId: c.id,
+                    listingId: c.listingId,
+                    tenantName: c.visitorName || c.tenantName,
+                    property: c.propertyTitle,
+                    unit: c.propertyUnit,
+                    authorId: c.authorId,
+                    authorEmail: c.authorEmail,
+                    authorPhone: c.authorPhone,
+                  });
+                }
+              }
+            });
+          }
         }
-        const landlordLeases = this.getLeasesForLandlord(user);
-        const landlordProps = new Set(landlordLeases.map((l) => (l.property || '').toLowerCase().trim()));
-        const landlordLeaseIds = new Set(landlordLeases.map((l) => l.id));
+      } catch {}
 
-        return parsed.filter((n) => {
-          // Demandes de visite d'annonces et messages reçus
-          if (n.type === 'visit_requested' || n.type === 'message_received') {
-            if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
-            if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
-            if (n.authorPhone && user.phone && arePhoneNumbersEqual(n.authorPhone, user.phone)) return true;
-            if (n.authorCompany && user.companyName && n.authorCompany.trim().toLowerCase() === user.companyName.trim().toLowerCase()) return true;
-            const userName = (user.name || user.firstName || '').trim().toLowerCase();
-            if (n.authorName && userName && n.authorName.trim().toLowerCase() === userName) return true;
-            if (user.role === 'bailleur' || user.role === 'demarcheur') return true;
-          }
-
-          // Approbation ou rejet d'annonce
-          if (n.type === 'listing_approved' || n.type === 'listing_rejected') {
-            if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
-            if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
-            if (user.role === 'bailleur' || user.role === 'demarcheur') return true;
-          }
-
-          // Gestion des baux et propriétés
-          if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
-          if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
-          if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
-          if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
-          return false;
-        });
+      if (!user || user.role === 'admin' || user.email === 'admin@locagestion.site') {
+        return parsed;
       }
+      const landlordLeases = this.getLeasesForLandlord(user);
+      const landlordProps = new Set(landlordLeases.map((l) => (l.property || '').toLowerCase().trim()));
+      const landlordLeaseIds = new Set(landlordLeases.map((l) => l.id));
+
+      return parsed.filter((n) => {
+        // Demandes de visite d'annonces et messages reçus
+        if (n.type === 'visit_requested' || n.type === 'message_received') {
+          if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
+          if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
+          if (n.authorPhone && user.phone && arePhoneNumbersEqual(n.authorPhone, user.phone)) return true;
+          if (n.authorCompany && user.companyName && n.authorCompany.trim().toLowerCase() === user.companyName.trim().toLowerCase()) return true;
+          const userName = (user.name || user.firstName || '').trim().toLowerCase();
+          if (n.authorName && userName && n.authorName.trim().toLowerCase() === userName) return true;
+          if (user.role === 'bailleur' || user.role === 'demarcheur' || !user.role) return true;
+        }
+
+        // Approbation ou rejet d'annonce
+        if (n.type === 'listing_approved' || n.type === 'listing_rejected') {
+          if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
+          if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
+          if (user.role === 'bailleur' || user.role === 'demarcheur' || !user.role) return true;
+        }
+
+        // Gestion des baux et propriétés
+        if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
+        if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
+        if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
+        if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+        if (user.role === 'bailleur' || user.role === 'demarcheur') return true;
+        return false;
+      });
     } catch (e) {
       console.error('Erreur lecture notifications:', e);
     }
     return [];
+  },
+
+  markNotificationAsRead(id: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      if (stored) {
+        const current: LandlordNotification[] = JSON.parse(stored);
+        const updated = current.map((n) => (n.id === id || n.convId === id ? { ...n, read: true } : n));
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
+        notifyStorageChange();
+        window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      }
+    } catch (e) {
+      console.error('Erreur mise à jour notification:', e);
+    }
+  },
+
+  deleteNotification(id: string): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      if (stored) {
+        const current: LandlordNotification[] = JSON.parse(stored);
+        const updated = current.filter((n) => n.id !== id && n.convId !== id);
+        localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
+        notifyStorageChange();
+        window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      }
+    } catch (e) {
+      console.error('Erreur suppression notification:', e);
+    }
   },
 
   addLandlordNotification(notif: LandlordNotification): void {

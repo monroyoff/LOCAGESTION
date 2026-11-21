@@ -132,6 +132,32 @@ export function Header({
     }
   };
 
+  const handleLandlordNotifClick = (n: LandlordNotification) => {
+    setIsNotifOpen(false);
+    LeaseService.markNotificationAsRead(n.id);
+    updateNotifications();
+
+    if (n.type === 'visit_requested' || n.type === 'message_received') {
+      const url = n.convId
+        ? `/messages?convId=${encodeURIComponent(n.convId)}`
+        : n.listingId
+          ? `/messages?listingId=${encodeURIComponent(n.listingId)}`
+          : '/messages';
+      router.push(url);
+    } else if (n.type === 'incident_reported') {
+      router.push('/incidents');
+    } else if (n.type === 'listing_approved' || n.type === 'listing_rejected') {
+      router.push('/listings?view=my_listings');
+    } else if (n.type === 'payment_declared') {
+      const targetId = n.paymentId || 'decl-initial-01';
+      router.push(`/payments?tab=pending&verify=${targetId}`);
+    } else if (n.type === 'notice_received') {
+      router.push('/reminders');
+    } else {
+      router.push('/leases');
+    }
+  };
+
   // Redirection immédiate vers la section Annonces & Visites (/listings)
   const handleOpenSearch = () => {
     if (pathname === '/listings') {
@@ -366,32 +392,47 @@ export function Header({
                       notifications.map((n) => (
                         <div
                           key={n.id}
-                          className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${!n.read
+                          onClick={() => handleLandlordNotifClick(n)}
+                          className={`p-3.5 rounded-2xl transition-all space-y-1.5 cursor-pointer group ${!n.read
                             ? n.type === 'incident_reported' || n.type === 'listing_rejected'
-                              ? 'bg-rose-50/70 border border-rose-200/80'
+                              ? 'bg-rose-50/70 border border-rose-200/80 hover:bg-rose-50'
                               : n.type === 'listing_approved'
-                                ? 'bg-emerald-50/70 border border-emerald-200/80'
+                                ? 'bg-emerald-50/70 border border-emerald-200/80 hover:bg-emerald-50'
                                 : n.type === 'visit_requested' || n.type === 'message_received'
-                                  ? 'bg-brand-50/80 border border-brand-200/90 shadow-xs'
-                                  : 'bg-amber-50/70 border border-amber-200/60'
-                            : 'hover:bg-slate-50'
+                                  ? 'bg-brand-50/80 border border-brand-200/90 shadow-xs hover:bg-brand-50'
+                                  : 'bg-amber-50/70 border border-amber-200/60 hover:bg-amber-50'
+                            : 'hover:bg-slate-50 border border-transparent'
                             }`}
                         >
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 truncate">
                               <span
                                 className={`w-2 h-2 rounded-full shrink-0 ${n.type === 'incident_reported' || n.type === 'listing_rejected'
                                   ? 'bg-rose-500 animate-pulse'
                                   : n.type === 'listing_approved'
                                     ? 'bg-emerald-500'
                                     : n.type === 'visit_requested' || n.type === 'message_received'
-                                      ? 'bg-brand-500 animate-pulse'
+                                      ? 'bg-brand-500 animate-pulse ring-2 ring-brand-200'
                                       : 'bg-amber-500'
                                   }`}
                               />
-                              {n.title}
+                              <span className="truncate">{n.title}</span>
                             </span>
-                            <span className="text-[10px] text-slate-400 font-medium">{n.timestamp}</span>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[10px] text-slate-400 font-medium">{n.timestamp || n.time}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  LeaseService.deleteNotification(n.id);
+                                  updateNotifications();
+                                }}
+                                className="p-1 rounded-md text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                                title="Supprimer la notification"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            </div>
                           </div>
 
                           <p className="text-xs text-slate-600 leading-snug">{n.message}</p>
@@ -428,85 +469,24 @@ export function Header({
                             <span className="text-[10px] font-mono font-bold text-slate-400">
                               {n.incidentId || n.leaseId || n.listingId || n.convId}
                             </span>
-                            {n.type === 'visit_requested' || n.type === 'message_received' ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsNotifOpen(false);
-                                  const url = n.convId
-                                    ? `/messages?convId=${encodeURIComponent(n.convId)}`
-                                    : n.listingId
-                                      ? `/messages?listingId=${encodeURIComponent(n.listingId)}`
-                                      : '/messages';
-                                  router.push(url);
-                                }}
-                                className="text-xs font-black text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
-                              >
-                                <span>{n.type === 'visit_requested' ? 'Voir la demande & Répondre' : 'Lire le message & Répondre'}</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
-                            ) : n.type === 'incident_reported' ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsNotifOpen(false);
-                                  router.push('/incidents');
-                                }}
-                                className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
-                              >
-                                <span>Traiter la panne</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
-                            ) : (n.type === 'listing_approved' || n.type === 'listing_rejected') ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsNotifOpen(false);
-                                  router.push('/listings?view=my_listings');
-                                }}
-                                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
-                              >
-                                <span>Gérer mon annonce</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
-                            ) : n.type === 'payment_declared' ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsNotifOpen(false);
-                                  const targetId = n.paymentId || 'decl-initial-01';
-                                  router.push(`/payments?tab=pending&verify=${targetId}`);
-                                }}
-                                className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
-                              >
-                                <span>Vérifier le paiement</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
-                            ) : n.type === 'notice_received' ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsNotifOpen(false);
-                                  router.push('/reminders');
-                                }}
-                                className="text-xs font-bold text-rose-600 hover:text-rose-700 flex items-center gap-1 cursor-pointer"
-                              >
-                                <span>Voir le préavis</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsNotifOpen(false);
-                                  router.push('/leases');
-                                }}
-                                className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
-                              >
-                                <span>Voir le bail</span>
-                                <ExternalLink className="w-3 h-3" />
-                              </button>
-                            )}
+                            <span className="text-xs font-black text-brand-600 group-hover:text-brand-700 flex items-center gap-1 cursor-pointer">
+                              <span>
+                                {n.type === 'visit_requested'
+                                  ? 'Voir la demande & Répondre'
+                                  : n.type === 'message_received'
+                                  ? 'Lire le message & Répondre'
+                                  : n.type === 'incident_reported'
+                                  ? 'Traiter la panne'
+                                  : (n.type === 'listing_approved' || n.type === 'listing_rejected')
+                                  ? 'Gérer mon annonce'
+                                  : n.type === 'payment_declared'
+                                  ? 'Vérifier le paiement'
+                                  : n.type === 'notice_received'
+                                  ? 'Voir le préavis'
+                                  : 'Voir le bail'}
+                              </span>
+                              <ExternalLink className="w-3 h-3" />
+                            </span>
                           </div>
                         </div>
                       ))

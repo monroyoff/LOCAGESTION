@@ -38,6 +38,7 @@ import { SkeletonTable } from '@/components/ui/SkeletonLoader';
 import { ListingsService } from '@/lib/services/listings-service';
 import { areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
 import { LeaseService, LandlordNotification } from '@/lib/services/lease-service';
+import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
 
 interface Message {
   id: string;
@@ -271,11 +272,37 @@ function MessagesContent() {
     };
   }, []);
 
-  const selectAndMarkAsRead = (conv: Conversation) => {
-    const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
-    const hasUnread = conv.hasUnread || (conv.unreadCount && conv.unreadCount > 0);
+  const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
 
-    if (hasUnread) {
+  const getUnreadCountForCurrentUser = (conv: Conversation): number => {
+    // Si la discussion est actuellement sélectionnée et visible à l'écran, le compteur non lu pour l'utilisateur actuel est 0
+    if (selectedConv?.id === conv.id) {
+      return 0;
+    }
+
+    if (!conv.unreadCount || conv.unreadCount <= 0) {
+      return 0;
+    }
+
+    if (isBailleurSide) {
+      // Le bailleur ne voit le badge non lu QUE si le message a été envoyé par le locataire/candidat (destiné au bailleur)
+      if (conv.unreadBy === 'locataire') {
+        return 0;
+      }
+      return conv.unreadCount;
+    } else {
+      // Le locataire ne voit le badge non lu QUE si le message lui est destiné (unreadBy === 'locataire')
+      if (conv.unreadBy !== 'locataire') {
+        return 0;
+      }
+      return conv.unreadCount;
+    }
+  };
+
+  const selectAndMarkAsRead = (conv: Conversation) => {
+    const userUnread = getUnreadCountForCurrentUser(conv);
+
+    if (userUnread > 0 || conv.hasUnread) {
       const updatedConv: Conversation = {
         ...conv,
         unreadCount: 0,
@@ -285,6 +312,13 @@ function MessagesContent() {
       setSelectedConv(updatedConv);
       const updatedList = conversations.map((c) => (c.id === conv.id ? updatedConv : c));
       saveConversations(updatedList);
+
+      // Si le bailleur consulte la conversation, marquer également les notifications cloche correspondantes comme lues
+      if (isBailleurSide) {
+        LeaseService.markNotificationAsRead(conv.id);
+        LeaseService.markNotificationAsRead(`notif-conv-${conv.id}`);
+        LeaseService.markNotificationAsRead(`notif-msg-${conv.id}`);
+      }
     } else {
       setSelectedConv(conv);
     }
@@ -516,8 +550,30 @@ function MessagesContent() {
     saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     setInputText('');
 
-    // Si c'est un locataire/candidat qui répond ou écrit au bailleur, notifier le bailleur dans sa cloche
-    if (!isBailleurSide) {
+    // Si c'est le bailleur qui répond, notifier le locataire dans sa cloche
+    if (isBailleurSide) {
+      const recipientName = selectedConv.visitorName || selectedConv.tenantName || 'Locataire';
+      const recipientEmail = selectedConv.visitorEmail;
+      const recipientPhone = selectedConv.visitorPhone;
+
+      TenantNotificationService.addNotification({
+        title: `💬 Réponse de votre bailleur : ${selectedConv.propertyTitle}`,
+        message: `${myName} vous a répondu : « ${inputText.slice(0, 70)}${inputText.length > 70 ? '...' : ''} »`,
+        time: 'À l’instant',
+        type: 'reminder_received',
+        read: false,
+        link: `/messages?convId=${encodeURIComponent(selectedConv.id)}`,
+        tenantName: recipientName,
+        tenantEmail: recipientEmail,
+        tenantPhone: recipientPhone,
+        recipientName: recipientName,
+        recipientEmail: recipientEmail,
+        recipientPhone: recipientPhone,
+        actor: myName,
+        actionLabel: 'Lire le message',
+      });
+    } else {
+      // Si c'est un locataire/candidat qui répond ou écrit au bailleur, notifier le bailleur dans sa cloche
       const landlordNotif: LandlordNotification = {
         id: `notif-msg-${Date.now()}`,
         title: `💬 Nouveau message : ${selectedConv.propertyTitle}`,
@@ -544,6 +600,13 @@ function MessagesContent() {
         authorPhone: selectedConv.authorPhone,
       };
       LeaseService.addLandlordNotification(landlordNotif);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+      window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      window.dispatchEvent(new CustomEvent('locagestion:tenant_notifications_updated'));
+      window.dispatchEvent(new Event('storage'));
     }
   };
 
@@ -775,13 +838,17 @@ function MessagesContent() {
 
                     {/* Right Badge / Status */}
                     <div className="shrink-0 flex items-center justify-center">
-                      {conv.unreadCount ? (
-                        <span className="w-5 h-5 rounded-full bg-brand-500 text-white font-black text-[10px] flex items-center justify-center shadow-md">
-                          {conv.unreadCount}
-                        </span>
-                      ) : (
-                        <CheckCheck className="w-3.5 h-3.5 text-brand-500" />
-                      )}
+                      {(() => {
+                        const countForUser = getUnreadCountForCurrentUser(conv);
+                        if (countForUser > 0) {
+                          return (
+                            <span className="w-5 h-5 rounded-full bg-brand-500 text-white font-black text-[10px] flex items-center justify-center shadow-md animate-pulse">
+                              {countForUser}
+                            </span>
+                          );
+                        }
+                        return <CheckCheck className="w-3.5 h-3.5 text-brand-500" />;
+                      })()}
                     </div>
                   </div>
                 );
