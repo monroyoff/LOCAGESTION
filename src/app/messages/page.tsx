@@ -40,177 +40,20 @@ import { areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-servic
 import { LeaseService, LandlordNotification } from '@/lib/services/lease-service';
 import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
 
-interface Message {
-  id: string;
-  sender: 'them' | 'me';
-  senderRole?: 'bailleur' | 'locataire' | 'demarcheur' | 'visitor';
-  senderName: string;
-  senderAvatar?: string;
-  senderId?: string;
-  text?: string;
-  imageUrl?: string;
-  time: string;
-  status: 'sent' | 'delivered' | 'read';
-}
-
-interface Conversation {
-  id: string;
-  tenantName: string;
-  tenantAvatar: string;
-  publisherName?: string;
-  publisherAvatar?: string;
-  visitorName?: string;
-  visitorAvatar?: string;
-  visitorPhone?: string;
-  visitorEmail?: string;
-  isOnline: boolean;
-  propertyTitle: string;
-  propertyUnit: string;
-  propertySurface: string; // "55 m²"
-  propertyPrice: number; // FCFA/mois
-  propertyThumbnail: string;
-  lastMessage: string;
-  lastMessageTime: string;
-  unreadCount?: number;
-  hasUnread?: boolean;
-  unreadBy?: 'bailleur' | 'locataire';
-  isRead?: boolean;
-  isArchived?: boolean;
-  messages: Message[];
-  listingId?: string;
-  authorId?: string;
-  authorName?: string;
-  authorCompany?: string;
-  authorEmail?: string;
-  authorPhone?: string;
-  authorRole?: string;
-}
-
-const STORAGE_KEY_CONVERSATIONS = 'locagestion:conversations:v1';
-
-function getConversationContactName(
-  conv: Conversation,
-  currentUser?: any,
-  activeSpace?: string
-): string {
-  const isAuthor =
-    (currentUser?.id && conv.authorId && currentUser.id.toLowerCase() === conv.authorId.toLowerCase()) ||
-    (currentUser?.email && conv.authorEmail && areEmailsEqual(currentUser.email, conv.authorEmail)) ||
-    (currentUser?.phone && conv.authorPhone && arePhoneNumbersEqual(currentUser.phone, conv.authorPhone)) ||
-    (currentUser?.companyName && conv.authorCompany && currentUser.companyName.trim().toLowerCase() === conv.authorCompany.trim().toLowerCase()) ||
-    activeSpace === 'bailleur' ||
-    activeSpace === 'demarcheur';
-
-  if (isAuthor) {
-    return conv.visitorName || conv.tenantName || 'Candidat Locataire';
-  }
-  return conv.publisherName || conv.authorCompany || conv.authorName || conv.tenantName || 'Bailleur / Propriétaire';
-}
-
-function getConversationContactAvatar(
-  conv: Conversation,
-  currentUser?: any,
-  activeSpace?: string
-): string {
-  const isAuthor =
-    (currentUser?.id && conv.authorId && currentUser.id.toLowerCase() === conv.authorId.toLowerCase()) ||
-    (currentUser?.email && conv.authorEmail && areEmailsEqual(currentUser.email, conv.authorEmail)) ||
-    (currentUser?.phone && conv.authorPhone && arePhoneNumbersEqual(currentUser.phone, conv.authorPhone)) ||
-    (currentUser?.companyName && conv.authorCompany && currentUser.companyName.trim().toLowerCase() === conv.authorCompany.trim().toLowerCase()) ||
-    activeSpace === 'bailleur' ||
-    activeSpace === 'demarcheur';
-
-  if (isAuthor) {
-    // Le bailleur voit la photo du candidat/locataire
-    return (
-      conv.visitorAvatar ||
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150'
-    );
-  }
-
-  // Le candidat voit le logo du bailleur/propriétaire
-  return (
-    conv.publisherAvatar ||
-    conv.tenantAvatar ||
-    'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=400'
-  );
-}
-
-function isMessageSentByCurrentUser(
-  msg: Message,
-  currentUser?: any,
-  activeSpace?: string,
-  conv?: Conversation | null
-): boolean {
-  const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
-
-  if (msg.senderRole) {
-    if (isBailleurSide) {
-      return msg.senderRole === 'bailleur' || msg.senderRole === 'demarcheur';
-    } else {
-      return msg.senderRole === 'locataire' || msg.senderRole === 'visitor';
-    }
-  }
-
-  if (conv?.visitorName && msg.senderName === conv.visitorName) {
-    return !isBailleurSide;
-  }
-
-  if (currentUser?.name && msg.senderName) {
-    if (msg.senderName.trim().toLowerCase() === currentUser.name.trim().toLowerCase()) {
-      return true;
-    }
-  }
-
-  return msg.sender === 'me';
-}
-
-function getConversationContactPhone(
-  conv: Conversation,
-  currentUser?: any,
-  activeSpace?: string
-): string {
-  const isAuthor =
-    (currentUser?.id && conv.authorId && currentUser.id.toLowerCase() === conv.authorId.toLowerCase()) ||
-    (currentUser?.email && conv.authorEmail && areEmailsEqual(currentUser.email, conv.authorEmail)) ||
-    (currentUser?.phone && conv.authorPhone && arePhoneNumbersEqual(currentUser.phone, conv.authorPhone)) ||
-    (currentUser?.companyName && conv.authorCompany && currentUser.companyName.trim().toLowerCase() === conv.authorCompany.trim().toLowerCase()) ||
-    activeSpace === 'bailleur' ||
-    activeSpace === 'demarcheur';
-
-  if (isAuthor) {
-    return conv.visitorPhone || conv.authorPhone || '+229 97 00 00 00';
-  }
-  return conv.authorPhone || '+229 97 00 00 00';
-}
-
-function isFakeConversation(c?: Partial<Conversation> | null): boolean {
-  if (!c) return true;
-  const name = (c.tenantName || '').trim().toLowerCase();
-  if (
-    name === 'koffi mensah' ||
-    name === 'mamadou diallo' ||
-    name === 'ibrahim traoré' ||
-    name === 'ibrahim traore' ||
-    name === 'aïcha touré' ||
-    name === 'aicha toure' ||
-    name === 'fatoumata traoré' ||
-    name === 'fatoumata traore' ||
-    name === 'amina diop'
-  ) {
-    return true;
-  }
-  const prop = (c.propertyTitle || '').trim().toLowerCase();
-  if (
-    prop.includes('résidence les cocotiers') ||
-    prop.includes('residence les cocotiers') ||
-    prop.includes('immeuble palmier royal') ||
-    prop.includes('villa émeraude')
-  ) {
-    return true;
-  }
-  return false;
-}
+import {
+  Message,
+  Conversation,
+  STORAGE_KEY_CONVERSATIONS,
+  isFakeConversation,
+  isUserConversationAuthor,
+  isUserConversationVisitor,
+  isUserConversationParticipant,
+  getConversationContactName,
+  getConversationContactAvatar,
+  getConversationContactPhone,
+  isMessageSentByCurrentUser,
+  getUnreadConversationsCount,
+} from '@/lib/services/conversation-service';
 
 function MessagesContent() {
   const router = useRouter();
@@ -274,6 +117,12 @@ function MessagesContent() {
 
   const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
 
+  // Seules les conversations dont l'utilisateur connecté est participant légitime sont visibles
+  const userConversations = React.useMemo(() => {
+    if (!user) return [];
+    return conversations.filter((c) => isUserConversationParticipant(c, user));
+  }, [conversations, user]);
+
   const getUnreadCountForCurrentUser = (conv: Conversation): number => {
     // Si la discussion est actuellement sélectionnée et visible à l'écran, le compteur non lu pour l'utilisateur actuel est 0
     if (selectedConv?.id === conv.id) {
@@ -284,22 +133,29 @@ function MessagesContent() {
       return 0;
     }
 
-    if (isBailleurSide) {
-      // Le bailleur ne voit le badge non lu QUE si le message a été envoyé par le locataire/candidat (destiné au bailleur)
-      if (conv.unreadBy === 'locataire') {
-        return 0;
-      }
+    const isAuthor = isUserConversationAuthor(conv, user);
+    const isVisitor = isUserConversationVisitor(conv, user);
+
+    if (isAuthor && !isVisitor) {
+      if (conv.unreadBy === 'locataire') return 0;
+      return conv.unreadCount;
+    } else if (isVisitor && !isAuthor) {
+      if (conv.unreadBy !== 'locataire') return 0;
       return conv.unreadCount;
     } else {
-      // Le locataire ne voit le badge non lu QUE si le message lui est destiné (unreadBy === 'locataire')
-      if (conv.unreadBy !== 'locataire') {
-        return 0;
+      if (isBailleurSide) {
+        if (conv.unreadBy === 'locataire') return 0;
+        return conv.unreadCount;
+      } else {
+        if (conv.unreadBy !== 'locataire') return 0;
+        return conv.unreadCount;
       }
-      return conv.unreadCount;
     }
   };
 
   const selectAndMarkAsRead = (conv: Conversation) => {
+    if (!isUserConversationParticipant(conv, user)) return;
+
     const userUnread = getUnreadCountForCurrentUser(conv);
 
     if (userUnread > 0 || conv.hasUnread) {
@@ -324,6 +180,13 @@ function MessagesContent() {
     }
     setMobileChatOpen(true);
   };
+
+  // Désélectionner immédiatement toute conversation qui n'appartient pas à l'utilisateur
+  useEffect(() => {
+    if (selectedConv && user && !isUserConversationParticipant(selectedConv, user)) {
+      setSelectedConv(null);
+    }
+  }, [selectedConv, user]);
 
   // Détection des paramètres URL (convId / listingId) pour ouvrir immédiatement le dialogue
   useEffect(() => {
@@ -446,14 +309,21 @@ function MessagesContent() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const filteredConversations = conversations.filter((c) => {
-    const matchesTab = activeTab === 'general' ? !c.isArchived : c.isArchived;
-    const matchesSearch =
-      c.tenantName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.propertyTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.lastMessage.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
+  const filteredConversations = React.useMemo(() => {
+    return userConversations.filter((c) => {
+      const matchesTab = activeTab === 'general' ? !c.isArchived : c.isArchived;
+      const q = searchQuery.toLowerCase().trim();
+      if (!q) return matchesTab;
+      const matchesSearch =
+        c.tenantName.toLowerCase().includes(q) ||
+        c.propertyTitle.toLowerCase().includes(q) ||
+        c.lastMessage.toLowerCase().includes(q) ||
+        (c.visitorName && c.visitorName.toLowerCase().includes(q)) ||
+        (c.authorName && c.authorName.toLowerCase().includes(q)) ||
+        (c.publisherName && c.publisherName.toLowerCase().includes(q));
+      return matchesTab && matchesSearch;
+    });
+  }, [userConversations, activeTab, searchQuery]);
 
   const handleGoToListing = () => {
     if (!selectedConv) return;
@@ -515,7 +385,9 @@ function MessagesContent() {
     e.preventDefault();
     if (!inputText.trim() || !selectedConv) return;
 
-    const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
+    const isAuthor = isUserConversationAuthor(selectedConv, user);
+    const isVisitor = isUserConversationVisitor(selectedConv, user);
+    const isBailleurSide = isAuthor && !isVisitor ? true : isVisitor && !isAuthor ? false : (activeSpace === 'bailleur' || activeSpace === 'demarcheur');
     const myRole = isBailleurSide ? ('bailleur' as const) : ('locataire' as const);
     const myName = user?.name || user?.firstName || (isBailleurSide ? 'Bailleur' : 'Locataire');
     const myAvatar =
@@ -739,7 +611,7 @@ function MessagesContent() {
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                     activeTab === 'general' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                   }`}>
-                    {conversations.filter((c) => !c.isArchived).length}
+                    {userConversations.filter((c) => !c.isArchived).length}
                   </span>
                 </button>
                 <button
@@ -755,7 +627,7 @@ function MessagesContent() {
                   <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
                     activeTab === 'archive' ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                   }`}>
-                    {conversations.filter((c) => c.isArchived).length}
+                    {userConversations.filter((c) => c.isArchived).length}
                   </span>
                 </button>
               </div>

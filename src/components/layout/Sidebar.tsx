@@ -38,6 +38,7 @@ import { UserProfileModal } from '@/components/profile/UserProfileModal';
 import { getUserProfile } from '@/lib/services/geo-service';
 import { NoticeService } from '@/lib/services/notice-service';
 import { ListingsService } from '@/lib/services/listings-service';
+import { getUnreadConversationsCount } from '@/lib/services/conversation-service';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 
 interface NavItem {
@@ -144,15 +145,7 @@ export function Sidebar({
         if (stored) {
           const parsed = JSON.parse(stored);
           if (Array.isArray(parsed)) {
-            const isLandlordSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
-            const count = parsed.filter((c: any) => {
-              if (c.isArchived) return false;
-              if (isLandlordSide) {
-                return (c.unreadCount && c.unreadCount > 0 && c.unreadBy !== 'locataire') || (c.hasUnread && c.unreadBy !== 'locataire');
-              } else {
-                return (c.unreadCount && c.unreadCount > 0 && c.unreadBy === 'locataire') || (c.hasUnread && c.unreadBy === 'locataire');
-              }
-            }).length;
+            const count = getUnreadConversationsCount(parsed, context.user, activeSpace);
             setUnreadMessagesCount(count);
             return;
           }
@@ -170,7 +163,7 @@ export function Sidebar({
       window.removeEventListener('locagestion:notifications_updated', updateUnreadMessages);
       window.removeEventListener('storage', updateUnreadMessages);
     };
-  }, [activeSpace]);
+  }, [activeSpace, context.user]);
 
   useEffect(() => {
     const updateNoticesCount = () => {

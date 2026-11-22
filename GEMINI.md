@@ -166,6 +166,7 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 - Chat bidirectionnel temps réel entre Bailleur, Locataire et Démarcheur.
 - Mini-carte de contexte intégrée dans le header : avatar du contact, statut en ligne, vignette du logement concerné, prix du loyer en FCFA.
 - Header mobile-responsive ultra-optimisé (aucun chevauchement d'éléments).
+- **Isolation Stricte Multi-Tenants des Conversations (`ConversationService`) :** Les discussions et messages directs sont filtrés avec une étanchéité absolue (`isUserConversationParticipant`). Un utilisateur (démarcheur, locataire ou bailleur) ne peut accéder, compter ou visualiser QUE les conversations dont il est explicitement participant (soit l'Auteur/Mandataire ayant publié l'annonce, soit le Visiteur/Candidat/Locataire ayant sollicité le bien). Aucun démarcheur ou bailleur tiers ne peut voir les échanges d'autres utilisateurs. Seul le Super-Admin dispose de droits de supervision.
 - **Horodatage Précis & Résolu des Notifications :** Les notifications de la cloche (bailleurs et locataires) n'affichent plus de mention figée « À l'instant ». Elles enregistrent un horodatage ISO `createdAt` et une heure `time` (HH:mm) réels. Le formateur `formatNotificationTime` calcule dynamiquement :
   - Moins de 2 min : `À l’instant (HH:mm)`
   - Moins d'une heure : `Il y a X min (HH:mm)`

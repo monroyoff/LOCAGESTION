@@ -4,6 +4,7 @@ import { TenantNotificationService } from './tenant-notification-service';
 import { AuthUser } from '../types';
 import { areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
 import { resolveNotificationDate } from '../money/format';
+import { isUserConversationAuthor } from './conversation-service';
 
 export type LeaseStatus =
   | 'actif'
@@ -932,6 +933,13 @@ export const LeaseService = {
             const nowTime = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
             const nowIso = new Date().toISOString();
             convs.forEach((c: any) => {
+              // Vérifier si cette conversation appartient au bailleur/démarcheur connecté
+              if (user && user.role !== 'admin' && !areEmailsEqual(user.email, 'admin@locagestion.site')) {
+                if (!isUserConversationAuthor(c, user)) {
+                  return;
+                }
+              }
+
               const isUnreadForLandlord =
                 (c.unreadCount && c.unreadCount > 0 && c.unreadBy !== 'locataire') ||
                 (c.hasUnread && c.unreadBy !== 'locataire');
@@ -988,27 +996,27 @@ export const LeaseService = {
         // Demandes de visite d'annonces et messages reçus
         if (n.type === 'visit_requested' || n.type === 'message_received') {
           if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
+          if (n.authorId && user.matricule && n.authorId.toLowerCase() === user.matricule.toLowerCase()) return true;
           if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
           if (n.authorPhone && user.phone && arePhoneNumbersEqual(n.authorPhone, user.phone)) return true;
           if (n.authorCompany && user.companyName && n.authorCompany.trim().toLowerCase() === user.companyName.trim().toLowerCase()) return true;
           const userName = (user.name || user.firstName || '').trim().toLowerCase();
           if (n.authorName && userName && n.authorName.trim().toLowerCase() === userName) return true;
-          if (user.role === 'bailleur' || user.role === 'demarcheur' || !user.role) return true;
+          return false;
         }
 
         // Approbation ou rejet d'annonce
         if (n.type === 'listing_approved' || n.type === 'listing_rejected') {
           if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
+          if (n.authorId && user.matricule && n.authorId.toLowerCase() === user.matricule.toLowerCase()) return true;
           if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
-          if (user.role === 'bailleur' || user.role === 'demarcheur' || !user.role) return true;
+          return false;
         }
 
         // Gestion des baux et propriétés
         if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
         if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
         if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
-        if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
-        if (user.role === 'bailleur' || user.role === 'demarcheur') return true;
         return false;
       });
     } catch (e) {
