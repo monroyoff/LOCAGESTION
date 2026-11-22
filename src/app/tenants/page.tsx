@@ -388,7 +388,7 @@ export default function TenantsPage() {
 
       const isJojo = isCanonicalJojoVog(
         l.tenantEmail || matchedUser?.email,
-        matchedUser?.matricule,
+        l.tenantMatricule || matchedUser?.matricule,
         l.tenant || matchedUser?.name
       );
 

@@ -762,6 +762,9 @@ export default function NewLeasePage() {
       tenantId: tenantMode === 'existing' ? selectedRegisteredTenantId : undefined,
       tenantEmail,
       tenantPhone,
+      tenantMatricule:
+        selectedCandidateTenant?.matricule ||
+        (isCanonicalJojoVog(tenantEmail || tenantPhone, undefined, tenantName) ? 'LOCA-MAT-BJ-17635' : undefined),
       tenantAddress: tenantAddress.trim() || undefined,
       tenantIdType: tenantIdType || undefined,
       tenantIdNumber: tenantIdNumber.trim() || undefined,

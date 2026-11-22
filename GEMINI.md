@@ -535,5 +535,24 @@ Le fichier `public/.well-known/assetlinks.json` et la route API `src/app/.well-k
 - **Aucune redirection (301, 302, 307, 308)** vers `www.locagestion.site` n'est permise pour ce fichier. Dans Vercel, le domaine `locagestion.site` doit être configuré avec `"redirect": null` pour servir la production directement, car le protocole de vérification TWA Android rejette immédiatement toute redirection pour des raisons de sécurité.
 
 ---
+
+## 17. Pérennité du Catalogue d'Annonces & Restitution Multi-Baux Intégrale
+
+> **GARANTIE DE DIFFUSION PERMANENTE & STABILITÉ MULTI-BAUX**
+
+### 🌐 1. Sanctuaire des Annonces de Référence (Immunité Anti-Purge)
+- Les annonces certifiées et officielles de référence portant un préfixe d'ID `list-` ou une référence officielle `A-<PAYS>-XXXXX` (notamment `A-BJ-17635` pour le Studio UAC Calavi) bénéficient d'une **immunité absolue contre la purge automatique des 30 jours**.
+- Le moteur `ListingsService.getCustomListings()` réinjecte automatiquement le catalogue de référence dès que le stockage local est vide ou altéré.
+- Le moteur de synchronisation `SyncService.sync()` synchronise dorénavant les annonces serveur (`/api/sync`) vers le cache local sur Web et Mobile.
+
+### 📝 2. Restitution Plurielle des Baux de Jojo VOG
+- Le compte scellé locataire `jojovog007@gmail.com` (`LOCA-MAT-BJ-17635`) dispose en permanence de ses 3 baux actifs multi-bailleurs :
+  1. `BAIL-2026-421` (Chambre Salon Sanitaire Allada — Bailleur VOGLOSSOU JOHANE — 25 000 FCFA — Actif)
+  2. `BAIL-2026-MAG-102` (Magasin A4 Dantokpa — Bailleur MAMADOU DIALLO — 65 000 FCFA — Actif)
+  3. `BAIL-2026-COM-205` (Boutique N° 12 Akpakpa — Bailleur AÏCHA TOURÉ — 40 000 FCFA — Actif)
+- Un quatrième bail de test en attente de signature (`BAIL-2026-422`, Studio Meublé Calavi, 35 000 FCFA) est rattaché à l'annonce `A-BJ-17635`. Sa contresignature dans l'Espace Locataire déclenche le retrait immédiat de l'annonce d'Internet avec notification horodatée.
+- Le comparateur d'appartenance `isLeaseMatchingUser` inspecte rigoureusement `l.tenantMatricule || (l as any).matricule` et `isCanonicalJojoVog` pour garantir un affichage sans faille dans `/portal`.
+
+---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
 

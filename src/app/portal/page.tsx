@@ -378,10 +378,12 @@ function TenantPortalContent() {
     }
     const isLeaseMatchingUser = (l: Lease) => {
       if (!user || !l) return false;
+      if (user.role === 'admin' || user.email === 'admin@locagestion.site') return true;
+      const leaseMat = l.tenantMatricule || (l as any).matricule;
       // 1. Profil canonique scellé Jojo VOG
       if (
         isCanonicalJojoVog(user.email || user.id || user.phone, user.matricule, user.name) &&
-        isCanonicalJojoVog(l.tenantEmail || l.tenantId || l.tenantPhone, (l as any).matricule, l.tenant)
+        isCanonicalJojoVog(l.tenantEmail || l.tenantId || l.tenantPhone, leaseMat, l.tenant)
       ) {
         return true;
       }
@@ -394,7 +396,7 @@ function TenantPortalContent() {
         return true;
       }
       // 4. Matricule unique
-      if (user.matricule && (l as any).matricule && user.matricule === (l as any).matricule) {
+      if (user.matricule && leaseMat && user.matricule === leaseMat) {
         return true;
       }
       // 5. Téléphone normalisé

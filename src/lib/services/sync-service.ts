@@ -2,12 +2,13 @@
 
 import { Lease } from './lease-service';
 import { TenantNotification } from './tenant-notification-service';
-import { AuthUser } from '@/lib/types';
+import { AuthUser, RentalListing } from '@/lib/types';
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
 const TENANT_NOTIFS_KEY = 'locagestion:tenant_notifications:v1';
 const LANDLORD_NOTIFS_KEY = 'locagestion:landlord_notifications:v1';
 const USERS_STORAGE_KEY = 'locagestion:users:v1';
+const LISTINGS_STORAGE_KEY = 'locagestion:custom_listings';
 
 let syncIntervalId: NodeJS.Timeout | null = null;
 let isSyncing = false;
@@ -151,6 +152,36 @@ export const SyncService = {
         if (usersUpdated) {
           localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(Array.from(userMap.values())));
           window.dispatchEvent(new Event('locagestion:auth_changed'));
+        }
+      }
+
+      // 4. Synchronisation des ANNONCES (Catalogues & Publications Web & Mobile)
+      if (Array.isArray(data.listings) && data.listings.length > 0) {
+        let localListings: RentalListing[] = [];
+        try {
+          const stored = localStorage.getItem(LISTINGS_STORAGE_KEY);
+          if (stored) localListings = JSON.parse(stored);
+        } catch (e) {}
+
+        const listingMap = new Map<string, RentalListing>();
+        localListings.forEach((l) => {
+          if (l && l.id) listingMap.set(l.id, l);
+        });
+
+        let listingsUpdated = false;
+        data.listings.forEach((serverListing: RentalListing) => {
+          if (!serverListing || !serverListing.id) return;
+          if (!listingMap.has(serverListing.id)) {
+            listingMap.set(serverListing.id, serverListing);
+            listingsUpdated = true;
+          }
+        });
+
+        if (listingsUpdated || localListings.length === 0) {
+          const mergedListings = Array.from(listingMap.values());
+          localStorage.setItem(LISTINGS_STORAGE_KEY, JSON.stringify(mergedListings));
+          window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
+          window.dispatchEvent(new Event('storage'));
         }
       }
 

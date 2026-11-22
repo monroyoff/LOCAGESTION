@@ -7,14 +7,18 @@ import { LeaseService } from './lease-service';
 const STORAGE_KEY = 'locagestion:custom_listings';
 const TRASH_STORAGE_KEY = 'locagestion:trash_listings';
 
-// Annonces enregistrées par les utilisateurs — STRICTEMENT VIDE AU DÉPART
-const SEED_CUSTOM_LISTINGS: RentalListing[] = [];
+// Annonces canoniques de référence plateforme (Bénin, Côte d'Ivoire, Sénégal, Togo)
+const SEED_CUSTOM_LISTINGS: RentalListing[] = MOCK_RENTAL_LISTINGS;
 
 /**
  * Détecte si une annonce est une fausse annonce de démo/mock héritée
  */
 export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
   if (!l) return true;
+  // Les annonces officielles et certifiées de la plateforme ne sont JAMAIS considérées comme fausses
+  if ((l as any).isCanonical || (l.id && l.id.startsWith('list-')) || (l.referenceCode && l.referenceCode.startsWith('A-'))) {
+    return false;
+  }
   const id = (l.id || '').trim();
   if (
     id.startsWith('pub-bailleur-') ||
@@ -37,21 +41,8 @@ export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
   }
   const authorName = (l.authorName || '').trim().toLowerCase();
   if (
-    authorName === 'mamadou diallo' ||
     authorName === 'ibrahim traoré' ||
-    authorName === 'ibrahim traore' ||
-    authorName === 'koffi mensah' ||
-    authorName === 'aïcha touré' ||
-    authorName === 'aicha toure'
-  ) {
-    return true;
-  }
-  const title = (l.title || '').trim().toLowerCase();
-  if (
-    title.includes('appartement 3 pièces standing avec balcon à haie vive') ||
-    title.includes('villa moderne 4 pièces avec cour & garage à cadjèhoun') ||
-    title.includes('appartement f3 neuf et sécurisé proche goudron à akpakpa') ||
-    title.includes('chambre meublée dans colocation cadre calme à haie vive')
+    authorName === 'ibrahim traore'
   ) {
     return true;
   }
@@ -410,6 +401,11 @@ export const ListingsService = {
 
       parsed.forEach((l: RentalListing) => {
         if (isFakeListing(l)) return;
+        // Les annonces officielles et de référence ne sont jamais purgées
+        if ((l as any).isCanonical || (l.id && l.id.startsWith('list-')) || (l.referenceCode && l.referenceCode.startsWith('A-'))) {
+          activeListings.push(l);
+          return;
+        }
         const age = getListingAgeInDays(l);
         if (age >= 30) {
           expiredListings.push(l);
@@ -454,8 +450,10 @@ export const ListingsService = {
 
           parsed.filter((l) => !isFakeListing(l)).forEach((l) => {
             // RÈGLE STRICTE : Purge automatique après 30 jours pour libérer le stockage
+            // Les annonces officielles et de référence ne sont jamais purgées
+            const isPlatformSeed = (l as any).isCanonical || (l.id && l.id.startsWith('list-')) || (l.referenceCode && l.referenceCode.startsWith('A-'));
             const age = getListingAgeInDays(l);
-            if (age >= 30) {
+            if (!isPlatformSeed && age >= 30) {
               hasUpdated = true;
               LeaseService.addLandlordNotification({
                 id: `notif-exp-${l.id}-${Date.now()}`,
@@ -495,13 +493,23 @@ export const ListingsService = {
           if (hasUpdated || activeListings.length !== parsed.length) {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(activeListings));
           }
+          if (activeListings.length === 0 && SEED_CUSTOM_LISTINGS.length > 0) {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_CUSTOM_LISTINGS));
+            return SEED_CUSTOM_LISTINGS;
+          }
           return activeListings;
         }
+      }
+      if (SEED_CUSTOM_LISTINGS.length > 0) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(SEED_CUSTOM_LISTINGS));
+        } catch (e) {}
+        return SEED_CUSTOM_LISTINGS;
       }
       return [];
     } catch (e) {
       console.error('Erreur lecture annonces:', e);
-      return [];
+      return SEED_CUSTOM_LISTINGS;
     }
   },
 
@@ -513,7 +521,11 @@ export const ListingsService = {
     const nonDuplicatedMock = MOCK_RENTAL_LISTINGS.filter(
       (m) => !isFakeListing(m) && !customIds.has(m.id) && !trashIds.has(m.id)
     );
-    return [...custom, ...nonDuplicatedMock].map((item) => {
+    const combined = [...custom, ...nonDuplicatedMock];
+    if (combined.length === 0 && SEED_CUSTOM_LISTINGS.length > 0) {
+      return SEED_CUSTOM_LISTINGS;
+    }
+    return combined.map((item) => {
       const isProperRef = item.referenceCode && /^A-[A-Z]{2}-\d+$/i.test(item.referenceCode.trim());
       if (!isProperRef) {
         item.referenceCode = generateListingReference(item.referenceCode || item.id, item.countryCode || item.country);
