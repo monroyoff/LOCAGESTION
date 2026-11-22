@@ -250,10 +250,14 @@ export const SyncService = {
               const msgMap = new Map<string, any>();
               (local.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
               (sc.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
+              const allMessages = Array.from(msgMap.values());
+              const lastMsg = allMessages.length > 0 ? allMessages[allMessages.length - 1] : null;
               convMap.set(sc.id, {
                 ...local,
                 ...sc,
-                messages: Array.from(msgMap.values()),
+                messages: allMessages,
+                lastMessage: lastMsg ? lastMsg.text : (sc.lastMessage || local.lastMessage),
+                lastMessageTime: lastMsg ? (lastMsg.time || sc.lastMessageTime) : (sc.lastMessageTime || local.lastMessageTime),
               });
             }
           }
@@ -262,6 +266,30 @@ export const SyncService = {
         const mergedConvs = Array.from(convMap.values());
         localStorage.setItem('locagestion:conversations:v1', JSON.stringify(mergedConvs));
         window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+
+        // RECONCILIATION BIDIRECTIONNELLE INSTANTANÉE (PUSH WEB <-> MOBILE)
+        // Si le client local possède des conversations ou messages non encore présents sur le serveur central,
+        // les pousser immédiatement vers /api/sync pour que l'application Android et le Web
+        // soient en miroir parfait temps réel !
+        const serverIds = new Set((data.conversations || []).map((sc: any) => sc.id));
+        const serverMsgCount = new Map<string, number>();
+        (data.conversations || []).forEach((sc: any) => {
+          serverMsgCount.set(sc.id, Array.isArray(sc.messages) ? sc.messages.length : 0);
+        });
+
+        const hasNewConvsForServer = mergedConvs.some((mc: any) => !serverIds.has(mc.id));
+        const hasNewMsgsForServer = mergedConvs.some((mc: any) => {
+          const sCount = serverMsgCount.get(mc.id) || 0;
+          return (mc.messages?.length || 0) > sCount;
+        });
+
+        if (hasNewConvsForServer || hasNewMsgsForServer) {
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversations: mergedConvs }),
+          }).catch(() => {});
+        }
       }
 
       // 7. Synchronisation des PAIEMENTS & QUITTANCES (Web & Mobile)

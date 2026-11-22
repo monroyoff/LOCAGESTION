@@ -474,10 +474,14 @@ export async function POST(req: NextRequest) {
             const msgMap = new Map<string, any>();
             (existing.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
             (c.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
+            const allMessages = Array.from(msgMap.values());
+            const lastMsg = allMessages.length > 0 ? allMessages[allMessages.length - 1] : null;
             convsMap.set(c.id, {
               ...existing,
               ...c,
-              messages: Array.from(msgMap.values()),
+              messages: allMessages,
+              lastMessage: lastMsg ? lastMsg.text : (c.lastMessage || existing.lastMessage),
+              lastMessageTime: lastMsg ? (lastMsg.time || c.lastMessageTime) : (c.lastMessageTime || existing.lastMessageTime),
             });
           } else {
             convsMap.set(c.id, c);
