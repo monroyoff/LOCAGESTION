@@ -223,58 +223,6 @@ export const INITIAL_LEASES: Lease[] = [
     tenantSignedAt: '01/11/2026',
     invitationCode: 'LOCA-INV-7842',
   },
-  {
-    id: 'BAIL-2026-422',
-    tenant: 'Jojo VOG',
-    tenantId: 'usr-tenant-jojovog',
-    tenantEmail: 'jojovog007@gmail.com',
-    tenantPhone: '+229 97 00 12 34',
-    tenantMatricule: 'LOCA-MAT-BJ-17635',
-    tenantAddress: 'Haie Vive, Cotonou',
-    property: 'Résidence UAC Calavi',
-    unit: 'Studio Meublé N° 3 (25 m²)',
-    propertyAddress: 'Zogbadjè (Campus UAC), Abomey-Calavi',
-    propertyDistrict: 'Zogbadjè',
-    propertyCity: 'Abomey-Calavi',
-    propertyLocation: 'Abomey-Calavi, Bénin',
-    propertyUsage: 'habitation',
-    country: 'Bénin',
-    governingLaw: 'Loi n° 2018-12 du 02 juillet 2018 (Bénin)',
-    listingId: 'list-bj-uac-calavi',
-    listingReference: 'A-BJ-17635',
-    rent: 35000,
-    deposit: 105000,
-    advanceMonths: 3,
-    charges: 3000,
-    utilitiesDeposit: 15000,
-    totalDueAtEntry: 158000,
-    startDate: '01/12/2026',
-    endDate: '30/11/2027',
-    durationMonths: 12,
-    status: 'en_attente_signature',
-    signedByLandlord: true,
-    signedByTenant: false,
-    landlordId: 'usr-bailleur-voglossou',
-    landlordName: 'VOGLOSSOU JOHANE',
-    landlordPhone: '+229 01 95 44 44 30',
-    landlordWhatsapp: '+229 01 95 44 44 30',
-    landlordEmail: 'jobovog@gmail.com',
-    landlordIfu: '3201984210987',
-    landlordAddress: 'Haie Vive, Cotonou, Bénin',
-    landlordPaymentMethods: {
-      wave: '+229 01 95 44 44 30',
-      mtn: '+229 01 95 44 44 30',
-      moov: '+229 01 95 44 44 30',
-      bank: 'BJ061 01001 001234567890 45 (BOA Bénin)',
-    },
-    landlordSignature: {
-      signedBy: 'VOGLOSSOU JOHANE',
-      date: '20/11/2026',
-      signatureDataUrl: '',
-    },
-    transmittedAt: '20/11/2026',
-    invitationCode: 'LOCA-INV-17635',
-  },
 ];
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
@@ -331,7 +279,14 @@ export function isLeaseMatchingLandlord(
 
 export function isFakeLease(l?: Partial<Lease> | null): boolean {
   if (!l) return true;
-  if (l.id === 'BAIL-2026-BJ-17635' || l.id === 'BAIL-2026-MAG-102' || l.id === 'BAIL-2026-COM-205') return true;
+  if (
+    l.id === 'BAIL-2026-422' ||
+    l.id === 'BAIL-2026-BJ-17635' ||
+    l.id === 'BAIL-2026-MAG-102' ||
+    l.id === 'BAIL-2026-COM-205'
+  ) {
+    return true;
+  }
   const lName = (l.landlordName || '').trim().toLowerCase();
   const lEmail = (l.landlordEmail || '').trim().toLowerCase();
   if (

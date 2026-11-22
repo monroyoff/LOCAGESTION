@@ -1785,8 +1785,8 @@ function TenantPortalContent() {
                   </button>
                 </div>
 
-                {/* Mon Bailleur & Contact Rapide */}
-                <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft flex flex-col justify-between space-y-4">
+                {/* Mon Bailleur & Contact Rapide (Affiché sur grand écran desktop, masqué sur mobile pour une interface épurée) */}
+                <div className="hidden lg:flex bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft flex-col justify-between space-y-4">
                   {currentLease ? (
                     <div>
                       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
@@ -1799,9 +1799,11 @@ function TenantPortalContent() {
                             <span className="text-[10px] text-slate-400">Bailleur & Gestionnaire Dédié</span>
                           </div>
                         </div>
-                        <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
-                          {tenant.landlord.contactPerson || 'Gestion'}
-                        </span>
+                        {tenant.landlord.contactPerson && tenant.landlord.contactPerson !== tenant.landlord.name && (
+                          <span className="text-[10px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
+                            {tenant.landlord.contactPerson}
+                          </span>
+                        )}
                       </div>
 
                       <div className="pt-3 space-y-1.5 text-xs">
@@ -1959,9 +1961,9 @@ function TenantPortalContent() {
                       </div>
                     </div>
 
-                    {/* En vue d'ensemble : Détail clair de chaque contrat */}
+                    {/* En vue d'ensemble : Détail clair de chaque contrat (affiché sur desktop, masqué sur mobile) */}
                     {selectedLeaseId === 'all' && myLeases.length > 1 && (
-                      <div className="pt-3 border-t border-slate-100 space-y-2.5">
+                      <div className="hidden md:block pt-3 border-t border-slate-100 space-y-2.5">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                           <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
                             Ventilation par contrat de location ({myLeases.length} baux actifs) :

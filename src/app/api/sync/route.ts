@@ -81,7 +81,14 @@ function writeJsonFile<T>(filename: string, data: T) {
 
 function isFakeServerLease(l: any): boolean {
   if (!l || !l.id) return true;
-  if (l.id === 'BAIL-2026-BJ-17635' || l.id === 'BAIL-2026-MAG-102' || l.id === 'BAIL-2026-COM-205') return true;
+  if (
+    l.id === 'BAIL-2026-422' ||
+    l.id === 'BAIL-2026-BJ-17635' ||
+    l.id === 'BAIL-2026-MAG-102' ||
+    l.id === 'BAIL-2026-COM-205'
+  ) {
+    return true;
+  }
   const lName = (l.landlordName || '').trim().toLowerCase();
   const lEmail = (l.landlordEmail || '').trim().toLowerCase();
   if (
