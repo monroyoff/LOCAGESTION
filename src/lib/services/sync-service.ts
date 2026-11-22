@@ -1,8 +1,9 @@
 'use client';
 
-import { Lease } from './lease-service';
+import { Lease, isFakeLease } from './lease-service';
 import { TenantNotification } from './tenant-notification-service';
 import { AuthUser, RentalListing } from '@/lib/types';
+import { isFakeDemoUser } from './auth-service';
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
 const TENANT_NOTIFS_KEY = 'locagestion:tenant_notifications:v1';
@@ -54,9 +55,10 @@ export const SyncService = {
           if (stored) localLeases = JSON.parse(stored);
         } catch (e) {}
 
-        // Purger immédiatement et définitivement l'ancien mock de démo BAIL-2026-BJ-17635 du client
-        if (localLeases.some((l) => l.id === 'BAIL-2026-BJ-17635')) {
-          localLeases = localLeases.filter((l) => l.id !== 'BAIL-2026-BJ-17635');
+        // Purger immédiatement et définitivement les faux baux de démo (BAIL-2026-MAG-102, BAIL-2026-COM-205, etc.)
+        const sanitizedLocal = localLeases.filter((l) => !isFakeLease(l));
+        if (sanitizedLocal.length !== localLeases.length) {
+          localLeases = sanitizedLocal;
           leasesUpdated = true;
         }
 
@@ -65,7 +67,7 @@ export const SyncService = {
         localLeases.forEach((l) => leaseMap.set(l.id, l));
         // Fusionner avec les baux serveur (le serveur a priorité sur les signatures et transmissions)
         data.leases.forEach((serverLease: Lease) => {
-          if (!serverLease || !serverLease.id || serverLease.id === 'BAIL-2026-BJ-17635') return;
+          if (!serverLease || !serverLease.id || isFakeLease(serverLease)) return;
           const local = leaseMap.get(serverLease.id);
           if (!local) {
             leaseMap.set(serverLease.id, serverLease);
@@ -121,7 +123,7 @@ export const SyncService = {
         }
       }
 
-      // 3. Synchronisation des UTILISATEURS (Garantie Unicité Matricule)
+      // 3. Synchronisation des UTILISATEURS (Garantie Unicité Matricule & Purge des faux comptes)
       if (Array.isArray(data.users)) {
         let localUsers: AuthUser[] = [];
         try {
@@ -129,14 +131,21 @@ export const SyncService = {
           if (stored) localUsers = JSON.parse(stored);
         } catch (e) {}
 
+        let usersUpdated = false;
+        // Purger les comptes démo locaux
+        const sanitizedUsers = localUsers.filter((u) => !isFakeDemoUser(u));
+        if (sanitizedUsers.length !== localUsers.length) {
+          localUsers = sanitizedUsers;
+          usersUpdated = true;
+        }
+
         const userMap = new Map<string, AuthUser>();
         localUsers.forEach((u) => {
           if (u.email) userMap.set(u.email.toLowerCase(), u);
         });
 
-        let usersUpdated = false;
         data.users.forEach((serverUser: AuthUser) => {
-          if (!serverUser || !serverUser.email) return;
+          if (!serverUser || !serverUser.email || isFakeDemoUser(serverUser)) return;
           const key = serverUser.email.toLowerCase();
           const local = userMap.get(key);
           if (!local) {

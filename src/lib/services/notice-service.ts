@@ -38,7 +38,7 @@ export interface Notice {
   effectiveDate: string; // JJ/MM/AAAA (date de libération des lieux)
   deliveryMethod: NoticeDeliveryMethod;
   status: NoticeStatus;
-  beneficiaryName?: string; // En cas de reprise personnelle (ex: M. Koffi Diallo, propriétaire)
+  beneficiaryName?: string; // En cas de reprise personnelle (ex: Propriétaire bénéficiaire)
   salePrice?: number; // En cas de vente (prix proposé en FCFA avec droit de préemption)
   legalBasis: string; // Référence légale UEMOA / OHADA
   departureInspectionDate?: string;

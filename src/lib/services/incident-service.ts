@@ -164,9 +164,9 @@ export const IncidentService = {
       urgency: newIncident.urgency,
       category: newIncident.category,
       photos: newIncident.photos,
-      emailSentTo: 'diallo.patrimoine@afrique-gestion.com',
+      emailSentTo: 'jobovog@gmail.com',
       emailDelivered: {
-        to: 'diallo.patrimoine@afrique-gestion.com',
+        to: 'jobovog@gmail.com',
         from: 'alertes@locagestion.site',
         subject: `[ALERTE TECHNIQUE ${newIncident.urgency.toUpperCase()}] ${newIncident.category} — ${newIncident.unit} (${newIncident.tenantName})`,
         date: nowFormatted,

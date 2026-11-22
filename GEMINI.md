@@ -186,7 +186,7 @@ L'authentification a été modernisée pour offrir une expérience fluide, sécu
 
 ### Connexion Universelle (`/auth/login`)
 - Connexion indifféremment par **Adresse Email** OU **Numéro de téléphone** (support des indicatifs internationaux ex: `+229 97 00 00 00` ou format local).
-- Boutons de démonstration instantanée (`quickLogin`) pour tester immédiatement les 3 rôles (Mamadou Diallo, Kofi Mensah, Aïcha Touré).
+- Comptes officiels et authentiques scellés pour tester les différents rôles (Bailleur, Locataire, Démarcheur, Super-Admin).
 
 ### Inscription Conversationnelle par Étapes (`/auth/register`)
 Le formulaire est orchestré sous forme de questions séquentielles ("questions l'une après l'autre", 6 étapes) :

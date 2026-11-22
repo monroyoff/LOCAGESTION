@@ -24,7 +24,7 @@ export interface InspectionData {
 
 const STORAGE_KEY = 'locagestion:inspections';
 
-export const DEFAULT_INSPECTION_KOFFI: InspectionData = {
+export const DEFAULT_INSPECTION_DATA: InspectionData = {
   type: 'entree',
   date: new Date().toISOString().split('T')[0],
   meterCashPower: '',
@@ -57,7 +57,7 @@ export const InspectionService = {
       return all[leaseId];
     }
     return {
-      ...DEFAULT_INSPECTION_KOFFI,
+      ...DEFAULT_INSPECTION_DATA,
       date: new Date().toISOString().split('T')[0],
     };
   },

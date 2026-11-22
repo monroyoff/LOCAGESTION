@@ -48,42 +48,26 @@ export const DEFAULT_PROPERTIES: Property[] = [
     authorRole: 'bailleur',
     createdAt: '01/11/2026',
   },
-  {
-    id: 'prop-diallo-cotonou-01',
-    name: 'Résidence Palmier Royal',
-    type: 'Immeuble',
-    address: 'Boulevard Saint-Michel, Haie Vive',
-    city: 'Cotonou',
-    district: 'Haie Vive',
-    country: 'Bénin',
-    totalUnits: 3,
-    occupiedUnits: 2,
-    monthlyRevenue: 450000,
-    imageUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&auto=format&fit=crop&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=1200&auto=format&fit=crop&q=80',
-    ],
-    description: 'Immeuble de haut standing à Haie Vive.',
-    amenities: [
-      'Compteurs prépayés individuels',
-      'Réserve d’eau et surpresseur',
-      'Gardien permanent 24/7',
-    ],
-    unitsList: [
-      { unit: 'Lot 101', type: '2 Pièces', surface: 50, rent: 150000, tenant: 'Clarisse Bakayoko', status: 'occupe' },
-      { unit: 'Lot 102', type: '3 Pièces', surface: 75, rent: 300000, tenant: 'Ibrahim Touré', status: 'occupe' },
-      { unit: 'Lot 103', type: 'Studio', surface: 30, rent: 100000, tenant: 'Disponible', status: 'vacant' },
-    ],
-    authorId: 'usr-bailleur-1',
-    authorName: 'Mamadou Diallo',
-    authorEmail: 'mamadou.diallo@locagestion.site',
-    authorPhone: '+229 97 00 00 00',
-    authorCompany: 'LOCA IMMO',
-    authorMatricule: 'LOCA-MAT-BJ-00001',
-    authorRole: 'bailleur',
-    createdAt: '15/01/2026',
-  },
 ];
+
+export function isFakeProperty(p?: Partial<Property> | null): boolean {
+  if (!p) return true;
+  if (p.id === 'prop-diallo-cotonou-01' || p.id === 'prop-01' || p.id === 'prop-02') return true;
+  const name = (p.name || '').trim().toLowerCase();
+  if (
+    name.includes('palmier royal') ||
+    name.includes('résidence les cocotiers') ||
+    name.includes('residence les cocotiers') ||
+    name.includes('villa émeraude')
+  ) {
+    return true;
+  }
+  const authorName = (p.authorName || '').trim().toLowerCase();
+  if (authorName === 'mamadou diallo' || authorName === 'koffi mensah') return true;
+  const authorEmail = (p.authorEmail || '').trim().toLowerCase();
+  if (authorEmail.includes('mamadou.diallo') || authorEmail.includes('diallo')) return true;
+  return false;
+}
 
 let inMemoryProperties: Property[] = [...DEFAULT_PROPERTIES];
 
@@ -101,9 +85,10 @@ export class PropertyService {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Vérification que les biens immuables de Voglossou et Diallo ne sont jamais perdus
-          let modified = false;
-          const merged = [...parsed];
+          // Élimination absolue de tout bien fictif hérité
+          const sanitized = parsed.filter((p) => !isFakeProperty(p));
+          let modified = sanitized.length !== parsed.length;
+          const merged = [...sanitized];
 
           for (const def of DEFAULT_PROPERTIES) {
             const exists = merged.some(
@@ -247,17 +232,6 @@ export class PropertyService {
           areEmailsEqual(p.authorEmail, 'jobovog@gmail.com') ||
           p.name.toLowerCase().includes('allada') ||
           (p.city && p.city.toLowerCase() === 'allada')
-        ) {
-          return true;
-        }
-      }
-
-      // 6. Règle pour MAMADOU DIALLO (Demo)
-      if (areEmailsEqual(userEmail, 'mamadou.diallo@locagestion.site')) {
-        if (
-          areEmailsEqual(p.authorEmail, 'mamadou.diallo@locagestion.site') ||
-          p.authorId === 'usr-bailleur-1' ||
-          p.authorMatricule === 'LOCA-MAT-BJ-00001'
         ) {
           return true;
         }

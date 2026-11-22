@@ -32,7 +32,7 @@ export const PARAPH_STYLES: ParaphStyleOption[] = [
 
 /**
  * Extrait automatiquement les initiales d'un nom complet
- * Ex: Mamadou Diallo -> MD, Koffi Mensah -> KM, Jojo VOG -> JV
+ * Ex: VOGLOSSOU JOHANE -> VJ, Jojo VOG -> JV
  */
 export function extractInitials(name?: string): string {
   if (!name || !name.trim()) return 'LG';

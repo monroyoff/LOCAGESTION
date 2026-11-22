@@ -234,9 +234,12 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
           u.id !== 'usr-bailleur-01' &&
           u.id !== 'usr-locataire-01' &&
           u.id !== 'usr-demarcheur-01' &&
+          u.id !== 'usr-tenant-koffi' &&
+          u.id !== 'usr-tenant-aicha' &&
           u.name !== 'Mamadou Diallo' &&
           u.name !== 'Koffi Mensah' &&
-          u.name !== 'Ibrahim Traoré'
+          u.name !== 'Ibrahim Traoré' &&
+          u.name !== 'Aïcha Touré'
         ) {
           const isJojoVog = isCanonicalJojoVog(u.email || u.id || u.phone, u.matricule, u.name);
           const isSealed = Boolean(u.isIdentitySealed || isJojoVog || (u.firstName && u.lastName && u.phone));
@@ -274,9 +277,12 @@ export function getUserProfile(role: UserSpace = 'locataire', useCache = true): 
           parsed.id !== 'usr-bailleur-01' &&
           parsed.id !== 'usr-locataire-01' &&
           parsed.id !== 'usr-demarcheur-01' &&
+          parsed.id !== 'usr-tenant-koffi' &&
+          parsed.id !== 'usr-tenant-aicha' &&
           parsed.name !== 'Mamadou Diallo' &&
           parsed.name !== 'Koffi Mensah' &&
-          parsed.name !== 'Ibrahim Traoré'
+          parsed.name !== 'Ibrahim Traoré' &&
+          parsed.name !== 'Aïcha Touré'
         ) {
           return {
             ...parsed,

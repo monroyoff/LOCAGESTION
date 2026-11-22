@@ -832,7 +832,7 @@ export default function RegisterPage() {
                       type="text"
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
-                      placeholder="ex: Diallo, Dupont..."
+                      placeholder="ex: Voglossou, Djigla..."
                       className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                       autoFocus
                     />
@@ -849,7 +849,7 @@ export default function RegisterPage() {
                       type="text"
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="ex: Mamadou, Jean-Pierre..."
+                      placeholder="ex: Johane, Théodora..."
                       className="w-full pl-10 pr-3.5 py-3 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
                     />
                     <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
@@ -869,7 +869,7 @@ export default function RegisterPage() {
                       type="text"
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="ex: Agence Immobilière Traoré & Associés (Optionnel)"
+                      placeholder="ex: Agence Immobilière Prestige (Optionnel)"
                       className="w-full px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
                     />
                     <span className="text-[10px] text-slate-500 mt-1 block">

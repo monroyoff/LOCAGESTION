@@ -77,12 +77,6 @@ export function generateUserMatricule(country?: string, role?: string, seed?: st
   if (cleanSeed.includes('theodoradjigla') || cleanSeed.includes('usr-tenant-theodora')) {
     return 'LOCA-MAT-BJ-24702';
   }
-  if (cleanSeed.includes('koffi.mensah') || cleanSeed.includes('usr-tenant-koffi')) {
-    return 'LOCA-MAT-CI-48219';
-  }
-  if (cleanSeed.includes('aicha.toure') || cleanSeed.includes('usr-tenant-aicha')) {
-    return 'LOCA-MAT-SN-39042';
-  }
 
   const code = getCountryMatriculeCode(country);
 
@@ -193,48 +187,6 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     password: 'Jesusmonroi@2026',
     accountStatus: 'active',
     isIdentitySealed: true,
-    emailVerified: true,
-  },
-  {
-    id: 'usr-tenant-koffi',
-    matricule: 'LOCA-MAT-CI-48219',
-    name: 'Koffi Mensah',
-    firstName: 'Koffi',
-    lastName: 'Mensah',
-    email: 'koffi.mensah@gmail.com',
-    phone: '+225 07 12 34 56',
-    role: 'locataire',
-    birthDate: '20/08/1990',
-    birthPlace: 'Abidjan',
-    residenceCountry: 'Côte d’Ivoire',
-    residenceCity: 'Abidjan',
-    residenceDistrict: 'Cocody',
-    projectCountry: 'Côte d’Ivoire',
-    avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-    registeredAt: '10/11/2026',
-    password: 'Koffi2026!',
-    accountStatus: 'active',
-    emailVerified: true,
-  },
-  {
-    id: 'usr-tenant-aicha',
-    matricule: 'LOCA-MAT-SN-39042',
-    name: 'Aïcha Touré',
-    firstName: 'Aïcha',
-    lastName: 'Touré',
-    email: 'aicha.toure@gmail.com',
-    phone: '+221 77 456 78 90',
-    role: 'locataire',
-    birthDate: '12/03/1995',
-    birthPlace: 'Dakar',
-    residenceCountry: 'Sénégal',
-    residenceCity: 'Dakar',
-    residenceDistrict: 'Almadies',
-    projectCountry: 'Sénégal',
-    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
-    registeredAt: '12/11/2026',
-    password: 'Aicha2026!',
-    accountStatus: 'active',
     emailVerified: true,
   },
 ];
@@ -448,15 +400,36 @@ export function arePhoneNumbersEqual(phoneA?: string | null, phoneB?: string | n
   return false;
 }
 
-function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
+export function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
   if (!u) return false;
-  if (u.id === 'usr-bailleur-01' || u.id === 'usr-locataire-01' || u.id === 'usr-demarcheur-01') return true;
-  if (u.name === 'Mamadou Diallo' || u.name === 'Koffi Mensah' || u.name === 'Ibrahim Traoré') return true;
+  if (
+    u.id === 'usr-bailleur-01' ||
+    u.id === 'usr-locataire-01' ||
+    u.id === 'usr-demarcheur-01' ||
+    u.id === 'usr-tenant-koffi' ||
+    u.id === 'usr-tenant-aicha'
+  ) return true;
+  const cleanName = (u.name || '').trim().toLowerCase();
+  if (
+    cleanName === 'mamadou diallo' ||
+    cleanName === 'koffi mensah' ||
+    cleanName === 'ibrahim traoré' ||
+    cleanName === 'ibrahim traore' ||
+    cleanName === 'aïcha touré' ||
+    cleanName === 'aicha toure' ||
+    cleanName === 'clarisse bakayoko' ||
+    cleanName === 'amina diop' ||
+    cleanName === 'fatoumata traoré' ||
+    cleanName === 'fatoumata traore'
+  ) return true;
   if (u.email && (
     u.email.toLowerCase().includes('diallo-patrimoine') ||
     u.email.toLowerCase().includes('fintech-africa') ||
     u.email.toLowerCase().includes('ibrahim.demarcheur') ||
-    u.email.toLowerCase().includes('demarcheur@locagestion')
+    u.email.toLowerCase().includes('demarcheur@locagestion') ||
+    u.email.toLowerCase().includes('koffi.mensah') ||
+    u.email.toLowerCase().includes('aicha.toure') ||
+    u.email.toLowerCase().includes('mamadou.diallo')
   )) return true;
   return false;
 }

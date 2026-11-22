@@ -269,7 +269,7 @@ function IncidentsPageContent() {
                       Maintenance & Technique
                     </span>
                     <span className="text-slate-400 text-xs">•</span>
-                    <span className="text-slate-300 text-xs font-semibold">Diallo Patrimoine</span>
+                    <span className="text-slate-300 text-xs font-semibold">{user?.companyName || user?.name || 'Mon Patrimoine'}</span>
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
                     <Wrench className="w-6 h-6 text-amber-400" />

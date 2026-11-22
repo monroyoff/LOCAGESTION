@@ -224,119 +224,6 @@ export const INITIAL_LEASES: Lease[] = [
     invitationCode: 'LOCA-INV-7842',
   },
   {
-    id: 'BAIL-2026-MAG-102',
-    tenant: 'Jojo VOG',
-    tenantId: 'usr-tenant-jojovog',
-    tenantEmail: 'jojovog007@gmail.com',
-    tenantPhone: '+229 97 00 12 34',
-    tenantMatricule: 'LOCA-MAT-BJ-17635',
-    tenantAddress: 'Haie Vive, Cotonou',
-    property: 'ENTREPÔT & MAGASINS DU PORT',
-    unit: 'Magasin A4 (Stockage Marchandises • 70 m²)',
-    propertyAddress: 'Zone Portuaire / Dantokpa, Cotonou',
-    propertyDistrict: 'Dantokpa',
-    propertyCity: 'Cotonou',
-    propertyLocation: 'Dantokpa, Cotonou, Bénin',
-    propertyLandmark: 'Face Grand Marché Dantokpa & Accès Port',
-    propertyUsage: 'magasin',
-    country: 'Bénin',
-    governingLaw: 'Acte Uniforme OHADA portant sur le Droit Commercial Général (AUDCG)',
-    rent: 65000,
-    deposit: 130000,
-    advanceMonths: 2,
-    charges: 5000,
-    utilitiesDeposit: 20000,
-    totalDueAtEntry: 220000,
-    startDate: '15/10/2026',
-    endDate: '14/10/2027',
-    durationMonths: 12,
-    status: 'actif',
-    signedByLandlord: true,
-    signedByTenant: true,
-    landlordId: 'usr-bailleur-diallo',
-    landlordName: 'MAMADOU DIALLO',
-    landlordPhone: '+229 97 11 22 33',
-    landlordWhatsapp: '+229 97 11 22 33',
-    landlordEmail: 'mamadou.diallo@locagestion.site',
-    landlordIfu: '3202011223344',
-    landlordAddress: 'Boulevard de la Marina, Cotonou, Bénin',
-    landlordPaymentMethods: {
-      wave: '+229 97 11 22 33',
-      mtn: '+229 97 11 22 33',
-      bank: 'BJ061 01002 987654321098 12 (Ecobank Bénin)',
-    },
-    landlordSignature: {
-      signedBy: 'MAMADOU DIALLO',
-      date: '15/10/2026',
-      signatureDataUrl: '',
-    },
-    tenantSignature: {
-      signedBy: 'Jojo VOG',
-      date: '15/10/2026',
-      signatureDataUrl: '',
-    },
-    transmittedAt: '15/10/2026',
-    tenantSignedAt: '15/10/2026',
-    invitationCode: 'LOCA-INV-9901',
-  },
-  {
-    id: 'BAIL-2026-COM-205',
-    tenant: 'Jojo VOG',
-    tenantId: 'usr-tenant-jojovog',
-    tenantEmail: 'jojovog007@gmail.com',
-    tenantPhone: '+229 97 00 12 34',
-    tenantMatricule: 'LOCA-MAT-BJ-17635',
-    tenantAddress: 'Haie Vive, Cotonou',
-    property: 'GALERIE COMMERCIALE LES PALMIERS',
-    unit: 'Boutique N° 12 (Emplacement Commercial • 30 m²)',
-    propertyAddress: 'Akpakpa Centre, Cotonou',
-    propertyDistrict: 'Akpakpa',
-    propertyCity: 'Cotonou',
-    propertyLocation: 'Akpakpa, Cotonou, Bénin',
-    propertyLandmark: 'Face Pharmacie du Centre Akpakpa',
-    propertyUsage: 'boutique',
-    country: 'Bénin',
-    governingLaw: 'Acte Uniforme OHADA portant sur le Droit Commercial Général (AUDCG)',
-    rent: 40000,
-    deposit: 80000,
-    advanceMonths: 2,
-    charges: 2000,
-    utilitiesDeposit: 15000,
-    totalDueAtEntry: 137000,
-    startDate: '01/09/2026',
-    endDate: '31/08/2027',
-    durationMonths: 12,
-    status: 'actif',
-    signedByLandlord: true,
-    signedByTenant: true,
-    landlordId: 'usr-bailleur-toure',
-    landlordName: 'AÏCHA TOURÉ',
-    landlordPhone: '+229 95 88 77 66',
-    landlordWhatsapp: '+229 95 88 77 66',
-    landlordEmail: 'aicha.toure@locagestion.site',
-    landlordIfu: '3201995887766',
-    landlordAddress: 'Akpakpa Dodomè, Cotonou, Bénin',
-    landlordPaymentMethods: {
-      wave: '+229 95 88 77 66',
-      moov: '+229 95 88 77 66',
-      mtn: '+229 95 88 77 66',
-      bank: 'BJ061 01003 456789123045 88 (BOA Bénin)',
-    },
-    landlordSignature: {
-      signedBy: 'AÏCHA TOURÉ',
-      date: '01/09/2026',
-      signatureDataUrl: '',
-    },
-    tenantSignature: {
-      signedBy: 'Jojo VOG',
-      date: '01/09/2026',
-      signatureDataUrl: '',
-    },
-    transmittedAt: '01/09/2026',
-    tenantSignedAt: '01/09/2026',
-    invitationCode: 'LOCA-INV-5542',
-  },
-  {
     id: 'BAIL-2026-422',
     tenant: 'Jojo VOG',
     tenantId: 'usr-tenant-jojovog',
@@ -442,6 +329,26 @@ export function isLeaseMatchingLandlord(
   return false;
 }
 
+export function isFakeLease(l?: Partial<Lease> | null): boolean {
+  if (!l) return true;
+  if (l.id === 'BAIL-2026-BJ-17635' || l.id === 'BAIL-2026-MAG-102' || l.id === 'BAIL-2026-COM-205') return true;
+  const lName = (l.landlordName || '').trim().toLowerCase();
+  const lEmail = (l.landlordEmail || '').trim().toLowerCase();
+  if (
+    lName === 'mamadou diallo' ||
+    lName === 'aïcha touré' ||
+    lName === 'aicha toure' ||
+    lName === 'koffi mensah' ||
+    lEmail.includes('mamadou.diallo') ||
+    lEmail.includes('aicha.toure') ||
+    lEmail.includes('diallo-patrimoine') ||
+    lEmail.includes('diallo')
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export const LeaseService = {
   getLeases(): Lease[] {
     if (typeof window === 'undefined') return INITIAL_LEASES;
@@ -450,11 +357,10 @@ export const LeaseService = {
       if (stored) {
         let parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // Élimination absolue et définitive du faux mock obsolète BAIL-2026-BJ-17635 (75 000 FCFA)
-          const hadOldMock = parsed.some((l: Lease) => l.id === 'BAIL-2026-BJ-17635');
-          if (hadOldMock) {
-            parsed = parsed.filter((l: Lease) => l.id !== 'BAIL-2026-BJ-17635');
-          }
+          // Élimination absolue et définitive de tout bail fictif / démo
+          const sanitized = parsed.filter((l: Lease) => !isFakeLease(l));
+          const hadFake = sanitized.length !== parsed.length;
+          parsed = sanitized;
 
           // Si le vrai bail actif de Jojo VOG (BAIL-2026-421) n'est pas encore présent, le fusionner
           const hasRealLease = parsed.some((l: Lease) => l.id === 'BAIL-2026-421');
@@ -466,7 +372,7 @@ export const LeaseService = {
             return merged;
           }
 
-          if (hadOldMock) {
+          if (hadFake) {
             try {
               localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
             } catch (e) {}
@@ -810,9 +716,9 @@ export const LeaseService = {
       tenantName: tenantName,
       unit: updatedLease.unit,
       property: updatedLease.property,
-      emailSentTo: 'diallo.patrimoine@afrique-gestion.com',
+      emailSentTo: updatedLease.landlordEmail || 'jobovog@gmail.com',
       emailDelivered: {
-        to: 'diallo.patrimoine@afrique-gestion.com',
+        to: updatedLease.landlordEmail || 'jobovog@gmail.com',
         from: 'baux@locagestion.site',
         subject: `[Bail Contresigné] ${leaseId} — ${tenantName} (${updatedLease.unit})`,
         date: nowFormatted,

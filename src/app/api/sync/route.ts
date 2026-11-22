@@ -77,17 +77,80 @@ function writeJsonFile<T>(filename: string, data: T) {
   } catch (e) {}
 }
 
+function isFakeServerLease(l: any): boolean {
+  if (!l || !l.id) return true;
+  if (l.id === 'BAIL-2026-BJ-17635' || l.id === 'BAIL-2026-MAG-102' || l.id === 'BAIL-2026-COM-205') return true;
+  const lName = (l.landlordName || '').trim().toLowerCase();
+  const lEmail = (l.landlordEmail || '').trim().toLowerCase();
+  if (
+    lName === 'mamadou diallo' ||
+    lName === 'aïcha touré' ||
+    lName === 'aicha toure' ||
+    lName === 'koffi mensah' ||
+    lEmail.includes('mamadou.diallo') ||
+    lEmail.includes('aicha.toure') ||
+    lEmail.includes('diallo-patrimoine') ||
+    lEmail.includes('diallo')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isFakeServerUser(u: any): boolean {
+  if (!u) return true;
+  if (
+    u.id === 'usr-bailleur-01' ||
+    u.id === 'usr-locataire-01' ||
+    u.id === 'usr-demarcheur-01' ||
+    u.id === 'usr-tenant-koffi' ||
+    u.id === 'usr-tenant-aicha'
+  ) return true;
+  const name = (u.name || '').trim().toLowerCase();
+  if (
+    name === 'mamadou diallo' ||
+    name === 'koffi mensah' ||
+    name === 'ibrahim traoré' ||
+    name === 'ibrahim traore' ||
+    name === 'aïcha touré' ||
+    name === 'aicha toure' ||
+    name === 'clarisse bakayoko' ||
+    name === 'amina diop' ||
+    name === 'fatoumata traoré' ||
+    name === 'fatoumata traore'
+  ) return true;
+  const email = (u.email || '').trim().toLowerCase();
+  if (
+    email.includes('koffi.mensah') ||
+    email.includes('aicha.toure') ||
+    email.includes('mamadou.diallo') ||
+    email.includes('diallo-patrimoine') ||
+    email.includes('fintech-africa')
+  ) return true;
+  return false;
+}
+
+function isFakeServerProperty(p: any): boolean {
+  if (!p || !p.id) return true;
+  if (p.id === 'prop-diallo-cotonou-01') return true;
+  const authorName = (p.authorName || '').trim().toLowerCase();
+  const authorEmail = (p.authorEmail || '').trim().toLowerCase();
+  if (authorName === 'mamadou diallo' || authorName === 'koffi mensah') return true;
+  if (authorEmail.includes('mamadou.diallo') || authorEmail.includes('diallo')) return true;
+  return false;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const email = searchParams.get('email')?.trim().toLowerCase();
     const matricule = searchParams.get('matricule')?.trim();
 
-    const leases = readJsonFile<any[]>(LEASES_FILE, []);
+    const leases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const notifications = readJsonFile<any[]>(NOTIFS_FILE, []);
-    const users = readJsonFile<any[]>(USERS_FILE, []);
+    const users = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
     const listings = readJsonFile<any[]>(LISTINGS_FILE, []);
-    const properties = readJsonFile<any[]>(PROPERTIES_FILE, []);
+    const properties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
 
     // Filtrage contextuel si locataire spécifique demandé, sinon envoi complet pour synchronisation globale
     return NextResponse.json({
@@ -120,19 +183,19 @@ export async function POST(req: NextRequest) {
       properties: incomingProperties,
     } = body;
 
-    // 1. Synchronisation et fusion des baux
+    // 1. Synchronisation et fusion des baux (rejet strict des baux fictifs)
     if (Array.isArray(incomingLeases) && incomingLeases.length > 0) {
-      const currentLeases = readJsonFile<any[]>(LEASES_FILE, []);
+      const currentLeases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
       const mergedMap = new Map<string, any>();
-      // Déposer d'abord les baux serveur (en purgeant l'ancien mock obsolète BAIL-2026-BJ-17635)
+      // Déposer d'abord les baux serveur authentiques
       currentLeases.forEach((l) => {
-        if (l && l.id && l.id !== 'BAIL-2026-BJ-17635') {
+        if (l && l.id && !isFakeServerLease(l)) {
           mergedMap.set(l.id, l);
         }
       });
-      // Écraser ou ajouter avec les baux entrants récents (en rejetant l'ancien mock obsolète)
+      // Écraser ou ajouter avec les baux entrants récents authentiques
       incomingLeases.forEach((l) => {
-        if (l && l.id && l.id !== 'BAIL-2026-BJ-17635') {
+        if (l && l.id && !isFakeServerLease(l)) {
           const existing = mergedMap.get(l.id);
           // Si le bail existe déjà, préserver ou fusionner les signatures
           if (existing) {
@@ -161,8 +224,8 @@ export async function POST(req: NextRequest) {
     }
 
     // 3. Synchronisation de l'utilisateur avec garantie d'unicité absolue
-    if (incomingUser && incomingUser.email) {
-      const currentUsers = readJsonFile<any[]>(USERS_FILE, []);
+    if (incomingUser && incomingUser.email && !isFakeServerUser(incomingUser)) {
+      const currentUsers = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
       const cleanEmail = incomingUser.email.trim().toLowerCase();
       const idx = currentUsers.findIndex(
         (u) => u.email && u.email.trim().toLowerCase() === cleanEmail
@@ -241,13 +304,13 @@ export async function POST(req: NextRequest) {
 
     // 5. Synchronisation et fusion des propriétés / patrimoine immobilier
     if (Array.isArray(incomingProperties) && incomingProperties.length > 0) {
-      const currentProperties = readJsonFile<any[]>(PROPERTIES_FILE, []);
+      const currentProperties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
       const propsMap = new Map<string, any>();
       currentProperties.forEach((p) => {
-        if (p && p.id) propsMap.set(p.id, p);
+        if (p && p.id && !isFakeServerProperty(p)) propsMap.set(p.id, p);
       });
       incomingProperties.forEach((p) => {
-        if (p && p.id) {
+        if (p && p.id && !isFakeServerProperty(p)) {
           const existing = propsMap.get(p.id);
           if (existing) {
             propsMap.set(p.id, { ...existing, ...p });
@@ -261,10 +324,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Retourner l'état unifié complet
-    const finalLeases = readJsonFile<any[]>(LEASES_FILE, []);
+    const finalLeases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const finalNotifs = readJsonFile<any[]>(NOTIFS_FILE, []);
-    const finalUsers = readJsonFile<any[]>(USERS_FILE, []);
-    const finalProperties = readJsonFile<any[]>(PROPERTIES_FILE, []);
+    const finalUsers = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
+    const finalProperties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
 
     return NextResponse.json({
       success: true,

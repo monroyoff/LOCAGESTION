@@ -113,7 +113,7 @@ export default function DeleteAccountPage() {
                     required
                     value={formData.fullName}
                     onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                    placeholder="Ex: Koffi Mensah"
+                    placeholder="Ex: Nom & Prénoms"
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-rose-500 transition"
                   />
                 </div>
@@ -127,7 +127,7 @@ export default function DeleteAccountPage() {
                     required
                     value={formData.identifier}
                     onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
-                    placeholder="Ex: koffi@gmail.com ou +229 97 00 00 00"
+                    placeholder="Ex: contact@email.com ou +229 01 95 00 00 00"
                     className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-rose-500 transition"
                   />
                 </div>

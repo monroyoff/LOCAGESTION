@@ -48,49 +48,29 @@ export const INITIAL_DECLARED_PAYMENTS: PaymentTransaction[] = [
     status: 'paye',
     isVerified: true,
   },
-  {
-    id: 'pay-diallo-002',
-    receiptNumber: 'DEC-2026-1021',
-    leaseId: 'BAIL-2026-MAG-102',
-    tenantId: 'usr-tenant-jojovog',
-    tenantName: 'Jojo VOG',
-    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-    tenantPhone: '+229 97 00 12 34',
-    tenantEmail: 'jojovog007@gmail.com',
-    propertyName: 'ENTREPÔT & MAGASINS DU PORT',
-    unitNumber: 'Magasin A4 (Stockage Marchandises • 70 m²)',
-    landlordName: 'MAMADOU DIALLO',
-    landlordId: 'usr-bailleur-diallo',
-    amount: 65000,
-    expectedAmount: 65000,
-    period: 'Novembre 2026',
-    paymentDate: '02/11/2026',
-    method: 'mtn',
-    status: 'paye',
-    isVerified: true,
-  },
-  {
-    id: 'pay-toure-003',
-    receiptNumber: 'DEC-2026-2051',
-    leaseId: 'BAIL-2026-COM-205',
-    tenantId: 'usr-tenant-jojovog',
-    tenantName: 'Jojo VOG',
-    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
-    tenantPhone: '+229 97 00 12 34',
-    tenantEmail: 'jojovog007@gmail.com',
-    propertyName: 'GALERIE COMMERCIALE LES PALMIERS',
-    unitNumber: 'Boutique N° 12 (Emplacement Commercial • 30 m²)',
-    landlordName: 'AÏCHA TOURÉ',
-    landlordId: 'usr-bailleur-toure',
-    amount: 40000,
-    expectedAmount: 40000,
-    period: 'Novembre 2026',
-    paymentDate: '03/11/2026',
-    method: 'moov',
-    status: 'paye',
-    isVerified: true,
-  },
 ];
+
+export function isFakePayment(p?: Partial<PaymentTransaction> | null): boolean {
+  if (!p) return true;
+  if (
+    p.id === 'pay-diallo-002' ||
+    p.id === 'pay-toure-003' ||
+    p.leaseId === 'BAIL-2026-MAG-102' ||
+    p.leaseId === 'BAIL-2026-COM-205'
+  ) return true;
+  const lName = (p.landlordName || '').trim().toLowerCase();
+  const tName = (p.tenantName || '').trim().toLowerCase();
+  if (
+    lName === 'mamadou diallo' ||
+    lName === 'aïcha touré' ||
+    lName === 'aicha toure' ||
+    tName === 'koffi mensah' ||
+    tName === 'aïcha touré' ||
+    tName === 'clarisse bakayoko' ||
+    tName === 'amina diop'
+  ) return true;
+  return false;
+}
 
 /**
  * Vérifie de façon étanche et déterministe si un paiement/quittance appartient à un locataire
@@ -213,11 +193,21 @@ export const PaymentService = {
       if (saved) {
         let parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
+          let hasMutated = false;
+          // Élimination des faux paiements démo
+          const sanitized = parsed.filter((p: PaymentTransaction) => !isFakePayment(p));
+          if (sanitized.length !== parsed.length) {
+            hasMutated = true;
+            parsed = sanitized;
+          }
           const missing = INITIAL_DECLARED_PAYMENTS.filter(
             (initP) => !parsed.some((p: PaymentTransaction) => p.id === initP.id || p.receiptNumber === initP.receiptNumber)
           );
           if (missing.length > 0) {
             parsed = [...missing, ...parsed];
+            hasMutated = true;
+          }
+          if (hasMutated) {
             try {
               localStorage.setItem(STORAGE_KEY_DECLARED, JSON.stringify(parsed));
             } catch (e) {}
@@ -252,7 +242,13 @@ export const PaymentService = {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          return parsed;
+          const sanitized = parsed.filter((p: PaymentTransaction) => !isFakePayment(p));
+          if (sanitized.length !== parsed.length) {
+            try {
+              localStorage.setItem(STORAGE_KEY_VERIFIED, JSON.stringify(sanitized));
+            } catch (e) {}
+          }
+          return sanitized;
         }
       }
     } catch (e) {

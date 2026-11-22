@@ -1573,7 +1573,7 @@ export default function TenantsPage() {
                       required
                       value={inviteLastName}
                       onChange={(e) => setInviteLastName(e.target.value)}
-                      placeholder="Ex: Touré, Mensah..."
+                      placeholder="Ex: VOG, Djigla..."
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                     />
                   </div>
@@ -1587,7 +1587,7 @@ export default function TenantsPage() {
                       required
                       value={inviteFirstName}
                       onChange={(e) => setInviteFirstName(e.target.value)}
-                      placeholder="Ex: Aïcha, Kofi..."
+                      placeholder="Ex: Jojo, Théodora..."
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                     />
                   </div>
