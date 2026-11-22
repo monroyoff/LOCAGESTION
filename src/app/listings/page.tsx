@@ -1132,19 +1132,6 @@ export default function ListingsPage() {
                 </span>
               </button>
             </div>
-
-            {activeView === 'my_listings' && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPublishModalOpen(true)}
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>Nouvelle annonce</span>
-                </button>
-              </div>
-            )}
           </div>
 
           {activeView === 'my_listings' ? (
