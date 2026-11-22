@@ -7,7 +7,17 @@ import { LeaseService } from './lease-service';
 const STORAGE_KEY = 'locagestion:custom_listings';
 const TRASH_STORAGE_KEY = 'locagestion:trash_listings';
 
-const SEED_CUSTOM_LISTINGS: RentalListing[] = [];
+export const PLATFORM_CANONICAL_LISTING_IDS = new Set([
+  'list-bj-uac-calavi',
+  'list-bj-haie-vive',
+  'list-bj-fidjrosse',
+  'list-bj-akpakpa',
+  'list-ci-cocody',
+  'list-sn-almadies',
+  'list-tg-lome',
+]);
+
+const SEED_CUSTOM_LISTINGS: RentalListing[] = MOCK_RENTAL_LISTINGS;
 
 /**
  * Détecte si une annonce est une fausse annonce de démo/mock héritée
@@ -15,68 +25,32 @@ const SEED_CUSTOM_LISTINGS: RentalListing[] = [];
 export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
   if (!l) return true;
   const id = (l.id || '').trim();
+
+  // 1. Les 7 annonces certifiées vitrines de la plateforme sont strictement préservées
+  if (PLATFORM_CANONICAL_LISTING_IDS.has(id)) {
+    return false;
+  }
+
+  // Annonces fictives explicites de test
   if (
-    id === 'list-bj-uac-calavi' ||
-    id === 'list-bj-haie-vive' ||
-    id === 'list-bj-fidjrosse' ||
-    id === 'list-bj-akpakpa' ||
-    id === 'list-ci-cocody' ||
-    id === 'list-sn-almadies' ||
-    id === 'list-tg-lome' ||
-    id.startsWith('pub-bailleur-') ||
-    id.startsWith('pub-demarcheur-') ||
-    id.startsWith('pub-locataire-') ||
-    id === 'pub-1' ||
-    id === 'pub-2' ||
-    id === 'pub-3' ||
-    id === 'pub-4' ||
-    id.startsWith('demo-')
+    id.startsWith('demo-') ||
+    id.startsWith('test-') ||
+    id.startsWith('fictif-')
   ) {
     return true;
   }
-  if (
-    l.authorId === 'usr-bailleur-01' ||
-    l.authorId === 'usr-demarcheur-01' ||
-    l.authorId === 'usr-locataire-01' ||
-    l.authorId === 'usr-agence-atlantique' ||
-    l.authorId === 'usr-demarcheur-cotonou' ||
-    l.authorId === 'usr-demarcheur-abidjan' ||
-    l.authorId === 'usr-demarcheur-dakar' ||
-    l.authorId === 'usr-demarcheur-lome'
-  ) {
-    return true;
-  }
+
+  // Anciens profils démo fictifs
   const authorName = (l.authorName || '').trim().toLowerCase();
   const authorEmail = (l.authorEmail || '').trim().toLowerCase();
   if (
-    authorName === 'ibrahim traoré' ||
-    authorName === 'ibrahim traore' ||
-    authorName === 'cabinet immobilier atlantique' ||
-    authorName === 'agence immobilière bénin littoral' ||
-    authorName === 'agence immobiliere benin littoral' ||
-    authorName === 'agence ivoire logement' ||
-    authorName === 'agence teranga immobilier' ||
-    authorName === 'cabinet immobilier lomé express' ||
-    authorName === 'cabinet immobilier lome express' ||
     authorName === 'mamadou diallo' ||
-    authorName === 'koffi mensah' ||
-    authorName === 'aïcha touré' ||
-    authorName === 'aicha toure'
-  ) {
-    return true;
-  }
-  if (
-    authorEmail.includes('atlantiqueprestige.bj') ||
-    authorEmail.includes('littoralimmo.bj') ||
-    authorEmail.includes('ivoirelogis.ci') ||
-    authorEmail.includes('terangaimmo.sn') ||
-    authorEmail.includes('lome-immo.tg') ||
     authorEmail.includes('mamadou.diallo') ||
-    authorEmail.includes('koffi.mensah') ||
-    authorEmail.includes('aicha.toure')
+    authorEmail.includes('diallo-patrimoine')
   ) {
     return true;
   }
+
   return false;
 }
 

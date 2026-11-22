@@ -184,7 +184,7 @@ export function isUserConversationAuthor(conv: Conversation, user?: AuthUser | a
         if (listing.authorCompany && uCompany && listing.authorCompany.trim().toLowerCase() === uCompany) return true;
         if (listing.authorName && uName && listing.authorName.trim().toLowerCase() === uName) return true;
       }
-    } catch {}
+    } catch { }
   }
 
   return false;
@@ -452,12 +452,12 @@ export const ConversationService = {
           if (sanitized.length !== parsed.length) {
             try {
               localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(sanitized));
-            } catch {}
+            } catch { }
           }
           return sanitized;
         }
       }
-    } catch {}
+    } catch { }
     return [];
   },
 
@@ -473,6 +473,6 @@ export const ConversationService = {
       localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(conversations));
       window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
       window.dispatchEvent(new Event('storage'));
-    } catch {}
+    } catch { }
   },
 };

@@ -54,7 +54,7 @@ export const SyncService = {
         try {
           const stored = localStorage.getItem(LEASES_STORAGE_KEY);
           if (stored) localLeases = JSON.parse(stored);
-        } catch (e) {}
+        } catch (e) { }
 
         // Purger immédiatement et définitivement les faux baux de démo (BAIL-2026-MAG-102, BAIL-2026-COM-205, etc.)
         const sanitizedLocal = localLeases.filter((l) => !isFakeLease(l));
@@ -101,7 +101,7 @@ export const SyncService = {
         try {
           const stored = localStorage.getItem(TENANT_NOTIFS_KEY);
           if (stored) localTenantNotifs = JSON.parse(stored);
-        } catch (e) {}
+        } catch (e) { }
 
         const notifMap = new Map<string, TenantNotification>();
         localTenantNotifs.forEach((n) => notifMap.set(n.id, n));
@@ -130,7 +130,7 @@ export const SyncService = {
         try {
           const stored = localStorage.getItem(USERS_STORAGE_KEY);
           if (stored) localUsers = JSON.parse(stored);
-        } catch (e) {}
+        } catch (e) { }
 
         let usersUpdated = false;
         // Purger les comptes démo locaux
@@ -171,7 +171,7 @@ export const SyncService = {
         try {
           const stored = localStorage.getItem(LISTINGS_STORAGE_KEY);
           if (stored) localListings = JSON.parse(stored);
-        } catch (e) {}
+        } catch (e) { }
 
         let listingsUpdated = false;
         // Purger les annonces démo locales
@@ -193,6 +193,16 @@ export const SyncService = {
             listingsUpdated = true;
           }
         });
+
+        // Synchronisation bidirectionnelle instantanée : si le client local détient des annonces authentiques non présentes sur le serveur
+        const unpushed = localListings.filter((loc) => !data.listings.some((sl: any) => sl && sl.id === loc.id));
+        if (unpushed.length > 0) {
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ listings: Array.from(listingMap.values()) }),
+          }).catch(() => {});
+        }
 
         if (listingsUpdated) {
           const mergedListings = Array.from(listingMap.values());
@@ -217,13 +227,15 @@ export const SyncService = {
 
   /**
    * Synchronisation montante : pousse immédiatement toute modification
-   * (nouveau bail, contresignature, notification, inscription) vers le serveur central.
+   * (nouveau bail, contresignature, notification, inscription, annonce) vers le serveur central.
    */
   async push(payload: {
     leases?: Lease[];
     notifications?: any[];
     user?: AuthUser;
     removedListingId?: string;
+    listings?: RentalListing[];
+    properties?: any[];
   }): Promise<boolean> {
     if (typeof window === 'undefined') return false;
 

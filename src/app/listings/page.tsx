@@ -21,6 +21,7 @@ import {
   isListingFromLast7Days,
 } from '@/lib/services/listings-service';
 import { LeaseService, LandlordNotification } from '@/lib/services/lease-service';
+import { SyncService } from '@/lib/services/sync-service';
 import { notifyAction, notifyPublish } from '@/lib/notifications/action-notifier';
 import {
   getUserResidenceCountry,
@@ -237,6 +238,11 @@ export default function ListingsPage() {
     };
 
     loadListings();
+    // Synchronisation montante/descendante immédiate avec le serveur pour garantir l'affichage instantané sur mobile
+    SyncService.sync().then(() => {
+      loadListings();
+    });
+
     window.addEventListener('locagestion:listings_updated', loadListings);
     window.addEventListener('storage', loadListings);
     return () => {

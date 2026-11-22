@@ -140,65 +140,45 @@ function isFakeServerProperty(p: any): boolean {
   return false;
 }
 
+const PLATFORM_CANONICAL_LISTING_IDS = new Set([
+  'list-bj-uac-calavi',
+  'list-bj-haie-vive',
+  'list-bj-fidjrosse',
+  'list-bj-akpakpa',
+  'list-ci-cocody',
+  'list-sn-almadies',
+  'list-tg-lome',
+]);
+
 function isFakeServerListing(l: any): boolean {
   if (!l || !l.id) return true;
   const id = String(l.id).trim();
+
+  // 1. Les 7 annonces certifiées vitrines de la plateforme sont strictement préservées
+  if (PLATFORM_CANONICAL_LISTING_IDS.has(id)) {
+    return false;
+  }
+
+  // Annonces fictives explicites de test
   if (
-    id === 'list-bj-uac-calavi' ||
-    id === 'list-bj-haie-vive' ||
-    id === 'list-bj-fidjrosse' ||
-    id === 'list-bj-akpakpa' ||
-    id === 'list-ci-cocody' ||
-    id === 'list-sn-almadies' ||
-    id === 'list-tg-lome' ||
-    id.startsWith('pub-') ||
-    id.startsWith('demo-')
+    id.startsWith('demo-') ||
+    id.startsWith('test-') ||
+    id.startsWith('fictif-')
   ) {
     return true;
   }
-  if (
-    l.authorId === 'usr-bailleur-01' ||
-    l.authorId === 'usr-demarcheur-01' ||
-    l.authorId === 'usr-locataire-01' ||
-    l.authorId === 'usr-agence-atlantique' ||
-    l.authorId === 'usr-demarcheur-cotonou' ||
-    l.authorId === 'usr-demarcheur-abidjan' ||
-    l.authorId === 'usr-demarcheur-dakar' ||
-    l.authorId === 'usr-demarcheur-lome'
-  ) {
-    return true;
-  }
+
+  // Anciens profils démo fictifs
   const authorName = (l.authorName || '').trim().toLowerCase();
   const authorEmail = (l.authorEmail || '').trim().toLowerCase();
   if (
-    authorName === 'ibrahim traoré' ||
-    authorName === 'ibrahim traore' ||
-    authorName === 'cabinet immobilier atlantique' ||
-    authorName === 'agence immobilière bénin littoral' ||
-    authorName === 'agence immobiliere benin littoral' ||
-    authorName === 'agence ivoire logement' ||
-    authorName === 'agence teranga immobilier' ||
-    authorName === 'cabinet immobilier lomé express' ||
-    authorName === 'cabinet immobilier lome express' ||
     authorName === 'mamadou diallo' ||
-    authorName === 'koffi mensah' ||
-    authorName === 'aïcha touré' ||
-    authorName === 'aicha toure'
-  ) {
-    return true;
-  }
-  if (
-    authorEmail.includes('atlantiqueprestige.bj') ||
-    authorEmail.includes('littoralimmo.bj') ||
-    authorEmail.includes('ivoirelogis.ci') ||
-    authorEmail.includes('terangaimmo.sn') ||
-    authorEmail.includes('lome-immo.tg') ||
     authorEmail.includes('mamadou.diallo') ||
-    authorEmail.includes('koffi.mensah') ||
-    authorEmail.includes('aicha.toure')
+    authorEmail.includes('diallo-patrimoine')
   ) {
     return true;
   }
+
   return false;
 }
 
@@ -211,7 +191,22 @@ export async function GET(req: NextRequest) {
     const leases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const notifications = readJsonFile<any[]>(NOTIFS_FILE, []);
     const users = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
-    const listings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
+    let listings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
+
+    if (listings.length === 0) {
+      try {
+        const dataPath = path.join(DATA_DIR, LISTINGS_FILE);
+        if (fs.existsSync(dataPath)) {
+          const raw = fs.readFileSync(dataPath, 'utf8');
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            listings = parsed.filter((l) => !isFakeServerListing(l));
+            writeJsonFile(LISTINGS_FILE, listings);
+          }
+        }
+      } catch (e) {}
+    }
+
     const properties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
 
     // Filtrage contextuel si locataire spécifique demandé, sinon envoi complet pour synchronisation globale
