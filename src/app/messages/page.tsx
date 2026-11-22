@@ -316,6 +316,14 @@ function MessagesContent() {
       try {
         localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(updated));
         window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+        window.dispatchEvent(new Event('storage'));
+
+        // Synchronisation montante immédiate vers le serveur (Web <-> Mobile)
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversations: updated }),
+        }).catch(() => {});
       } catch {}
     }
   };

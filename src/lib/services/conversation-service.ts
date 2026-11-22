@@ -51,8 +51,93 @@ export interface Conversation {
 
 export const STORAGE_KEY_CONVERSATIONS = 'locagestion:conversations:v1';
 
+export const INITIAL_CONVERSATIONS: Conversation[] = [
+  {
+    id: 'conv-jojovog-voglossou-01',
+    listingId: 'list-bj-allada-01',
+    tenantName: 'Jojo VOG',
+    tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+    visitorId: 'usr-tenant-jojovog',
+    visitorName: 'Jojo VOG',
+    visitorEmail: 'jojovog007@gmail.com',
+    visitorPhone: '+229 97 00 12 34',
+    visitorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+    publisherName: 'VOGLOSSOU JOHANE',
+    publisherAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+    authorId: 'usr-bailleur-voglossou',
+    authorName: 'VOGLOSSOU JOHANE',
+    authorCompany: 'MONROY AGENCY',
+    authorEmail: 'jobovog@gmail.com',
+    authorPhone: '+229 01 95 44 44 30',
+    authorRole: 'bailleur',
+    isOnline: true,
+    propertyTitle: 'Chambre Salon Sanitaire Moderne à Dogoudo',
+    propertyUnit: 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
+    propertySurface: '45 m²',
+    propertyPrice: 25000,
+    propertyThumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
+    lastMessage: "c'est parfait",
+    lastMessageTime: 'À l’instant',
+    unreadCount: 0,
+    hasUnread: false,
+    isRead: true,
+    isArchived: false,
+    messages: [
+      {
+        id: 'msg-001',
+        sender: 'them',
+        senderRole: 'locataire',
+        senderName: 'Jojo VOG',
+        senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+        senderId: 'usr-tenant-jojovog',
+        text: 'Bonjour M. Voglossou, je vous contacte concernant le logement.',
+        time: '10:15',
+        status: 'read',
+      },
+      {
+        id: 'msg-002',
+        sender: 'me',
+        senderRole: 'bailleur',
+        senderName: 'VOGLOSSOU JOHANE',
+        senderAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+        senderId: 'usr-bailleur-voglossou',
+        text: 'Bonjour Jojo, le logement est bien disponible et le contrat de bail est prêt.',
+        time: '10:20',
+        status: 'read',
+      },
+      {
+        id: 'msg-003',
+        sender: 'them',
+        senderRole: 'locataire',
+        senderName: 'Jojo VOG',
+        senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
+        senderId: 'usr-tenant-jojovog',
+        text: "c'est parfait",
+        time: '10:25',
+        status: 'read',
+      },
+    ],
+  },
+];
+
 export function isFakeConversation(c: any): boolean {
   if (!c) return true;
+
+  // Protection absolue des conversations authentiques des comptes officiels
+  const aEmail = (c.authorEmail || '').trim().toLowerCase();
+  const vEmail = (c.visitorEmail || '').trim().toLowerCase();
+  const aId = (c.authorId || '').trim();
+  const vId = (c.visitorId || '').trim();
+  if (
+    aEmail === 'jobovog@gmail.com' ||
+    vEmail === 'jojovog007@gmail.com' ||
+    vEmail === 'theodoradjigla@gmail.com' ||
+    aId === 'usr-bailleur-voglossou' ||
+    vId === 'usr-tenant-jojovog' ||
+    vId === 'usr-tenant-theodora'
+  ) {
+    return false;
+  }
   const name = (c.tenantName || c.visitorName || '').trim().toLowerCase();
   if (
     name === 'koffi mensah' ||
@@ -442,7 +527,7 @@ export function getUnreadConversationsCount(
 
 export const ConversationService = {
   getAllConversations(): Conversation[] {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') return INITIAL_CONVERSATIONS;
     try {
       const stored = localStorage.getItem(STORAGE_KEY_CONVERSATIONS);
       if (stored) {
@@ -454,11 +539,17 @@ export const ConversationService = {
               localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(sanitized));
             } catch { }
           }
-          return sanitized;
+          if (sanitized.length > 0) return sanitized;
         }
       }
+      if (INITIAL_CONVERSATIONS.length > 0) {
+        try {
+          localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(INITIAL_CONVERSATIONS));
+        } catch { }
+        return INITIAL_CONVERSATIONS;
+      }
     } catch { }
-    return [];
+    return INITIAL_CONVERSATIONS;
   },
 
   getConversationsForUser(user?: AuthUser | any | null): Conversation[] {
@@ -473,6 +564,13 @@ export const ConversationService = {
       localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(conversations));
       window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
       window.dispatchEvent(new Event('storage'));
+
+      // Synchronisation montante instantanée Web <-> Mobile
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversations }),
+      }).catch(() => {});
     } catch { }
   },
 };

@@ -838,6 +838,13 @@ export default function ListingsPage() {
 
       localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(existingList));
 
+      // Synchronisation montante immédiate vers le serveur (Web <-> Mobile)
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversations: existingList }),
+      }).catch(() => {});
+
       // Notification pour le Bailleur / Démarcheur dans sa cloche
       const notifId = `notif-msg-${Date.now()}`;
       const landlordNotif: LandlordNotification = {
@@ -1039,6 +1046,13 @@ export default function ListingsPage() {
       }
 
       localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(existingList));
+
+      // Synchronisation montante immédiate vers le serveur (Web <-> Mobile)
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ conversations: existingList }),
+      }).catch(() => {});
       window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
       window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
       window.dispatchEvent(new Event('storage'));

@@ -5,7 +5,7 @@ import { TenantNotification } from './tenant-notification-service';
 import { AuthUser, RentalListing, Property } from '@/lib/types';
 import { isFakeDemoUser } from './auth-service';
 import { isFakeListing } from './listings-service';
-import { isFakeConversation } from './conversation-service';
+import { isFakeConversation, INITIAL_CONVERSATIONS } from './conversation-service';
 import { isFakeProperty } from './property-service';
 import { isFakePayment } from './payment-service';
 
@@ -235,6 +235,9 @@ export const SyncService = {
         } catch (e) {}
 
         const convMap = new Map<string, any>();
+        if (INITIAL_CONVERSATIONS && Array.isArray(INITIAL_CONVERSATIONS)) {
+          INITIAL_CONVERSATIONS.forEach((ic) => convMap.set(ic.id, ic));
+        }
         localConvs.forEach((c) => {
           if (c && c.id && !isFakeConversation(c)) convMap.set(c.id, c);
         });
