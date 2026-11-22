@@ -5,11 +5,12 @@ import { TenantNotification } from './tenant-notification-service';
 import { AuthUser, RentalListing } from '@/lib/types';
 import { isFakeDemoUser } from './auth-service';
 import { isFakeListing } from './listings-service';
+import { isFakeConversation } from './conversation-service';
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
 const TENANT_NOTIFS_KEY = 'locagestion:tenant_notifications:v1';
 const LANDLORD_NOTIFS_KEY = 'locagestion:landlord_notifications:v1';
-const USERS_STORAGE_KEY = 'locagestion:users:v1';
+const USERS_STORAGE_KEY = 'locagestion:auth:users:v1';
 const LISTINGS_STORAGE_KEY = 'locagestion:custom_listings';
 
 let syncIntervalId: NodeJS.Timeout | null = null;
@@ -128,44 +129,44 @@ export const SyncService = {
       if (Array.isArray(data.users)) {
         let localUsers: AuthUser[] = [];
         try {
-          const stored = localStorage.getItem(USERS_STORAGE_KEY);
+          const stored = localStorage.getItem(USERS_STORAGE_KEY) || localStorage.getItem('locagestion:users:v1');
           if (stored) localUsers = JSON.parse(stored);
         } catch (e) { }
 
-        let usersUpdated = false;
-        // Purger les comptes démo locaux
+        // Purger immédiatement et définitivement tous les comptes démo locaux
         const sanitizedUsers = localUsers.filter((u) => !isFakeDemoUser(u));
-        if (sanitizedUsers.length !== localUsers.length) {
-          localUsers = sanitizedUsers;
-          usersUpdated = true;
-        }
+        const serverUsers = data.users.filter((u: any) => !isFakeDemoUser(u));
 
         const userMap = new Map<string, AuthUser>();
-        localUsers.forEach((u) => {
+        serverUsers.forEach((u: any) => {
           if (u.email) userMap.set(u.email.toLowerCase(), u);
         });
-
-        data.users.forEach((serverUser: AuthUser) => {
-          if (!serverUser || !serverUser.email || isFakeDemoUser(serverUser)) return;
-          const key = serverUser.email.toLowerCase();
-          const local = userMap.get(key);
-          if (!local) {
-            userMap.set(key, serverUser);
-            usersUpdated = true;
-          } else if (local.matricule !== serverUser.matricule) {
-            // Toujours aligner sur le matricule officiel serveur
-            userMap.set(key, { ...local, matricule: serverUser.matricule });
-            usersUpdated = true;
+        sanitizedUsers.forEach((u) => {
+          if (u.email && !userMap.has(u.email.toLowerCase())) {
+            userMap.set(u.email.toLowerCase(), u);
           }
         });
 
-        if (usersUpdated) {
-          localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(Array.from(userMap.values())));
-          window.dispatchEvent(new Event('locagestion:auth_changed'));
-        }
+        const finalUsers = Array.from(userMap.values());
+        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(finalUsers));
+        localStorage.removeItem('locagestion:users:v1');
+        window.dispatchEvent(new Event('locagestion:auth_changed'));
+
+        // Vérifier et purger la session active si elle appartient à un compte fictif
+        try {
+          const sessionRaw = localStorage.getItem('locagestion:auth:session:v1');
+          if (sessionRaw) {
+            const parsedSession = JSON.parse(sessionRaw);
+            if (parsedSession && isFakeDemoUser(parsedSession)) {
+              localStorage.removeItem('locagestion:auth:session:v1');
+              localStorage.removeItem('locagestion:active_space');
+              window.dispatchEvent(new Event('locagestion:auth_changed'));
+            }
+          }
+        } catch (e) {}
       }
 
-      // 4. Synchronisation des ANNONCES (Catalogues & Publications Web & Mobile)
+      // 4. Synchronisation des ANNONCES (Purge complète des annonces fictives Web & Mobile)
       if (Array.isArray(data.listings)) {
         let localListings: RentalListing[] = [];
         try {
@@ -173,29 +174,20 @@ export const SyncService = {
           if (stored) localListings = JSON.parse(stored);
         } catch (e) { }
 
-        let listingsUpdated = false;
-        // Purger les annonces démo locales
-        const sanitizedListings = localListings.filter((l) => !isFakeListing(l));
-        if (sanitizedListings.length !== localListings.length) {
-          localListings = sanitizedListings;
-          listingsUpdated = true;
-        }
+        // Purger immédiatement et définitivement toutes les annonces démo locales et serveur
+        const sanitizedLocal = localListings.filter((l) => !isFakeListing(l));
+        const sanitizedServer = (data.listings || []).filter((l: any) => !isFakeListing(l));
 
         const listingMap = new Map<string, RentalListing>();
-        localListings.forEach((l) => {
-          if (l && l.id && !isFakeListing(l)) listingMap.set(l.id, l);
+        sanitizedLocal.forEach((l) => {
+          if (l && l.id) listingMap.set(l.id, l);
+        });
+        sanitizedServer.forEach((l: any) => {
+          if (l && l.id) listingMap.set(l.id, l);
         });
 
-        data.listings.forEach((serverListing: RentalListing) => {
-          if (!serverListing || !serverListing.id || isFakeListing(serverListing)) return;
-          if (!listingMap.has(serverListing.id)) {
-            listingMap.set(serverListing.id, serverListing);
-            listingsUpdated = true;
-          }
-        });
-
-        // Synchronisation bidirectionnelle instantanée : si le client local détient des annonces authentiques non présentes sur le serveur
-        const unpushed = localListings.filter((loc) => !data.listings.some((sl: any) => sl && sl.id === loc.id));
+        // Remontée bidirectionnelle instantanée uniquement pour les annonces authentiques créées localement
+        const unpushed = sanitizedLocal.filter((loc) => !sanitizedServer.some((sl: any) => sl.id === loc.id));
         if (unpushed.length > 0) {
           fetch('/api/sync', {
             method: 'POST',
@@ -204,13 +196,54 @@ export const SyncService = {
           }).catch(() => {});
         }
 
-        if (listingsUpdated) {
-          const mergedListings = Array.from(listingMap.values());
-          localStorage.setItem(LISTINGS_STORAGE_KEY, JSON.stringify(mergedListings));
-          window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
-          window.dispatchEvent(new Event('storage'));
-        }
+        const mergedListings = Array.from(listingMap.values());
+        localStorage.setItem(LISTINGS_STORAGE_KEY, JSON.stringify(mergedListings));
+        window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
+        window.dispatchEvent(new Event('storage'));
       }
+
+      // 5. Purge immédiate des conversations fictives dans le stockage client
+      try {
+        const convStr = localStorage.getItem('locagestion:conversations:v1');
+        if (convStr) {
+          const convs = JSON.parse(convStr);
+          if (Array.isArray(convs)) {
+            const sanitizedConvs = convs.filter((c: any) => !isFakeConversation(c));
+            if (sanitizedConvs.length !== convs.length) {
+              localStorage.setItem('locagestion:conversations:v1', JSON.stringify(sanitizedConvs));
+              window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+            }
+          }
+        }
+      } catch (e) {}
+
+      // 6. Purge immédiate des faux locataires de test
+      try {
+        const tenStr = localStorage.getItem('locagestion:registered_tenants');
+        if (tenStr) {
+          const tenants = JSON.parse(tenStr);
+          if (Array.isArray(tenants)) {
+            const sanitizedTenants = tenants.filter((t: any) => {
+              if (!t) return false;
+              const name = (t.name || '').trim().toLowerCase();
+              return !(
+                name === 'koffi mensah' ||
+                name === 'mamadou diallo' ||
+                name === 'ibrahim traoré' ||
+                name === 'ibrahim traore' ||
+                name === 'aïcha touré' ||
+                name === 'aicha toure' ||
+                name === 'fatoumata traoré' ||
+                name === 'fatoumata traore' ||
+                name === 'amina diop'
+              );
+            });
+            if (sanitizedTenants.length !== tenants.length) {
+              localStorage.setItem('locagestion:registered_tenants', JSON.stringify(sanitizedTenants));
+            }
+          }
+        }
+      } catch (e) {}
 
       isSyncing = false;
       return {

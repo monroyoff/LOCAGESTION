@@ -402,12 +402,18 @@ export function arePhoneNumbersEqual(phoneA?: string | null, phoneB?: string | n
 
 export function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
   if (!u) return false;
+  const id = (u.id || '').trim();
   if (
-    u.id === 'usr-bailleur-01' ||
-    u.id === 'usr-locataire-01' ||
-    u.id === 'usr-demarcheur-01' ||
-    u.id === 'usr-tenant-koffi' ||
-    u.id === 'usr-tenant-aicha'
+    id === 'usr-bailleur-01' ||
+    id === 'usr-locataire-01' ||
+    id === 'usr-demarcheur-01' ||
+    id === 'usr-tenant-koffi' ||
+    id === 'usr-tenant-aicha' ||
+    id === 'usr-agence-atlantique' ||
+    id === 'usr-demarcheur-cotonou' ||
+    id === 'usr-demarcheur-abidjan' ||
+    id === 'usr-demarcheur-dakar' ||
+    id === 'usr-demarcheur-lome'
   ) return true;
   const cleanName = (u.name || '').trim().toLowerCase();
   if (
@@ -420,17 +426,32 @@ export function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
     cleanName === 'clarisse bakayoko' ||
     cleanName === 'amina diop' ||
     cleanName === 'fatoumata traoré' ||
-    cleanName === 'fatoumata traore'
+    cleanName === 'fatoumata traore' ||
+    cleanName === 'cabinet immobilier atlantique' ||
+    cleanName === 'agence immobilière bénin littoral' ||
+    cleanName === 'agence immobiliere benin littoral' ||
+    cleanName === 'agence ivoire logement' ||
+    cleanName === 'agence teranga immobilier' ||
+    cleanName === 'cabinet immobilier lomé express' ||
+    cleanName === 'cabinet immobilier lome express'
   ) return true;
-  if (u.email && (
-    u.email.toLowerCase().includes('diallo-patrimoine') ||
-    u.email.toLowerCase().includes('fintech-africa') ||
-    u.email.toLowerCase().includes('ibrahim.demarcheur') ||
-    u.email.toLowerCase().includes('demarcheur@locagestion') ||
-    u.email.toLowerCase().includes('koffi.mensah') ||
-    u.email.toLowerCase().includes('aicha.toure') ||
-    u.email.toLowerCase().includes('mamadou.diallo')
-  )) return true;
+  if (u.email) {
+    const cleanEmail = u.email.toLowerCase().trim();
+    if (
+      cleanEmail.includes('diallo-patrimoine') ||
+      cleanEmail.includes('fintech-africa') ||
+      cleanEmail.includes('ibrahim.demarcheur') ||
+      cleanEmail.includes('demarcheur@locagestion') ||
+      cleanEmail.includes('koffi.mensah') ||
+      cleanEmail.includes('aicha.toure') ||
+      cleanEmail.includes('mamadou.diallo') ||
+      cleanEmail.includes('atlantiqueprestige.bj') ||
+      cleanEmail.includes('littoralimmo.bj') ||
+      cleanEmail.includes('ivoirelogis.ci') ||
+      cleanEmail.includes('terangaimmo.sn') ||
+      cleanEmail.includes('lome-immo.tg')
+    ) return true;
+  }
   return false;
 }
 
