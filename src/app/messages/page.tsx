@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -85,7 +85,16 @@ function MessagesContent() {
     return [];
   });
 
-  const [selectedConv, setSelectedConv] = useState<Conversation | null>(null);
+  const [selectedConvId, setSelectedConvId] = useState<string | null>(() => {
+    return queryConvId || null;
+  });
+
+  const selectedConv = React.useMemo(() => {
+    if (!selectedConvId) return null;
+    return conversations.find((c) => c.id === selectedConvId) || null;
+  }, [conversations, selectedConvId]);
+
+  const handledQueryKeyRef = useRef<string | null>(null);
   const [inputText, setInputText] = useState('');
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [optionsMenuOpen, setOptionsMenuOpen] = useState(false);
@@ -156,6 +165,15 @@ function MessagesContent() {
   const selectAndMarkAsRead = (conv: Conversation) => {
     if (!isUserConversationParticipant(conv, user)) return;
 
+    setSelectedConvId(conv.id);
+    setMobileChatOpen(true);
+
+    // Mettre à jour l'URL sans rechargement pour refléter fidèlement la conversation active
+    if (typeof window !== 'undefined') {
+      handledQueryKeyRef.current = `${conv.id}:::`;
+      window.history.replaceState(null, '', `/messages?convId=${encodeURIComponent(conv.id)}`);
+    }
+
     const userUnread = getUnreadCountForCurrentUser(conv);
 
     if (userUnread > 0 || conv.hasUnread) {
@@ -165,7 +183,6 @@ function MessagesContent() {
         hasUnread: false,
         isRead: true,
       };
-      setSelectedConv(updatedConv);
       const updatedList = conversations.map((c) => (c.id === conv.id ? updatedConv : c));
       saveConversations(updatedList);
 
@@ -175,22 +192,23 @@ function MessagesContent() {
         LeaseService.markNotificationAsRead(`notif-conv-${conv.id}`);
         LeaseService.markNotificationAsRead(`notif-msg-${conv.id}`);
       }
-    } else {
-      setSelectedConv(conv);
     }
-    setMobileChatOpen(true);
   };
 
   // Désélectionner immédiatement toute conversation qui n'appartient pas à l'utilisateur
   useEffect(() => {
     if (selectedConv && user && !isUserConversationParticipant(selectedConv, user)) {
-      setSelectedConv(null);
+      setSelectedConvId(null);
     }
   }, [selectedConv, user]);
 
   // Détection des paramètres URL (convId / listingId) pour ouvrir immédiatement le dialogue
   useEffect(() => {
     if (!queryConvId && !queryListingId) return;
+
+    const queryKey = `${queryConvId || ''}:::${queryListingId || ''}`;
+    // Si cette requête URL a déjà été appliquée, ne pas la ré-exécuter (empêche tout rebond ou bascule forcée)
+    if (handledQueryKeyRef.current === queryKey) return;
 
     // 1. Recherche dans l'état actuel
     const matchInState = conversations.find(
@@ -200,6 +218,7 @@ function MessagesContent() {
     );
 
     if (matchInState) {
+      handledQueryKeyRef.current = queryKey;
       selectAndMarkAsRead(matchInState);
       return;
     }
@@ -215,6 +234,7 @@ function MessagesContent() {
             (queryListingId && c.listingId === queryListingId)
         );
         if (matchInStorage) {
+          handledQueryKeyRef.current = queryKey;
           selectAndMarkAsRead(matchInStorage);
           return;
         }
@@ -223,6 +243,7 @@ function MessagesContent() {
 
     // 3. Si aucun échange trouvé mais un listingId est fourni, instanciation automatique
     if (queryListingId) {
+      handledQueryKeyRef.current = queryKey;
       const allListings = ListingsService.getAllListings();
       const listing = allListings.find((l) => l.id === queryListingId);
       if (listing) {
@@ -278,11 +299,7 @@ function MessagesContent() {
         };
 
         const updated = [newConv, ...conversations.filter((c) => c.id !== newConv.id)];
-        setConversations(updated);
-        try {
-          localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(updated));
-          window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
-        } catch {}
+        saveConversations(updated);
         selectAndMarkAsRead(newConv);
       }
     }
@@ -421,7 +438,7 @@ function MessagesContent() {
       unreadBy: isBailleurSide ? 'locataire' : 'bailleur',
     };
 
-    setSelectedConv(updatedConv);
+    setSelectedConvId(updatedConv.id);
     saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     setInputText('');
 
@@ -506,7 +523,7 @@ function MessagesContent() {
       lastMessageTime: nowTime,
     };
 
-    setSelectedConv(updatedConv);
+    setSelectedConvId(updatedConv.id);
     saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     showToast('Document officiel attaché et transmis dans la conversation !');
   };
@@ -531,7 +548,7 @@ function MessagesContent() {
       lastMessageTime: nowTime,
     };
 
-    setSelectedConv(updatedConv);
+    setSelectedConvId(updatedConv.id);
     saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     showToast('Photo du logement transmise dans la conversation !');
   };
@@ -543,7 +560,7 @@ function MessagesContent() {
       ...selectedConv,
       isArchived: !selectedConv.isArchived,
     };
-    setSelectedConv(updatedConv);
+    setSelectedConvId(updatedConv.id);
     saveConversations(conversations.map((c) => (c.id === updatedConv.id ? updatedConv : c)));
     showToast(
       !selectedConv.isArchived
@@ -757,7 +774,12 @@ function MessagesContent() {
             <div className="px-3 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-2 sm:gap-4 bg-white/95 backdrop-blur-sm z-10 shrink-0">
               {/* Back to list on mobile */}
               <button
-                onClick={() => setMobileChatOpen(false)}
+                onClick={() => {
+                  setMobileChatOpen(false);
+                  if (typeof window !== 'undefined') {
+                    window.history.replaceState(null, '', '/messages');
+                  }
+                }}
                 className="lg:hidden p-2 rounded-xl bg-slate-100 text-slate-600 hover:text-slate-900 active:scale-95 transition-all shrink-0 cursor-pointer"
                 title="Retour aux conversations"
               >
