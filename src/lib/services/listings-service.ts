@@ -7,13 +7,130 @@ import { LeaseService } from './lease-service';
 const STORAGE_KEY = 'locagestion:custom_listings';
 const TRASH_STORAGE_KEY = 'locagestion:trash_listings';
 
-const SEED_CUSTOM_LISTINGS: RentalListing[] = [];
+const SEED_CUSTOM_LISTINGS: RentalListing[] = [
+  {
+    id: 'list-bj-allada-01',
+    referenceCode: 'A-BJ-84291',
+    title: 'Chambre Salon Sanitaire Moderne à Dogoudo',
+    propertyType: 'Chambre salon sanitaire',
+    country: 'Bénin',
+    countryCode: 'BJ',
+    flag: '🇧🇯',
+    city: 'Allada',
+    district: 'Dogoudo',
+    landmark: 'Zone résidentielle Dogoudo, Allada',
+    monthlyRent: 25000,
+    charges: 0,
+    depositMonths: 3,
+    advanceMonths: 3,
+    agencyFees: 0,
+    includeFirstRent: true,
+    includeAgencyFees: false,
+    hasUtilitiesDeposit: true,
+    utilitiesDeposit: 25000,
+    surface: 45,
+    bedrooms: 1,
+    bathrooms: 1,
+    images: [
+      'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&auto=format&fit=crop&q=80',
+    ],
+    amenities: [
+      'Compteur électricité personnel',
+      'Chambre spacieuse',
+      'Sanitaire moderne privatif',
+      'Accès sécurisé',
+    ],
+    description: "Chambre spacieuse avec salon sanitaire autonome à Dogoudo, Allada. Compteur d'électricité personnel Cash Power, accès bitumé et sécurisé.",
+    latitude: 6.6494,
+    longitude: 2.1528,
+    isVerified: true,
+    status: 'disponible',
+    moderationStatus: 'valide',
+    authorId: 'usr-bailleur-voglossou',
+    authorName: 'VOGLOSSOU JOHANE',
+    authorCompany: 'MONROY AGENCY',
+    authorEmail: 'jobovog@gmail.com',
+    authorPhone: '+229 01 95 44 44 30',
+    authorRole: 'bailleur',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+    createdAt: '01/11/2026',
+    viewsCount: 142,
+    inquiriesCount: 14,
+  },
+  {
+    id: 'list-bj-calavi-17635',
+    referenceCode: 'A-BJ-17635',
+    title: 'Studio Meublé Moderne — Résidence UAC Calavi',
+    propertyType: 'Studio',
+    country: 'Bénin',
+    countryCode: 'BJ',
+    flag: '🇧🇯',
+    city: 'Abomey-Calavi',
+    district: 'Zogbadjè',
+    landmark: 'Zogbadjè (Campus UAC), Abomey-Calavi',
+    monthlyRent: 35000,
+    charges: 3000,
+    depositMonths: 3,
+    advanceMonths: 3,
+    agencyFees: 0,
+    includeFirstRent: true,
+    includeAgencyFees: false,
+    hasUtilitiesDeposit: true,
+    utilitiesDeposit: 15000,
+    surface: 25,
+    bedrooms: 1,
+    bathrooms: 1,
+    images: [
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&auto=format&fit=crop&q=80',
+    ],
+    amenities: [
+      'Wifi Haut Débit',
+      'Compteur Cash Power',
+      'Forage d\'eau',
+      'Sécurité 24/7',
+      'Meublé',
+    ],
+    description: "Studio climatisé et meublé tout confort à 200m du campus UAC Calavi. Compteur Cash Power autonome, forage d'eau avec surpresseur, wifi haut débit.",
+    latitude: 6.4485,
+    longitude: 2.3556,
+    isVerified: true,
+    status: 'disponible',
+    moderationStatus: 'valide',
+    authorId: 'usr-bailleur-voglossou',
+    authorName: 'VOGLOSSOU JOHANE',
+    authorCompany: 'MONROY AGENCY',
+    authorEmail: 'jobovog@gmail.com',
+    authorPhone: '+229 01 95 44 44 30',
+    authorRole: 'bailleur',
+    authorAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
+    createdAt: '15/11/2026',
+    viewsCount: 98,
+    inquiriesCount: 9,
+  },
+];
 
 /**
  * Détecte si une annonce est une fausse annonce de démo/mock héritée
  */
 export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
   if (!l) return true;
+
+  // RÈGLE D'OR : Les annonces créées par les comptes officiels authentiques sont toujours protégées
+  const authorEmail = (l.authorEmail || '').trim().toLowerCase();
+  const authorId = (l.authorId || '').trim();
+  if (
+    authorEmail === 'jobovog@gmail.com' ||
+    authorEmail === 'jojovog007@gmail.com' ||
+    authorEmail === 'theodoradjigla@gmail.com' ||
+    authorId === 'usr-bailleur-voglossou' ||
+    authorId === 'usr-tenant-jojovog' ||
+    authorId === 'usr-tenant-theodora'
+  ) {
+    return false;
+  }
+
   const id = (l.id || '').trim();
 
   // Toutes les annonces de démo / mock canoniques ou de test sont des annonces fictives à bannir
@@ -53,7 +170,6 @@ export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
   }
 
   const authorName = (l.authorName || '').trim().toLowerCase();
-  const authorEmail = (l.authorEmail || '').trim().toLowerCase();
   if (
     authorName === 'ibrahim traoré' ||
     authorName === 'ibrahim traore' ||

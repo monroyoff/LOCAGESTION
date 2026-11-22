@@ -48,10 +48,61 @@ export const DEFAULT_PROPERTIES: Property[] = [
     authorRole: 'bailleur',
     createdAt: '01/11/2026',
   },
+  {
+    id: 'prop-voglossou-calavi-02',
+    name: 'Résidence UAC Calavi',
+    type: 'Studio',
+    address: 'Zogbadjè (Campus UAC), Abomey-Calavi',
+    city: 'Abomey-Calavi',
+    district: 'Zogbadjè',
+    country: 'Bénin',
+    totalUnits: 1,
+    occupiedUnits: 1,
+    monthlyRevenue: 35000,
+    imageUrl: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&auto=format&fit=crop&q=80',
+    ],
+    description: 'Studio climatisé et meublé tout confort à 200m du campus UAC Calavi. Compteur Cash Power autonome, forage d\'eau avec surpresseur, wifi haut débit.',
+    amenities: [
+      'Wifi Haut Débit',
+      'Compteur Cash Power',
+      'Forage d\'eau',
+      'Sécurité 24/7',
+      'Meublé',
+    ],
+    unitsList: [
+      {
+        unit: 'Studio Meublé N° 3 (25 m²)',
+        type: 'Studio',
+        surface: 25,
+        rent: 35000,
+        tenant: 'Jojo VOG',
+        status: 'occupe',
+      },
+    ],
+    authorId: 'usr-bailleur-voglossou',
+    authorName: 'VOGLOSSOU JOHANE',
+    authorEmail: 'jobovog@gmail.com',
+    authorPhone: '+229 01 95 44 44 30',
+    authorCompany: 'MONROY AGENCY',
+    authorMatricule: 'LOCA-MAT-BJ-84291',
+    authorRole: 'bailleur',
+    createdAt: '15/11/2026',
+  },
 ];
 
 export function isFakeProperty(p?: Partial<Property> | null): boolean {
   if (!p) return true;
+  const authorEmail = (p.authorEmail || '').trim().toLowerCase();
+  const authorId = (p.authorId || '').trim();
+  if (
+    authorEmail === 'jobovog@gmail.com' ||
+    authorId === 'usr-bailleur-voglossou'
+  ) {
+    return false;
+  }
   if (p.id === 'prop-diallo-cotonou-01' || p.id === 'prop-01' || p.id === 'prop-02') return true;
   const name = (p.name || '').trim().toLowerCase();
   if (
@@ -64,7 +115,6 @@ export function isFakeProperty(p?: Partial<Property> | null): boolean {
   }
   const authorName = (p.authorName || '').trim().toLowerCase();
   if (authorName === 'mamadou diallo' || authorName === 'koffi mensah') return true;
-  const authorEmail = (p.authorEmail || '').trim().toLowerCase();
   if (authorEmail.includes('mamadou.diallo') || authorEmail.includes('diallo')) return true;
   return false;
 }

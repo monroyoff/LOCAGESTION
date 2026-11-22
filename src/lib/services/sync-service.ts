@@ -2,10 +2,12 @@
 
 import { Lease, isFakeLease } from './lease-service';
 import { TenantNotification } from './tenant-notification-service';
-import { AuthUser, RentalListing } from '@/lib/types';
+import { AuthUser, RentalListing, Property } from '@/lib/types';
 import { isFakeDemoUser } from './auth-service';
 import { isFakeListing } from './listings-service';
 import { isFakeConversation } from './conversation-service';
+import { isFakeProperty } from './property-service';
+import { isFakePayment } from './payment-service';
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
 const TENANT_NOTIFS_KEY = 'locagestion:tenant_notifications:v1';
@@ -202,7 +204,88 @@ export const SyncService = {
         window.dispatchEvent(new Event('storage'));
       }
 
-      // 5. Purge immédiate des conversations fictives dans le stockage client
+      // 5. Synchronisation des PROPRIÉTÉS (Patrimoine Bailleur Web & Mobile)
+      if (Array.isArray(data.properties)) {
+        let localProps: Property[] = [];
+        try {
+          const stored = localStorage.getItem('locagestion:properties:v1');
+          if (stored) localProps = JSON.parse(stored);
+        } catch (e) {}
+
+        const propMap = new Map<string, any>();
+        localProps.forEach((p) => {
+          if (p && p.id && !isFakeProperty(p)) propMap.set(p.id, p);
+        });
+        (data.properties || []).forEach((p: any) => {
+          if (p && p.id && !isFakeProperty(p)) propMap.set(p.id, p);
+        });
+
+        const mergedProps = Array.from(propMap.values());
+        localStorage.setItem('locagestion:properties:v1', JSON.stringify(mergedProps));
+        window.dispatchEvent(new CustomEvent('locagestion:properties_updated'));
+        window.dispatchEvent(new Event('storage'));
+      }
+
+      // 6. Synchronisation des CONVERSATIONS (Messagerie Web & Mobile)
+      if (Array.isArray(data.conversations)) {
+        let localConvs: any[] = [];
+        try {
+          const stored = localStorage.getItem('locagestion:conversations:v1');
+          if (stored) localConvs = JSON.parse(stored);
+        } catch (e) {}
+
+        const convMap = new Map<string, any>();
+        localConvs.forEach((c) => {
+          if (c && c.id && !isFakeConversation(c)) convMap.set(c.id, c);
+        });
+        (data.conversations || []).forEach((sc: any) => {
+          if (sc && sc.id && !isFakeConversation(sc)) {
+            const local = convMap.get(sc.id);
+            if (!local) {
+              convMap.set(sc.id, sc);
+            } else {
+              const msgMap = new Map<string, any>();
+              (local.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
+              (sc.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
+              convMap.set(sc.id, {
+                ...local,
+                ...sc,
+                messages: Array.from(msgMap.values()),
+              });
+            }
+          }
+        });
+
+        const mergedConvs = Array.from(convMap.values());
+        localStorage.setItem('locagestion:conversations:v1', JSON.stringify(mergedConvs));
+        window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+      }
+
+      // 7. Synchronisation des PAIEMENTS & QUITTANCES (Web & Mobile)
+      if (Array.isArray(data.payments)) {
+        let localPayments: any[] = [];
+        try {
+          const stored = localStorage.getItem('locagestion:declared_payments');
+          if (stored) localPayments = JSON.parse(stored);
+        } catch (e) {}
+
+        const payMap = new Map<string, any>();
+        localPayments.forEach((p) => {
+          if (p && p.id && !isFakePayment(p)) payMap.set(p.id, p);
+        });
+        (data.payments || []).forEach((sp: any) => {
+          if (sp && sp.id && !isFakePayment(sp)) {
+            const local = payMap.get(sp.id);
+            payMap.set(sp.id, { ...local, ...sp });
+          }
+        });
+
+        const mergedPayments = Array.from(payMap.values());
+        localStorage.setItem('locagestion:declared_payments', JSON.stringify(mergedPayments));
+        window.dispatchEvent(new CustomEvent('locagestion:payments_updated'));
+      }
+
+      // 8. Purge immédiate des conversations fictives dans le stockage client
       try {
         const convStr = localStorage.getItem('locagestion:conversations:v1');
         if (convStr) {
@@ -217,7 +300,7 @@ export const SyncService = {
         }
       } catch (e) {}
 
-      // 6. Purge immédiate des faux locataires de test
+      // 9. Purge immédiate des faux locataires de test
       try {
         const tenStr = localStorage.getItem('locagestion:registered_tenants');
         if (tenStr) {
@@ -260,7 +343,7 @@ export const SyncService = {
 
   /**
    * Synchronisation montante : pousse immédiatement toute modification
-   * (nouveau bail, contresignature, notification, inscription, annonce) vers le serveur central.
+   * (nouveau bail, contresignature, notification, inscription, annonce, propriété, message, paiement) vers le serveur central.
    */
   async push(payload: {
     leases?: Lease[];
@@ -269,6 +352,9 @@ export const SyncService = {
     removedListingId?: string;
     listings?: RentalListing[];
     properties?: any[];
+    conversations?: any[];
+    payments?: any[];
+    incidents?: any[];
   }): Promise<boolean> {
     if (typeof window === 'undefined') return false;
 

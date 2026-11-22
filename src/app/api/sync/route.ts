@@ -10,6 +10,8 @@ const NOTIFS_FILE = 'notifications.json';
 const USERS_FILE = 'users.json';
 const LISTINGS_FILE = 'listings.json';
 const PROPERTIES_FILE = 'properties.json';
+const CONVERSATIONS_FILE = 'conversations.json';
+const PAYMENTS_FILE = 'payments.json';
 
 // In-memory global store to guarantee cross-request persistence in serverless instances
 const memoryStore: Record<string, any[]> =
@@ -160,6 +162,19 @@ function isFakeServerProperty(p: any): boolean {
 
 function isFakeServerListing(l: any): boolean {
   if (!l || !l.id) return true;
+  const authorEmail = (l.authorEmail || '').trim().toLowerCase();
+  const authorId = (l.authorId || '').trim();
+  if (
+    authorEmail === 'jobovog@gmail.com' ||
+    authorEmail === 'jojovog007@gmail.com' ||
+    authorEmail === 'theodoradjigla@gmail.com' ||
+    authorId === 'usr-bailleur-voglossou' ||
+    authorId === 'usr-tenant-jojovog' ||
+    authorId === 'usr-tenant-theodora'
+  ) {
+    return false;
+  }
+
   const id = String(l.id).trim();
 
   // Toutes les annonces de démo / mock ou de test sont des annonces fictives à bannir
@@ -199,7 +214,6 @@ function isFakeServerListing(l: any): boolean {
   }
 
   const authorName = (l.authorName || '').trim().toLowerCase();
-  const authorEmail = (l.authorEmail || '').trim().toLowerCase();
   if (
     authorName === 'ibrahim traoré' ||
     authorName === 'ibrahim traore' ||
@@ -246,6 +260,8 @@ export async function GET(req: NextRequest) {
     const users = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
     const listings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
     const properties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
+    const conversations = readJsonFile<any[]>(CONVERSATIONS_FILE, []);
+    const payments = readJsonFile<any[]>(PAYMENTS_FILE, []);
 
     // Filtrage contextuel si locataire spécifique demandé, sinon envoi complet pour synchronisation globale
     return NextResponse.json({
@@ -255,6 +271,8 @@ export async function GET(req: NextRequest) {
       users,
       listings,
       properties,
+      conversations,
+      payments,
       timestamp: new Date().toISOString(),
     });
   } catch (e) {
@@ -277,6 +295,8 @@ export async function POST(req: NextRequest) {
       removedListingId,
       properties: incomingProperties,
       listings: incomingListings,
+      conversations: incomingConversations,
+      payments: incomingPayments,
     } = body;
 
     // 1. Synchronisation et fusion des baux (rejet strict des baux fictifs)
@@ -440,12 +460,61 @@ export async function POST(req: NextRequest) {
       writeJsonFile(LISTINGS_FILE, updatedListings);
     }
 
+    // 7. Synchronisation et fusion des conversations
+    if (Array.isArray(incomingConversations) && incomingConversations.length > 0) {
+      const currentConvs = readJsonFile<any[]>(CONVERSATIONS_FILE, []);
+      const convsMap = new Map<string, any>();
+      currentConvs.forEach((c) => {
+        if (c && c.id) convsMap.set(c.id, c);
+      });
+      incomingConversations.forEach((c) => {
+        if (c && c.id) {
+          const existing = convsMap.get(c.id);
+          if (existing) {
+            const msgMap = new Map<string, any>();
+            (existing.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
+            (c.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
+            convsMap.set(c.id, {
+              ...existing,
+              ...c,
+              messages: Array.from(msgMap.values()),
+            });
+          } else {
+            convsMap.set(c.id, c);
+          }
+        }
+      });
+      writeJsonFile(CONVERSATIONS_FILE, Array.from(convsMap.values()));
+    }
+
+    // 8. Synchronisation et fusion des paiements déclarés
+    if (Array.isArray(incomingPayments) && incomingPayments.length > 0) {
+      const currentPayments = readJsonFile<any[]>(PAYMENTS_FILE, []);
+      const payMap = new Map<string, any>();
+      currentPayments.forEach((p) => {
+        if (p && p.id) payMap.set(p.id, p);
+      });
+      incomingPayments.forEach((p) => {
+        if (p && p.id) {
+          const existing = payMap.get(p.id);
+          if (existing) {
+            payMap.set(p.id, { ...existing, ...p });
+          } else {
+            payMap.set(p.id, p);
+          }
+        }
+      });
+      writeJsonFile(PAYMENTS_FILE, Array.from(payMap.values()));
+    }
+
     // Retourner l'état unifié complet
     const finalLeases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const finalNotifs = readJsonFile<any[]>(NOTIFS_FILE, []);
     const finalUsers = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
     const finalListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
     const finalProperties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
+    const finalConversations = readJsonFile<any[]>(CONVERSATIONS_FILE, []);
+    const finalPayments = readJsonFile<any[]>(PAYMENTS_FILE, []);
 
     return NextResponse.json({
       success: true,
@@ -454,6 +523,8 @@ export async function POST(req: NextRequest) {
       users: finalUsers,
       listings: finalListings,
       properties: finalProperties,
+      conversations: finalConversations,
+      payments: finalPayments,
       timestamp: new Date().toISOString(),
     });
   } catch (e) {

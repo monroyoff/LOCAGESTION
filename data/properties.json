@@ -40,5 +40,48 @@
     "authorMatricule": "LOCA-MAT-BJ-84291",
     "authorRole": "bailleur",
     "createdAt": "01/11/2026"
+  },
+  {
+    "id": "prop-voglossou-calavi-02",
+    "name": "Résidence UAC Calavi",
+    "type": "Studio",
+    "address": "Zogbadjè (Campus UAC), Abomey-Calavi",
+    "city": "Abomey-Calavi",
+    "district": "Zogbadjè",
+    "country": "Bénin",
+    "totalUnits": 1,
+    "occupiedUnits": 1,
+    "monthlyRevenue": 35000,
+    "imageUrl": "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&auto=format&fit=crop&q=80",
+    "images": [
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200&auto=format&fit=crop&q=80",
+      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200&auto=format&fit=crop&q=80"
+    ],
+    "description": "Studio climatisé et meublé tout confort à 200m du campus UAC Calavi. Compteur Cash Power autonome, forage d'eau avec surpresseur, wifi haut débit.",
+    "amenities": [
+      "Wifi Haut Débit",
+      "Compteur Cash Power",
+      "Forage d'eau",
+      "Sécurité 24/7",
+      "Meublé"
+    ],
+    "unitsList": [
+      {
+        "unit": "Studio Meublé N° 3 (25 m²)",
+        "type": "Studio",
+        "surface": 25,
+        "rent": 35000,
+        "tenant": "Jojo VOG",
+        "status": "occupe"
+      }
+    ],
+    "authorId": "usr-bailleur-voglossou",
+    "authorName": "VOGLOSSOU JOHANE",
+    "authorEmail": "jobovog@gmail.com",
+    "authorPhone": "+229 01 95 44 44 30",
+    "authorCompany": "MONROY AGENCY",
+    "authorMatricule": "LOCA-MAT-BJ-84291",
+    "authorRole": "bailleur",
+    "createdAt": "15/11/2026"
   }
 ]

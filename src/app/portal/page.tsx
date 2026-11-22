@@ -1278,8 +1278,8 @@ function TenantPortalContent() {
             <SkeletonPortalDashboard />
           ) : (
             <>
-              {/* Top Segmented Navigation Tabs (Masqué sur mobile, visible sur tablette et desktop) */}
-              <div className="resident-subbar hidden md:flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none">
+              {/* Top Segmented Navigation Tabs (Parfaitement accessible et défilable sur Web & Mobile) */}
+              <div className="resident-subbar flex items-center gap-1.5 p-1.5 bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-x-auto scrollbar-none touch-pan-x">
             <button
               type="button"
               onClick={() => handleTabChange('accueil')}
@@ -1374,6 +1374,19 @@ function TenantPortalContent() {
               >
                 {tenantScoring.currentScore}/100
               </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleTabChange('preavis')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === 'preavis'
+                  ? 'bg-black text-white shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+            >
+              <BellRing className="w-4 h-4" />
+              <span>Préavis</span>
             </button>
           </div>
 

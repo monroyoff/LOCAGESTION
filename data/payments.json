@@ -1,0 +1,23 @@
+[
+  {
+    "id": "pay-vog-001",
+    "receiptNumber": "DEC-2026-4211",
+    "leaseId": "BAIL-2026-421",
+    "tenantId": "usr-tenant-jojovog",
+    "tenantName": "Jojo VOG",
+    "tenantAvatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80",
+    "tenantPhone": "+229 97 00 12 34",
+    "tenantEmail": "jojovog007@gmail.com",
+    "propertyName": "CHAMBRE SALON SANITAIRE",
+    "unitNumber": "Lot 1 (Chambre Salon Sanitaire • 45 m²)",
+    "landlordName": "VOGLOSSOU JOHANE",
+    "landlordId": "usr-bailleur-voglossou",
+    "amount": 25000,
+    "expectedAmount": 25000,
+    "period": "Novembre 2026",
+    "paymentDate": "01/11/2026",
+    "method": "wave",
+    "status": "paye",
+    "isVerified": true
+  }
+]
