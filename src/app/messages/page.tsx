@@ -126,11 +126,11 @@ function MessagesContent() {
 
   const isBailleurSide = activeSpace === 'bailleur' || activeSpace === 'demarcheur';
 
-  // Seules les conversations dont l'utilisateur connecté est participant légitime sont visibles
+  // Seules les conversations dont l'utilisateur connecté est participant légitime selon l'espace actif sont visibles (3 espaces étanches)
   const userConversations = React.useMemo(() => {
     if (!user) return [];
-    return conversations.filter((c) => isUserConversationParticipant(c, user));
-  }, [conversations, user]);
+    return conversations.filter((c) => isUserConversationParticipant(c, user, activeSpace));
+  }, [conversations, user, activeSpace]);
 
   const getUnreadCountForCurrentUser = (conv: Conversation): number => {
     // Si la discussion est actuellement sélectionnée et visible à l'écran, le compteur non lu pour l'utilisateur actuel est 0
@@ -163,7 +163,7 @@ function MessagesContent() {
   };
 
   const selectAndMarkAsRead = (conv: Conversation) => {
-    if (!isUserConversationParticipant(conv, user)) return;
+    if (!isUserConversationParticipant(conv, user, activeSpace)) return;
 
     setSelectedConvId(conv.id);
     setMobileChatOpen(true);
@@ -195,12 +195,12 @@ function MessagesContent() {
     }
   };
 
-  // Désélectionner immédiatement toute conversation qui n'appartient pas à l'utilisateur
+  // Désélectionner immédiatement toute conversation qui n'appartient pas à l'utilisateur ou à l'espace actif
   useEffect(() => {
-    if (selectedConv && user && !isUserConversationParticipant(selectedConv, user)) {
+    if (selectedConv && user && !isUserConversationParticipant(selectedConv, user, activeSpace)) {
       setSelectedConvId(null);
     }
-  }, [selectedConv, user]);
+  }, [selectedConv, user, activeSpace]);
 
   // Détection des paramètres URL (convId / listingId) pour ouvrir immédiatement le dialogue
   useEffect(() => {
@@ -217,7 +217,7 @@ function MessagesContent() {
         (queryListingId && c.listingId === queryListingId)
     );
 
-    if (matchInState) {
+    if (matchInState && isUserConversationParticipant(matchInState, user, activeSpace)) {
       handledQueryKeyRef.current = queryKey;
       selectAndMarkAsRead(matchInState);
       return;
@@ -233,7 +233,7 @@ function MessagesContent() {
             (queryConvId && c.id === queryConvId) ||
             (queryListingId && c.listingId === queryListingId)
         );
-        if (matchInStorage) {
+        if (matchInStorage && isUserConversationParticipant(matchInStorage, user, activeSpace)) {
           handledQueryKeyRef.current = queryKey;
           selectAndMarkAsRead(matchInStorage);
           return;

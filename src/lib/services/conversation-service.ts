@@ -341,17 +341,70 @@ export function isUserConversationVisitor(conv: Conversation, user?: AuthUser | 
 
 /**
  * Détermine si l'utilisateur est un participant légitime (Auteur OU Visiteur) ou Super-Admin
+ * avec respect absolu du cloisonnement étanche des 3 espaces (Bailleur, Locataire, Démarcheur).
  */
-export function isUserConversationParticipant(conv: Conversation, user?: AuthUser | any | null): boolean {
+export function isUserConversationParticipant(
+  conv: Conversation,
+  user?: AuthUser | any | null,
+  activeSpace?: string
+): boolean {
   if (!user) return false;
 
-  // Super-Administrateur : supervision complète autorisée
+  // Super-Administrateur : supervision complète autorisée uniquement en console admin ou si l'espace n'est pas restreint
   if (
     user.role === 'admin' ||
     areEmailsEqual(user.email, SYSTEM_ADMIN_USER.email) ||
     areEmailsEqual(user.email, 'admin@locagestion.site')
   ) {
-    return true;
+    if (!activeSpace || activeSpace === 'admin') {
+      return true;
+    }
+  }
+
+  // 1. DÉTECTION DU RÔLE DE LA CONVERSATION
+  let convRole = (conv.authorRole || '').toLowerCase().trim();
+  if (!convRole && conv.listingId) {
+    try {
+      const allListings = ListingsService.getAllListings();
+      const match = allListings.find(
+        (l) => l.id === conv.listingId || (l.referenceCode && l.referenceCode === conv.listingId)
+      );
+      if (match?.authorRole) {
+        convRole = match.authorRole.toLowerCase().trim();
+      }
+    } catch {}
+  }
+  if (!convRole) {
+    convRole = 'bailleur'; // Par défaut, les baux et baux d'habitation relèvent du bailleur
+  }
+
+  // 2. ISOLATION STRICTE MULTI-ESPACES (3 ESPACES ÉTANCHES : Bailleur, Locataire, Démarcheur)
+  const currentSpace = (activeSpace || user.role || 'bailleur').toLowerCase().trim();
+
+  if (currentSpace === 'demarcheur') {
+    // Dans l'Espace Démarcheur :
+    // - INTERDICTION ABSOLUE d'afficher les conversations de baux / gestion locative bailleur (authorRole === 'bailleur')
+    if (convRole === 'bailleur') {
+      return false;
+    }
+    // L'utilisateur doit être l'auteur/mandataire de la conversation démarcheur
+    return isUserConversationAuthor(conv, user);
+  }
+
+  if (currentSpace === 'bailleur') {
+    // Dans l'Espace Bailleur :
+    // - Ne doit afficher QUE les échanges où l'utilisateur intervient en tant que Bailleur (gestion de ses biens, baux, loyers)
+    // - Exclut strictement les annonces de pure intermédiation démarcheur
+    if (convRole === 'demarcheur') {
+      return false;
+    }
+    return isUserConversationAuthor(conv, user);
+  }
+
+  if (currentSpace === 'locataire') {
+    // Dans l'Espace Locataire / Résident :
+    // - L'utilisateur doit impérativement être le VISITEUR / LOCATAIRE / CANDIDAT (jamais l'auteur bailleur ou démarcheur)
+    return isUserConversationVisitor(conv, user);
   }
 
   return isUserConversationAuthor(conv, user) || isUserConversationVisitor(conv, user);
@@ -493,7 +546,7 @@ export function getUnreadConversationsCount(
 
   return conversations.filter((c) => {
     if (c.isArchived) return false;
-    if (!isUserConversationParticipant(c, currentUser)) return false;
+    if (!isUserConversationParticipant(c, currentUser, activeSpace)) return false;
 
     const isAuthor = isUserConversationAuthor(c, currentUser);
     const isVisitor = isUserConversationVisitor(c, currentUser);
@@ -552,10 +605,10 @@ export const ConversationService = {
     return INITIAL_CONVERSATIONS;
   },
 
-  getConversationsForUser(user?: AuthUser | any | null): Conversation[] {
+  getConversationsForUser(user?: AuthUser | any | null, activeSpace?: string): Conversation[] {
     if (!user) return [];
     const all = this.getAllConversations();
-    return all.filter((c) => isUserConversationParticipant(c, user));
+    return all.filter((c) => isUserConversationParticipant(c, user, activeSpace));
   },
 
   saveConversations(conversations: Conversation[]): void {
