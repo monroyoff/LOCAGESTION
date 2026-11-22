@@ -164,7 +164,7 @@ export default function TenantsPage() {
       if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(mat);
       }
-    } catch (e) {}
+    } catch (e) { }
     setCopiedMatricule(mat);
     showToast(`Matricule certifié ${mat} copié !`);
     setTimeout(() => setCopiedMatricule(null), 2500);
@@ -462,11 +462,11 @@ export default function TenantsPage() {
         (isJojo
           ? 'LOCA-MAT-BJ-17635'
           : (matchedUser?.matricule ||
-             l.tenantMatricule ||
-             (l as any).matricule ||
-             (matchedUser?.email ? generateUserMatricule(resolvedCountry || 'Bénin', 'locataire', matchedUser.email) : undefined) ||
-             (l.tenantEmail ? generateUserMatricule(resolvedCountry || 'Bénin', 'locataire', l.tenantEmail) : undefined)
-            )
+            l.tenantMatricule ||
+            (l as any).matricule ||
+            (matchedUser?.email ? generateUserMatricule(resolvedCountry || 'Bénin', 'locataire', matchedUser.email) : undefined) ||
+            (l.tenantEmail ? generateUserMatricule(resolvedCountry || 'Bénin', 'locataire', l.tenantEmail) : undefined)
+          )
         ) || (l.tenantId ? `LOCA-MAT-BJ-${l.tenantId.slice(-5).toUpperCase()}` : 'LOCA-MAT-BJ-17635');
 
       return {
@@ -804,72 +804,72 @@ export default function TenantsPage() {
                     </div>
                   ) : (
                     filteredTenants.map((t) => {
-                    const isSelected = selectedTenant?.id === t.id;
+                      const isSelected = selectedTenant?.id === t.id;
 
-                    return (
-                      <div
-                        key={t.id}
-                        onClick={() => setSelectedTenant(t)}
-                        className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected
-                          ? 'bg-brand-50/40 border-brand-500/50 shadow-sm ring-1 ring-brand-500/20'
-                          : 'bg-white hover:bg-slate-50 border-slate-200/80'
-                          }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="relative">
-                            <img
-                              src={t.avatar}
-                              alt={t.fullName}
-                              className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-200"
-                            />
-                            <span
-                              className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full ring-2 ring-white ${t.scoring.score >= 85
-                                ? 'bg-emerald-500'
-                                : t.scoring.score >= 70
-                                  ? 'bg-blue-500'
-                                  : 'bg-amber-500'
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => setSelectedTenant(t)}
+                          className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${isSelected
+                            ? 'bg-brand-50/40 border-brand-500/50 shadow-sm ring-1 ring-brand-500/20'
+                            : 'bg-white hover:bg-slate-50 border-slate-200/80'
+                            }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="relative">
+                              <img
+                                src={t.avatar}
+                                alt={t.fullName}
+                                className="w-11 h-11 rounded-2xl object-cover ring-1 ring-slate-200"
+                              />
+                              <span
+                                className={`absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full ring-2 ring-white ${t.scoring.score >= 85
+                                  ? 'bg-emerald-500'
+                                  : t.scoring.score >= 70
+                                    ? 'bg-blue-500'
+                                    : 'bg-amber-500'
+                                  }`}
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <h3 className="text-xs font-black text-slate-900 truncate">
+                                  {t.fullName}
+                                </h3>
+                                {t.matricule && (
+                                  <span className="font-mono text-[9px] font-black px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                                    {t.matricule}
+                                  </span>
+                                )}
+                                <span className="text-[10px] font-extrabold text-slate-400">
+                                  {t.scoring.score}/100
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-brand-600 font-bold block truncate mt-0.5">
+                                {t.property.unit} • {t.property.name}
+                              </span>
+                              <span className="text-[10px] text-slate-500 flex items-center gap-1 truncate mt-0.5 font-medium">
+                                <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
+                                <span className="truncate">{t.property.location}</span>
+                              </span>
+                              <span className="text-[10px] text-slate-400 block truncate mt-0.5">
+                                Loyer : {formatFCFA(t.financials.monthlyRent)}/mois
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="text-right shrink-0">
+                            <ChevronRight
+                              className={`w-4 h-4 transition-transform ${isSelected
+                                ? 'text-brand-600 translate-x-1'
+                                : 'text-slate-300'
                                 }`}
                             />
                           </div>
-
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              <h3 className="text-xs font-black text-slate-900 truncate">
-                                {t.fullName}
-                              </h3>
-                              {t.matricule && (
-                                <span className="font-mono text-[9px] font-black px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
-                                  {t.matricule}
-                                </span>
-                              )}
-                              <span className="text-[10px] font-extrabold text-slate-400">
-                                {t.scoring.score}/100
-                              </span>
-                            </div>
-                            <span className="text-[11px] text-brand-600 font-bold block truncate mt-0.5">
-                              {t.property.unit} • {t.property.name}
-                            </span>
-                            <span className="text-[10px] text-slate-500 flex items-center gap-1 truncate mt-0.5 font-medium">
-                              <MapPin className="w-3 h-3 text-rose-500 shrink-0" />
-                              <span className="truncate">{t.property.location}</span>
-                            </span>
-                            <span className="text-[10px] text-slate-400 block truncate mt-0.5">
-                              Loyer : {formatFCFA(t.financials.monthlyRent)}/mois
-                            </span>
-                          </div>
                         </div>
-
-                        <div className="text-right shrink-0">
-                          <ChevronRight
-                            className={`w-4 h-4 transition-transform ${isSelected
-                              ? 'text-brand-600 translate-x-1'
-                              : 'text-slate-300'
-                              }`}
-                          />
-                        </div>
-                      </div>
-                    );
-                  }))}
+                      );
+                    }))}
                 </div>
               </div>
 

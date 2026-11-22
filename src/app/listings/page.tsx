@@ -8,7 +8,7 @@ import { Header } from '@/components/layout/Header';
 import { useSpace } from '@/lib/context/space-context';
 import { formatFCFA, computeEntryCost, formatDateFR } from '@/lib/money/format';
 import { RentalListing } from '@/lib/types';
-import { MOCK_RENTAL_LISTINGS, COUNTRIES_CITIES } from '@/lib/data/mock-data';
+import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
 import { EditListingModal } from '@/components/listings/EditListingModal';
 import { SkeletonListingGrid } from '@/components/ui/SkeletonLoader';

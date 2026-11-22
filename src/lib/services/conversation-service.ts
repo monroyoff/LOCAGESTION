@@ -67,12 +67,40 @@ export function isFakeConversation(c: any): boolean {
   ) {
     return true;
   }
+  const authorName = (c.authorName || c.publisherName || '').trim().toLowerCase();
+  if (
+    authorName === 'cabinet immobilier atlantique' ||
+    authorName === 'agence immobilière bénin littoral' ||
+    authorName === 'agence immobiliere benin littoral' ||
+    authorName === 'agence ivoire logement' ||
+    authorName === 'agence teranga immobilier' ||
+    authorName === 'cabinet immobilier lomé express' ||
+    authorName === 'cabinet immobilier lome express' ||
+    authorName === 'mamadou diallo' ||
+    authorName === 'koffi mensah' ||
+    authorName === 'aïcha touré' ||
+    authorName === 'aicha toure'
+  ) {
+    return true;
+  }
   const prop = (c.propertyTitle || '').trim().toLowerCase();
   if (
     prop.includes('résidence les cocotiers') ||
     prop.includes('residence les cocotiers') ||
     prop.includes('immeuble palmier royal') ||
     prop.includes('villa émeraude')
+  ) {
+    return true;
+  }
+  const lId = (c.listingId || '').trim();
+  if (
+    lId === 'list-bj-uac-calavi' ||
+    lId === 'list-bj-haie-vive' ||
+    lId === 'list-bj-fidjrosse' ||
+    lId === 'list-bj-akpakpa' ||
+    lId === 'list-ci-cocody' ||
+    lId === 'list-sn-almadies' ||
+    lId === 'list-tg-lome'
   ) {
     return true;
   }
@@ -420,7 +448,13 @@ export const ConversationService = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          return parsed.filter((c) => !isFakeConversation(c));
+          const sanitized = parsed.filter((c) => !isFakeConversation(c));
+          if (sanitized.length !== parsed.length) {
+            try {
+              localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(sanitized));
+            } catch {}
+          }
+          return sanitized;
         }
       }
     } catch {}

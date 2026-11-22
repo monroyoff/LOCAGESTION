@@ -140,6 +140,68 @@ function isFakeServerProperty(p: any): boolean {
   return false;
 }
 
+function isFakeServerListing(l: any): boolean {
+  if (!l || !l.id) return true;
+  const id = String(l.id).trim();
+  if (
+    id === 'list-bj-uac-calavi' ||
+    id === 'list-bj-haie-vive' ||
+    id === 'list-bj-fidjrosse' ||
+    id === 'list-bj-akpakpa' ||
+    id === 'list-ci-cocody' ||
+    id === 'list-sn-almadies' ||
+    id === 'list-tg-lome' ||
+    id.startsWith('pub-') ||
+    id.startsWith('demo-')
+  ) {
+    return true;
+  }
+  if (
+    l.authorId === 'usr-bailleur-01' ||
+    l.authorId === 'usr-demarcheur-01' ||
+    l.authorId === 'usr-locataire-01' ||
+    l.authorId === 'usr-agence-atlantique' ||
+    l.authorId === 'usr-demarcheur-cotonou' ||
+    l.authorId === 'usr-demarcheur-abidjan' ||
+    l.authorId === 'usr-demarcheur-dakar' ||
+    l.authorId === 'usr-demarcheur-lome'
+  ) {
+    return true;
+  }
+  const authorName = (l.authorName || '').trim().toLowerCase();
+  const authorEmail = (l.authorEmail || '').trim().toLowerCase();
+  if (
+    authorName === 'ibrahim traoré' ||
+    authorName === 'ibrahim traore' ||
+    authorName === 'cabinet immobilier atlantique' ||
+    authorName === 'agence immobilière bénin littoral' ||
+    authorName === 'agence immobiliere benin littoral' ||
+    authorName === 'agence ivoire logement' ||
+    authorName === 'agence teranga immobilier' ||
+    authorName === 'cabinet immobilier lomé express' ||
+    authorName === 'cabinet immobilier lome express' ||
+    authorName === 'mamadou diallo' ||
+    authorName === 'koffi mensah' ||
+    authorName === 'aïcha touré' ||
+    authorName === 'aicha toure'
+  ) {
+    return true;
+  }
+  if (
+    authorEmail.includes('atlantiqueprestige.bj') ||
+    authorEmail.includes('littoralimmo.bj') ||
+    authorEmail.includes('ivoirelogis.ci') ||
+    authorEmail.includes('terangaimmo.sn') ||
+    authorEmail.includes('lome-immo.tg') ||
+    authorEmail.includes('mamadou.diallo') ||
+    authorEmail.includes('koffi.mensah') ||
+    authorEmail.includes('aicha.toure')
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -149,7 +211,7 @@ export async function GET(req: NextRequest) {
     const leases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const notifications = readJsonFile<any[]>(NOTIFS_FILE, []);
     const users = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
-    const listings = readJsonFile<any[]>(LISTINGS_FILE, []);
+    const listings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
     const properties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
 
     // Filtrage contextuel si locataire spécifique demandé, sinon envoi complet pour synchronisation globale
@@ -181,6 +243,7 @@ export async function POST(req: NextRequest) {
       user: incomingUser,
       removedListingId,
       properties: incomingProperties,
+      listings: incomingListings,
     } = body;
 
     // 1. Synchronisation et fusion des baux (rejet strict des baux fictifs)
@@ -295,7 +358,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Retrait d'annonce après contresignature si requis
     if (removedListingId) {
-      const currentListings = readJsonFile<any[]>(LISTINGS_FILE, []);
+      const currentListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
       const filtered = currentListings.filter(
         (l) => l.id !== removedListingId && l.referenceCode !== removedListingId
       );
@@ -323,10 +386,32 @@ export async function POST(req: NextRequest) {
       writeJsonFile(PROPERTIES_FILE, updatedProperties);
     }
 
+    // 6. Synchronisation et fusion des annonces / publications
+    if (Array.isArray(incomingListings) && incomingListings.length > 0) {
+      const currentListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
+      const listingsMap = new Map<string, any>();
+      currentListings.forEach((l) => {
+        if (l && l.id && !isFakeServerListing(l)) listingsMap.set(l.id, l);
+      });
+      incomingListings.forEach((l) => {
+        if (l && l.id && !isFakeServerListing(l)) {
+          const existing = listingsMap.get(l.id);
+          if (existing) {
+            listingsMap.set(l.id, { ...existing, ...l });
+          } else {
+            listingsMap.set(l.id, l);
+          }
+        }
+      });
+      const updatedListings = Array.from(listingsMap.values());
+      writeJsonFile(LISTINGS_FILE, updatedListings);
+    }
+
     // Retourner l'état unifié complet
     const finalLeases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const finalNotifs = readJsonFile<any[]>(NOTIFS_FILE, []);
     const finalUsers = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
+    const finalListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
     const finalProperties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
 
     return NextResponse.json({
@@ -334,6 +419,7 @@ export async function POST(req: NextRequest) {
       leases: finalLeases,
       notifications: finalNotifs,
       users: finalUsers,
+      listings: finalListings,
       properties: finalProperties,
       timestamp: new Date().toISOString(),
     });

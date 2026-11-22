@@ -7,20 +7,22 @@ import { LeaseService } from './lease-service';
 const STORAGE_KEY = 'locagestion:custom_listings';
 const TRASH_STORAGE_KEY = 'locagestion:trash_listings';
 
-// Annonces canoniques de référence plateforme (Bénin, Côte d'Ivoire, Sénégal, Togo)
-const SEED_CUSTOM_LISTINGS: RentalListing[] = MOCK_RENTAL_LISTINGS;
+const SEED_CUSTOM_LISTINGS: RentalListing[] = [];
 
 /**
  * Détecte si une annonce est une fausse annonce de démo/mock héritée
  */
 export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
   if (!l) return true;
-  // Les annonces officielles et certifiées de la plateforme ne sont JAMAIS considérées comme fausses
-  if ((l as any).isCanonical || (l.id && l.id.startsWith('list-')) || (l.referenceCode && l.referenceCode.startsWith('A-'))) {
-    return false;
-  }
   const id = (l.id || '').trim();
   if (
+    id === 'list-bj-uac-calavi' ||
+    id === 'list-bj-haie-vive' ||
+    id === 'list-bj-fidjrosse' ||
+    id === 'list-bj-akpakpa' ||
+    id === 'list-ci-cocody' ||
+    id === 'list-sn-almadies' ||
+    id === 'list-tg-lome' ||
     id.startsWith('pub-bailleur-') ||
     id.startsWith('pub-demarcheur-') ||
     id.startsWith('pub-locataire-') ||
@@ -35,14 +37,43 @@ export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
   if (
     l.authorId === 'usr-bailleur-01' ||
     l.authorId === 'usr-demarcheur-01' ||
-    l.authorId === 'usr-locataire-01'
+    l.authorId === 'usr-locataire-01' ||
+    l.authorId === 'usr-agence-atlantique' ||
+    l.authorId === 'usr-demarcheur-cotonou' ||
+    l.authorId === 'usr-demarcheur-abidjan' ||
+    l.authorId === 'usr-demarcheur-dakar' ||
+    l.authorId === 'usr-demarcheur-lome'
   ) {
     return true;
   }
   const authorName = (l.authorName || '').trim().toLowerCase();
+  const authorEmail = (l.authorEmail || '').trim().toLowerCase();
   if (
     authorName === 'ibrahim traoré' ||
-    authorName === 'ibrahim traore'
+    authorName === 'ibrahim traore' ||
+    authorName === 'cabinet immobilier atlantique' ||
+    authorName === 'agence immobilière bénin littoral' ||
+    authorName === 'agence immobiliere benin littoral' ||
+    authorName === 'agence ivoire logement' ||
+    authorName === 'agence teranga immobilier' ||
+    authorName === 'cabinet immobilier lomé express' ||
+    authorName === 'cabinet immobilier lome express' ||
+    authorName === 'mamadou diallo' ||
+    authorName === 'koffi mensah' ||
+    authorName === 'aïcha touré' ||
+    authorName === 'aicha toure'
+  ) {
+    return true;
+  }
+  if (
+    authorEmail.includes('atlantiqueprestige.bj') ||
+    authorEmail.includes('littoralimmo.bj') ||
+    authorEmail.includes('ivoirelogis.ci') ||
+    authorEmail.includes('terangaimmo.sn') ||
+    authorEmail.includes('lome-immo.tg') ||
+    authorEmail.includes('mamadou.diallo') ||
+    authorEmail.includes('koffi.mensah') ||
+    authorEmail.includes('aicha.toure')
   ) {
     return true;
   }
@@ -582,6 +613,11 @@ export const ListingsService = {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
         notifyListingsChange();
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listings: updated }),
+        }).catch(() => {});
       } catch (e) {
         console.error('Erreur sauvegarde nouvelle annonce:', e);
       }
@@ -608,6 +644,11 @@ export const ListingsService = {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedList));
         notifyListingsChange();
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listings: updatedList }),
+        }).catch(() => {});
       } catch (e) {
         console.error('Erreur mise à jour annonce:', e);
       }
@@ -674,6 +715,11 @@ export const ListingsService = {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
         notifyListingsChange();
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ removedListingId: id, listings: filtered }),
+        }).catch(() => {});
         return true;
       } catch (e) {
         console.error('Erreur suppression annonce:', e);

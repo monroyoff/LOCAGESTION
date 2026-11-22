@@ -155,7 +155,7 @@ export class PropertyService {
                 }
               }
             }
-          } catch (e) {}
+          } catch (e) { }
 
           if (modified) {
             localStorage.setItem(PROPERTIES_STORAGE_KEY, JSON.stringify(merged));
@@ -286,7 +286,7 @@ export class PropertyService {
     }
 
     // Synchronisation serveur en arrière-plan
-    this.pushToServer(updated).catch(() => {});
+    this.pushToServer(updated).catch(() => { });
 
     return enriched;
   }
@@ -349,7 +349,7 @@ export class PropertyService {
       }
     }
 
-    this.pushToServer(filtered).catch(() => {});
+    this.pushToServer(filtered).catch(() => { });
     return true;
   }
 

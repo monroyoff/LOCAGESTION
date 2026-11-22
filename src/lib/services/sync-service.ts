@@ -4,6 +4,7 @@ import { Lease, isFakeLease } from './lease-service';
 import { TenantNotification } from './tenant-notification-service';
 import { AuthUser, RentalListing } from '@/lib/types';
 import { isFakeDemoUser } from './auth-service';
+import { isFakeListing } from './listings-service';
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
 const TENANT_NOTIFS_KEY = 'locagestion:tenant_notifications:v1';
@@ -165,28 +166,35 @@ export const SyncService = {
       }
 
       // 4. Synchronisation des ANNONCES (Catalogues & Publications Web & Mobile)
-      if (Array.isArray(data.listings) && data.listings.length > 0) {
+      if (Array.isArray(data.listings)) {
         let localListings: RentalListing[] = [];
         try {
           const stored = localStorage.getItem(LISTINGS_STORAGE_KEY);
           if (stored) localListings = JSON.parse(stored);
         } catch (e) {}
 
+        let listingsUpdated = false;
+        // Purger les annonces démo locales
+        const sanitizedListings = localListings.filter((l) => !isFakeListing(l));
+        if (sanitizedListings.length !== localListings.length) {
+          localListings = sanitizedListings;
+          listingsUpdated = true;
+        }
+
         const listingMap = new Map<string, RentalListing>();
         localListings.forEach((l) => {
-          if (l && l.id) listingMap.set(l.id, l);
+          if (l && l.id && !isFakeListing(l)) listingMap.set(l.id, l);
         });
 
-        let listingsUpdated = false;
         data.listings.forEach((serverListing: RentalListing) => {
-          if (!serverListing || !serverListing.id) return;
+          if (!serverListing || !serverListing.id || isFakeListing(serverListing)) return;
           if (!listingMap.has(serverListing.id)) {
             listingMap.set(serverListing.id, serverListing);
             listingsUpdated = true;
           }
         });
 
-        if (listingsUpdated || localListings.length === 0) {
+        if (listingsUpdated) {
           const mergedListings = Array.from(listingMap.values());
           localStorage.setItem(LISTINGS_STORAGE_KEY, JSON.stringify(mergedListings));
           window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
