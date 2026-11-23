@@ -92,12 +92,12 @@ export default function LoginPage() {
       if (!res.success) {
         // Synchronisation complète avec le serveur central (utilisateurs nouvellement créés, mots de passe, baux, etc.)
         try {
-          await SyncService.sync();
+          await SyncService.sync(true);
         } catch {}
         res = login(cleanId, cleanPass);
       }
       if (res.success) {
-        SyncService.sync().catch(() => {});
+        SyncService.sync(true).catch(() => {});
       } else {
         setErrorMsg(res.error || 'Identifiants invalides.');
       }

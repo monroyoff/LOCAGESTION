@@ -22,6 +22,7 @@ const REMOVED_LISTINGS_KEY = 'locagestion:removed_listing_ids';
 let syncIntervalId: NodeJS.Timeout | null = null;
 let isSyncing = false;
 let isInitialized = false;
+let lastSyncCompletedAt = 0;
 
 export const SyncService = {
   /**
@@ -30,9 +31,13 @@ export const SyncService = {
    * conversations, paiements, quittances, préavis, relances, pannes, états des lieux et notifications
    * sur Web, Ordinateurs, Mobile et Application Android.
    */
-  async sync(): Promise<{ success: boolean; leasesCount: number; notifsCount: number }> {
+  async sync(force: boolean = false): Promise<{ success: boolean; leasesCount: number; notifsCount: number }> {
     if (typeof window === 'undefined' || isSyncing) {
       return { success: false, leasesCount: 0, notifsCount: 0 };
+    }
+    const now = Date.now();
+    if (!force && now - lastSyncCompletedAt < 1800) {
+      return { success: true, leasesCount: 0, notifsCount: 0 };
     }
 
     isSyncing = true;
@@ -137,10 +142,11 @@ export const SyncService = {
           needsServerPush = true;
         }
 
-        if (leasesChangedLocally) {
-          localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(mergedLeases));
+        const prevLeasesStr = localStorage.getItem(LEASES_STORAGE_KEY);
+        const nextLeasesStr = JSON.stringify(mergedLeases);
+        if (leasesChangedLocally && prevLeasesStr !== nextLeasesStr) {
+          localStorage.setItem(LEASES_STORAGE_KEY, nextLeasesStr);
           window.dispatchEvent(new Event('locagestion:leases_updated'));
-          window.dispatchEvent(new Event('storage'));
         }
       }
 
@@ -187,12 +193,13 @@ export const SyncService = {
           needsServerPush = true;
         }
 
-        if (notifsUpdated) {
-          localStorage.setItem(TENANT_NOTIFS_KEY, JSON.stringify(mergedNotifs));
+        const prevNotifsStr = localStorage.getItem(TENANT_NOTIFS_KEY);
+        const nextNotifsStr = JSON.stringify(mergedNotifs);
+        if (notifsUpdated && prevNotifsStr !== nextNotifsStr) {
+          localStorage.setItem(TENANT_NOTIFS_KEY, nextNotifsStr);
           window.dispatchEvent(new Event('locagestion:tenant_notifications_updated'));
           window.dispatchEvent(new Event('locagestion:tenant_notifs_updated'));
           window.dispatchEvent(new Event('locagestion:notifications_updated'));
-          window.dispatchEvent(new Event('storage'));
         }
       }
 
@@ -206,22 +213,27 @@ export const SyncService = {
           if (stored) localUsers = JSON.parse(stored);
         } catch {}
 
-        const sanitizedLocalUsers = (Array.isArray(localUsers) ? localUsers : []).filter((u) => !isFakeDemoUser(u));
-        const serverUsers: AuthUser[] = (data.users || []).filter((u: any) => !isFakeDemoUser(u));
+        const isNonAdminAuthenticUser = (u: any) =>
+          u &&
+          u.email &&
+          !isFakeDemoUser(u) &&
+          u.role !== 'admin' &&
+          u.id !== 'usr-admin-locagestion' &&
+          !areEmailsEqual(u.email, 'admin@locagestion.site');
+
+        const sanitizedLocalUsers = (Array.isArray(localUsers) ? localUsers : []).filter(isNonAdminAuthenticUser);
+        const serverUsers: AuthUser[] = (data.users || []).filter(isNonAdminAuthenticUser);
 
         const userMap = new Map<string, AuthUser>();
         let usersNeedPush = false;
 
         // Déposer d'abord les utilisateurs locaux
         sanitizedLocalUsers.forEach((u) => {
-          if (u && u.email) {
-            userMap.set(u.email.trim().toLowerCase(), enforceUserIdentityIntegrity(u));
-          }
+          userMap.set(u.email.trim().toLowerCase(), enforceUserIdentityIntegrity(u));
         });
 
         // Fusionner avec les utilisateurs serveur
         serverUsers.forEach((su: AuthUser) => {
-          if (!su || !su.email) return;
           const key = su.email.trim().toLowerCase();
           const local = userMap.get(key);
           if (!local) {
@@ -268,7 +280,7 @@ export const SyncService = {
           window.dispatchEvent(new Event('locagestion:auth_changed'));
         }
 
-        // Synchroniser également la session active si le profil connecté a été mis à jour
+        // Synchroniser également la session active uniquement si un attribut significatif a changé
         try {
           const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
           if (sessionRaw) {
@@ -280,14 +292,32 @@ export const SyncService = {
             } else if (parsedSession && parsedSession.email && parsedSession.role !== 'admin') {
               const matchedServerUser = userMap.get(parsedSession.email.trim().toLowerCase());
               if (matchedServerUser) {
-                const updatedSession = enforceUserIdentityIntegrity({
-                  ...parsedSession,
-                  ...matchedServerUser,
-                  // Préserver l'espace actif choisi par l'utilisateur s'il a basculé d'espace
-                  role: parsedSession.role || matchedServerUser.role,
-                  emailVerified: Boolean(parsedSession.emailVerified || matchedServerUser.emailVerified),
-                });
-                if (JSON.stringify(updatedSession) !== JSON.stringify(parsedSession)) {
+                const nextVerified = Boolean(parsedSession.emailVerified || matchedServerUser.emailVerified);
+                const nextStatus = matchedServerUser.accountStatus || parsedSession.accountStatus;
+                const nextCompany =
+                  matchedServerUser.companyName !== undefined
+                    ? matchedServerUser.companyName
+                    : parsedSession.companyName;
+                const nextAvatar = matchedServerUser.avatarUrl || parsedSession.avatarUrl;
+                const nextMatricule = matchedServerUser.matricule || parsedSession.matricule;
+
+                const hasSessionMeaningfulChange =
+                  parsedSession.emailVerified !== nextVerified ||
+                  parsedSession.accountStatus !== nextStatus ||
+                  parsedSession.companyName !== nextCompany ||
+                  parsedSession.avatarUrl !== nextAvatar ||
+                  parsedSession.matricule !== nextMatricule;
+
+                if (hasSessionMeaningfulChange) {
+                  const updatedSession = {
+                    ...parsedSession,
+                    emailVerified: nextVerified,
+                    accountStatus: nextStatus,
+                    blockReason: matchedServerUser.blockReason,
+                    companyName: nextCompany,
+                    avatarUrl: nextAvatar,
+                    matricule: nextMatricule,
+                  };
                   localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
                   window.dispatchEvent(new Event('locagestion:auth_changed'));
                 }
@@ -373,7 +403,6 @@ export const SyncService = {
         if (prevListingsStr !== nextListingsStr) {
           localStorage.setItem(LISTINGS_STORAGE_KEY, nextListingsStr);
           window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
-          window.dispatchEvent(new Event('storage'));
         }
       }
 
@@ -409,7 +438,6 @@ export const SyncService = {
         if (prevPropsStr !== nextPropsStr) {
           localStorage.setItem('locagestion:properties:v1', nextPropsStr);
           window.dispatchEvent(new CustomEvent('locagestion:properties_updated'));
-          window.dispatchEvent(new Event('storage'));
         }
       }
 
@@ -540,7 +568,6 @@ export const SyncService = {
           localStorage.setItem('locagestion:declared_payments', nextDecStr);
           localStorage.setItem('locagestion:verified_payments', nextVerStr);
           window.dispatchEvent(new CustomEvent('locagestion:payments_updated'));
-          window.dispatchEvent(new Event('storage'));
         }
 
         const serverPayIds = new Set((data.payments || []).map((sp: any) => sp.id));
@@ -838,6 +865,7 @@ export const SyncService = {
         }).catch(() => {});
       }
 
+      lastSyncCompletedAt = Date.now();
       isSyncing = false;
       return {
         success: true,

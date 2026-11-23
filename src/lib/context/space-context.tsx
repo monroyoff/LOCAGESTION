@@ -63,7 +63,10 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
     const current = AuthService.getCurrentUser();
-    setUser(current);
+    setUser((prev) => {
+      if (JSON.stringify(prev) === JSON.stringify(current)) return prev;
+      return current;
+    });
 
     // 1. Redirection stricte vers /auth/login si l'utilisateur n'est pas connecté
     if (!current) {
@@ -133,7 +136,10 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
 
     const syncUser = () => {
       const updated = AuthService.getCurrentUser();
-      setUser(updated);
+      setUser((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(updated)) return prev;
+        return updated;
+      });
       if (!updated && !isPublicRoute) {
         router.replace('/auth/login');
       }

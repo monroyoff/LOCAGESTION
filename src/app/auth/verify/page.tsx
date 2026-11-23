@@ -29,7 +29,7 @@ function VerifyEmailContent() {
     const runVerification = async () => {
       try {
         // Synchroniser d'abord avec le serveur central au cas où l'inscription a été faite sur un autre appareil
-        await SyncService.sync().catch(() => {});
+        await SyncService.sync(true).catch(() => {});
 
         const pendingUsers = AuthService.getAllKnownUsers();
         const targetUser = pendingUsers.find(
