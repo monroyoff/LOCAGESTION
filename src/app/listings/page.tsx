@@ -251,10 +251,37 @@ export default function ListingsPage() {
     };
   }, []);
 
-  // Synchronisation de l'affichage avec l'URL (?view=my_listings, ?q=, ?dateFilter=, ?sortBy=) et les événements globaux
+  // Synchronisation de l'affichage avec l'URL (?view=my_listings, ?q=, ?dateFilter=, ?sortBy=, ?restore=1) et les événements globaux
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
+
+      // Restauration de la recherche exacte et de la position après retour depuis la messagerie (?restore=1)
+      if (params.get('restore') === '1') {
+        try {
+          const savedRaw = sessionStorage.getItem('locagestion:listings_search_state');
+          if (savedRaw) {
+            const saved = JSON.parse(savedRaw);
+            if (typeof saved.searchQuery === 'string') setSearchQuery(saved.searchQuery);
+            if (typeof saved.selectedCountry === 'string') setSelectedCountry(saved.selectedCountry);
+            if (typeof saved.selectedCity === 'string') setSelectedCity(saved.selectedCity);
+            if (typeof saved.currentDistrict === 'string') setCurrentDistrict(saved.currentDistrict);
+            if (typeof saved.pricePresetIdx === 'number') setPricePresetIdx(saved.pricePresetIdx);
+            if (typeof saved.customMinPrice === 'string') setCustomMinPrice(saved.customMinPrice);
+            if (typeof saved.customMaxPrice === 'string') setCustomMaxPrice(saved.customMaxPrice);
+            if (typeof saved.selectedPropertyType === 'string') setSelectedPropertyType(saved.selectedPropertyType);
+            if (saved.dateFilter === 'all' || saved.dateFilter === '7_days') setDateFilter(saved.dateFilter);
+            if (saved.sortBy) setSortBy(saved.sortBy);
+            if (saved.activeView === 'all' || saved.activeView === 'my_listings') setActiveView(saved.activeView);
+            if (typeof saved.scrollY === 'number' && saved.scrollY > 0) {
+              setTimeout(() => {
+                window.scrollTo({ top: saved.scrollY, behavior: 'smooth' });
+              }, 120);
+            }
+          }
+        } catch {}
+      }
+
       if (params.get('view') === 'my_listings') {
         setActiveView('my_listings');
       }
@@ -887,7 +914,29 @@ export default function ListingsPage() {
       console.error('Erreur ouverture discussion annonce:', e);
     }
 
-    router.push(`/messages?convId=${encodeURIComponent(convId)}&listingId=${encodeURIComponent(listing.id)}`);
+    // Sauvegarder l'état exact de la recherche d'annonces et la position de défilement pour pouvoir y revenir en 1 clic
+    try {
+      sessionStorage.setItem(
+        'locagestion:listings_search_state',
+        JSON.stringify({
+          searchQuery,
+          selectedCountry,
+          selectedCity,
+          currentDistrict,
+          pricePresetIdx,
+          customMinPrice,
+          customMaxPrice,
+          selectedPropertyType,
+          dateFilter,
+          sortBy,
+          activeView,
+          scrollY: typeof window !== 'undefined' ? window.scrollY : 0,
+          lastListingId: listing.id,
+        })
+      );
+    } catch {}
+
+    router.push(`/messages?convId=${encodeURIComponent(convId)}&listingId=${encodeURIComponent(listing.id)}&from=listings`);
   };
 
   const handleBookVisitSubmit = (e: React.FormEvent) => {
