@@ -185,14 +185,33 @@ function MessagesContent() {
       };
       const updatedList = conversations.map((c) => (c.id === conv.id ? updatedConv : c));
       saveConversations(updatedList);
+    }
 
-      // Si le bailleur consulte la conversation, marquer également les notifications cloche correspondantes comme lues
+    // Marquer systématiquement les notifications de messagerie associées comme lues (Bailleur & Locataire)
+    try {
       if (isBailleurSide) {
         LeaseService.markNotificationAsRead(conv.id);
         LeaseService.markNotificationAsRead(`notif-conv-${conv.id}`);
         LeaseService.markNotificationAsRead(`notif-msg-${conv.id}`);
+        const lNotifs = LeaseService.getLandlordNotifications(user);
+        lNotifs.forEach((n) => {
+          if (!n.read && n.type === 'message_received' && (n.convId === conv.id || n.property === conv.propertyTitle)) {
+            LeaseService.markNotificationAsRead(n.id);
+          }
+        });
+      } else {
+        const tNotifs = TenantNotificationService.getNotifications(user);
+        tNotifs.forEach((n) => {
+          if (
+            !n.read &&
+            (n.type === 'chat_message' || n.link?.includes('/messages')) &&
+            (n.link?.includes(conv.id) || (conv.propertyTitle && n.title?.toLowerCase().includes(conv.propertyTitle.toLowerCase())))
+          ) {
+            TenantNotificationService.markAsRead(n.id);
+          }
+        });
       }
-    }
+    } catch {}
   };
 
   // Désélectionner immédiatement toute conversation qui n'appartient pas à l'utilisateur ou à l'espace actif

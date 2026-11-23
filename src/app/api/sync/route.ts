@@ -7,6 +7,9 @@ const TMP_DATA_DIR = path.join('/tmp', 'locagestion_data');
 
 const LEASES_FILE = 'leases.json';
 const NOTIFS_FILE = 'notifications.json';
+const LANDLORD_NOTIFS_FILE = 'landlord_notifications.json';
+const NOTICES_FILE = 'notices.json';
+const INCIDENTS_FILE = 'incidents.json';
 const USERS_FILE = 'users.json';
 const LISTINGS_FILE = 'listings.json';
 const PROPERTIES_FILE = 'properties.json';
@@ -264,6 +267,9 @@ export async function GET(req: NextRequest) {
 
     const leases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const notifications = readJsonFile<any[]>(NOTIFS_FILE, []);
+    const landlordNotifications = readJsonFile<any[]>(LANDLORD_NOTIFS_FILE, []);
+    const notices = readJsonFile<any[]>(NOTICES_FILE, []);
+    const incidents = readJsonFile<any[]>(INCIDENTS_FILE, []);
     const users = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
     const listings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
     const properties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
@@ -283,6 +289,9 @@ export async function GET(req: NextRequest) {
       success: true,
       leases,
       notifications,
+      landlordNotifications,
+      notices,
+      incidents,
       users,
       listings,
       properties,
@@ -307,6 +316,9 @@ export async function POST(req: NextRequest) {
     const {
       leases: incomingLeases,
       notifications: incomingNotifs,
+      landlordNotifications: incomingLandlordNotifs,
+      notices: incomingNotices,
+      incidents: incomingIncidents,
       user: incomingUser,
       removedListingId,
       properties: incomingProperties,
@@ -492,9 +504,16 @@ export async function POST(req: NextRequest) {
             (c.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
             const allMessages = Array.from(msgMap.values());
             const lastMsg = allMessages.length > 0 ? allMessages[allMessages.length - 1] : null;
+            const cIsNewer = (c.messages?.length || 0) > (existing.messages?.length || 0);
+            const eIsNewer = (existing.messages?.length || 0) > (c.messages?.length || 0);
+            const unreadSource = cIsNewer ? c : eIsNewer ? existing : c;
             convsMap.set(c.id, {
               ...existing,
               ...c,
+              unreadCount: unreadSource.unreadCount ?? 0,
+              hasUnread: Boolean(unreadSource.hasUnread),
+              unreadBy: unreadSource.unreadBy,
+              isRead: unreadSource.isRead ?? !unreadSource.hasUnread,
               messages: allMessages,
               lastMessage: lastMsg ? lastMsg.text : (c.lastMessage || existing.lastMessage),
               lastMessageTime: lastMsg ? (lastMsg.time || c.lastMessageTime) : (c.lastMessageTime || existing.lastMessageTime),
@@ -527,9 +546,60 @@ export async function POST(req: NextRequest) {
       writeJsonFile(PAYMENTS_FILE, Array.from(payMap.values()));
     }
 
+    // 9. Synchronisation et fusion des notifications bailleur
+    if (Array.isArray(incomingLandlordNotifs) && incomingLandlordNotifs.length > 0) {
+      const currentLNotifs = readJsonFile<any[]>(LANDLORD_NOTIFS_FILE, []);
+      const lnMap = new Map<string, any>();
+      currentLNotifs.forEach((n) => {
+        if (n && n.id) lnMap.set(n.id, n);
+      });
+      incomingLandlordNotifs.forEach((n) => {
+        if (n && n.id) {
+          const existing = lnMap.get(n.id);
+          lnMap.set(n.id, existing ? { ...existing, ...n, read: Boolean(existing.read || n.read) } : n);
+        }
+      });
+      writeJsonFile(LANDLORD_NOTIFS_FILE, Array.from(lnMap.values()));
+    }
+
+    // 10. Synchronisation et fusion des préavis (départs locataires & congés bailleurs)
+    if (Array.isArray(incomingNotices) && incomingNotices.length > 0) {
+      const currentNotices = readJsonFile<any[]>(NOTICES_FILE, []);
+      const noticesMap = new Map<string, any>();
+      currentNotices.forEach((n) => {
+        if (n && n.id) noticesMap.set(n.id, n);
+      });
+      incomingNotices.forEach((n) => {
+        if (n && n.id) {
+          const existing = noticesMap.get(n.id);
+          noticesMap.set(n.id, existing ? { ...existing, ...n } : n);
+        }
+      });
+      writeJsonFile(NOTICES_FILE, Array.from(noticesMap.values()));
+    }
+
+    // 11. Synchronisation et fusion des pannes & interventions
+    if (Array.isArray(incomingIncidents) && incomingIncidents.length > 0) {
+      const currentIncidents = readJsonFile<any[]>(INCIDENTS_FILE, []);
+      const incMap = new Map<string, any>();
+      currentIncidents.forEach((i) => {
+        if (i && i.id) incMap.set(i.id, i);
+      });
+      incomingIncidents.forEach((i) => {
+        if (i && i.id) {
+          const existing = incMap.get(i.id);
+          incMap.set(i.id, existing ? { ...existing, ...i } : i);
+        }
+      });
+      writeJsonFile(INCIDENTS_FILE, Array.from(incMap.values()));
+    }
+
     // Retourner l'état unifié complet
     const finalLeases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const finalNotifs = readJsonFile<any[]>(NOTIFS_FILE, []);
+    const finalLandlordNotifs = readJsonFile<any[]>(LANDLORD_NOTIFS_FILE, []);
+    const finalNotices = readJsonFile<any[]>(NOTICES_FILE, []);
+    const finalIncidents = readJsonFile<any[]>(INCIDENTS_FILE, []);
     const finalUsers = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
     const finalListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
     const finalProperties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
@@ -540,6 +610,9 @@ export async function POST(req: NextRequest) {
       success: true,
       leases: finalLeases,
       notifications: finalNotifs,
+      landlordNotifications: finalLandlordNotifs,
+      notices: finalNotices,
+      incidents: finalIncidents,
       users: finalUsers,
       listings: finalListings,
       properties: finalProperties,

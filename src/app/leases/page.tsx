@@ -70,6 +70,20 @@ export default function LeasesPage() {
 
   const refreshLeases = () => {
     setLeases(LeaseService.getLeasesForLandlord(spaceCtx.user));
+    try {
+      const lNotifs = LeaseService.getLandlordNotifications(spaceCtx.user);
+      lNotifs.forEach((n) => {
+        if (
+          !n.read &&
+          (n.type === 'lease_signed' ||
+            n.type === 'lease_transmitted' ||
+            n.type === 'lease_terminated' ||
+            n.type === 'lease_reactivated')
+        ) {
+          LeaseService.markNotificationAsRead(n.id);
+        }
+      });
+    } catch {}
   };
 
   useEffect(() => {

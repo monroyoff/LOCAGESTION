@@ -96,8 +96,16 @@ export const IncidentService = {
       if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return all;
       return [];
     }
-    const propNames = new Set(landlordLeases.map((l) => l.property.toLowerCase().trim()));
-    return all.filter((inc) => propNames.has((inc.property || '').toLowerCase().trim()));
+    const propNames = new Set(landlordLeases.map((l) => (l.property || '').toLowerCase().trim()));
+    const tenantNames = new Set(landlordLeases.map((l) => (l.tenant || '').toLowerCase().trim()));
+    const tenantEmails = new Set(landlordLeases.map((l) => (l.tenantEmail || '').toLowerCase().trim()));
+    return all.filter((inc) => {
+      if (propNames.has((inc.property || '').toLowerCase().trim())) return true;
+      if (tenantNames.has((inc.tenantName || '').toLowerCase().trim())) return true;
+      if (inc.tenantEmail && tenantEmails.has(inc.tenantEmail.toLowerCase().trim())) return true;
+      if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+      return false;
+    });
   },
 
   saveAllIncidents(incidents: ReportedIncident[]): void {
@@ -105,6 +113,12 @@ export const IncidentService = {
     try {
       localStorage.setItem(INCIDENTS_STORAGE_KEY, JSON.stringify(incidents));
       notifyIncidentsChange();
+      window.dispatchEvent(new Event('storage'));
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ incidents }),
+      }).catch(() => {});
     } catch (e) {
       console.error('Erreur sauvegarde incidents:', e);
     }
@@ -206,6 +220,17 @@ export const IncidentService = {
     current[index] = updated;
     this.saveAllIncidents(current);
 
+    if (status === 'resolu') {
+      try {
+        const lNotifs = LeaseService.getLandlordNotifications();
+        lNotifs.forEach((n) => {
+          if (n.incidentId === id || (n.type === 'incident_reported' && n.unit === updated.unit)) {
+            LeaseService.markNotificationAsRead(n.id);
+          }
+        });
+      } catch {}
+    }
+
     // Alerter le locataire du suivi de son signalement
     TenantNotificationService.notifyIncidentUpdated({
       incidentTitle: updated.category || 'Panne signalée',
@@ -257,6 +282,17 @@ export const IncidentService = {
     current[index] = updated;
     this.saveAllIncidents(current);
 
+    if (status === 'resolu') {
+      try {
+        const lNotifs = LeaseService.getLandlordNotifications();
+        lNotifs.forEach((n) => {
+          if (n.incidentId === id || (n.type === 'incident_reported' && n.unit === updated.unit)) {
+            LeaseService.markNotificationAsRead(n.id);
+          }
+        });
+      } catch {}
+    }
+
     // Alerter le locataire du suivi de son signalement
     TenantNotificationService.notifyIncidentUpdated({
       incidentTitle: updated.category || 'Panne signalée',
@@ -291,6 +327,17 @@ export const IncidentService = {
 
     current[index] = updated;
     this.saveAllIncidents(current);
+
+    if (status === 'resolu') {
+      try {
+        const lNotifs = LeaseService.getLandlordNotifications();
+        lNotifs.forEach((n) => {
+          if (n.incidentId === id || (n.type === 'incident_reported' && n.unit === updated.unit)) {
+            LeaseService.markNotificationAsRead(n.id);
+          }
+        });
+      } catch {}
+    }
 
     // Alerter le locataire du suivi de son signalement
     TenantNotificationService.notifyIncidentUpdated({

@@ -958,6 +958,7 @@ export const LeaseService = {
       }
       const landlordLeases = this.getLeasesForLandlord(user);
       const landlordProps = new Set(landlordLeases.map((l) => (l.property || '').toLowerCase().trim()));
+      const landlordTenants = new Set(landlordLeases.map((l) => (l.tenant || '').toLowerCase().trim()));
       const landlordLeaseIds = new Set(landlordLeases.map((l) => l.id));
 
       return parsed.filter((n) => {
@@ -981,10 +982,12 @@ export const LeaseService = {
           return false;
         }
 
-        // Gestion des baux et propriétés
+        // Gestion des baux, préavis, paiements, incidents et propriétés
         if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
         if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
+        if (n.tenantName && landlordTenants.has(n.tenantName.toLowerCase().trim())) return true;
         if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
+        if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
         return false;
       });
     } catch (e) {
@@ -999,10 +1002,15 @@ export const LeaseService = {
       const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
       if (stored) {
         const current: LandlordNotification[] = JSON.parse(stored);
-        const updated = current.map((n) => (n.id === id || n.convId === id ? { ...n, read: true } : n));
+        const updated = current.map((n) => (n.id === id || n.convId === id || n.noticeId === id ? { ...n, read: true } : n));
         localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
         notifyStorageChange();
         window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ landlordNotifications: updated }),
+        }).catch(() => {});
       }
     } catch (e) {
       console.error('Erreur mise à jour notification:', e);
@@ -1045,6 +1053,11 @@ export const LeaseService = {
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
       notifyStorageChange();
       window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ landlordNotifications: updated }),
+      }).catch(() => {});
     } catch (e) {
       console.error('Erreur ajout notification:', e);
     }

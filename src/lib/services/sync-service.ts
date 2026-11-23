@@ -258,9 +258,16 @@ export const SyncService = {
               (sc.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
               const allMessages = Array.from(msgMap.values());
               const lastMsg = allMessages.length > 0 ? allMessages[allMessages.length - 1] : null;
+              const scIsNewer = (sc.messages?.length || 0) > (local.messages?.length || 0);
+              const locIsNewer = (local.messages?.length || 0) > (sc.messages?.length || 0);
+              const unreadSource = scIsNewer ? sc : locIsNewer ? local : local;
               convMap.set(sc.id, {
                 ...local,
                 ...sc,
+                unreadCount: unreadSource.unreadCount ?? 0,
+                hasUnread: Boolean(unreadSource.hasUnread),
+                unreadBy: unreadSource.unreadBy,
+                isRead: unreadSource.isRead ?? !unreadSource.hasUnread,
                 messages: allMessages,
                 lastMessage: lastMsg ? lastMsg.text : (sc.lastMessage || local.lastMessage),
                 lastMessageTime: lastMsg ? (lastMsg.time || sc.lastMessageTime) : (sc.lastMessageTime || local.lastMessageTime),
@@ -320,6 +327,114 @@ export const SyncService = {
         const mergedPayments = Array.from(payMap.values());
         localStorage.setItem('locagestion:declared_payments', JSON.stringify(mergedPayments));
         window.dispatchEvent(new CustomEvent('locagestion:payments_updated'));
+
+        const serverPayIds = new Set((data.payments || []).map((sp: any) => sp.id));
+        if (mergedPayments.some((mp: any) => !serverPayIds.has(mp.id))) {
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payments: mergedPayments }),
+          }).catch(() => {});
+        }
+      }
+
+      // 7.bis Synchronisation des NOTIFICATIONS BAILLEUR / DÉMARCHEUR (Web & Mobile)
+      if (Array.isArray(data.landlordNotifications)) {
+        let localLNotifs: any[] = [];
+        try {
+          const stored = localStorage.getItem(LANDLORD_NOTIFS_KEY);
+          if (stored) localLNotifs = JSON.parse(stored);
+        } catch {}
+
+        const lnMap = new Map<string, any>();
+        localLNotifs.forEach((n) => {
+          if (n && n.id) lnMap.set(n.id, n);
+        });
+        (data.landlordNotifications || []).forEach((sn: any) => {
+          if (sn && sn.id) {
+            const local = lnMap.get(sn.id);
+            lnMap.set(sn.id, local ? { ...local, ...sn, read: Boolean(local.read || sn.read) } : sn);
+          }
+        });
+
+        const mergedLNotifs = Array.from(lnMap.values());
+        localStorage.setItem(LANDLORD_NOTIFS_KEY, JSON.stringify(mergedLNotifs));
+        window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+
+        const serverLnIds = new Set((data.landlordNotifications || []).map((sn: any) => sn.id));
+        if (mergedLNotifs.some((mn: any) => !serverLnIds.has(mn.id))) {
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ landlordNotifications: mergedLNotifs }),
+          }).catch(() => {});
+        }
+      }
+
+      // 7.ter Synchronisation des PRÉAVIS (Départs Locataires & Congés Bailleurs Web & Mobile)
+      if (Array.isArray(data.notices)) {
+        let localNotices: any[] = [];
+        try {
+          const stored = localStorage.getItem('locagestion:notices:v2');
+          if (stored) localNotices = JSON.parse(stored);
+        } catch {}
+
+        const nMap = new Map<string, any>();
+        localNotices.forEach((n) => {
+          if (n && n.id) nMap.set(n.id, n);
+        });
+        (data.notices || []).forEach((sn: any) => {
+          if (sn && sn.id) {
+            const local = nMap.get(sn.id);
+            nMap.set(sn.id, local ? { ...local, ...sn } : sn);
+          }
+        });
+
+        const mergedNotices = Array.from(nMap.values());
+        localStorage.setItem('locagestion:notices:v2', JSON.stringify(mergedNotices));
+        window.dispatchEvent(new CustomEvent('locagestion:notices_updated'));
+
+        const serverNIds = new Set((data.notices || []).map((sn: any) => sn.id));
+        if (mergedNotices.some((mn: any) => !serverNIds.has(mn.id))) {
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notices: mergedNotices }),
+          }).catch(() => {});
+        }
+      }
+
+      // 7.quater Synchronisation des PANNES & INTERVENTIONS (Web & Mobile)
+      if (Array.isArray(data.incidents)) {
+        let localIncidents: any[] = [];
+        try {
+          const stored = localStorage.getItem('locagestion:incidents:v1');
+          if (stored) localIncidents = JSON.parse(stored);
+        } catch {}
+
+        const incMap = new Map<string, any>();
+        localIncidents.forEach((i) => {
+          if (i && i.id) incMap.set(i.id, i);
+        });
+        (data.incidents || []).forEach((si: any) => {
+          if (si && si.id) {
+            const local = incMap.get(si.id);
+            incMap.set(si.id, local ? { ...local, ...si } : si);
+          }
+        });
+
+        const mergedIncidents = Array.from(incMap.values());
+        localStorage.setItem('locagestion:incidents:v1', JSON.stringify(mergedIncidents));
+        window.dispatchEvent(new CustomEvent('locagestion:incidents_updated'));
+
+        const serverIncIds = new Set((data.incidents || []).map((si: any) => si.id));
+        if (mergedIncidents.some((mi: any) => !serverIncIds.has(mi.id))) {
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ incidents: mergedIncidents }),
+          }).catch(() => {});
+        }
       }
 
       // 8. Purge immédiate des conversations fictives dans le stockage client

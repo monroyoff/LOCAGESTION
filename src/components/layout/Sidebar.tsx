@@ -38,9 +38,10 @@ import { UserProfileModal } from '@/components/profile/UserProfileModal';
 import { getUserProfile } from '@/lib/services/geo-service';
 import { NoticeService } from '@/lib/services/notice-service';
 import { ListingsService } from '@/lib/services/listings-service';
-import { getUnreadConversationsCount } from '@/lib/services/conversation-service';
+import { ConversationService, getUnreadConversationsCount } from '@/lib/services/conversation-service';
 import { LeaseService } from '@/lib/services/lease-service';
 import { PaymentService } from '@/lib/services/payment-service';
+import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
 import { areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 
@@ -128,55 +129,84 @@ export function Sidebar({
   const [pendingNoticesCount, setPendingNoticesCount] = useState(0);
   const [pendingLeasesCount, setPendingLeasesCount] = useState(0);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+  const [pendingVisitsCount, setPendingVisitsCount] = useState(0);
   const [myListingsCount, setMyListingsCount] = useState(0);
 
   useEffect(() => {
     const updateAllBadges = () => {
       if (typeof window === 'undefined') return;
 
-      // 1. Messages non lus
+      const unreadLandlordNotifs =
+        isLandlord || isDemarcheur || context.user?.role === 'admin'
+          ? LeaseService.getLandlordNotifications(context.user).filter((n) => !n.read)
+          : [];
+
+      const unreadTenantNotifs = isTenant
+        ? TenantNotificationService.getNotifications(context.user).filter((n) => !n.read)
+        : [];
+
+      // 1. Messages reçus non lus (Conversations + Notifications de messagerie)
       try {
-        const storedConvs = localStorage.getItem('locagestion:conversations:v1');
-        if (storedConvs) {
-          const parsed = JSON.parse(storedConvs);
-          if (Array.isArray(parsed)) {
-            setUnreadMessagesCount(getUnreadConversationsCount(parsed, context.user, activeSpace));
-          } else {
-            setUnreadMessagesCount(0);
-          }
+        const allConvs = ConversationService.getAllConversations();
+        const convUnread = getUnreadConversationsCount(allConvs, context.user, activeSpace);
+        if (isTenant) {
+          const msgNotifCount = unreadTenantNotifs.filter(
+            (n) => n.type === 'chat_message' || n.link?.includes('/messages')
+          ).length;
+          setUnreadMessagesCount(Math.max(convUnread, msgNotifCount));
         } else {
-          setUnreadMessagesCount(0);
+          const msgNotifCount = unreadLandlordNotifs.filter(
+            (n) => n.type === 'message_received'
+          ).length;
+          setUnreadMessagesCount(Math.max(convUnread, msgNotifCount));
         }
       } catch {
         setUnreadMessagesCount(0);
       }
 
-      // 2. Pannes & Interventions non résolues
+      // 2. Pannes & Interventions reçues / en cours
       try {
-        const allIncidents = IncidentService.getIncidents();
         if (isTenant) {
-          const myInc = allIncidents.filter(
-            (i) => i.status !== 'resolu' &&
-              ((context.user?.email && areEmailsEqual(i.tenantEmail, context.user.email)) ||
-               (context.user?.name && i.tenantName?.toLowerCase().includes(context.user.name.toLowerCase())))
-          );
-          setPendingIncidents(myInc.length);
+          const myInc = IncidentService.getIncidentsForTenant(context.user).filter(
+            (i) => i.status !== 'resolu'
+          ).length;
+          const incNotifs = unreadTenantNotifs.filter((n) => n.type === 'incident_update').length;
+          setPendingIncidents(Math.max(myInc, incNotifs));
         } else {
-          setPendingIncidents(allIncidents.filter((i) => i.status !== 'resolu').length);
+          const lInc = IncidentService.getIncidentsForLandlord(context.user).filter(
+            (i) => i.status !== 'resolu'
+          ).length;
+          const incNotifs = unreadLandlordNotifs.filter(
+            (n) => n.type === 'incident_reported'
+          ).length;
+          setPendingIncidents(Math.max(lInc, incNotifs));
         }
       } catch {
         setPendingIncidents(0);
       }
 
-      // 3. Relances & Préavis (Bailleur: Préavis de départ reçus des locataires à traiter)
+      // 3. Relances & Préavis reçus à traiter
       try {
         if (isLandlord || context.user?.role === 'admin') {
           const pendingDep = NoticeService.getPendingDepartureNoticesCount(context.user);
-          setPendingNoticesCount(pendingDep);
+          const noticeNotifs = unreadLandlordNotifs.filter(
+            (n) =>
+              n.type === 'notice_received' ||
+              (n.title && n.title.toLowerCase().includes('préavis'))
+          ).length;
+          setPendingNoticesCount(Math.max(pendingDep, noticeNotifs));
         } else if (isTenant) {
           const myNotices = NoticeService.getTenantNotices(context.user);
-          const activeConges = myNotices.filter((n) => n.reasonType !== 'depart_locataire' && (n.status === 'en_cours' || n.status === 'notifie'));
-          setPendingNoticesCount(activeConges.length);
+          const activeConges = myNotices.filter(
+            (n) => n.reasonType !== 'depart_locataire' && (n.status === 'en_cours' || n.status === 'notifie')
+          ).length;
+          const unreadRem = TenantNotificationService.getReminders(context.user).filter(
+            (n) => !n.read
+          ).length;
+          const unreadNotifIssued = unreadTenantNotifs.filter(
+            (n) => n.type === 'notice_issued'
+          ).length;
+          setPendingNoticesCount(Math.max(activeConges, unreadRem + unreadNotifIssued));
         } else {
           setPendingNoticesCount(0);
         }
@@ -184,21 +214,37 @@ export function Sidebar({
         setPendingNoticesCount(0);
       }
 
-      // 4. Baux & Contrats
+      // 4. Baux & Contrats reçus / en attente
       try {
         if (isLandlord || context.user?.role === 'admin') {
           const landlordLeases = LeaseService.getLeasesForLandlord(context.user);
-          const pendingL = landlordLeases.filter((l) => l.status === 'en_attente_signature' || (!l.signedByTenant && !l.tenantSignature?.date));
-          setPendingLeasesCount(pendingL.length);
+          const pendingL = landlordLeases.filter(
+            (l) => l.status === 'en_attente_signature' || (!l.signedByTenant && !l.tenantSignature?.date)
+          ).length;
+          const leaseNotifs = unreadLandlordNotifs.filter(
+            (n) =>
+              n.type === 'lease_signed' ||
+              n.type === 'lease_transmitted' ||
+              n.type === 'lease_terminated' ||
+              n.type === 'lease_reactivated'
+          ).length;
+          setPendingLeasesCount(Math.max(pendingL, leaseNotifs));
         } else if (isTenant) {
           const allLeases = LeaseService.getLeases();
           const toSign = allLeases.filter(
-            (l) => l.status === 'en_attente_signature' &&
+            (l) =>
+              (l.status === 'en_attente_signature' || (!l.signedByTenant && !l.tenantSignature?.date)) &&
               ((context.user?.email && areEmailsEqual(l.tenantEmail, context.user.email)) ||
-               (context.user?.phone && arePhoneNumbersEqual(l.tenantPhone, context.user.phone)) ||
-               (context.user?.name && l.tenant?.toLowerCase().includes(context.user.name.toLowerCase())))
-          );
-          setPendingLeasesCount(toSign.length);
+                (context.user?.phone && arePhoneNumbersEqual(l.tenantPhone, context.user.phone)) ||
+                (context.user?.name && l.tenant?.toLowerCase().includes(context.user.name.toLowerCase())))
+          ).length;
+          const leaseNotifs = unreadTenantNotifs.filter(
+            (n) =>
+              n.type === 'lease_available' ||
+              n.type === 'lease_reactivated' ||
+              n.type === 'lease_resiliated'
+          ).length;
+          setPendingLeasesCount(Math.max(toSign, leaseNotifs));
         } else {
           setPendingLeasesCount(0);
         }
@@ -206,16 +252,24 @@ export function Sidebar({
         setPendingLeasesCount(0);
       }
 
-      // 5. Paiements & Reçus
+      // 5. Paiements & Reçus reçus / en attente
       try {
         if (isLandlord || context.user?.role === 'admin') {
           const decl = PaymentService.getDeclaredPaymentsForLandlord(context.user);
-          const unverified = decl.filter((p) => !p.isVerified && p.status !== 'en_retard');
-          setPendingPaymentsCount(unverified.length);
+          const unverified = decl.filter((p) => !p.isVerified && p.status !== 'en_retard').length;
+          const payNotifs = unreadLandlordNotifs.filter(
+            (n) => n.type === 'payment_declared'
+          ).length;
+          setPendingPaymentsCount(Math.max(unverified, payNotifs));
         } else if (isTenant) {
           const myPayments = PaymentService.getPaymentsForTenant(context.user, null);
-          const unpaid = myPayments.filter((p) => p.status === 'en_retard' || (!p.isVerified && p.status === 'en_attente'));
-          setPendingPaymentsCount(unpaid.length);
+          const unpaid = myPayments.filter(
+            (p) => p.status === 'en_retard' || (!p.isVerified && p.status === 'en_attente')
+          ).length;
+          const receiptNotifs = unreadTenantNotifs.filter(
+            (n) => n.type === 'receipt_issued' || n.type === 'advance_payment_declared'
+          ).length;
+          setPendingPaymentsCount(Math.max(unpaid, receiptNotifs));
         } else {
           setPendingPaymentsCount(0);
         }
@@ -223,7 +277,20 @@ export function Sidebar({
         setPendingPaymentsCount(0);
       }
 
-      // 6. Mes publications
+      // 6. Annonces & Visites reçues
+      try {
+        const visitNotifs = unreadLandlordNotifs.filter(
+          (n) =>
+            n.type === 'visit_requested' ||
+            n.type === 'listing_approved' ||
+            n.type === 'listing_rejected'
+        ).length;
+        setPendingVisitsCount(visitNotifs);
+      } catch {
+        setPendingVisitsCount(0);
+      }
+
+      // 7. Mes publications
       try {
         const userListings = ListingsService.getUserListings(context.user, activeSpace);
         setMyListingsCount(userListings.length);
@@ -237,6 +304,8 @@ export function Sidebar({
     const events = [
       'locagestion:conversations_updated',
       'locagestion:notifications_updated',
+      'locagestion:tenant_notifications_updated',
+      'locagestion:tenant_notifs_updated',
       'locagestion:incidents_updated',
       'locagestion:notices_updated',
       'locagestion:leases_updated',
@@ -252,7 +321,7 @@ export function Sidebar({
       events.forEach((ev) => window.removeEventListener(ev, updateAllBadges));
       clearInterval(interval);
     };
-  }, [activeSpace, context.user, isLandlord, isTenant]);
+  }, [activeSpace, context.user, isLandlord, isTenant, isDemarcheur]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -342,7 +411,9 @@ export function Sidebar({
       href: '/listings',
       icon: Compass,
       active: pathname.startsWith('/listings'),
-      badge: 'Nouveau',
+      badgeCount: pendingVisitsCount > 0 ? pendingVisitsCount : undefined,
+      badgeColor: 'bg-brand-500',
+      badge: pendingVisitsCount > 0 ? undefined : 'Nouveau',
     },
     {
       name: 'Messages',
@@ -437,7 +508,9 @@ export function Sidebar({
       href: '/listings',
       icon: Compass,
       active: pathname.startsWith('/listings') && currentListingsView !== 'my_listings',
-      badge: 'Nouveau',
+      badgeCount: pendingVisitsCount > 0 ? pendingVisitsCount : undefined,
+      badgeColor: 'bg-brand-500',
+      badge: pendingVisitsCount > 0 ? undefined : 'Nouveau',
     },
     {
       name: 'Mes publications',
@@ -481,7 +554,9 @@ export function Sidebar({
       href: '/listings',
       icon: Compass,
       active: pathname.startsWith('/listings') && currentListingsView !== 'my_listings',
-      badge: 'Nouveau',
+      badgeCount: pendingVisitsCount > 0 ? pendingVisitsCount : undefined,
+      badgeColor: 'bg-brand-500',
+      badge: pendingVisitsCount > 0 ? undefined : 'Nouveau',
     },
     {
       name: 'Mes publications',

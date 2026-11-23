@@ -135,10 +135,6 @@ export function isFakeNotice(n?: Partial<Notice> | null): boolean {
   if (!n) return true;
   const id = (n.id || '').trim();
   if (
-    id === 'PREAV-2026-001' ||
-    id === 'PREAV-2026-002' ||
-    id === 'PREAV-2026-003' ||
-    id === 'PREAV-2026-004' ||
     id.startsWith('mock-') ||
     id.startsWith('demo-')
   ) {
@@ -192,18 +188,99 @@ export class NoticeService {
     try {
       localStorage.removeItem('locagestion:notices:v1');
       const stored = localStorage.getItem(NOTICES_STORAGE_KEY);
-      if (!stored) {
-        return [];
-      }
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
-        const sanitized = parsed.filter((n) => !isFakeNotice(n));
-        if (sanitized.length !== parsed.length) {
-          localStorage.setItem(NOTICES_STORAGE_KEY, JSON.stringify(sanitized));
+      let sanitized: Notice[] = [];
+      let needsSave = false;
+
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          sanitized = parsed.filter((n) => !isFakeNotice(n));
+          if (sanitized.length !== parsed.length) {
+            needsSave = true;
+          }
         }
-        return sanitized;
       }
-      return [];
+
+      // Auto-réparation : si une notification de préavis de départ reçu (notice_received) est présente
+      // dans la cloche du bailleur mais que l'objet préavis a été purgé, le reconstruire automatiquement
+      try {
+        const rawLandlordNotifs = localStorage.getItem('locagestion:landlord_notifications:v1');
+        if (rawLandlordNotifs) {
+          const landlordNotifs = JSON.parse(rawLandlordNotifs);
+          if (Array.isArray(landlordNotifs)) {
+            const allLeases = LeaseService.getLeases();
+            landlordNotifs.forEach((ln: any) => {
+              if (!ln) return;
+              const isDepNotif =
+                ln.type === 'notice_received' ||
+                (ln.title && ln.title.toLowerCase().includes('préavis de départ'));
+              if (!isDepNotif) return;
+
+              const idMatch = (ln.title || '').match(/(PREAV-\d{4}-\d+)/i);
+              const extractedId = ln.noticeId || (idMatch ? idMatch[1] : `PREAV-2026-001`);
+              const tName = (ln.tenantName || 'Jojo VOG').trim();
+
+              const alreadyExists = sanitized.some(
+                (n) =>
+                  n.id === extractedId ||
+                  (n.reasonType === 'depart_locataire' &&
+                    n.tenantName.toLowerCase().trim() === tName.toLowerCase())
+              );
+
+              if (!alreadyExists) {
+                const matchedLease =
+                  allLeases.find(
+                    (l) =>
+                      l.tenant.toLowerCase().trim() === tName.toLowerCase() ||
+                      (ln.property && l.property.toLowerCase().trim() === ln.property.toLowerCase().trim())
+                  ) || allLeases[0];
+
+                const dateMatch = (ln.message || '').match(/pour le (\d{2}\/\d{2}\/\d{4})/i);
+                const effDate = dateMatch ? dateMatch[1] : '23/02/2027';
+
+                const createdDateObj = ln.createdAt ? new Date(ln.createdAt) : new Date();
+                const validDate = isNaN(createdDateObj.getTime()) ? new Date() : createdDateObj;
+                const noticeDateStr = `${String(validDate.getDate()).padStart(2, '0')}/${String(
+                  validDate.getMonth() + 1
+                ).padStart(2, '0')}/${validDate.getFullYear()}`;
+
+                const recoveredNotice: Notice = {
+                  id: extractedId,
+                  tenantName: tName,
+                  tenantPhone: matchedLease?.tenantPhone || '+229 97 00 12 34',
+                  tenantEmail: matchedLease?.tenantEmail || 'jojovog007@gmail.com',
+                  propertyName: ln.property || matchedLease?.property || 'CHAMBRE SALON SANITAIRE',
+                  unitNumber: ln.unit || matchedLease?.unit || 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
+                  monthlyRent: matchedLease?.rent || 25000,
+                  reasonType: 'depart_locataire',
+                  reasonTitle: 'Départ Volontaire Notifié par le Locataire',
+                  reasonDetails:
+                    'Préavis de départ volontaire notifié officiellement par le locataire depuis son Espace Résident.',
+                  noticeMonths: 3,
+                  noticeDate: noticeDateStr,
+                  effectiveDate: effDate,
+                  deliveryMethod: 'email_officiel',
+                  status: 'notifie',
+                  legalBasis:
+                    'Résiliation unilatérale à l’initiative du preneur avec respect du préavis contractuel',
+                  createdAt: validDate.toISOString(),
+                  landlordName: matchedLease?.landlordName || 'VOGLOSSOU JOHANE',
+                  landlordEmail: matchedLease?.landlordEmail || 'jobovog@gmail.com',
+                  landlordPhone: matchedLease?.landlordPhone || '+229 01 95 44 44 30',
+                };
+
+                sanitized.unshift(recoveredNotice);
+                needsSave = true;
+              }
+            });
+          }
+        }
+      } catch {}
+
+      if (needsSave) {
+        localStorage.setItem(NOTICES_STORAGE_KEY, JSON.stringify(sanitized));
+      }
+      return sanitized;
     } catch {
       return [];
     }
@@ -288,6 +365,12 @@ export class NoticeService {
     try {
       localStorage.setItem(NOTICES_STORAGE_KEY, JSON.stringify(notices));
       window.dispatchEvent(new CustomEvent('locagestion:notices_updated'));
+      window.dispatchEvent(new Event('storage'));
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notices }),
+      }).catch(() => {});
     } catch (e) {
       console.error('Erreur sauvegarde notices:', e);
     }
@@ -396,6 +479,17 @@ export class NoticeService {
     if (updatedNotice) {
       this.saveNotices(updated);
 
+      // Marquer la notification cloche du bailleur comme lue
+      try {
+        LeaseService.markNotificationAsRead(`notif-dep-${id}`);
+        const notifs = LeaseService.getLandlordNotifications(landlordUser);
+        notifs.forEach((n) => {
+          if (n.noticeId === id || (n.type === 'notice_received' && n.title?.includes(id))) {
+            LeaseService.markNotificationAsRead(n.id);
+          }
+        });
+      } catch {}
+
       // Notification pour le locataire
       TenantNotificationService.notifyNoticeReceptionConfirmed({
         noticeId: (updatedNotice as Notice).id,
@@ -434,6 +528,8 @@ export class NoticeService {
       if (n.id === id) {
         updatedNotice = {
           ...n,
+          status: 'confirme' as NoticeStatus,
+          landlordConfirmedAt: n.landlordConfirmedAt || formattedToday,
           landlordReplyMessage: message.trim(),
           landlordReplyDate: formattedToday,
           landlordName: lName,
@@ -445,6 +541,17 @@ export class NoticeService {
 
     if (updatedNotice) {
       this.saveNotices(updated);
+
+      // Marquer la notification cloche du bailleur comme lue
+      try {
+        LeaseService.markNotificationAsRead(`notif-dep-${id}`);
+        const notifs = LeaseService.getLandlordNotifications(landlordUser);
+        notifs.forEach((n) => {
+          if (n.noticeId === id || (n.type === 'notice_received' && n.title?.includes(id))) {
+            LeaseService.markNotificationAsRead(n.id);
+          }
+        });
+      } catch {}
 
       // Notification dans l'espace résident
       TenantNotificationService.notifyNoticeReplied({

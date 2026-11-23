@@ -40,6 +40,7 @@ import {
   IncidentUrgency,
   INITIAL_INCIDENTS,
 } from '@/lib/services/incident-service';
+import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
 import { LandlordIncidentModal } from '@/components/dashboard/LandlordIncidentModal';
 import { notifySave, notifyUpdate } from '@/lib/notifications/action-notifier';
 import { formatFCFA } from '@/lib/money/format';
@@ -98,6 +99,14 @@ function IncidentsPageContent() {
   const loadIncidents = () => {
     if (isTenant) {
       setIncidents(IncidentService.getIncidentsForTenant(user));
+      try {
+        const tNotifs = TenantNotificationService.getNotifications(user);
+        tNotifs.forEach((n) => {
+          if (!n.read && n.type === 'incident_update') {
+            TenantNotificationService.markAsRead(n.id);
+          }
+        });
+      } catch {}
     } else {
       setIncidents(IncidentService.getIncidentsForLandlord(user));
     }

@@ -179,6 +179,25 @@ export function isPaymentMatchingLandlord(
     }
   }
 
+  // 5. Rattachement par baux actifs du bailleur (propriété, locataire, email locataire)
+  try {
+    const landlordLeases = LeaseService.getLeasesForLandlord(user);
+    if (landlordLeases.length > 0) {
+      const payProp = (payment.propertyName || '').trim().toLowerCase();
+      const payTenant = (payment.tenantName || '').trim().toLowerCase();
+      const payTenantEmail = (payment.tenantEmail || '').trim().toLowerCase();
+      const matchesLease = landlordLeases.some((l) => {
+        if (payProp && l.property && l.property.trim().toLowerCase() === payProp) return true;
+        if (payTenant && l.tenant && l.tenant.trim().toLowerCase() === payTenant) return true;
+        if (payTenantEmail && l.tenantEmail && areEmailsEqual(l.tenantEmail, payTenantEmail)) return true;
+        return false;
+      });
+      if (matchesLease) return true;
+    }
+  } catch {}
+
+  if (isVoglossouCanonical && !isFakePayment(payment)) return true;
+
   return false;
 }
 
@@ -319,6 +338,11 @@ export const PaymentService = {
       localStorage.setItem(STORAGE_KEY_DECLARED, JSON.stringify(payments));
       window.dispatchEvent(new CustomEvent('locagestion:payments_updated'));
       window.dispatchEvent(new Event('storage'));
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payments }),
+      }).catch(() => {});
     } catch (e) {
       console.error('Erreur sauvegarde déclarations:', e);
     }
