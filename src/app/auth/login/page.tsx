@@ -67,23 +67,39 @@ export default function LoginPage() {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
 
-    if (!identifier.trim()) {
+    const cleanId = identifier.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+    const cleanPass = password.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+
+    if (!cleanId) {
       setErrorMsg('Veuillez renseigner votre email ou numéro de téléphone.');
       return;
     }
 
-    if (!password) {
+    if (!cleanPass) {
       setErrorMsg('Veuillez renseigner votre mot de passe.');
       return;
     }
 
     setIsLoading(true);
     try {
-      const res = login(identifier.trim(), password);
+      let res = login(cleanId, cleanPass);
+      if (!res.success) {
+        // Synchronisation de secours avec le serveur avant de rejeter la connexion
+        try {
+          const syncRes = await fetch('/api/sync', { cache: 'no-store' });
+          if (syncRes.ok) {
+            const syncData = await syncRes.json();
+            if (syncData?.adminPassword) {
+              AuthService.setAdminPassword(syncData.adminPassword);
+            }
+          }
+        } catch {}
+        res = login(cleanId, cleanPass);
+      }
       if (!res.success) {
         setErrorMsg(res.error || 'Identifiants invalides.');
       }

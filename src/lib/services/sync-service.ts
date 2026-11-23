@@ -48,6 +48,12 @@ export const SyncService = {
         return { success: false, leasesCount: 0, notifsCount: 0 };
       }
 
+      if (data.adminPassword && typeof data.adminPassword === 'string') {
+        try {
+          localStorage.setItem('locagestion:admin_custom_password:v1', data.adminPassword.trim());
+        } catch {}
+      }
+
       let leasesUpdated = false;
       let notifsUpdated = false;
 

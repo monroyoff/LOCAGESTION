@@ -23,13 +23,18 @@ export function GlobalSyncProvider({ children }: { children: React.ReactNode }) 
         if (res.ok) {
           const data = await res.json();
           if (data && data.version) {
+            const storedVersion = localStorage.getItem('locagestion:client_build_version');
             if (!initialVersionRef.current) {
-              // Premier chargement de la session active
               initialVersionRef.current = data.version;
+              if (storedVersion && storedVersion !== data.version) {
+                localStorage.setItem('locagestion:client_build_version', data.version);
+                window.location.reload();
+                return;
+              }
+              localStorage.setItem('locagestion:client_build_version', data.version);
             } else if (initialVersionRef.current !== data.version) {
-              // Une nouvelle version a été déployée sur le serveur !
-              // Rechargement automatique et transparent sans que l'utilisateur n'ait besoin d'actualiser
               initialVersionRef.current = data.version;
+              localStorage.setItem('locagestion:client_build_version', data.version);
               window.location.reload();
             }
           }

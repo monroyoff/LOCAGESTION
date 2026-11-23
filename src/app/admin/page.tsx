@@ -101,9 +101,12 @@ export default function AdminDashboardPage() {
     setUsers(AuthService.getAllKnownUsers());
   };
 
+  const effectiveUser = user || (typeof window !== 'undefined' ? AuthService.getCurrentUser() : null);
+
   useEffect(() => {
+    const currentAdmin = user || AuthService.getCurrentUser();
     // RLS Applicatif : Seul le compte vérifié Super-Admin a le droit d'accéder à la console
-    if (!user || user.role !== 'admin' || user.email !== 'admin@locagestion.site') {
+    if (!currentAdmin || currentAdmin.role !== 'admin' || !areEmailsEqual(currentAdmin.email, 'admin@locagestion.site')) {
       router.replace('/auth/login');
       return;
     }
@@ -119,7 +122,7 @@ export default function AdminDashboardPage() {
     };
   }, [user, router]);
 
-  if (!user || user.role !== 'admin' || user.email !== 'admin@locagestion.site') {
+  if (!effectiveUser || effectiveUser.role !== 'admin' || !areEmailsEqual(effectiveUser.email, 'admin@locagestion.site')) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-white">
         <p className="text-sm font-bold text-slate-400">Accès restreint au Super-Administrateur...</p>

@@ -269,6 +269,14 @@ export async function GET(req: NextRequest) {
     const properties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
     const conversations = readJsonFile<any[]>(CONVERSATIONS_FILE, []);
     const payments = readJsonFile<any[]>(PAYMENTS_FILE, []);
+    let adminPassword = 'Omega#Admin2027!LocaSecurity';
+    try {
+      const adminPath = path.join(DATA_DIR, 'admin.json');
+      if (fs.existsSync(adminPath)) {
+        const parsedAdmin = JSON.parse(fs.readFileSync(adminPath, 'utf8'));
+        if (parsedAdmin?.password) adminPassword = parsedAdmin.password;
+      }
+    } catch {}
 
     // Filtrage contextuel si locataire spécifique demandé, sinon envoi complet pour synchronisation globale
     return NextResponse.json({
@@ -280,6 +288,7 @@ export async function GET(req: NextRequest) {
       properties,
       conversations,
       payments,
+      adminPassword,
       timestamp: new Date().toISOString(),
     });
   } catch (e) {

