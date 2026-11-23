@@ -45,6 +45,8 @@ import {
   NoticeReasonType,
   NOTICE_REASONS_CATALOG,
 } from '@/lib/services/notice-service';
+import { LeaseService, RegisteredTenant } from '@/lib/services/lease-service';
+import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
 import { IssueNoticeModal } from '@/components/reminders/IssueNoticeModal';
 import { NoticeDetailsModal } from '@/components/reminders/NoticeDetailsModal';
 import { NoticeEmailModal } from '@/components/reminders/NoticeEmailModal';
@@ -82,16 +84,21 @@ export default function RemindersCenterPage() {
   const [selectedNoticeForReply, setSelectedNoticeForReply] = useState<Notice | null>(null);
   const [replyMessage, setReplyMessage] = useState<string>('');
   const [isSendingReply, setIsSendingReply] = useState<boolean>(false);
+  const [landlordTenants, setLandlordTenants] = useState<RegisteredTenant[]>([]);
+  const [preselectedTenantForNotice, setPreselectedTenantForNotice] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const handleUpdate = () => {
       setNotices(NoticeService.getLandlordNotices(user));
+      setLandlordTenants(LeaseService.getRegisteredTenants(user));
     };
     handleUpdate();
     window.addEventListener('locagestion:notices_updated', handleUpdate);
+    window.addEventListener('locagestion:leases_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
     return () => {
       window.removeEventListener('locagestion:notices_updated', handleUpdate);
+      window.removeEventListener('locagestion:leases_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
   }, [user]);
@@ -452,7 +459,7 @@ export default function RemindersCenterPage() {
                     </div>
 
                     <p className="text-xs text-slate-600 leading-relaxed">
-                      Prévient courtoisement l'ensemble des <strong>28 locataires actifs</strong> du loyer à venir pour le mois suivant, avec rappel des coordonnées Wave et Mobile Money.
+                      Prévient courtoisement l'ensemble de vos <strong>{landlordTenants.length} contrat{landlordTenants.length > 1 ? 's' : ''} / locataire{landlordTenants.length > 1 ? 's' : ''} actif{landlordTenants.length > 1 ? 's' : ''}</strong> du loyer à venir pour le mois suivant, avec rappel des coordonnées Wave et Mobile Money.
                     </p>
                   </div>
 
@@ -503,6 +510,89 @@ export default function RemindersCenterPage() {
                     <span className="text-xs font-extrabold text-emerald-600">Actif en continu ✓</span>
                   </div>
                 </div>
+              </div>
+
+              {/* Liste des Locataires sous Contrat Signé pour Relance ou Préavis Ciblé */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">
+                      Mes Locataires sous Contrat Signé ({landlordTenants.length})
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      Sélectionnez un locataire pour lui transmettre une relance directe ou émettre un préavis formel.
+                    </p>
+                  </div>
+                </div>
+
+                {landlordTenants.length === 0 ? (
+                  <div className="py-6 text-center text-slate-400 text-xs">
+                    Aucun contrat de bail signé enregistré pour le moment.
+                  </div>
+                ) : (
+                  <div className="divide-y divide-slate-100">
+                    {landlordTenants.map((t) => (
+                      <div
+                        key={t.id}
+                        className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-black text-xs text-slate-900">{t.name}</span>
+                            {t.leaseId && (
+                              <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                                {t.leaseId}
+                              </span>
+                            )}
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              Contrat Signé
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-500 block mt-0.5">
+                            {t.property} ({t.unit}) • Loyer : <strong>{formatFCFA(t.rent || 0)}/mois</strong>
+                          </span>
+                          <span className="text-[11px] text-slate-400 block">
+                            {t.phone} {t.email ? `• ${t.email}` : ''}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPreselectedTenantForNotice(t.id);
+                              setActiveTab('preavis');
+                              setShowIssueNoticeModal(true);
+                            }}
+                            className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+                          >
+                            <Scale className="w-3.5 h-3.5" />
+                            <span>Émettre un Préavis</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setSelectedReminderTarget({
+                                tenantName: t.name,
+                                tenantPhone: t.phone,
+                                tenantEmail: t.email,
+                                propertyName: t.property || 'Logement',
+                                unitNumber: t.unit || 'Lot',
+                                expectedAmount: t.rent || 25000,
+                                period: 'Novembre 2026',
+                              })
+                            }
+                            className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>Relancer ce locataire</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               {/* Pending Overdue Tenants Action List */}
@@ -1007,7 +1097,11 @@ export default function RemindersCenterPage() {
       {showIssueNoticeModal && (
         <IssueNoticeModal
           isOpen={showIssueNoticeModal}
-          onClose={() => setShowIssueNoticeModal(false)}
+          onClose={() => {
+            setShowIssueNoticeModal(false);
+            setPreselectedTenantForNotice(undefined);
+          }}
+          preselectedTenantName={preselectedTenantForNotice}
           onNoticeCreated={() => {
             refreshNotices();
           }}

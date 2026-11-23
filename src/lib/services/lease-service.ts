@@ -100,6 +100,10 @@ export interface RegisteredTenant {
   phone: string;
   property?: string;
   unit?: string;
+  rent?: number;
+  leaseId?: string;
+  matricule?: string;
+  status?: LeaseStatus;
   address?: string;
   idType?: string;
   idNumber?: string;
@@ -523,8 +527,39 @@ export const LeaseService = {
   },
 
   // Récupérer la liste des locataires certifiés (avec persistance)
-  getRegisteredTenants(): RegisteredTenant[] {
+  getRegisteredTenants(user?: AuthUser | null): RegisteredTenant[] {
     if (typeof window === 'undefined') return [];
+    const result: RegisteredTenant[] = [];
+    const seenKeys = new Set<string>();
+
+    // 1. Priorité absolue : Locataires avec lesquels le bailleur a signé un contrat de bail
+    try {
+      const leases = user ? this.getLeasesForLandlord(user) : this.getLeases();
+      const validLeases = leases.filter((l) => !isFakeLease(l) && l.status !== 'resilie');
+      validLeases.forEach((l) => {
+        const key = `${l.id}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          result.push({
+            id: l.id,
+            leaseId: l.id,
+            name: l.tenant,
+            email: l.tenantEmail || '',
+            phone: l.tenantPhone || '',
+            property: l.property,
+            unit: l.unit,
+            rent: l.rent,
+            matricule: l.tenantMatricule,
+            status: l.status,
+            address: l.tenantAddress || l.propertyAddress,
+          });
+        }
+      });
+    } catch (e) {
+      console.error('Erreur extraction locataires depuis les baux:', e);
+    }
+
+    // 2. Compléter avec les locataires enregistrés additionnels non fictifs
     try {
       const stored = localStorage.getItem('locagestion:registered_tenants');
       if (stored) {
@@ -551,13 +586,23 @@ export const LeaseService = {
           if (sanitized.length !== parsed.length) {
             localStorage.setItem('locagestion:registered_tenants', JSON.stringify(sanitized));
           }
-          return sanitized;
+          sanitized.forEach((t: RegisteredTenant) => {
+            const alreadyInLeases = result.some(
+              (r) =>
+                r.id === t.id ||
+                (r.name.toLowerCase().trim() === (t.name || '').toLowerCase().trim() &&
+                  (!t.unit || r.unit === t.unit))
+            );
+            if (!alreadyInLeases) {
+              result.push(t);
+            }
+          });
         }
       }
     } catch (e) {
       console.error('Erreur lecture locataires enregistrés:', e);
     }
-    return [];
+    return result;
   },
 
   // Enregistrer dynamiquement un nouveau locataire et lui générer un code d'accès

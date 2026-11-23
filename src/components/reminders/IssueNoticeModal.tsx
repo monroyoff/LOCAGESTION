@@ -51,12 +51,22 @@ export function IssueNoticeModal({
   preselectedTenantName,
 }: IssueNoticeModalProps) {
   const { user } = useAuth();
-  const [registeredTenants, setRegisteredTenants] = useState<RegisteredTenant[]>(() => {
+  const [registeredTenants, setRegisteredTenants] = useState<RegisteredTenant[]>([]);
+
+  useEffect(() => {
     if (typeof window !== 'undefined') {
-      return LeaseService.getRegisteredTenants();
+      const loadTenants = () => {
+        setRegisteredTenants(LeaseService.getRegisteredTenants(user));
+      };
+      loadTenants();
+      window.addEventListener('locagestion:leases_updated', loadTenants);
+      window.addEventListener('storage', loadTenants);
+      return () => {
+        window.removeEventListener('locagestion:leases_updated', loadTenants);
+        window.removeEventListener('storage', loadTenants);
+      };
     }
-    return [];
-  });
+  }, [user, isOpen]);
 
   const [selectedTenantKey, setSelectedTenantKey] = useState<string>('');
   const [tenantName, setTenantName] = useState<string>('');
@@ -112,11 +122,13 @@ export function IssueNoticeModal({
     }
   };
 
-  // Pré-remplissage uniquement si locataire pré-sélectionné
+  // Pré-remplissage si locataire/contrat pré-sélectionné ou sélection automatique du premier contrat signé
   useEffect(() => {
     if (preselectedTenantName) {
       const match = registeredTenants.find(
-        (t) => t.name.toLowerCase() === preselectedTenantName.toLowerCase()
+        (t) =>
+          t.id.toLowerCase() === preselectedTenantName.toLowerCase() ||
+          t.name.toLowerCase() === preselectedTenantName.toLowerCase()
       );
       if (match) {
         setSelectedTenantKey(match.id);
@@ -125,6 +137,7 @@ export function IssueNoticeModal({
         setTenantEmail(match.email);
         if (match.property) setPropertyName(match.property);
         if (match.unit) setUnitNumber(match.unit);
+        if (match.rent !== undefined) setMonthlyRent(match.rent);
       } else {
         setTenantName(preselectedTenantName);
       }
@@ -139,6 +152,7 @@ export function IssueNoticeModal({
       setTenantEmail('');
       setPropertyName('');
       setUnitNumber('');
+      setMonthlyRent(0);
       return;
     }
     const t = registeredTenants.find((item) => item.id === tenantId);
@@ -148,6 +162,7 @@ export function IssueNoticeModal({
       setTenantEmail(t.email);
       if (t.property) setPropertyName(t.property);
       if (t.unit) setUnitNumber(t.unit);
+      if (t.rent !== undefined) setMonthlyRent(t.rent);
     }
   };
 
@@ -193,6 +208,9 @@ export function IssueNoticeModal({
       legalBasis: activeCatalog.legalBasis,
       departureInspectionDate: formattedInspectionDate,
       notes: `Préavis formel émis le ${formattedNoticeDate} avec délai de ${noticeMonths} mois.`,
+      landlordName: user?.companyName || user?.name || 'Bailleur',
+      landlordEmail: user?.email,
+      landlordPhone: user?.phone,
     };
   };
 
@@ -298,10 +316,10 @@ export function IssueNoticeModal({
                     onChange={(e) => handleSelectTenant(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                   >
-                    <option value="">Sélectionner un locataire...</option>
+                    <option value="">Sélectionner un locataire sous contrat...</option>
                     {registeredTenants.map((t) => (
                       <option key={t.id} value={t.id}>
-                        {t.name} {t.property ? `• ${t.property} (${t.unit || ''})` : ''}
+                        {t.name} {t.property ? `• ${t.property} (${t.unit || ''})` : ''} {t.rent ? `— ${formatFCFA(t.rent)}/mois` : ''} {t.leaseId ? `[${t.leaseId}]` : ''}
                       </option>
                     ))}
                     <option value="custom">+ Autre locataire (saisie libre)</option>

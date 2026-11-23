@@ -194,7 +194,7 @@ export function isPaymentMatchingLandlord(
       });
       if (matchesLease) return true;
     }
-  } catch {}
+  } catch { }
 
   if (isVoglossouCanonical && !isFakePayment(payment)) return true;
 
@@ -229,14 +229,14 @@ export const PaymentService = {
           if (hasMutated) {
             try {
               localStorage.setItem(STORAGE_KEY_DECLARED, JSON.stringify(parsed));
-            } catch (e) {}
+            } catch (e) { }
           }
           return parsed;
         }
       }
       try {
         localStorage.setItem(STORAGE_KEY_DECLARED, JSON.stringify(INITIAL_DECLARED_PAYMENTS));
-      } catch (e) {}
+      } catch (e) { }
       return INITIAL_DECLARED_PAYMENTS;
     } catch (e) {
       console.error('Erreur lecture déclarations:', e);
@@ -265,7 +265,7 @@ export const PaymentService = {
           if (sanitized.length !== parsed.length) {
             try {
               localStorage.setItem(STORAGE_KEY_VERIFIED, JSON.stringify(sanitized));
-            } catch (e) {}
+            } catch (e) { }
           }
           return sanitized;
         }
@@ -342,7 +342,7 @@ export const PaymentService = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ payments }),
-      }).catch(() => {});
+      }).catch(() => { });
     } catch (e) {
       console.error('Erreur sauvegarde déclarations:', e);
     }
