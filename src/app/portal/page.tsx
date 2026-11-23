@@ -66,14 +66,17 @@ import {
   ShoppingBag,
   Store,
   Briefcase,
+  MessageSquare,
+  DoorOpen,
 } from 'lucide-react';
-import { formatFCFA } from '@/lib/money/format';
+import { formatFCFA, formatNotificationTime } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { PaymentTransaction } from '@/lib/types';
 import { generateLeasePDF, generateInspectionPDF, generateNoticePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { NoticeService, Notice } from '@/lib/services/notice-service';
 import { TenantNotificationService, TenantNotification } from '@/lib/services/tenant-notification-service';
+import { ConversationService, Conversation, Message } from '@/lib/services/conversation-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
 import { TenantDepartureModal } from '@/components/portal/TenantDepartureModal';
 import { InspectionModal } from '@/components/leases/InspectionModal';
@@ -630,6 +633,114 @@ function TenantPortalContent() {
       window.removeEventListener('storage', loadNotifs);
     };
   }, [user]);
+
+  // Relances de loyer et mises en demeure filtrées strictement (excluant chats et baux)
+  const receivedReminders = useMemo(() => {
+    return TenantNotificationService.getReminders(user);
+  }, [portalNotifs, user]);
+
+  // État de réponse directe du locataire à une relance de loyer
+  const [reminderToReply, setReminderToReply] = useState<TenantNotification | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isSendingReply, setIsSendingReply] = useState(false);
+
+  const handleSendReminderReply = () => {
+    if (!reminderToReply || !replyText.trim()) return;
+    setIsSendingReply(true);
+    try {
+      const allConvs = ConversationService.getAllConversations();
+      const myName = user?.name || tenant.name || 'Locataire';
+      const landlordName = reminderToReply.actor || tenant.landlord.name || 'Bailleur';
+      const landlordPhone = tenant.landlord.phone || '+229 01 95 44 44 30';
+      const landlordEmail = tenant.landlord.email || 'jobovog@gmail.com';
+
+      let targetConv = allConvs.find(
+        (c) =>
+          (c.visitorName?.toLowerCase() === myName.toLowerCase() ||
+            c.tenantName?.toLowerCase() === myName.toLowerCase() ||
+            (user?.email && c.visitorEmail && areEmailsEqual(user.email, c.visitorEmail)))
+      );
+
+      const now = new Date();
+      const nowTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const userAvatar = (user as any)?.avatar || (tenant as any)?.avatar || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80';
+      const newMsg: Message = {
+        id: `msg-${Date.now()}`,
+        sender: 'me',
+        senderRole: 'locataire',
+        senderName: myName,
+        senderAvatar: userAvatar,
+        text: `[Réponse à votre relance : « ${reminderToReply.title} »]\n\n${replyText.trim()}`,
+        time: nowTime,
+        status: 'sent',
+      };
+
+      if (targetConv) {
+        targetConv.messages.push(newMsg);
+        targetConv.lastMessage = `[Réponse relance] : ${replyText.trim().slice(0, 50)}...`;
+        targetConv.lastMessageTime = nowTime;
+        targetConv.hasUnread = true;
+        targetConv.unreadBy = 'bailleur';
+        targetConv.unreadCount = (targetConv.unreadCount || 0) + 1;
+        ConversationService.saveConversations(
+          allConvs.map((c) => (c.id === targetConv!.id ? targetConv! : c))
+        );
+      } else {
+        const newConv: Conversation = {
+          id: `conv-reply-${Date.now()}`,
+          tenantName: myName,
+          tenantAvatar: userAvatar,
+          visitorName: myName,
+          visitorEmail: user?.email,
+          visitorPhone: user?.phone,
+          visitorAvatar: userAvatar,
+          publisherName: landlordName,
+          authorName: landlordName,
+          authorEmail: landlordEmail,
+          authorPhone: landlordPhone,
+          authorRole: 'bailleur',
+          isOnline: true,
+          propertyTitle: currentLease?.property || tenant.property,
+          propertyUnit: currentLease?.unit || tenant.unit,
+          propertySurface: '45 m²',
+          propertyPrice: currentLease?.rent || tenant.monthlyRent,
+          propertyThumbnail: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
+          lastMessage: `[Réponse relance] : ${replyText.trim().slice(0, 50)}...`,
+          lastMessageTime: nowTime,
+          unreadCount: 1,
+          hasUnread: true,
+          unreadBy: 'bailleur',
+          messages: [newMsg],
+        };
+        ConversationService.saveConversations([newConv, ...allConvs]);
+      }
+
+      LeaseService.addLandlordNotification({
+        id: `notif-reply-${Date.now()}`,
+        title: `💬 Réponse du locataire à votre relance`,
+        message: `${myName} a répondu à votre relance pour ${currentLease?.unit || tenant.unit} : « ${replyText.trim().slice(0, 60)}... »`,
+        type: 'message_received',
+        time: nowTime,
+        createdAt: now.toISOString(),
+        read: false,
+        tenantName: myName,
+        property: currentLease?.property || tenant.property,
+        unit: currentLease?.unit || tenant.unit,
+      });
+
+      TenantNotificationService.markAsRead(reminderToReply.id);
+      setPortalNotifs(TenantNotificationService.getNotifications(user));
+
+      showToast('Votre réponse a été transmise à votre bailleur avec succès !');
+      setReminderToReply(null);
+      setReplyText('');
+    } catch (e) {
+      console.error(e);
+      showToast('Erreur lors de la transmission de votre réponse.');
+    } finally {
+      setIsSendingReply(false);
+    }
+  };
 
   // Calcul dynamique des mois et libellé de période
   const resolvedMonthsCount =
@@ -3575,20 +3686,22 @@ function TenantPortalContent() {
                 </div>
               </div>
 
-              {/* SECTION 0 : FIL DE TOUTES LES NOTIFICATIONS & COMMUNICATIONS DU BAILLEUR */}
+              {/* ==================================================================== */}
+              {/* SECTION 1 : RELANCES DE LOYER & MISES EN DEMEURE REÇUES              */}
+              {/* ==================================================================== */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-brand-600" />
+                    <BellRing className="w-4 h-4 text-rose-600" />
                     <h3 className="text-sm font-black text-slate-900 tracking-tight">
-                      Communications & Actions Émises par le Bailleur ({portalNotifs.length})
+                      Relances de Loyer & Mises en Demeure Reçues ({receivedReminders.length})
                     </h3>
                   </div>
-                  {portalNotifs.some((n) => !n.read) && (
+                  {receivedReminders.some((n) => !n.read) && (
                     <button
                       type="button"
                       onClick={() => {
-                        TenantNotificationService.markAllAsRead(user);
+                        receivedReminders.forEach((r) => TenantNotificationService.markAsRead(r.id));
                         setPortalNotifs(TenantNotificationService.getNotifications(user));
                       }}
                       className="text-xs font-bold text-brand-600 hover:text-brand-700 cursor-pointer"
@@ -3598,58 +3711,156 @@ function TenantPortalContent() {
                   )}
                 </div>
 
-                {portalNotifs.length === 0 ? (
-                  <div className="p-8 rounded-3xl bg-white border border-slate-200/80 shadow-soft text-center space-y-2">
-                    <CheckCircle2 className="w-8 h-8 text-emerald-500 mx-auto" />
-                    <h4 className="text-sm font-black text-slate-900">Aucune notification pour le moment</h4>
-                    <p className="text-xs text-slate-500">Toutes les actions du bailleur apparaîtront automatiquement ici en temps réel.</p>
+                {receivedReminders.length === 0 ? (
+                  <div className="p-8 rounded-3xl bg-white border border-slate-200/80 shadow-soft text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto border border-emerald-100">
+                      <CheckCircle2 className="w-6 h-6" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-black text-slate-900">
+                        Aucune relance de loyer en attente
+                      </h4>
+                      <p className="text-xs text-slate-500 max-w-md mx-auto">
+                        Tous vos règlements de loyer sont à jour auprès de votre bailleur. Aucun impayé ni rappel de paiement n’a été émis à votre encontre.
+                      </p>
+                    </div>
+                    <div className="pt-2 flex items-center justify-center gap-3 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleTabChange('quittances')}
+                        className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                      >
+                        Consulter mes quittances ({receiptsList.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeclarationModalOpen(true)}
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                      >
+                        + Déclarer un paiement
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="space-y-2.5">
-                    {portalNotifs.map((n) => {
-                      const isUnread = !n.read;
+                  <div className="space-y-3">
+                    {receivedReminders.map((reminder) => {
+                      const isUnread = !reminder.read;
+                      const titleLower = (reminder.title || '').toLowerCase();
+                      const isMiseEnDemeure = titleLower.includes('mise en demeure') || titleLower.includes('sommation');
+                      const isFerme = titleLower.includes('ferme') || titleLower.includes('retard') || titleLower.includes('impayé');
+
                       return (
                         <div
-                          key={n.id}
-                          className={`p-4 rounded-3xl bg-white border shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-                            isUnread ? 'border-amber-400 bg-amber-50/20 ring-2 ring-amber-400/20' : 'border-slate-200/80'
+                          key={reminder.id}
+                          className={`rounded-3xl p-5 sm:p-6 bg-white border shadow-soft space-y-4 transition-all ${
+                            isMiseEnDemeure
+                              ? 'border-rose-300 ring-2 ring-rose-500/10'
+                              : isFerme
+                              ? 'border-amber-300 ring-2 ring-amber-500/10'
+                              : isUnread
+                              ? 'border-blue-300 ring-2 ring-blue-500/10'
+                              : 'border-slate-200/80'
                           }`}
                         >
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
+                          {/* Header Relance */}
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {isMiseEnDemeure ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
+                                  <AlertTriangle className="w-3 h-3 text-rose-600" />
+                                  <span>Mise en Demeure Formelle (J+15)</span>
+                                </span>
+                              ) : isFerme ? (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 border border-amber-200 flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3 text-amber-600" />
+                                  <span>Notification de Retard de Loyer</span>
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 flex items-center gap-1">
+                                  <BellRing className="w-3 h-3 text-blue-600" />
+                                  <span>Rappel d’Échéance de Loyer</span>
+                                </span>
+                              )}
+
                               {isUnread && (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500 text-slate-950">
                                   Nouveau
                                 </span>
                               )}
+
                               <h4 className="text-xs sm:text-sm font-black text-slate-900">
-                                {n.title}
+                                {reminder.title}
                               </h4>
-                              <span className="text-[10px] text-slate-400 font-mono">• {n.time || n.timestamp}</span>
                             </div>
-                            <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
-                              {n.message}
-                            </p>
-                            <span className="text-[10px] text-slate-400 block">Émetteur : {n.actor || 'Bailleur'}</span>
+
+                            <span className="text-[11px] text-slate-400 font-mono">
+                              {formatNotificationTime(reminder)}
+                            </span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              TenantNotificationService.markAsRead(n.id);
-                              setPortalNotifs(TenantNotificationService.getNotifications(user));
-                              if (n.link.includes('tab=quittances')) handleTabChange('quittances');
-                              else if (n.link.includes('tab=bail')) handleTabChange('bail');
-                              else if (n.link.includes('tab=preavis')) handleTabChange('preavis');
-                              else if (n.link.includes('tab=solvabilite')) handleTabChange('solvabilite');
-                              else if (n.link.includes('action=declare_payment')) setDeclarationModalOpen(true);
-                              else if (n.link.includes('action=incident')) setReportIssueModalOpen(true);
-                            }}
-                            className="py-2 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer self-start sm:self-auto"
-                          >
-                            <span>{n.actionLabel || 'Consulter'}</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
+                          {/* Message et Contexte */}
+                          <div className="space-y-2">
+                            <p className="text-xs text-slate-700 leading-relaxed bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200/70">
+                              {reminder.message}
+                            </p>
+                            <div className="flex items-center justify-between text-[11px] text-slate-400">
+                              <span>Émetteur : <strong className="text-slate-700">{reminder.actor || tenant.landlord.name || 'Bailleur'}</strong></span>
+                              <span>Logement : <strong className="text-slate-700">{currentLease ? `${currentLease.property} (${currentLease.unit})` : tenant.unit}</strong></span>
+                            </div>
+                          </div>
+
+                          {/* Zone d'action : Répondre à la Relance */}
+                          <div className="pt-2 flex flex-wrap items-center justify-between gap-2.5 border-t border-slate-100">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                TenantNotificationService.markAsRead(reminder.id);
+                                setPortalNotifs(TenantNotificationService.getNotifications(user));
+                                setDeclarationModalOpen(true);
+                              }}
+                              className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Régulariser / Payer mon loyer</span>
+                            </button>
+
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setReminderToReply(reminder);
+                                  setReplyText('');
+                                }}
+                                className="py-2.5 px-3.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 text-brand-300" />
+                                <span>Répondre au Bailleur</span>
+                              </button>
+
+                              <a
+                                href={`https://wa.me/${(tenant.landlord.whatsapp || tenant.landlord.phone || '2290197000000').replace(/\D/g, '')}?text=${encodeURIComponent(
+                                  `Bonjour ${tenant.landlord.name || 'Bailleur'},\nJe fais suite à votre relance concernant le loyer de ${currentLease?.unit || tenant.unit}.\nJe vous contacte pour convenir de la régularisation.\nCordialement,\n${tenant.name}`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="py-2.5 px-3.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Échanger sur WhatsApp</span>
+                              </a>
+
+                              {tenant.landlord.phone && (
+                                <a
+                                  href={`tel:${tenant.landlord.phone.replace(/\s+/g, '')}`}
+                                  className="py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 flex items-center justify-center gap-1 transition-all cursor-pointer"
+                                  title="Appeler directement le bailleur"
+                                >
+                                  <Phone className="w-3.5 h-3.5 text-slate-500" />
+                                  <span>Appeler</span>
+                                </a>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
@@ -3657,8 +3868,10 @@ function TenantPortalContent() {
                 )}
               </div>
 
-              {/* SECTION 1 : PRÉAVIS DE CONGÉ OFFICIELS */}
-              <div className="space-y-3">
+              {/* ==================================================================== */}
+              {/* SECTION 2 : PRÉAVIS DE CONGÉ OFFICIELS                               */}
+              {/* ==================================================================== */}
+              <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <FileWarning className="w-4 h-4 text-rose-600" />
@@ -3667,7 +3880,7 @@ function TenantPortalContent() {
                     </h3>
                   </div>
                   <span className="text-[11px] font-semibold text-slate-400">
-                    Notifications juridiquement opposables
+                    Notifications juridiquement opposables (UEMOA / CEMAC)
                   </span>
                 </div>
 
@@ -3851,6 +4064,14 @@ function TenantPortalContent() {
                                 <Mail className="w-3.5 h-3.5 text-slate-500" />
                                 <span>Envoyer un Email</span>
                               </a>
+
+                              <Link
+                                href="/messages"
+                                className="px-3.5 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                              >
+                                <MessageSquare className="w-3.5 h-3.5 text-brand-300" />
+                                <span>Messagerie</span>
+                              </Link>
                             </div>
                           </div>
                         </div>
@@ -3860,69 +4081,42 @@ function TenantPortalContent() {
                 )}
               </div>
 
-              {/* SECTION 2 : RAPPELS & RELANCES D’ÉCHÉANCES DE LOYER */}
+              {/* ==================================================================== */}
+              {/* SECTION 3 : TRANSMETTRE UN PRÉAVIS DE DÉPART VOLONTAIRE (LOCATAIRE)  */}
+              {/* ==================================================================== */}
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CreditCard className="w-4 h-4 text-emerald-600" />
+                    <DoorOpen className="w-4 h-4 text-brand-600" />
                     <h3 className="text-sm font-black text-slate-900 tracking-tight">
-                      Rappels d’Échéances & Relances de Loyer
+                      Démarche : Notifier un Départ Volontaire
                     </h3>
                   </div>
                   <span className="text-[11px] font-semibold text-slate-400">
-                    {currentLease ? `Échéance mensuelle au ${tenant.dueDate || '05'}` : 'Aucune échéance'}
+                    Délai légal de 1 à 3 mois selon le bail
                   </span>
                 </div>
 
                 <div className="p-5 sm:p-6 rounded-3xl bg-white border border-slate-200/80 shadow-soft space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-black text-slate-900">
-                          {currentLease ? `Échéance Courante : ${declaredPeriod}` : 'Aucune échéance active'}
-                        </span>
-                        {currentLease && (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-                            Rappel automatique
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500">
-                        {currentLease ? (
-                          <>Loyer mensuel contractuel de <strong>{formatFCFA(tenant.monthlyRent)}</strong>. Règlement direct via Wave ou Mobile Money.</>
-                        ) : (
-                          <>Aucune échéance de loyer à régler pour le moment. Vos rappels et échéances s'afficheront ici automatiquement dès qu'un bail vous sera attribué.</>
-                        )}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="space-y-1 max-w-2xl">
+                      <h4 className="text-xs font-black text-slate-900">
+                        Vous prévoyez de déménager ou de libérer votre logement ?
+                      </h4>
+                      <p className="text-xs text-slate-500 leading-relaxed">
+                        Conformément au Code Foncier et Domanial et aux dispositions contractuelles de votre bail, transmettez officiellement votre notification de congé avec calcul automatique de la date d'effet, du calendrier d'état des lieux contradictoire de sortie et du délai légal de restitution de votre dépôt de garantie (30 jours).
                       </p>
                     </div>
 
-                    {currentLease && (
-                      <button
-                        type="button"
-                        onClick={() => setDeclarationModalOpen(true)}
-                        className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md shadow-emerald-600/20 flex items-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0 self-start sm:self-auto"
-                      >
-                        <Smartphone className="w-4 h-4" />
-                        <span>Déclarer un Règlement</span>
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => setDepartureModalOpen(true)}
+                      className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow flex items-center gap-2 cursor-pointer active:scale-95 transition-all shrink-0 self-start sm:self-auto"
+                    >
+                      <Plus className="w-4 h-4" />
+                      <span>+ Transmettre mon Préavis</span>
+                    </button>
                   </div>
-
-                  {/* Message de relance reçu */}
-                  {tenantNotices.length > 0 && (
-                    <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200/80 space-y-2">
-                      <div className="flex items-center justify-between text-xs font-bold text-amber-900">
-                        <span className="flex items-center gap-1.5">
-                          <BellRing className="w-3.5 h-3.5 text-amber-600" />
-                          <span>Dernier avis ou rappel de paiement reçu</span>
-                        </span>
-                        <span className="text-[10px] text-amber-600 font-medium">Reçu le {tenantNotices[0].noticeDate || tenantNotices[0].createdAt}</span>
-                      </div>
-                      <p className="text-xs text-amber-950 font-mono leading-relaxed bg-white/70 p-3 rounded-xl border border-amber-200/60">
-                        « {tenantNotices[0].reasonTitle || tenantNotices[0].reasonDetails || 'Rappel d’échéance de loyer'}. Montant exigible : {formatFCFA(tenantNotices[0].monthlyRent)}. Merci de déclarer votre règlement une fois le versement effectué. »
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             </div>
@@ -4835,6 +5029,125 @@ function TenantPortalContent() {
               <span className="text-[11px] text-slate-400 font-medium">
                 Photo contradictoire certifiée de l'état des lieux • Sceau d'inviolabilité numérique
               </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal : Répondre à la Relance du Bailleur */}
+      {reminderToReply && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200"
+          onClick={() => setReminderToReply(null)}
+        >
+          <div
+            className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm">
+                    Répondre à la Relance
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    Destinataire : {reminderToReply.actor || tenant.landlord.name || 'Bailleur Propriétaire'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReminderToReply(null)}
+                className="p-1 rounded-xl text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              {/* Rappel du contexte */}
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">
+                  Relance concernée
+                </span>
+                <h4 className="font-bold text-slate-900">{reminderToReply.title}</h4>
+                <p className="text-[11px] text-slate-600 line-clamp-2">{reminderToReply.message}</p>
+              </div>
+
+              {/* Suggestions rapides */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1.5">
+                  Réponses rapides prêtes à l’envoi :
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    "J'effectue le règlement ce jour par Wave / Mobile Money.",
+                    "Je sollicite un court délai de 48 heures pour régulariser.",
+                    "Le paiement a déjà été effectué, quittance en attente.",
+                    "Je vous transmets la preuve de virement dès ce soir.",
+                  ].map((chip) => (
+                    <button
+                      key={chip}
+                      type="button"
+                      onClick={() => setReplyText(chip)}
+                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-brand-50 hover:text-brand-600 text-slate-700 text-[11px] transition-colors text-left cursor-pointer"
+                    >
+                      {chip}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Zone de texte libre */}
+              <div>
+                <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                  Votre message au bailleur *
+                </label>
+                <textarea
+                  value={replyText}
+                  onChange={(e) => setReplyText(e.target.value)}
+                  placeholder="Ex : Bonjour, je vous confirme que le paiement est en cours de traitement..."
+                  rows={4}
+                  className="w-full p-3 rounded-2xl border border-slate-200 bg-white text-slate-900 text-xs focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 outline-none transition-all resize-none"
+                />
+              </div>
+
+              {/* Actions directes */}
+              <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
+                <a
+                  href={`https://wa.me/${(tenant.landlord.whatsapp || tenant.landlord.phone || '2290197000000').replace(/\D/g, '')}?text=${encodeURIComponent(
+                    `Bonjour ${tenant.landlord.name || 'Bailleur'},\nJe fais suite à votre relance : « ${reminderToReply.title} ».\n\n${replyText || 'Je vous contacte pour convenir de la régularisation de mon loyer.'}\n\nCordialement,\n${tenant.name}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1.5 cursor-pointer"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Préférer WhatsApp</span>
+                </a>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setReminderToReply(null)}
+                    className="py-2.5 px-4 rounded-xl border border-slate-200 text-slate-700 text-xs font-bold hover:bg-slate-50 cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!replyText.trim() || isSendingReply}
+                    onClick={handleSendReminderReply}
+                    className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 disabled:opacity-50 text-white text-xs font-black shadow-pink-glow flex items-center gap-1.5 transition-all cursor-pointer"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    <span>{isSendingReply ? 'Envoi...' : 'Envoyer la Réponse'}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -461,7 +461,7 @@ function MessagesContent() {
         message: `${myName} vous a répondu : « ${inputText.slice(0, 70)}${inputText.length > 70 ? '...' : ''} »`,
         createdAt: nowIso,
         time: nowTime,
-        type: 'reminder_received',
+        type: 'chat_message',
         read: false,
         link: `/messages?convId=${encodeURIComponent(selectedConv.id)}`,
         tenantName: recipientName,

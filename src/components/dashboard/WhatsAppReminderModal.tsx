@@ -77,6 +77,8 @@ ${senderName}`;
       tenantPhone: payment.tenantPhone,
       propertyName: payment.propertyName,
       unitNumber: payment.unitNumber,
+      urgencyLevel,
+      senderName,
     });
     notifyAction('Message de relance copié et consigné dans l’espace locataire !', 'Relance copiée !', 'success');
     setTimeout(() => setCopied(false), 2500);
@@ -168,6 +170,8 @@ ${senderName}`;
                 tenantPhone: payment.tenantPhone,
                 propertyName: payment.propertyName,
                 unitNumber: payment.unitNumber,
+                urgencyLevel,
+                senderName,
               });
               onClose();
             }}

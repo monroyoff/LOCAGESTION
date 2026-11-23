@@ -122,17 +122,17 @@ export interface LandlordNotification {
   timestamp?: string;
   createdAt?: string;
   type:
-    | 'lease_signed'
-    | 'lease_transmitted'
-    | 'payment_declared'
-    | 'incident_reported'
-    | 'lease_terminated'
-    | 'lease_reactivated'
-    | 'notice_received'
-    | 'listing_approved'
-    | 'listing_rejected'
-    | 'visit_requested'
-    | 'message_received';
+  | 'lease_signed'
+  | 'lease_transmitted'
+  | 'payment_declared'
+  | 'incident_reported'
+  | 'lease_terminated'
+  | 'lease_reactivated'
+  | 'notice_received'
+  | 'listing_approved'
+  | 'listing_rejected'
+  | 'visit_requested'
+  | 'message_received';
   read: boolean;
   leaseId?: string;
   incidentId?: string;
@@ -323,14 +323,14 @@ export const LeaseService = {
             const merged = [...INITIAL_LEASES, ...parsed];
             try {
               localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(merged));
-            } catch (e) {}
+            } catch (e) { }
             return merged;
           }
 
           if (hadFake) {
             try {
               localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
-            } catch (e) {}
+            } catch (e) { }
           }
 
           // Si le bail canonique est présent mais sans les coordonnées complètes du bailleur, les enrichir
@@ -370,7 +370,7 @@ export const LeaseService = {
             }
             try {
               localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
-            } catch (e) {}
+            } catch (e) { }
           }
 
           // Si d'autres baux initiaux (ex: Magasin ou Boutique de Jojo VOG) sont absents du cache local, les intégrer
@@ -381,7 +381,7 @@ export const LeaseService = {
             parsed = [...parsed, ...missingInitialLeases];
             try {
               localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
-            } catch (e) {}
+            } catch (e) { }
           }
           if (parsed.length > 0) return parsed;
         }
@@ -394,7 +394,7 @@ export const LeaseService = {
     if (INITIAL_LEASES.length > 0) {
       try {
         localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(INITIAL_LEASES));
-      } catch (e) {}
+      } catch (e) { }
     }
     return INITIAL_LEASES;
   },
@@ -444,7 +444,7 @@ export const LeaseService = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leases: updated }),
-      }).catch(() => {});
+      }).catch(() => { });
     } catch (e) {
       console.error('Erreur sauvegarde bail:', e);
     }
@@ -461,7 +461,7 @@ export const LeaseService = {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ leases }),
-      }).catch(() => {});
+      }).catch(() => { });
     } catch (e) {
       console.error('Erreur sauvegarde baux:', e);
     }
@@ -834,7 +834,7 @@ export const LeaseService = {
       if (needsSave && typeof window !== 'undefined') {
         try {
           localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(parsed));
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // Synthèse des messages reçus non lus depuis les conversations
@@ -896,7 +896,7 @@ export const LeaseService = {
             });
           }
         }
-      } catch {}
+      } catch { }
 
       if (!user || user.role === 'admin' || user.email === 'admin@locagestion.site') {
         return parsed;

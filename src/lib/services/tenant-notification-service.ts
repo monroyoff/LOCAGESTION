@@ -13,7 +13,8 @@ export type TenantNotificationType =
   | 'incident_update'
   | 'notice_issued'
   | 'reminder_received'
-  | 'advance_payment_declared';
+  | 'advance_payment_declared'
+  | 'chat_message';
 
 export interface TenantNotification {
   id: string;
@@ -156,8 +157,36 @@ export const TenantNotificationService = {
               timestamp = !isTimestampInstant && timestamp ? timestamp : resolved.toISOString();
             }
 
+            let type = n.type;
+            const link = n.link || '';
+            const title = (n.title || '').toLowerCase();
+            const actionLabel = (n.actionLabel || '').toLowerCase();
+
+            // Reclassifier les réponses de messagerie en chat_message
+            if (
+              (type === 'reminder_received' || !type) &&
+              (link.includes('/messages') ||
+                n.title?.startsWith('💬') ||
+                title.includes('réponse de votre bailleur') ||
+                title.includes('nouveau message') ||
+                actionLabel.includes('lire le message'))
+            ) {
+              type = 'chat_message';
+              needsSave = true;
+            }
+
+            // Reclassifier les contrats de bail
+            if (
+              (type === 'reminder_received' || !type) &&
+              (title.includes('contrat de bail') || title.includes('bail contresigné'))
+            ) {
+              type = 'lease_available';
+              needsSave = true;
+            }
+
             return {
               ...n,
+              type,
               createdAt,
               time,
               timestamp,
@@ -207,6 +236,45 @@ export const TenantNotificationService = {
 
     // Aucun utilisateur ciblé ni connecté : liste vide sécurisée
     return [];
+  },
+
+  /**
+   * Récupère exclusivement les relances de loyer et mises en demeure adressées au locataire
+   * Exclut formellement les messages de discussion chat et les avis de baux
+   */
+  getReminders(userOrFilter?: AuthUser | string | null): TenantNotification[] {
+    const notifs = this.getNotifications(userOrFilter);
+    return notifs.filter((n) => {
+      // Exclure les chats et discussions
+      if (n.type === 'chat_message') return false;
+      if (n.link?.includes('/messages')) return false;
+      if (n.title?.startsWith('💬') || n.title?.toLowerCase().includes('réponse de votre bailleur') || n.title?.toLowerCase().includes('nouveau message')) return false;
+
+      // Exclure les contrats de bail
+      if (n.type === 'lease_available' || n.type === 'lease_reactivated' || n.type === 'lease_resiliated') return false;
+      if (n.title?.toLowerCase().includes('contrat de bail') || n.title?.toLowerCase().includes('bail contresigné')) return false;
+
+      // Exclure quittances, incidents, etc.
+      if (
+        n.type === 'receipt_issued' ||
+        n.type === 'incident_update' ||
+        n.type === 'advance_payment_declared' ||
+        n.type === 'passport_ready'
+      ) {
+        return false;
+      }
+
+      // Vraie relance
+      if (n.type === 'reminder_received') return true;
+      const lower = (n.title || '').toLowerCase();
+      return (
+        lower.includes('rappel') ||
+        lower.includes('relance') ||
+        lower.includes('mise en demeure') ||
+        lower.includes('retard de loyer') ||
+        lower.includes('sommation')
+      );
+    });
   },
 
   /**
@@ -488,18 +556,44 @@ export const TenantNotificationService = {
     expectedAmount: number;
     tenantName: string;
     tenantPhone?: string;
+    tenantEmail?: string;
     propertyName?: string;
     unitNumber?: string;
+    urgencyLevel?: 'courtois' | 'ferme' | 'mise_en_demeure';
+    senderName?: string;
   }) {
+    const isMiseEnDemeure = params.urgencyLevel === 'mise_en_demeure';
+    const isFerme = params.urgencyLevel === 'ferme';
+
+    const title = isMiseEnDemeure
+      ? 'Sommation & Mise en Demeure de Payer (J+15)'
+      : isFerme
+      ? 'Notification de Retard de Loyer (Relance Ferme)'
+      : 'Rappel d’Échéance de Loyer';
+
+    const message = isMiseEnDemeure
+      ? `Mise en demeure formelle concernant l'impayé de loyer de ${params.period} (${new Intl.NumberFormat('fr-FR').format(params.expectedAmount)} FCFA) pour le logement ${params.propertyName || params.unitNumber || 'loué'}. Régularisation exigée sous 48h avant ouverture de procédure contentieuse.`
+      : isFerme
+      ? `Votre bailleur constate un retard sur le règlement du loyer de ${params.period} (${new Intl.NumberFormat('fr-FR').format(params.expectedAmount)} FCFA) pour ${params.propertyName || params.unitNumber || 'votre logement'}. Merci de régulariser sans délai.`
+      : `Votre bailleur vous rappelle l'échéance de loyer de ${params.period} d'un montant de ${new Intl.NumberFormat('fr-FR').format(params.expectedAmount)} FCFA. Vous pouvez régler par Wave, MTN ou virement bancaire.`;
+
     return this.addNotification({
-      title: 'Rappel d’Échéance de Loyer Émis',
-      message: `Votre bailleur vous rappelle l'échéance de loyer de ${params.period} d'un montant de ${new Intl.NumberFormat('fr-FR').format(params.expectedAmount)} FCFA. Vous pouvez régler par Wave, MTN ou virement bancaire.`,
+      title,
+      message,
       type: 'reminder_received',
-      link: '/portal?tab=accueil&action=declare_payment',
+      link: '/portal?tab=preavis',
       tenantName: params.tenantName,
       tenantPhone: params.tenantPhone,
-      actor: 'Bailleur',
-      actionLabel: 'Déclarer mon paiement',
+      tenantEmail: params.tenantEmail,
+      actor: params.senderName || 'Bailleur',
+      actionLabel: 'Régulariser / Payer',
+      metadata: {
+        urgencyLevel: params.urgencyLevel || 'courtois',
+        period: params.period,
+        expectedAmount: params.expectedAmount,
+        propertyName: params.propertyName,
+        unitNumber: params.unitNumber,
+      },
     });
   },
 
