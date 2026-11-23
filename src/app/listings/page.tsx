@@ -1903,8 +1903,6 @@ export default function ListingsPage() {
           ) : filteredListings.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredListings.map((listing) => {
-                const entryCost = computeEntryCost(listing);
-
                 return (
                   <div
                     key={listing.id}
@@ -2011,7 +2009,13 @@ export default function ListingsPage() {
                           {listing.title}
                         </h3>
 
-                        <div className="text-xs text-slate-500 space-y-1">
+                        <div
+                          onClick={() => {
+                            setSelectedListingForDetail(listing);
+                            setCurrentDetailPhotoIdx(0);
+                          }}
+                          className="text-xs text-slate-500 space-y-1 cursor-pointer"
+                        >
                           <div className="flex items-center justify-between gap-2 flex-wrap">
                             <div className="flex items-center gap-1 font-bold text-slate-800">
                               <MapPin className="w-3.5 h-3.5 text-brand-500 shrink-0" />
@@ -2036,54 +2040,6 @@ export default function ListingsPage() {
                                 <span>{listing.createdAt}</span>
                               </span>
                             )}
-                          </div>
-                        </div>
-
-                        {/* Fonctionnalité Clé : Boîte Coût Total d'Entrée */}
-                        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-emerald-50 to-tealAccent-50 border border-emerald-200/80 text-xs">
-                          <span className="text-[10px] uppercase font-bold text-emerald-800 block">
-                            À Prévoir à l’Entrée (Coût Total) :
-                          </span>
-                          <div className="text-lg font-black text-emerald-900 mt-0.5">
-                            {formatFCFA(entryCost.total)}
-                          </div>
-                          <span className="text-[10px] text-emerald-700 block mt-0.5">
-                            {entryCost.formulaLabel}
-                          </span>
-                        </div>
-
-                        {/* Description concernant le bien cochée ligne par ligne */}
-                        <div className="pt-2.5 border-t border-slate-100 space-y-1.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                              <span>Description du bien :</span>
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-medium">
-                              {((listing.descriptionLines && listing.descriptionLines.length > 0)
-                                ? listing.descriptionLines
-                                : listing.description
-                                ? listing.description.split('\n').filter((l) => l.trim().length > 0)
-                                : listing.amenities
-                              ).length} points clés
-                            </span>
-                          </div>
-
-                          <div className="space-y-1.5 bg-slate-50/90 p-2.5 rounded-xl border border-slate-100">
-                            {((listing.descriptionLines && listing.descriptionLines.length > 0)
-                              ? listing.descriptionLines
-                              : listing.description
-                              ? listing.description.split('\n').filter((l) => l.trim().length > 0)
-                              : listing.amenities
-                            ).map((line, idx) => (
-                              <div
-                                key={idx}
-                                className="flex items-start gap-1.5 text-[11px] text-slate-700 font-medium"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                                <span className="leading-snug">{line.replace(/^[-•*✓✔]\s*/, '')}</span>
-                              </div>
-                            ))}
                           </div>
                         </div>
 
@@ -2446,7 +2402,7 @@ export default function ListingsPage() {
                   return (
                     <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-tealAccent-50 border border-emerald-200 text-emerald-950">
                       <span className="text-[10px] font-bold uppercase tracking-wider block text-emerald-800">
-                        Coût Total à l'Entrée
+                        À Prévoir à l’Entrée (Coût Total) :
                       </span>
                       <div className="text-xl font-black text-emerald-900 mt-0.5">
                         {formatFCFA(modalCost.total)}
@@ -2464,10 +2420,15 @@ export default function ListingsPage() {
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                   <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 uppercase tracking-wider">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Description Détaillée & Points Clés du Bien</span>
+                    <span>Description du bien :</span>
                   </span>
-                  <span className="text-[11px] font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded-md border border-brand-200/60">
-                    Caractéristiques certifiées
+                  <span className="text-[11px] font-bold text-slate-500">
+                    {((selectedListingForDetail.descriptionLines && selectedListingForDetail.descriptionLines.length > 0)
+                      ? selectedListingForDetail.descriptionLines
+                      : selectedListingForDetail.description
+                      ? selectedListingForDetail.description.split('\n').filter((l) => l.trim().length > 0)
+                      : selectedListingForDetail.amenities
+                    ).length} points clés
                   </span>
                 </div>
 
