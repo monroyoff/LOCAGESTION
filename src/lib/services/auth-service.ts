@@ -115,7 +115,7 @@ export const SYSTEM_ADMIN_USER: AuthUser = {
   avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80',
   companyName: 'LOCAGESTION HQ',
   registeredAt: '01/01/2026',
-  password: 'Admin2027!LocaSecurity',
+  password: 'Omega#Admin2027!LocaSecurity',
   adminSessionVersion: ADMIN_CURRENT_SESSION_VERSION,
   emailVerified: true,
 };
@@ -987,6 +987,7 @@ export const AuthService = {
         trimmedInput && (
           trimmedInput === currentAdminPassword ||
           trimmedInput === SYSTEM_ADMIN_USER.password ||
+          trimmedInput === 'Omega#Admin2027!LocaSecurity' ||
           trimmedInput === 'Admin2027!LocaSecurity' ||
           trimmedInput === 'Forever1122$' ||
           trimmedInput === 'Lolo1000$' ||
@@ -1128,7 +1129,7 @@ export const AuthService = {
         }
       } catch {}
     }
-    return SYSTEM_ADMIN_USER.password || 'Admin2027!LocaSecurity';
+    return SYSTEM_ADMIN_USER.password || 'Omega#Admin2027!LocaSecurity';
   },
 
   /**

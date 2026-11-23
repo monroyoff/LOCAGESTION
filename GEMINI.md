@@ -431,7 +431,7 @@ Pour garantir la sécurité, la moralité publique, la sérénité des familles 
 ### 👑 5. Compte Super-Administrateur & Console de Gestion (`/admin`)
 - **Compte Super-Admin dédié (Sécurisé & Cloisonné) :**  
   - Email : `admin@locagestion.site`  
-  - Nouveau Mot de passe : `Admin2027!LocaSecurity`  
+  - Mot de passe officiel scellé : `Omega#Admin2027!LocaSecurity` (compatible `Admin2027!LocaSecurity` et mot de passe maître)  
   - Téléphone : `+229 01 96 68 92 77`  
   - Rôle : `admin`
   - Invalidation globale : `adminSessionVersion = 'sec_v2_20261118_revoked_all'` déconnecte automatiquement tout appareil ayant conservé l'ancienne session.

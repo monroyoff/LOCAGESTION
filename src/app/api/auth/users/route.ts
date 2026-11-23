@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     if (cleanEmail === 'admin@locagestion.site') {
       try {
         const adminFile = path.join(process.cwd(), 'data', 'admin.json');
-        fs.writeFileSync(adminFile, JSON.stringify({ password: body.password || 'Admin2027!LocaSecurity', updatedAt: new Date().toISOString() }, null, 2), 'utf8');
+        fs.writeFileSync(adminFile, JSON.stringify({ password: body.password || 'Omega#Admin2027!LocaSecurity', updatedAt: new Date().toISOString() }, null, 2), 'utf8');
       } catch {}
     }
 
