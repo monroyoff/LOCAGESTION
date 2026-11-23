@@ -60,6 +60,14 @@ function MessagesContent() {
   const searchParams = useSearchParams();
   const queryConvId = searchParams?.get('convId') || null;
   const queryListingId = searchParams?.get('listingId') || null;
+  const queryFromListings = searchParams?.get('from') === 'listings';
+  const [cameFromListings, setCameFromListings] = useState<boolean>(() => queryFromListings);
+
+  useEffect(() => {
+    if (queryFromListings) {
+      setCameFromListings(true);
+    }
+  }, [queryFromListings]);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
@@ -171,7 +179,15 @@ function MessagesContent() {
     // Mettre à jour l'URL sans rechargement pour refléter fidèlement la conversation active
     if (typeof window !== 'undefined') {
       handledQueryKeyRef.current = `${conv.id}:::`;
-      window.history.replaceState(null, '', `/messages?convId=${encodeURIComponent(conv.id)}`);
+      const preserveFrom =
+        cameFromListings ||
+        queryFromListings ||
+        new URLSearchParams(window.location.search).get('from') === 'listings';
+      window.history.replaceState(
+        null,
+        '',
+        `/messages?convId=${encodeURIComponent(conv.id)}${preserveFrom ? '&from=listings' : ''}`
+      );
     }
 
     const userUnread = getUnreadCountForCurrentUser(conv);
@@ -615,17 +631,30 @@ function MessagesContent() {
 
         {/* 3-Panel Content Wrapper */}
         <div className="flex-1 flex flex-col overflow-hidden p-2.5 sm:p-6 gap-2 sm:gap-3">
-          {/* Bouton Retour Accueil sur Mobile & Desktop (masqué sur mobile quand le chat est ouvert pour maximiser l'espace) */}
-          <div className={`flex items-center gap-2 ${mobileChatOpen ? 'hidden lg:flex' : 'flex'}`}>
-            <button
-              type="button"
-              onClick={() => router.push(isDemarcheur ? '/listings' : isLandlord ? '/' : '/portal')}
-              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
-            >
-              <Home className="w-4 h-4 text-slate-600" />
-              <span>← Retour {isDemarcheur ? 'aux Annonces & Visites' : isLandlord ? 'au Tableau de bord' : 'à l’Accueil'}</span>
-            </button>
-          </div>
+          {/* Bouton Retour : Cas spécifique "Retour aux Annonces" si ouvert via "Contacter" depuis une annonce, sinon retour standard */}
+          {cameFromListings ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => router.push('/listings?restore=1')}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow active:scale-95 transition-all cursor-pointer"
+              >
+                <ArrowLeft className="w-4 h-4 text-white" />
+                <span>← Retour aux Annonces (Continuer ma recherche)</span>
+              </button>
+            </div>
+          ) : (
+            <div className={`flex items-center gap-2 ${mobileChatOpen ? 'hidden lg:flex' : 'flex'}`}>
+              <button
+                type="button"
+                onClick={() => router.push(isDemarcheur ? '/listings' : isLandlord ? '/' : '/portal')}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white border border-slate-200 text-slate-800 text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer hover:bg-slate-50"
+              >
+                <Home className="w-4 h-4 text-slate-600" />
+                <span>← Retour {isDemarcheur ? 'aux Annonces & Visites' : isLandlord ? 'au Tableau de bord' : 'à l’Accueil'}</span>
+              </button>
+            </div>
+          )}
 
           <div className="flex-1 flex overflow-hidden gap-5">
           {/* Middle Panel: Conversations List (StayWise White Card with Pink Pill) */}
