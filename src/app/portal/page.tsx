@@ -284,6 +284,40 @@ function TenantPortalContent() {
     }
   }, []);
 
+  useEffect(() => {
+    try {
+      const notifs = TenantNotificationService.getNotifications(user);
+      if (activeTab === 'quittances') {
+        let changed = false;
+        notifs.forEach((n) => {
+          if (!n.read && (n.type === 'receipt_issued' || n.type === 'advance_payment_declared')) {
+            TenantNotificationService.markAsRead(n.id);
+            changed = true;
+          }
+        });
+        if (changed) setPortalNotifs(TenantNotificationService.getNotifications(user));
+      } else if (activeTab === 'bail') {
+        let changed = false;
+        notifs.forEach((n) => {
+          if (!n.read && (n.type === 'lease_available' || n.type === 'lease_reactivated' || n.type === 'lease_resiliated')) {
+            TenantNotificationService.markAsRead(n.id);
+            changed = true;
+          }
+        });
+        if (changed) setPortalNotifs(TenantNotificationService.getNotifications(user));
+      } else if (activeTab === 'preavis') {
+        let changed = false;
+        notifs.forEach((n) => {
+          if (!n.read && (n.type === 'notice_issued' || n.type === 'reminder_received')) {
+            TenantNotificationService.markAsRead(n.id);
+            changed = true;
+          }
+        });
+        if (changed) setPortalNotifs(TenantNotificationService.getNotifications(user));
+      }
+    } catch {}
+  }, [activeTab, user]);
+
   const handleTabChange = (tab: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis') => {
     setActiveTab(tab);
     try {
@@ -1437,7 +1471,7 @@ function TenantPortalContent() {
             >
               <Receipt className="w-4 h-4" />
               <span>Mes Quittances & Reçus</span>
-              {portalNotifs.filter((n) => !n.read && (n.type === 'receipt_issued' || n.type === 'advance_payment_declared')).length > 0 ? (
+              {activeTab !== 'quittances' && portalNotifs.filter((n) => !n.read && (n.type === 'receipt_issued' || n.type === 'advance_payment_declared')).length > 0 ? (
                 <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500 text-white animate-pulse">
                   {portalNotifs.filter((n) => !n.read && (n.type === 'receipt_issued' || n.type === 'advance_payment_declared')).length}
                 </span>
@@ -1463,13 +1497,11 @@ function TenantPortalContent() {
             >
               <FileText className="w-4 h-4" />
               <span>Mon Bail & Contrat</span>
-              {(() => {
-                const pendingSign = myLeases.filter((l) => l.status === 'en_attente_signature' || (!l.signedByTenant && !l.tenantSignature?.date)).length;
+              {activeTab !== 'bail' && (() => {
                 const unreadLeaseNotifs = portalNotifs.filter((n) => !n.read && (n.type === 'lease_available' || n.type === 'lease_reactivated' || n.type === 'lease_resiliated')).length;
-                const count = Math.max(pendingSign, unreadLeaseNotifs);
-                return count > 0 ? (
+                return unreadLeaseNotifs > 0 ? (
                   <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500 text-white animate-pulse">
-                    {count}
+                    {unreadLeaseNotifs}
                   </span>
                 ) : null;
               })()}
@@ -1536,11 +1568,10 @@ function TenantPortalContent() {
             >
               <BellRing className="w-4 h-4" />
               <span>Relances & Préavis</span>
-              {(() => {
+              {activeTab !== 'preavis' && (() => {
                 const unreadRems = receivedReminders.filter((n) => !n.read).length;
                 const unreadNotifIssued = portalNotifs.filter((n) => !n.read && n.type === 'notice_issued').length;
-                const activeConges = tenantNotices.filter((n) => n.reasonType !== 'depart_locataire' && (n.status === 'en_cours' || n.status === 'notifie')).length;
-                const count = Math.max(activeConges, unreadRems + unreadNotifIssued);
+                const count = unreadRems + unreadNotifIssued;
                 return count > 0 ? (
                   <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-500 text-white animate-pulse">
                     {count}
