@@ -293,6 +293,11 @@ export const TenantNotificationService = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notifications: updated }),
+        }).catch(() => {});
       } catch (e) {}
     }
     dispatchUpdateEvent();
@@ -320,6 +325,11 @@ export const TenantNotificationService = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notifications: updated }),
+        }).catch(() => {});
       } catch (e) {}
     }
     dispatchUpdateEvent();
@@ -334,6 +344,11 @@ export const TenantNotificationService = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notifications: updated }),
+        }).catch(() => {});
       } catch (e) {}
     }
     dispatchUpdateEvent();

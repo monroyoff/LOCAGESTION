@@ -253,9 +253,14 @@ export const PaymentService = {
 
   /**
    * Récupère la liste des paiements vérifiés et validés
+   * Fusionne locagestion:verified_payments et tous les paiements déjà marqués vérifiés dans locagestion:declared_payments
    */
   getVerifiedPayments(): PaymentTransaction[] {
-    if (typeof window === 'undefined') return [];
+    if (typeof window === 'undefined') {
+      return INITIAL_DECLARED_PAYMENTS.filter((p) => p.isVerified || p.status === 'paye');
+    }
+    const verMap = new Map<string, PaymentTransaction>();
+
     try {
       const saved = localStorage.getItem(STORAGE_KEY_VERIFIED);
       if (saved) {
@@ -267,13 +272,27 @@ export const PaymentService = {
               localStorage.setItem(STORAGE_KEY_VERIFIED, JSON.stringify(sanitized));
             } catch (e) { }
           }
-          return sanitized;
+          sanitized.forEach((p) => {
+            if (p && p.id) verMap.set(p.id, { ...p, isVerified: true, status: 'paye' });
+          });
         }
       }
     } catch (e) {
       console.error('Erreur lecture paiements vérifiés:', e);
     }
-    return [];
+
+    try {
+      const declared = this.getDeclaredPayments();
+      declared.forEach((p) => {
+        if (p && p.id && !isFakePayment(p) && (p.isVerified || p.status === 'paye')) {
+          if (!verMap.has(p.id)) {
+            verMap.set(p.id, { ...p, isVerified: true, status: 'paye' });
+          }
+        }
+      });
+    } catch {}
+
+    return Array.from(verMap.values());
   },
 
   /**
@@ -357,6 +376,11 @@ export const PaymentService = {
       localStorage.setItem(STORAGE_KEY_VERIFIED, JSON.stringify(payments));
       window.dispatchEvent(new CustomEvent('locagestion:payments_updated'));
       window.dispatchEvent(new Event('storage'));
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ verifiedPayments: payments }),
+      }).catch(() => {});
     } catch (e) {
       console.error('Erreur sauvegarde paiements vérifiés:', e);
     }

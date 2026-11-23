@@ -640,6 +640,11 @@ export const LeaseService = {
           'locagestion:registered_tenants',
           JSON.stringify(updated)
         );
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ registeredTenants: updated }),
+        }).catch(() => {});
       } catch (e) {
         console.error('Erreur enregistrement locataire:', e);
       }
@@ -1118,6 +1123,11 @@ export const LeaseService = {
         localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
         notifyStorageChange();
         window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ landlordNotifications: updated }),
+        }).catch(() => {});
       }
     } catch (e) {
       console.error('Erreur mise à jour notifications:', e);

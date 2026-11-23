@@ -3,17 +3,21 @@
 import { Lease, isFakeLease } from './lease-service';
 import { TenantNotification } from './tenant-notification-service';
 import { AuthUser, RentalListing, Property } from '@/lib/types';
-import { isFakeDemoUser } from './auth-service';
+import { isFakeDemoUser, enforceUserIdentityIntegrity, areEmailsEqual } from './auth-service';
 import { isFakeListing } from './listings-service';
 import { isFakeConversation, INITIAL_CONVERSATIONS } from './conversation-service';
 import { isFakeProperty } from './property-service';
 import { isFakePayment } from './payment-service';
+import { isFakeNotice } from './notice-service';
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
 const TENANT_NOTIFS_KEY = 'locagestion:tenant_notifications:v1';
 const LANDLORD_NOTIFS_KEY = 'locagestion:landlord_notifications:v1';
 const USERS_STORAGE_KEY = 'locagestion:auth:users:v1';
+const SESSION_STORAGE_KEY = 'locagestion:auth:session:v1';
 const LISTINGS_STORAGE_KEY = 'locagestion:custom_listings';
+const TRASH_LISTINGS_KEY = 'locagestion:trash_listings';
+const REMOVED_LISTINGS_KEY = 'locagestion:removed_listing_ids';
 
 let syncIntervalId: NodeJS.Timeout | null = null;
 let isSyncing = false;
@@ -21,8 +25,10 @@ let isInitialized = false;
 
 export const SyncService = {
   /**
-   * Synchronisation descendante : récupère les baux, notifications et utilisateurs du serveur
-   * et les fusionne instantanément avec le stockage local (Web & Mobile).
+   * Synchronisation bidirectionnelle universelle (Pull + Push) :
+   * Harmonise en temps réel les baux, utilisateurs (anciens & nouveaux), annonces, propriétés,
+   * conversations, paiements, quittances, préavis, relances, pannes, états des lieux et notifications
+   * sur Web, Ordinateurs, Mobile et Application Android.
    */
   async sync(): Promise<{ success: boolean; leasesCount: number; notifsCount: number }> {
     if (typeof window === 'undefined' || isSyncing) {
@@ -33,7 +39,10 @@ export const SyncService = {
     try {
       const res = await fetch('/api/sync', {
         method: 'GET',
-        headers: { credentials: 'same-origin' },
+        headers: {
+          'Cache-Control': 'no-cache',
+          Pragma: 'no-cache',
+        },
         cache: 'no-store',
       });
 
@@ -48,83 +57,137 @@ export const SyncService = {
         return { success: false, leasesCount: 0, notifsCount: 0 };
       }
 
+      const pushPayload: Record<string, any> = {};
+      let needsServerPush = false;
+
       if (data.adminPassword && typeof data.adminPassword === 'string') {
         try {
           localStorage.setItem('locagestion:admin_custom_password:v1', data.adminPassword.trim());
         } catch {}
       }
 
-      let leasesUpdated = false;
-      let notifsUpdated = false;
-
-      // 1. Synchronisation des BAUX
+      // =======================================================================
+      // 1. SYNCHRONISATION DES BAUX & CONTRATS
+      // =======================================================================
       if (Array.isArray(data.leases)) {
         let localLeases: Lease[] = [];
         try {
           const stored = localStorage.getItem(LEASES_STORAGE_KEY);
           if (stored) localLeases = JSON.parse(stored);
-        } catch (e) { }
+        } catch {}
 
-        // Purger immédiatement et définitivement les faux baux de démo (BAIL-2026-MAG-102, BAIL-2026-COM-205, etc.)
-        const sanitizedLocal = localLeases.filter((l) => !isFakeLease(l));
-        if (sanitizedLocal.length !== localLeases.length) {
-          localLeases = sanitizedLocal;
-          leasesUpdated = true;
-        }
+        const sanitizedLocal = (Array.isArray(localLeases) ? localLeases : []).filter((l) => !isFakeLease(l));
+        const serverLeases: Lease[] = (data.leases || []).filter((l: any) => !isFakeLease(l));
 
         const leaseMap = new Map<string, Lease>();
-        // Déposer les baux locaux
-        localLeases.forEach((l) => leaseMap.set(l.id, l));
-        // Fusionner avec les baux serveur (le serveur a priorité sur les signatures et transmissions)
-        data.leases.forEach((serverLease: Lease) => {
-          if (!serverLease || !serverLease.id || isFakeLease(serverLease)) return;
+        sanitizedLocal.forEach((l) => {
+          if (l && l.id) leaseMap.set(l.id, l);
+        });
+
+        let leasesChangedLocally = sanitizedLocal.length !== localLeases.length;
+        let leasesNeedPush = false;
+
+        serverLeases.forEach((serverLease: Lease) => {
+          if (!serverLease || !serverLease.id) return;
           const local = leaseMap.get(serverLease.id);
           if (!local) {
             leaseMap.set(serverLease.id, serverLease);
-            leasesUpdated = true;
+            leasesChangedLocally = true;
           } else {
-            // Si le statut ou la signature est plus avancée sur le serveur
+            const signedByTenant = Boolean(local.signedByTenant || serverLease.signedByTenant);
+            const signedByLandlord = Boolean(local.signedByLandlord || serverLease.signedByLandlord);
+            const status =
+              serverLease.status === 'resilie' || local.status === 'resilie'
+                ? (serverLease.reactivatedAt || local.reactivatedAt) &&
+                  (serverLease.status === 'actif' || local.status === 'actif')
+                  ? 'actif'
+                  : 'resilie'
+                : signedByTenant || serverLease.status === 'actif' || local.status === 'actif'
+                ? 'actif'
+                : serverLease.status || local.status;
+
+            const mergedLease: Lease = {
+              ...local,
+              ...serverLease,
+              status,
+              signedByTenant,
+              signedByLandlord,
+              tenantSignedAt: serverLease.tenantSignedAt || local.tenantSignedAt,
+              tenantSignature: serverLease.tenantSignature || local.tenantSignature,
+              landlordSignature: serverLease.landlordSignature || local.landlordSignature,
+            };
+
+            if (JSON.stringify(mergedLease) !== JSON.stringify(local)) {
+              leaseMap.set(serverLease.id, mergedLease);
+              leasesChangedLocally = true;
+            }
             if (
-              serverLease.status !== local.status ||
-              serverLease.signedByTenant !== local.signedByTenant ||
-              serverLease.signedByLandlord !== local.signedByLandlord ||
-              serverLease.transmittedAt !== local.transmittedAt
+              mergedLease.status !== serverLease.status ||
+              mergedLease.signedByTenant !== serverLease.signedByTenant
             ) {
-              leaseMap.set(serverLease.id, { ...local, ...serverLease });
-              leasesUpdated = true;
+              leasesNeedPush = true;
             }
           }
         });
 
-        if (leasesUpdated) {
-          const mergedLeases = Array.from(leaseMap.values());
+        const serverLeaseIds = new Set(serverLeases.map((l) => l.id));
+        const mergedLeases = Array.from(leaseMap.values());
+        if (mergedLeases.some((ml) => !serverLeaseIds.has(ml.id)) || leasesNeedPush) {
+          pushPayload.leases = mergedLeases;
+          needsServerPush = true;
+        }
+
+        if (leasesChangedLocally) {
           localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(mergedLeases));
           window.dispatchEvent(new Event('locagestion:leases_updated'));
           window.dispatchEvent(new Event('storage'));
         }
       }
 
-      // 2. Synchronisation des NOTIFICATIONS
+      // =======================================================================
+      // 2. SYNCHRONISATION DES NOTIFICATIONS LOCATAIRE
+      // =======================================================================
       if (Array.isArray(data.notifications)) {
         let localTenantNotifs: TenantNotification[] = [];
         try {
           const stored = localStorage.getItem(TENANT_NOTIFS_KEY);
           if (stored) localTenantNotifs = JSON.parse(stored);
-        } catch (e) { }
+        } catch {}
 
         const notifMap = new Map<string, TenantNotification>();
-        localTenantNotifs.forEach((n) => notifMap.set(n.id, n));
+        (Array.isArray(localTenantNotifs) ? localTenantNotifs : []).forEach((n) => {
+          if (n && n.id) notifMap.set(n.id, n);
+        });
+
+        let notifsUpdated = false;
+        let notifsNeedPush = false;
 
         data.notifications.forEach((serverNotif: TenantNotification) => {
           if (!serverNotif || !serverNotif.id) return;
-          if (!notifMap.has(serverNotif.id)) {
+          const local = notifMap.get(serverNotif.id);
+          if (!local) {
             notifMap.set(serverNotif.id, serverNotif);
             notifsUpdated = true;
+          } else {
+            const isRead = Boolean(local.read || serverNotif.read);
+            if (local.read !== isRead) {
+              notifMap.set(serverNotif.id, { ...local, ...serverNotif, read: isRead });
+              notifsUpdated = true;
+            }
+            if (isRead && !serverNotif.read) {
+              notifsNeedPush = true;
+            }
           }
         });
 
+        const serverNotifIds = new Set(data.notifications.map((sn: any) => sn?.id));
+        const mergedNotifs = Array.from(notifMap.values());
+        if (mergedNotifs.some((mn) => !serverNotifIds.has(mn.id)) || notifsNeedPush) {
+          pushPayload.notifications = mergedNotifs;
+          needsServerPush = true;
+        }
+
         if (notifsUpdated) {
-          const mergedNotifs = Array.from(notifMap.values());
           localStorage.setItem(TENANT_NOTIFS_KEY, JSON.stringify(mergedNotifs));
           window.dispatchEvent(new Event('locagestion:tenant_notifications_updated'));
           window.dispatchEvent(new Event('locagestion:tenant_notifs_updated'));
@@ -133,118 +196,238 @@ export const SyncService = {
         }
       }
 
-      // 3. Synchronisation des UTILISATEURS (Garantie Unicité Matricule & Purge des faux comptes)
+      // =======================================================================
+      // 3. SYNCHRONISATION DES UTILISATEURS (NOUVEAUX & ANCIENS COMPTES)
+      // =======================================================================
       if (Array.isArray(data.users)) {
         let localUsers: AuthUser[] = [];
         try {
           const stored = localStorage.getItem(USERS_STORAGE_KEY) || localStorage.getItem('locagestion:users:v1');
           if (stored) localUsers = JSON.parse(stored);
-        } catch (e) { }
+        } catch {}
 
-        // Purger immédiatement et définitivement tous les comptes démo locaux
-        const sanitizedUsers = localUsers.filter((u) => !isFakeDemoUser(u));
-        const serverUsers = data.users.filter((u: any) => !isFakeDemoUser(u));
+        const sanitizedLocalUsers = (Array.isArray(localUsers) ? localUsers : []).filter((u) => !isFakeDemoUser(u));
+        const serverUsers: AuthUser[] = (data.users || []).filter((u: any) => !isFakeDemoUser(u));
 
         const userMap = new Map<string, AuthUser>();
-        serverUsers.forEach((u: any) => {
-          if (u.email) userMap.set(u.email.toLowerCase(), u);
-        });
-        sanitizedUsers.forEach((u) => {
-          if (u.email && !userMap.has(u.email.toLowerCase())) {
-            userMap.set(u.email.toLowerCase(), u);
+        let usersNeedPush = false;
+
+        // Déposer d'abord les utilisateurs locaux
+        sanitizedLocalUsers.forEach((u) => {
+          if (u && u.email) {
+            userMap.set(u.email.trim().toLowerCase(), enforceUserIdentityIntegrity(u));
           }
         });
 
-        const finalUsers = Array.from(userMap.values());
-        localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(finalUsers));
-        localStorage.removeItem('locagestion:users:v1');
-        window.dispatchEvent(new Event('locagestion:auth_changed'));
+        // Fusionner avec les utilisateurs serveur
+        serverUsers.forEach((su: AuthUser) => {
+          if (!su || !su.email) return;
+          const key = su.email.trim().toLowerCase();
+          const local = userMap.get(key);
+          if (!local) {
+            userMap.set(key, enforceUserIdentityIntegrity(su));
+          } else {
+            const isVerified = Boolean(local.emailVerified || su.emailVerified);
+            const mergedUser = enforceUserIdentityIntegrity({
+              ...local,
+              ...su,
+              emailVerified: isVerified,
+              companyName: su.companyName !== undefined ? su.companyName : local.companyName,
+              avatarUrl: su.avatarUrl || local.avatarUrl,
+              password: su.password || local.password,
+              matricule: su.matricule || local.matricule,
+              accountStatus: su.accountStatus || local.accountStatus,
+              blockReason: su.blockReason !== undefined ? su.blockReason : local.blockReason,
+            });
+            userMap.set(key, mergedUser);
+            if (isVerified && !su.emailVerified) {
+              usersNeedPush = true;
+            }
+          }
+        });
 
-        // Vérifier et purger la session active si elle appartient à un compte fictif
+        const serverUserEmails = new Set(
+          serverUsers.map((su) => (su?.email || '').trim().toLowerCase()).filter(Boolean)
+        );
+        const finalUsers = Array.from(userMap.values());
+
+        if (
+          finalUsers.some((fu) => fu.email && !serverUserEmails.has(fu.email.trim().toLowerCase())) ||
+          usersNeedPush
+        ) {
+          pushPayload.users = finalUsers;
+          needsServerPush = true;
+        }
+
+        const prevStored = localStorage.getItem(USERS_STORAGE_KEY);
+        const nextStored = JSON.stringify(finalUsers);
+        if (prevStored !== nextStored) {
+          localStorage.setItem(USERS_STORAGE_KEY, nextStored);
+          localStorage.removeItem('locagestion:users:v1');
+          window.dispatchEvent(new Event('locagestion:users_updated'));
+          window.dispatchEvent(new Event('locagestion:auth_changed'));
+        }
+
+        // Synchroniser également la session active si le profil connecté a été mis à jour
         try {
-          const sessionRaw = localStorage.getItem('locagestion:auth:session:v1');
+          const sessionRaw = localStorage.getItem(SESSION_STORAGE_KEY);
           if (sessionRaw) {
             const parsedSession = JSON.parse(sessionRaw);
             if (parsedSession && isFakeDemoUser(parsedSession)) {
-              localStorage.removeItem('locagestion:auth:session:v1');
+              localStorage.removeItem(SESSION_STORAGE_KEY);
               localStorage.removeItem('locagestion:active_space');
               window.dispatchEvent(new Event('locagestion:auth_changed'));
+            } else if (parsedSession && parsedSession.email && parsedSession.role !== 'admin') {
+              const matchedServerUser = userMap.get(parsedSession.email.trim().toLowerCase());
+              if (matchedServerUser) {
+                const updatedSession = enforceUserIdentityIntegrity({
+                  ...parsedSession,
+                  ...matchedServerUser,
+                  // Préserver l'espace actif choisi par l'utilisateur s'il a basculé d'espace
+                  role: parsedSession.role || matchedServerUser.role,
+                  emailVerified: Boolean(parsedSession.emailVerified || matchedServerUser.emailVerified),
+                });
+                if (JSON.stringify(updatedSession) !== JSON.stringify(parsedSession)) {
+                  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(updatedSession));
+                  window.dispatchEvent(new Event('locagestion:auth_changed'));
+                }
+              }
             }
           }
-        } catch (e) {}
+        } catch {}
       }
 
-      // 4. Synchronisation des ANNONCES (Purge complète des annonces fictives Web & Mobile)
+      // =======================================================================
+      // 4. SYNCHRONISATION DES ANNONCES & CORBEILLE
+      // =======================================================================
       if (Array.isArray(data.listings)) {
+        let localRemovedIds: string[] = [];
+        try {
+          const rawRem = localStorage.getItem(REMOVED_LISTINGS_KEY);
+          if (rawRem) localRemovedIds = JSON.parse(rawRem);
+        } catch {}
+
+        let localTrash: any[] = [];
+        try {
+          const rawTrash = localStorage.getItem(TRASH_LISTINGS_KEY);
+          if (rawTrash) localTrash = JSON.parse(rawTrash);
+        } catch {}
+
+        const serverRemovedIds: string[] = Array.isArray(data.removedListingIds) ? data.removedListingIds : [];
+        const serverTrash: any[] = Array.isArray(data.trashListings) ? data.trashListings : [];
+
+        const trashMap = new Map<string, any>();
+        (Array.isArray(localTrash) ? localTrash : []).forEach((t) => {
+          if (t && t.id && !isFakeListing(t)) trashMap.set(t.id, t);
+        });
+        serverTrash.forEach((t) => {
+          if (t && t.id && !isFakeListing(t)) trashMap.set(t.id, { ...(trashMap.get(t.id) || {}), ...t });
+        });
+        const mergedTrash = Array.from(trashMap.values());
+        localStorage.setItem(TRASH_LISTINGS_KEY, JSON.stringify(mergedTrash));
+
+        const removedSet = new Set<string>([
+          ...(Array.isArray(localRemovedIds) ? localRemovedIds : []),
+          ...serverRemovedIds,
+          ...mergedTrash.map((t) => String(t.id)),
+        ]);
+        const mergedRemovedIds = Array.from(removedSet).filter(Boolean);
+        localStorage.setItem(REMOVED_LISTINGS_KEY, JSON.stringify(mergedRemovedIds));
+
         let localListings: RentalListing[] = [];
         try {
           const stored = localStorage.getItem(LISTINGS_STORAGE_KEY);
           if (stored) localListings = JSON.parse(stored);
-        } catch (e) { }
+        } catch {}
 
-        // Purger immédiatement et définitivement toutes les annonces démo locales et serveur
-        const sanitizedLocal = localListings.filter((l) => !isFakeListing(l));
-        const sanitizedServer = (data.listings || []).filter((l: any) => !isFakeListing(l));
+        const sanitizedLocal = (Array.isArray(localListings) ? localListings : []).filter(
+          (l) => !isFakeListing(l) && !removedSet.has(l.id)
+        );
+        const sanitizedServer = (data.listings || []).filter(
+          (l: any) => !isFakeListing(l) && !removedSet.has(l.id)
+        );
 
         const listingMap = new Map<string, RentalListing>();
         sanitizedLocal.forEach((l) => {
           if (l && l.id) listingMap.set(l.id, l);
         });
         sanitizedServer.forEach((l: any) => {
-          if (l && l.id) listingMap.set(l.id, l);
+          if (l && l.id) {
+            const existing = listingMap.get(l.id);
+            listingMap.set(l.id, existing ? { ...existing, ...l } : l);
+          }
         });
 
-        // Remontée bidirectionnelle instantanée uniquement pour les annonces authentiques créées localement
+        const mergedListings = Array.from(listingMap.values());
         const unpushed = sanitizedLocal.filter((loc) => !sanitizedServer.some((sl: any) => sl.id === loc.id));
-        if (unpushed.length > 0) {
-          fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ listings: Array.from(listingMap.values()) }),
-          }).catch(() => {});
+        const unpushedTrash = mergedTrash.filter((mt) => !serverTrash.some((st: any) => st.id === mt.id));
+        if (unpushed.length > 0 || unpushedTrash.length > 0) {
+          pushPayload.listings = mergedListings;
+          pushPayload.trashListings = mergedTrash;
+          pushPayload.removedListingIds = mergedRemovedIds;
+          needsServerPush = true;
         }
 
-        const mergedListings = Array.from(listingMap.values());
-        localStorage.setItem(LISTINGS_STORAGE_KEY, JSON.stringify(mergedListings));
-        window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
-        window.dispatchEvent(new Event('storage'));
+        const prevListingsStr = localStorage.getItem(LISTINGS_STORAGE_KEY);
+        const nextListingsStr = JSON.stringify(mergedListings);
+        if (prevListingsStr !== nextListingsStr) {
+          localStorage.setItem(LISTINGS_STORAGE_KEY, nextListingsStr);
+          window.dispatchEvent(new CustomEvent('locagestion:listings_updated'));
+          window.dispatchEvent(new Event('storage'));
+        }
       }
 
-      // 5. Synchronisation des PROPRIÉTÉS (Patrimoine Bailleur Web & Mobile)
+      // =======================================================================
+      // 5. SYNCHRONISATION DES PROPRIÉTÉS & PATRIMOINE
+      // =======================================================================
       if (Array.isArray(data.properties)) {
         let localProps: Property[] = [];
         try {
           const stored = localStorage.getItem('locagestion:properties:v1');
           if (stored) localProps = JSON.parse(stored);
-        } catch (e) {}
+        } catch {}
 
         const propMap = new Map<string, any>();
-        localProps.forEach((p) => {
+        (Array.isArray(localProps) ? localProps : []).forEach((p) => {
           if (p && p.id && !isFakeProperty(p)) propMap.set(p.id, p);
         });
-        (data.properties || []).forEach((p: any) => {
-          if (p && p.id && !isFakeProperty(p)) propMap.set(p.id, p);
+        const serverProps = (data.properties || []).filter((p: any) => p && p.id && !isFakeProperty(p));
+        serverProps.forEach((p: any) => {
+          const existing = propMap.get(p.id);
+          propMap.set(p.id, existing ? { ...existing, ...p } : p);
         });
 
         const mergedProps = Array.from(propMap.values());
-        localStorage.setItem('locagestion:properties:v1', JSON.stringify(mergedProps));
-        window.dispatchEvent(new CustomEvent('locagestion:properties_updated'));
-        window.dispatchEvent(new Event('storage'));
+        const serverPropIds = new Set(serverProps.map((sp: any) => sp.id));
+        if (mergedProps.some((mp) => !serverPropIds.has(mp.id))) {
+          pushPayload.properties = mergedProps;
+          needsServerPush = true;
+        }
+
+        const prevPropsStr = localStorage.getItem('locagestion:properties:v1');
+        const nextPropsStr = JSON.stringify(mergedProps);
+        if (prevPropsStr !== nextPropsStr) {
+          localStorage.setItem('locagestion:properties:v1', nextPropsStr);
+          window.dispatchEvent(new CustomEvent('locagestion:properties_updated'));
+          window.dispatchEvent(new Event('storage'));
+        }
       }
 
-      // 6. Synchronisation des CONVERSATIONS (Messagerie Web & Mobile)
+      // =======================================================================
+      // 6. SYNCHRONISATION DES CONVERSATIONS & MESSAGES
+      // =======================================================================
       if (Array.isArray(data.conversations)) {
         let localConvs: any[] = [];
         try {
           const stored = localStorage.getItem('locagestion:conversations:v1');
           if (stored) localConvs = JSON.parse(stored);
-        } catch (e) {}
+        } catch {}
 
         const convMap = new Map<string, any>();
         if (INITIAL_CONVERSATIONS && Array.isArray(INITIAL_CONVERSATIONS)) {
           INITIAL_CONVERSATIONS.forEach((ic) => convMap.set(ic.id, ic));
         }
-        localConvs.forEach((c) => {
+        (Array.isArray(localConvs) ? localConvs : []).forEach((c) => {
           if (c && c.id && !isFakeConversation(c)) convMap.set(c.id, c);
         });
         (data.conversations || []).forEach((sc: any) => {
@@ -254,8 +437,8 @@ export const SyncService = {
               convMap.set(sc.id, sc);
             } else {
               const msgMap = new Map<string, any>();
-              (local.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
-              (sc.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
+              (local.messages || []).forEach((m: any) => msgMap.set(m.id || `${m.time}-${m.text}`, m));
+              (sc.messages || []).forEach((m: any) => msgMap.set(m.id || `${m.time}-${m.text}`, m));
               const allMessages = Array.from(msgMap.values());
               const lastMsg = allMessages.length > 0 ? allMessages[allMessages.length - 1] : null;
               const scIsNewer = (sc.messages?.length || 0) > (local.messages?.length || 0);
@@ -269,21 +452,21 @@ export const SyncService = {
                 unreadBy: unreadSource.unreadBy,
                 isRead: unreadSource.isRead ?? !unreadSource.hasUnread,
                 messages: allMessages,
-                lastMessage: lastMsg ? lastMsg.text : (sc.lastMessage || local.lastMessage),
-                lastMessageTime: lastMsg ? (lastMsg.time || sc.lastMessageTime) : (sc.lastMessageTime || local.lastMessageTime),
+                lastMessage: lastMsg ? lastMsg.text : sc.lastMessage || local.lastMessage,
+                lastMessageTime: lastMsg ? lastMsg.time || sc.lastMessageTime : sc.lastMessageTime || local.lastMessageTime,
               });
             }
           }
         });
 
-        const mergedConvs = Array.from(convMap.values());
-        localStorage.setItem('locagestion:conversations:v1', JSON.stringify(mergedConvs));
-        window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+        const mergedConvs = Array.from(convMap.values()).filter((c) => !isFakeConversation(c));
+        const prevConvsStr = localStorage.getItem('locagestion:conversations:v1');
+        const nextConvsStr = JSON.stringify(mergedConvs);
+        if (prevConvsStr !== nextConvsStr) {
+          localStorage.setItem('locagestion:conversations:v1', nextConvsStr);
+          window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
+        }
 
-        // RECONCILIATION BIDIRECTIONNELLE INSTANTANÉE (PUSH WEB <-> MOBILE)
-        // Si le client local possède des conversations ou messages non encore présents sur le serveur central,
-        // les pousser immédiatement vers /api/sync pour que l'application Android et le Web
-        // soient en miroir parfait temps réel !
         const serverIds = new Set((data.conversations || []).map((sc: any) => sc.id));
         const serverMsgCount = new Map<string, number>();
         (data.conversations || []).forEach((sc: any) => {
@@ -297,48 +480,84 @@ export const SyncService = {
         });
 
         if (hasNewConvsForServer || hasNewMsgsForServer) {
-          fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversations: mergedConvs }),
-          }).catch(() => {});
+          pushPayload.conversations = mergedConvs;
+          needsServerPush = true;
         }
       }
 
-      // 7. Synchronisation des PAIEMENTS & QUITTANCES (Web & Mobile)
-      if (Array.isArray(data.payments)) {
+      // =======================================================================
+      // 7. SYNCHRONISATION DES PAIEMENTS DÉCLARÉS & QUITTANCES VÉRIFIÉES
+      // =======================================================================
+      if (Array.isArray(data.payments) || Array.isArray(data.verifiedPayments)) {
         let localPayments: any[] = [];
+        let localVerified: any[] = [];
         try {
-          const stored = localStorage.getItem('locagestion:declared_payments');
-          if (stored) localPayments = JSON.parse(stored);
-        } catch (e) {}
+          const storedDec = localStorage.getItem('locagestion:declared_payments');
+          if (storedDec) localPayments = JSON.parse(storedDec);
+          const storedVer = localStorage.getItem('locagestion:verified_payments');
+          if (storedVer) localVerified = JSON.parse(storedVer);
+        } catch {}
 
         const payMap = new Map<string, any>();
-        localPayments.forEach((p) => {
-          if (p && p.id && !isFakePayment(p)) payMap.set(p.id, p);
-        });
-        (data.payments || []).forEach((sp: any) => {
-          if (sp && sp.id && !isFakePayment(sp)) {
-            const local = payMap.get(sp.id);
-            payMap.set(sp.id, { ...local, ...sp });
+        const ingestPayment = (p: any) => {
+          if (!p || !p.id || isFakePayment(p)) return;
+          const existing = payMap.get(p.id);
+          if (!existing) {
+            payMap.set(p.id, p);
+          } else {
+            const isVerified = Boolean(existing.isVerified || p.isVerified);
+            payMap.set(p.id, {
+              ...existing,
+              ...p,
+              isVerified,
+              status: isVerified ? 'paye' : p.status || existing.status,
+              receiptNumber:
+                isVerified && existing.receiptNumber?.startsWith('QUITT-')
+                  ? existing.receiptNumber
+                  : p.receiptNumber || existing.receiptNumber,
+            });
           }
-        });
+        };
+
+        (Array.isArray(localPayments) ? localPayments : []).forEach(ingestPayment);
+        (Array.isArray(localVerified) ? localVerified : []).forEach((p) =>
+          ingestPayment({ ...p, isVerified: true, status: 'paye' })
+        );
+        (data.payments || []).forEach(ingestPayment);
+        (data.verifiedPayments || []).forEach((p: any) =>
+          ingestPayment({ ...p, isVerified: true, status: 'paye' })
+        );
 
         const mergedPayments = Array.from(payMap.values());
-        localStorage.setItem('locagestion:declared_payments', JSON.stringify(mergedPayments));
-        window.dispatchEvent(new CustomEvent('locagestion:payments_updated'));
+        const mergedVerified = mergedPayments.filter((p) => p.isVerified || p.status === 'paye');
+
+        const prevDecStr = localStorage.getItem('locagestion:declared_payments');
+        const nextDecStr = JSON.stringify(mergedPayments);
+        const prevVerStr = localStorage.getItem('locagestion:verified_payments');
+        const nextVerStr = JSON.stringify(mergedVerified);
+
+        if (prevDecStr !== nextDecStr || prevVerStr !== nextVerStr) {
+          localStorage.setItem('locagestion:declared_payments', nextDecStr);
+          localStorage.setItem('locagestion:verified_payments', nextVerStr);
+          window.dispatchEvent(new CustomEvent('locagestion:payments_updated'));
+          window.dispatchEvent(new Event('storage'));
+        }
 
         const serverPayIds = new Set((data.payments || []).map((sp: any) => sp.id));
-        if (mergedPayments.some((mp: any) => !serverPayIds.has(mp.id))) {
-          fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ payments: mergedPayments }),
-          }).catch(() => {});
+        const serverVerIds = new Set((data.verifiedPayments || []).map((sp: any) => sp.id));
+        if (
+          mergedPayments.some((mp: any) => !serverPayIds.has(mp.id)) ||
+          mergedVerified.some((mv: any) => !serverVerIds.has(mv.id))
+        ) {
+          pushPayload.payments = mergedPayments;
+          pushPayload.verifiedPayments = mergedVerified;
+          needsServerPush = true;
         }
       }
 
-      // 7.bis Synchronisation des NOTIFICATIONS BAILLEUR / DÉMARCHEUR (Web & Mobile)
+      // =======================================================================
+      // 8. SYNCHRONISATION DES NOTIFICATIONS BAILLEUR / DÉMARCHEUR
+      // =======================================================================
       if (Array.isArray(data.landlordNotifications)) {
         let localLNotifs: any[] = [];
         try {
@@ -347,31 +566,39 @@ export const SyncService = {
         } catch {}
 
         const lnMap = new Map<string, any>();
-        localLNotifs.forEach((n) => {
+        (Array.isArray(localLNotifs) ? localLNotifs : []).forEach((n) => {
           if (n && n.id) lnMap.set(n.id, n);
         });
+        let lnNeedPush = false;
         (data.landlordNotifications || []).forEach((sn: any) => {
           if (sn && sn.id) {
             const local = lnMap.get(sn.id);
-            lnMap.set(sn.id, local ? { ...local, ...sn, read: Boolean(local.read || sn.read) } : sn);
+            const isRead = Boolean(local?.read || sn.read);
+            lnMap.set(sn.id, local ? { ...local, ...sn, read: isRead } : sn);
+            if (local?.read && !sn.read) {
+              lnNeedPush = true;
+            }
           }
         });
 
         const mergedLNotifs = Array.from(lnMap.values());
-        localStorage.setItem(LANDLORD_NOTIFS_KEY, JSON.stringify(mergedLNotifs));
-        window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+        const prevLnStr = localStorage.getItem(LANDLORD_NOTIFS_KEY);
+        const nextLnStr = JSON.stringify(mergedLNotifs);
+        if (prevLnStr !== nextLnStr) {
+          localStorage.setItem(LANDLORD_NOTIFS_KEY, nextLnStr);
+          window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+        }
 
         const serverLnIds = new Set((data.landlordNotifications || []).map((sn: any) => sn.id));
-        if (mergedLNotifs.some((mn: any) => !serverLnIds.has(mn.id))) {
-          fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ landlordNotifications: mergedLNotifs }),
-          }).catch(() => {});
+        if (mergedLNotifs.some((mn: any) => !serverLnIds.has(mn.id)) || lnNeedPush) {
+          pushPayload.landlordNotifications = mergedLNotifs;
+          needsServerPush = true;
         }
       }
 
-      // 7.ter Synchronisation des PRÉAVIS (Départs Locataires & Congés Bailleurs Web & Mobile)
+      // =======================================================================
+      // 9. SYNCHRONISATION DES PRÉAVIS (DÉPARTS LOCATAIRES & CONGÉS BAILLEURS)
+      // =======================================================================
       if (Array.isArray(data.notices)) {
         let localNotices: any[] = [];
         try {
@@ -380,31 +607,58 @@ export const SyncService = {
         } catch {}
 
         const nMap = new Map<string, any>();
-        localNotices.forEach((n) => {
-          if (n && n.id) nMap.set(n.id, n);
+        (Array.isArray(localNotices) ? localNotices : []).forEach((n) => {
+          if (n && n.id && !isFakeNotice(n)) nMap.set(n.id, n);
         });
+        let noticesNeedPush = false;
         (data.notices || []).forEach((sn: any) => {
-          if (sn && sn.id) {
+          if (sn && sn.id && !isFakeNotice(sn)) {
             const local = nMap.get(sn.id);
-            nMap.set(sn.id, local ? { ...local, ...sn } : sn);
+            if (!local) {
+              nMap.set(sn.id, sn);
+            } else {
+              const isConfirmed =
+                local.status === 'confirme' ||
+                sn.status === 'confirme' ||
+                Boolean(local.landlordConfirmedAt || sn.landlordConfirmedAt);
+              const mergedN = {
+                ...local,
+                ...sn,
+                status: isConfirmed ? 'confirme' : sn.status || local.status,
+                landlordConfirmedAt: sn.landlordConfirmedAt || local.landlordConfirmedAt,
+                landlordReplyMessage: sn.landlordReplyMessage || local.landlordReplyMessage,
+                landlordReplyDate: sn.landlordReplyDate || local.landlordReplyDate,
+              };
+              nMap.set(sn.id, mergedN);
+              if (
+                mergedN.status !== sn.status ||
+                mergedN.landlordConfirmedAt !== sn.landlordConfirmedAt ||
+                mergedN.landlordReplyMessage !== sn.landlordReplyMessage
+              ) {
+                noticesNeedPush = true;
+              }
+            }
           }
         });
 
         const mergedNotices = Array.from(nMap.values());
-        localStorage.setItem('locagestion:notices:v2', JSON.stringify(mergedNotices));
-        window.dispatchEvent(new CustomEvent('locagestion:notices_updated'));
+        const prevNStr = localStorage.getItem('locagestion:notices:v2');
+        const nextNStr = JSON.stringify(mergedNotices);
+        if (prevNStr !== nextNStr) {
+          localStorage.setItem('locagestion:notices:v2', nextNStr);
+          window.dispatchEvent(new CustomEvent('locagestion:notices_updated'));
+        }
 
         const serverNIds = new Set((data.notices || []).map((sn: any) => sn.id));
-        if (mergedNotices.some((mn: any) => !serverNIds.has(mn.id))) {
-          fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ notices: mergedNotices }),
-          }).catch(() => {});
+        if (mergedNotices.some((mn: any) => !serverNIds.has(mn.id)) || noticesNeedPush) {
+          pushPayload.notices = mergedNotices;
+          needsServerPush = true;
         }
       }
 
-      // 7.quater Synchronisation des PANNES & INTERVENTIONS (Web & Mobile)
+      // =======================================================================
+      // 10. SYNCHRONISATION DES PANNES & INTERVENTIONS
+      // =======================================================================
       if (Array.isArray(data.incidents)) {
         let localIncidents: any[] = [];
         try {
@@ -413,72 +667,176 @@ export const SyncService = {
         } catch {}
 
         const incMap = new Map<string, any>();
-        localIncidents.forEach((i) => {
+        (Array.isArray(localIncidents) ? localIncidents : []).forEach((i) => {
           if (i && i.id) incMap.set(i.id, i);
         });
+        let incNeedPush = false;
         (data.incidents || []).forEach((si: any) => {
           if (si && si.id) {
             const local = incMap.get(si.id);
-            incMap.set(si.id, local ? { ...local, ...si } : si);
+            if (!local) {
+              incMap.set(si.id, si);
+            } else {
+              const mergedInc = { ...local, ...si };
+              incMap.set(si.id, mergedInc);
+              if (local.status !== si.status || local.artisanFee !== si.artisanFee) {
+                incNeedPush = true;
+              }
+            }
           }
         });
 
         const mergedIncidents = Array.from(incMap.values());
-        localStorage.setItem('locagestion:incidents:v1', JSON.stringify(mergedIncidents));
-        window.dispatchEvent(new CustomEvent('locagestion:incidents_updated'));
+        const prevIncStr = localStorage.getItem('locagestion:incidents:v1');
+        const nextIncStr = JSON.stringify(mergedIncidents);
+        if (prevIncStr !== nextIncStr) {
+          localStorage.setItem('locagestion:incidents:v1', nextIncStr);
+          window.dispatchEvent(new CustomEvent('locagestion:incidents_updated'));
+        }
 
         const serverIncIds = new Set((data.incidents || []).map((si: any) => si.id));
-        if (mergedIncidents.some((mi: any) => !serverIncIds.has(mi.id))) {
-          fetch('/api/sync', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ incidents: mergedIncidents }),
-          }).catch(() => {});
+        if (mergedIncidents.some((mi: any) => !serverIncIds.has(mi.id)) || incNeedPush) {
+          pushPayload.incidents = mergedIncidents;
+          needsServerPush = true;
         }
       }
 
-      // 8. Purge immédiate des conversations fictives dans le stockage client
-      try {
-        const convStr = localStorage.getItem('locagestion:conversations:v1');
-        if (convStr) {
-          const convs = JSON.parse(convStr);
-          if (Array.isArray(convs)) {
-            const sanitizedConvs = convs.filter((c: any) => !isFakeConversation(c));
-            if (sanitizedConvs.length !== convs.length) {
-              localStorage.setItem('locagestion:conversations:v1', JSON.stringify(sanitizedConvs));
-              window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
-            }
-          }
-        }
-      } catch (e) {}
+      // =======================================================================
+      // 11. SYNCHRONISATION DES ÉTATS DES LIEUX (INSPECTIONS)
+      // =======================================================================
+      if (data.inspections && typeof data.inspections === 'object') {
+        let localInspections: Record<string, any> = {};
+        try {
+          const stored = localStorage.getItem('locagestion:inspections');
+          if (stored) localInspections = JSON.parse(stored);
+        } catch {}
 
-      // 9. Purge immédiate des faux locataires de test
-      try {
-        const tenStr = localStorage.getItem('locagestion:registered_tenants');
-        if (tenStr) {
-          const tenants = JSON.parse(tenStr);
-          if (Array.isArray(tenants)) {
-            const sanitizedTenants = tenants.filter((t: any) => {
-              if (!t) return false;
-              const name = (t.name || '').trim().toLowerCase();
-              return !(
-                name === 'koffi mensah' ||
-                name === 'mamadou diallo' ||
-                name === 'ibrahim traoré' ||
-                name === 'ibrahim traore' ||
-                name === 'aïcha touré' ||
-                name === 'aicha toure' ||
-                name === 'fatoumata traoré' ||
-                name === 'fatoumata traore' ||
-                name === 'amina diop'
-              );
-            });
-            if (sanitizedTenants.length !== tenants.length) {
-              localStorage.setItem('locagestion:registered_tenants', JSON.stringify(sanitizedTenants));
+        const mergedInspections: Record<string, any> = {
+          ...(localInspections || {}),
+        };
+        let inspectionsChanged = false;
+        let inspectionsNeedPush = false;
+
+        Object.entries(data.inspections).forEach(([leaseId, serverInsp]) => {
+          if (!leaseId || !serverInsp) return;
+          const localInsp = mergedInspections[leaseId];
+          if (!localInsp) {
+            mergedInspections[leaseId] = serverInsp;
+            inspectionsChanged = true;
+          } else {
+            const combined = { ...localInsp, ...(serverInsp as object) };
+            if (JSON.stringify(combined) !== JSON.stringify(localInsp)) {
+              mergedInspections[leaseId] = combined;
+              inspectionsChanged = true;
             }
           }
+        });
+
+        const serverLeaseKeys = new Set(Object.keys(data.inspections));
+        if (Object.keys(mergedInspections).some((k) => !serverLeaseKeys.has(k))) {
+          inspectionsNeedPush = true;
         }
-      } catch (e) {}
+
+        if (inspectionsChanged) {
+          localStorage.setItem('locagestion:inspections', JSON.stringify(mergedInspections));
+          window.dispatchEvent(new CustomEvent('locagestion:inspections_updated'));
+        }
+        if (inspectionsNeedPush) {
+          pushPayload.inspections = mergedInspections;
+          needsServerPush = true;
+        }
+      }
+
+      // =======================================================================
+      // 12. SYNCHRONISATION DES LOCATAIRES INVITÉS & ALERTES SÉCURITÉ
+      // =======================================================================
+      if (Array.isArray(data.registeredTenants)) {
+        let localTenants: any[] = [];
+        try {
+          const tenStr = localStorage.getItem('locagestion:registered_tenants');
+          if (tenStr) localTenants = JSON.parse(tenStr);
+        } catch {}
+
+        const isFakeTenant = (t: any) => {
+          if (!t) return true;
+          const name = (t.name || '').trim().toLowerCase();
+          return (
+            name === 'koffi mensah' ||
+            name === 'mamadou diallo' ||
+            name === 'ibrahim traoré' ||
+            name === 'ibrahim traore' ||
+            name === 'aïcha touré' ||
+            name === 'aicha toure' ||
+            name === 'fatoumata traoré' ||
+            name === 'fatoumata traore' ||
+            name === 'amina diop'
+          );
+        };
+
+        const tenMap = new Map<string, any>();
+        (Array.isArray(localTenants) ? localTenants : [])
+          .filter((t) => !isFakeTenant(t))
+          .forEach((t) => {
+            const key = t.email ? t.email.toLowerCase() : t.id;
+            if (key) tenMap.set(key, t);
+          });
+        (data.registeredTenants || [])
+          .filter((t: any) => !isFakeTenant(t))
+          .forEach((t: any) => {
+            const key = t.email ? t.email.toLowerCase() : t.id;
+            if (key) tenMap.set(key, { ...(tenMap.get(key) || {}), ...t });
+          });
+
+        const mergedTenants = Array.from(tenMap.values());
+        localStorage.setItem('locagestion:registered_tenants', JSON.stringify(mergedTenants));
+
+        const serverTenKeys = new Set(
+          (data.registeredTenants || []).map((t: any) => (t?.email ? t.email.toLowerCase() : t?.id))
+        );
+        if (mergedTenants.some((mt) => !serverTenKeys.has(mt.email ? mt.email.toLowerCase() : mt.id))) {
+          pushPayload.registeredTenants = mergedTenants;
+          needsServerPush = true;
+        }
+      }
+
+      if (Array.isArray(data.securityAlerts)) {
+        let localAlerts: any[] = [];
+        try {
+          const alStr = localStorage.getItem('locagestion:security_alerts:v1');
+          if (alStr) localAlerts = JSON.parse(alStr);
+        } catch {}
+
+        const alertMap = new Map<string, any>();
+        (Array.isArray(localAlerts) ? localAlerts : []).forEach((a) => {
+          if (a && a.id) alertMap.set(a.id, a);
+        });
+        (data.securityAlerts || []).forEach((sa: any) => {
+          if (sa && sa.id) alertMap.set(sa.id, { ...(alertMap.get(sa.id) || {}), ...sa });
+        });
+        const mergedAlerts = Array.from(alertMap.values());
+        const prevAlStr = localStorage.getItem('locagestion:security_alerts:v1');
+        const nextAlStr = JSON.stringify(mergedAlerts);
+        if (prevAlStr !== nextAlStr) {
+          localStorage.setItem('locagestion:security_alerts:v1', nextAlStr);
+          window.dispatchEvent(new Event('locagestion:security_alerts_updated'));
+        }
+        const serverAlertIds = new Set((data.securityAlerts || []).map((sa: any) => sa.id));
+        if (mergedAlerts.some((ma) => !serverAlertIds.has(ma.id))) {
+          pushPayload.securityAlerts = mergedAlerts;
+          needsServerPush = true;
+        }
+      }
+
+      // =======================================================================
+      // 13. ENVOI CONSOLIDÉ DES DELTAS LOCAUX VERS LE SERVEUR CENTRAL
+      // =======================================================================
+      if (needsServerPush && Object.keys(pushPayload).length > 0) {
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pushPayload),
+        }).catch(() => {});
+      }
 
       isSyncing = false;
       return {
@@ -494,19 +852,29 @@ export const SyncService = {
   },
 
   /**
-   * Synchronisation montante : pousse immédiatement toute modification
-   * (nouveau bail, contresignature, notification, inscription, annonce, propriété, message, paiement) vers le serveur central.
+   * Synchronisation montante immédiate vers le serveur central.
    */
   async push(payload: {
     leases?: Lease[];
     notifications?: any[];
+    landlordNotifications?: any[];
+    notices?: any[];
     user?: AuthUser;
+    users?: AuthUser[];
     removedListingId?: string;
+    removedListingIds?: string[];
+    restoredListingId?: string;
     listings?: RentalListing[];
+    trashListings?: any[];
     properties?: any[];
     conversations?: any[];
     payments?: any[];
+    verifiedPayments?: any[];
     incidents?: any[];
+    inspections?: Record<string, any>;
+    registeredTenants?: any[];
+    securityAlerts?: any[];
+    adminPassword?: string;
   }): Promise<boolean> {
     if (typeof window === 'undefined') return false;
 
@@ -527,8 +895,8 @@ export const SyncService = {
   },
 
   /**
-   * Initialise le moteur de synchronisation en tâche de fond (toutes les 4 secondes,
-   * ainsi qu'au focus ou retour sur l'application mobile).
+   * Initialise le moteur de synchronisation temps réel (toutes les 2,5 secondes,
+   * ainsi qu'au focus, retour réseau ou réouverture sur mobile / appli Android).
    */
   init() {
     if (typeof window === 'undefined' || isInitialized) return;
@@ -537,18 +905,18 @@ export const SyncService = {
     // Premier sync immédiat
     this.sync();
 
-    // Boucle de pulsation temps réel (4 secondes) pour une synchronisation instantanée Web <-> Mobile
+    // Boucle de pulsation temps réel (2,5 secondes) pour une synchronisation instantanée Web <-> Mobile <-> Android
     syncIntervalId = setInterval(() => {
       this.sync();
-    }, 4000);
+    }, 2500);
 
-    // Sync immédiat dès que l'utilisateur revient sur l'application mobile ou change d'onglet
-    const handleFocus = () => {
+    const handleImmediateSync = () => {
       this.sync();
     };
 
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('online', handleFocus);
+    window.addEventListener('focus', handleImmediateSync);
+    window.addEventListener('online', handleImmediateSync);
+    window.addEventListener('pageshow', handleImmediateSync);
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
         this.sync();

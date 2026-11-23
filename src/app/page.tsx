@@ -60,9 +60,10 @@ export default function DashboardPage() {
       const userPayments = PaymentService.getVerifiedPaymentsForLandlord(user);
       setPayments(userPayments);
 
-      const active = IncidentService.getIncidents().filter((i) => i.status !== 'resolu').length;
+      const landlordIncidents = IncidentService.getIncidentsForLandlord(user);
+      const active = landlordIncidents.filter((i) => i.status !== 'resolu').length;
       setPendingIncidents(active);
-      const totalExpenses = IncidentService.getTotalArtisanExpenses();
+      const totalExpenses = landlordIncidents.reduce((acc, curr) => acc + (curr.artisanFee || 0), 0);
 
       const totalUnits = props.reduce(
         (acc, p) => acc + (p.totalUnits || (p.unitsList ? p.unitsList.length : 1)),
@@ -139,13 +140,17 @@ export default function DashboardPage() {
 
     refreshDashboardData();
     window.addEventListener('locagestion:properties_updated', refreshDashboardData);
+    window.addEventListener('locagestion:leases_updated', refreshDashboardData);
     window.addEventListener('locagestion:payments_updated', refreshDashboardData);
     window.addEventListener('locagestion:incidents_updated', refreshDashboardData);
+    window.addEventListener('locagestion:auth_changed', refreshDashboardData);
     window.addEventListener('storage', refreshDashboardData);
     return () => {
       window.removeEventListener('locagestion:properties_updated', refreshDashboardData);
+      window.removeEventListener('locagestion:leases_updated', refreshDashboardData);
       window.removeEventListener('locagestion:payments_updated', refreshDashboardData);
       window.removeEventListener('locagestion:incidents_updated', refreshDashboardData);
+      window.removeEventListener('locagestion:auth_changed', refreshDashboardData);
       window.removeEventListener('storage', refreshDashboardData);
     };
   }, [user]);

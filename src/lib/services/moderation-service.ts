@@ -263,6 +263,11 @@ export const ModerationService = {
     try {
       localStorage.setItem(STORAGE_KEY_ALERTS, JSON.stringify(alerts));
       window.dispatchEvent(new Event('locagestion:security_alerts_updated'));
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ securityAlerts: alerts }),
+      }).catch(() => {});
     } catch (e) {
       console.error('Erreur sauvegarde alertes sécurité:', e);
     }

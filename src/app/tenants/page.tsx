@@ -343,9 +343,17 @@ export default function TenantsPage() {
     };
     refreshLeases();
     window.addEventListener('locagestion:leases_updated', refreshLeases);
+    window.addEventListener('locagestion:auth_changed', refreshLeases);
+    window.addEventListener('locagestion:payments_updated', refreshLeases);
+    window.addEventListener('locagestion:inspections_updated', refreshLeases);
+    window.addEventListener('locagestion:listings_updated', refreshLeases);
     window.addEventListener('storage', refreshLeases);
     return () => {
       window.removeEventListener('locagestion:leases_updated', refreshLeases);
+      window.removeEventListener('locagestion:auth_changed', refreshLeases);
+      window.removeEventListener('locagestion:payments_updated', refreshLeases);
+      window.removeEventListener('locagestion:inspections_updated', refreshLeases);
+      window.removeEventListener('locagestion:listings_updated', refreshLeases);
       window.removeEventListener('storage', refreshLeases);
     };
   }, [user]);

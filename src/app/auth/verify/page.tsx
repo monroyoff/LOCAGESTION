@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { CheckCircle2, ShieldCheck, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/lib/context/space-context';
 import { AuthService } from '@/lib/services/auth-service';
+import { SyncService } from '@/lib/services/sync-service';
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -25,55 +26,62 @@ function VerifyEmailContent() {
       return;
     }
 
-    try {
-      // Vérifier le code dans la session ou l'enregistrement local
-      const pendingUsers = AuthService.getAllKnownUsers();
-      let targetUser = pendingUsers.find(
-        (u) => u.email.toLowerCase() === email.trim().toLowerCase()
-      );
+    const runVerification = async () => {
+      try {
+        // Synchroniser d'abord avec le serveur central au cas où l'inscription a été faite sur un autre appareil
+        await SyncService.sync().catch(() => {});
 
-      if (targetUser) {
-        // Marquer comme vérifié et connecter automatiquement
-        const updated = {
-          ...targetUser,
-          emailVerified: true,
-        };
-        AuthService.saveRegisteredUsers(
-          pendingUsers.map((u) => (u.id === updated.id ? updated : u))
+        const pendingUsers = AuthService.getAllKnownUsers();
+        const targetUser = pendingUsers.find(
+          (u) => u.email.toLowerCase() === email.trim().toLowerCase()
         );
-        AuthService.setCurrentUser(updated);
 
-        // Synchroniser sur le backend
-        fetch('/api/auth/users', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updated),
-        }).catch(() => {});
+        if (targetUser) {
+          // Marquer comme vérifié et connecter automatiquement
+          const updated = {
+            ...targetUser,
+            emailVerified: true,
+          };
+          const updatedUsersList = pendingUsers.map((u) => (u.id === updated.id ? updated : u));
+          AuthService.saveRegisteredUsers(updatedUsersList);
+          AuthService.setCurrentUser(updated);
 
-        setStatus('success');
-        setMessage(`Votre adresse email ${email} a été confirmée avec succès ! Redirection vers votre espace...`);
+          // Synchroniser immédiatement sur le backend
+          await Promise.all([
+            fetch('/api/auth/users', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(updated),
+            }).catch(() => {}),
+            SyncService.push({ user: updated, users: updatedUsersList }).catch(() => {}),
+          ]);
 
-        setTimeout(() => {
-          if (updated.role === 'locataire') {
-            router.push('/portal');
-          } else if (updated.role === 'demarcheur') {
-            router.push('/listings');
-          } else {
-            router.push('/');
-          }
-        }, 1500);
-      } else {
-        // Si le compte est en attente
-        setStatus('success');
-        setMessage(`Votre code (${code}) pour ${email} a été validé ! Vous pouvez vous connecter.`);
-        setTimeout(() => {
-          router.push('/auth/login');
-        }, 2000);
+          setStatus('success');
+          setMessage(`Votre adresse email ${email} a été confirmée avec succès ! Redirection vers votre espace...`);
+
+          setTimeout(() => {
+            if (updated.role === 'locataire') {
+              router.push('/portal');
+            } else if (updated.role === 'demarcheur') {
+              router.push('/listings');
+            } else {
+              router.push('/');
+            }
+          }, 1200);
+        } else {
+          setStatus('success');
+          setMessage(`Votre code (${code}) pour ${email} a été validé ! Vous pouvez vous connecter.`);
+          setTimeout(() => {
+            router.push('/auth/login');
+          }, 1800);
+        }
+      } catch (err) {
+        setStatus('error');
+        setMessage('Une erreur est survenue lors de la vérification.');
       }
-    } catch (err) {
-      setStatus('error');
-      setMessage('Une erreur est survenue lors de la vérification.');
-    }
+    };
+
+    runVerification();
   }, [searchParams, router]);
 
   return (

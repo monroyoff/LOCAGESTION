@@ -1,36 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
+import { readJsonFile, writeJsonFile, writeJsonObject } from '@/lib/server/server-store';
 
-const DATA_FILE = path.join(process.cwd(), 'data', 'users.json');
+const USERS_FILE = 'users.json';
 
-function getUsersFromFile(): any[] {
-  try {
-    if (!fs.existsSync(DATA_FILE)) {
-      fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-      fs.writeFileSync(DATA_FILE, '[]', 'utf8');
-      return [];
-    }
-    const raw = fs.readFileSync(DATA_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    console.error('Erreur lecture users.json:', e);
-    return [];
-  }
+function getUsersFromStore(): any[] {
+  const users = readJsonFile<any[]>(USERS_FILE, [], 'email');
+  return Array.isArray(users) ? users : [];
 }
 
-function saveUsersToFile(users: any[]) {
-  try {
-    fs.mkdirSync(path.dirname(DATA_FILE), { recursive: true });
-    fs.writeFileSync(DATA_FILE, JSON.stringify(users, null, 2), 'utf8');
-  } catch (e) {
-    console.error('Erreur écriture users.json:', e);
-  }
+function saveUsersToStore(users: any[]) {
+  writeJsonFile(USERS_FILE, users);
 }
 
 export async function GET() {
-  const users = getUsersFromFile();
+  const users = getUsersFromStore();
   return NextResponse.json({ success: true, users });
 }
 
@@ -41,7 +24,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: 'Email obligatoire' }, { status: 400 });
     }
 
-    const users = getUsersFromFile();
+    const users = [...getUsersFromStore()];
     const cleanEmail = body.email.trim().toLowerCase();
 
     // RÈGLE D'OR : Le compte jojovog007@gmail.com est irrévocablement lié à LOCA-MAT-BJ-17635 et scellé, mot de passe unique Lolo1000$
@@ -52,6 +35,7 @@ export async function POST(req: NextRequest) {
       body.name = 'Jojo VOG';
       body.phone = body.phone || '+229 97 00 12 34';
       body.password = body.password || 'Lolo1000$';
+      body.emailVerified = true;
       body.isIdentitySealed = true;
     }
 
@@ -63,6 +47,7 @@ export async function POST(req: NextRequest) {
       body.name = 'VOGLOSSOU JOHANE';
       body.phone = '+229 01 95 44 44 30';
       body.password = body.password || 'Forever1122$';
+      body.emailVerified = true;
       body.isIdentitySealed = true;
     }
 
@@ -80,10 +65,10 @@ export async function POST(req: NextRequest) {
 
     // RÈGLE SPÉCIALE SUPER-ADMIN : Sauvegarde persistante du mot de passe admin
     if (cleanEmail === 'admin@locagestion.site') {
-      try {
-        const adminFile = path.join(process.cwd(), 'data', 'admin.json');
-        fs.writeFileSync(adminFile, JSON.stringify({ password: body.password || 'Omega#Admin2027!LocaSecurity', updatedAt: new Date().toISOString() }, null, 2), 'utf8');
-      } catch {}
+      writeJsonObject('admin.json', {
+        password: body.password || 'Omega#Admin2027!LocaSecurity',
+        updatedAt: new Date().toISOString(),
+      });
     }
 
     const idx = users.findIndex((u: any) => u.email && u.email.trim().toLowerCase() === cleanEmail);
@@ -93,6 +78,7 @@ export async function POST(req: NextRequest) {
       const existing = users[idx];
       const immutableMatricule = existing.matricule || body.matricule;
       const isSealed = Boolean(existing.isIdentitySealed || body.isIdentitySealed);
+      const isEmailVerified = Boolean(existing.emailVerified || body.emailVerified);
 
       users[idx] = {
         ...existing,
@@ -106,6 +92,7 @@ export async function POST(req: NextRequest) {
         name: isSealed ? (existing.name || body.name) : (body.name || existing.name),
         phone: cleanEmail === 'jobovog@gmail.com' ? '+229 01 95 44 44 30' : (body.phone || existing.phone),
         isIdentitySealed: isSealed,
+        emailVerified: isEmailVerified,
       };
     } else {
       if (body.firstName && body.lastName && body.phone) {
@@ -114,10 +101,9 @@ export async function POST(req: NextRequest) {
       users.unshift(body);
     }
 
-    saveUsersToFile(users);
-    return NextResponse.json({ success: true, user: body });
+    saveUsersToStore(users);
+    return NextResponse.json({ success: true, user: body, users });
   } catch (e) {
     return NextResponse.json({ success: false, error: 'Erreur serveur' }, { status: 500 });
   }
 }
-

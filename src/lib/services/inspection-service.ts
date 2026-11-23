@@ -69,6 +69,12 @@ export const InspectionService = {
       all[leaseId] = data;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
       window.dispatchEvent(new CustomEvent('locagestion:inspections_updated', { detail: { leaseId } }));
+      window.dispatchEvent(new Event('storage'));
+      fetch('/api/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ inspections: all }),
+      }).catch(() => {});
     } catch (e) {
       console.error('Erreur sauvegarde inspection:', e);
     }

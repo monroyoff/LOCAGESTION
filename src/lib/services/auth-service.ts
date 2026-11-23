@@ -604,8 +604,14 @@ export const AuthService = {
       localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(sanitized));
       window.dispatchEvent(new Event('locagestion:users_updated'));
 
-      // Synchronisation asynchrone sécurisée avec le serveur de production
+      // Synchronisation asynchrone sécurisée avec le serveur de production (/api/auth/users & /api/sync)
       if (sanitized.length > 0) {
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ users: sanitized }),
+        }).catch(() => {});
+
         sanitized.forEach((usr) => {
           fetch('/api/auth/users', {
             method: 'POST',
@@ -1144,6 +1150,11 @@ export const AuthService = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem('locagestion:admin_custom_password:v1', newPassword.trim());
+        fetch('/api/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminPassword: newPassword.trim() }),
+        }).catch(() => {});
         fetch('/api/auth/users', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

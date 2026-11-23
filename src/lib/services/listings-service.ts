@@ -890,11 +890,16 @@ export const ListingsService = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+        const trash = this.getTrashListings();
         notifyListingsChange();
         fetch('/api/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ removedListingId: id, listings: filtered }),
+          body: JSON.stringify({
+            removedListingId: id,
+            listings: filtered,
+            trashListings: trash,
+          }),
         }).catch(() => {});
         return true;
       } catch (e) {
@@ -990,6 +995,16 @@ export const ListingsService = {
     const current = this.getCustomListings().filter((l) => !isFakeListing(l));
     const updatedListings = [restoredItem, ...current.filter((l) => l.id !== id)];
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedListings));
+
+    fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        restoredListingId: id,
+        listings: updatedListings,
+        trashListings: updatedTrash,
+      }),
+    }).catch(() => {});
 
     // 3. Notifier l'auteur dans son espace
     try {

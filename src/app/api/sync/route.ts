@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
-import path from 'path';
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const TMP_DATA_DIR = path.join('/tmp', 'locagestion_data');
+import {
+  readJsonFile,
+  writeJsonFile,
+  readJsonObject,
+  writeJsonObject,
+} from '@/lib/server/server-store';
 
 const LEASES_FILE = 'leases.json';
 const NOTIFS_FILE = 'notifications.json';
@@ -12,82 +13,19 @@ const NOTICES_FILE = 'notices.json';
 const INCIDENTS_FILE = 'incidents.json';
 const USERS_FILE = 'users.json';
 const LISTINGS_FILE = 'listings.json';
+const TRASH_LISTINGS_FILE = 'trash_listings.json';
+const REMOVED_LISTING_IDS_FILE = 'removed_listing_ids.json';
 const PROPERTIES_FILE = 'properties.json';
 const CONVERSATIONS_FILE = 'conversations.json';
 const PAYMENTS_FILE = 'payments.json';
-
-// In-memory global store to guarantee cross-request persistence in serverless instances
-const memoryStore: Record<string, any[]> =
-  (globalThis as any)._locagestion_store ||
-  ((globalThis as any)._locagestion_store = {});
-
-function readJsonFile<T>(filename: string, fallback: T): T {
-  const storeKey = filename.replace('.json', '');
-
-  // 1. In-memory cache
-  if (memoryStore[storeKey] && Array.isArray(memoryStore[storeKey]) && memoryStore[storeKey].length > 0) {
-    return memoryStore[storeKey] as T;
-  }
-
-  // 2. /tmp directory (writable in serverless / Vercel lambdas)
-  try {
-    const tmpPath = path.join(TMP_DATA_DIR, filename);
-    if (fs.existsSync(tmpPath)) {
-      const raw = fs.readFileSync(tmpPath, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        memoryStore[storeKey] = parsed;
-        return parsed as T;
-      }
-    }
-  } catch (e) {}
-
-  // 3. process.cwd()/data (static data bundled at build time)
-  try {
-    const dataPath = path.join(DATA_DIR, filename);
-    if (fs.existsSync(dataPath)) {
-      const raw = fs.readFileSync(dataPath, 'utf8');
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        memoryStore[storeKey] = parsed;
-        return parsed as T;
-      }
-    }
-  } catch (e) {}
-
-  memoryStore[storeKey] = fallback as any;
-  return fallback;
-}
-
-function writeJsonFile<T>(filename: string, data: T) {
-  const storeKey = filename.replace('.json', '');
-  memoryStore[storeKey] = data as any;
-
-  // Try writing to data/ directory (works on standard hosts and local environment)
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(path.join(DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {
-    // Read-only filesystem in serverless; falls back to /tmp below
-  }
-
-  // Also write to /tmp for persistent writes across warm serverless functions
-  try {
-    if (!fs.existsSync(TMP_DATA_DIR)) {
-      fs.mkdirSync(TMP_DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(path.join(TMP_DATA_DIR, filename), JSON.stringify(data, null, 2), 'utf8');
-  } catch (e) {}
-}
+const VERIFIED_PAYMENTS_FILE = 'verified_payments.json';
+const INSPECTIONS_FILE = 'inspections.json';
+const REGISTERED_TENANTS_FILE = 'registered_tenants.json';
+const SECURITY_ALERTS_FILE = 'security_alerts.json';
 
 function isFakeServerLease(l: any): boolean {
   if (!l || !l.id) return true;
-  if (
-    l.id === 'BAIL-2026-MAG-102' ||
-    l.id === 'BAIL-2026-COM-205'
-  ) {
+  if (l.id === 'BAIL-2026-MAG-102' || l.id === 'BAIL-2026-COM-205') {
     return true;
   }
   const lName = (l.landlordName || '').trim().toLowerCase();
@@ -121,7 +59,8 @@ function isFakeServerUser(u: any): boolean {
     id === 'usr-demarcheur-abidjan' ||
     id === 'usr-demarcheur-dakar' ||
     id === 'usr-demarcheur-lome'
-  ) return true;
+  )
+    return true;
   const name = (u.name || '').trim().toLowerCase();
   if (
     name === 'mamadou diallo' ||
@@ -141,7 +80,8 @@ function isFakeServerUser(u: any): boolean {
     name === 'agence teranga immobilier' ||
     name === 'cabinet immobilier lomé express' ||
     name === 'cabinet immobilier lome express'
-  ) return true;
+  )
+    return true;
   const email = (u.email || '').trim().toLowerCase();
   if (
     email.includes('koffi.mensah') ||
@@ -154,7 +94,8 @@ function isFakeServerUser(u: any): boolean {
     email.includes('ivoirelogis.ci') ||
     email.includes('terangaimmo.sn') ||
     email.includes('lome-immo.tg')
-  ) return true;
+  )
+    return true;
   return false;
 }
 
@@ -186,8 +127,6 @@ function isFakeServerListing(l: any): boolean {
   }
 
   const id = String(l.id).trim();
-
-  // Toutes les annonces de démo / mock ou de test sont des annonces fictives à bannir
   if (
     id === 'list-bj-uac-calavi' ||
     id === 'list-bj-haie-vive' ||
@@ -259,47 +198,141 @@ function isFakeServerListing(l: any): boolean {
   return false;
 }
 
-export async function GET(req: NextRequest) {
+function mergeUserIntoList(currentUsers: any[], incomingUser: any) {
+  if (!incomingUser || !incomingUser.email || isFakeServerUser(incomingUser)) return;
+  const cleanEmail = incomingUser.email.trim().toLowerCase();
+  const idx = currentUsers.findIndex(
+    (u) => u.email && u.email.trim().toLowerCase() === cleanEmail
+  );
+
+  // Règles d'intégrité canoniques
+  if (cleanEmail === 'jojovog007@gmail.com') {
+    incomingUser.matricule = 'LOCA-MAT-BJ-17635';
+    incomingUser.firstName = 'Jojo';
+    incomingUser.lastName = 'VOG';
+    incomingUser.name = 'Jojo VOG';
+    incomingUser.phone = incomingUser.phone || '+229 97 00 12 34';
+    incomingUser.password = incomingUser.password || 'Lolo1000$';
+    incomingUser.emailVerified = true;
+    incomingUser.isIdentitySealed = true;
+  } else if (cleanEmail === 'jobovog@gmail.com') {
+    incomingUser.matricule = 'LOCA-MAT-BJ-84291';
+    incomingUser.firstName = 'Johane';
+    incomingUser.lastName = 'Voglossou';
+    incomingUser.name = 'VOGLOSSOU JOHANE';
+    incomingUser.phone = '+229 01 95 44 44 30';
+    incomingUser.password = incomingUser.password || 'Forever1122$';
+    incomingUser.emailVerified = true;
+    incomingUser.isIdentitySealed = true;
+  } else if (cleanEmail === 'theodoradjigla@gmail.com') {
+    incomingUser.matricule = 'LOCA-MAT-BJ-24702';
+    incomingUser.firstName = 'Théodora';
+    incomingUser.lastName = 'DJIGLA';
+    incomingUser.name = 'Théodora DJIGLA';
+    incomingUser.phone = incomingUser.phone || '+229 01 97 30 73 74';
+    incomingUser.password = incomingUser.password || 'Jesusmonroi@2026';
+    incomingUser.emailVerified = true;
+    incomingUser.isIdentitySealed = true;
+  } else if (cleanEmail === 'viviimmo.bj@gmail.com') {
+    incomingUser.matricule = 'LOCA-MAT-BJ-96011';
+    incomingUser.firstName = 'Pari';
+    incomingUser.lastName = 'Vivid';
+    incomingUser.name = 'PARI VIVID';
+    incomingUser.phone = incomingUser.phone || '+229 96 00 11 22';
+    incomingUser.password = incomingUser.password || 'Forever1122$';
+    incomingUser.emailVerified = true;
+    incomingUser.isIdentitySealed = true;
+  }
+
+  if (idx !== -1) {
+    const existing = currentUsers[idx];
+    const immutableMatricule = existing.matricule || incomingUser.matricule;
+    const isSealed = Boolean(existing.isIdentitySealed || incomingUser.isIdentitySealed);
+    const isEmailVerified = Boolean(existing.emailVerified || incomingUser.emailVerified);
+
+    currentUsers[idx] = {
+      ...existing,
+      ...incomingUser,
+      companyName: incomingUser.companyName !== undefined ? incomingUser.companyName : existing.companyName,
+      avatarUrl: incomingUser.avatarUrl || existing.avatarUrl,
+      password: incomingUser.password || existing.password,
+      matricule: immutableMatricule,
+      firstName: isSealed ? (existing.firstName || incomingUser.firstName) : (incomingUser.firstName || existing.firstName),
+      lastName: isSealed ? (existing.lastName || incomingUser.lastName) : (incomingUser.lastName || existing.lastName),
+      name: isSealed ? (existing.name || incomingUser.name) : (incomingUser.name || existing.name),
+      phone: cleanEmail === 'jobovog@gmail.com' ? '+229 01 95 44 44 30' : (incomingUser.phone || existing.phone),
+      isIdentitySealed: isSealed,
+      emailVerified: isEmailVerified,
+    };
+  } else {
+    if (incomingUser.firstName && incomingUser.lastName && incomingUser.phone) {
+      incomingUser.isIdentitySealed = true;
+    }
+    currentUsers.unshift(incomingUser);
+  }
+}
+
+export async function GET(_req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const email = searchParams.get('email')?.trim().toLowerCase();
-    const matricule = searchParams.get('matricule')?.trim();
+    const removedListingIds = readJsonFile<string[]>(REMOVED_LISTING_IDS_FILE, []);
+    const trashListings = readJsonFile<any[]>(TRASH_LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
+    const removedSet = new Set<string>([
+      ...removedListingIds.map((id) => String(id).trim()),
+      ...trashListings.map((t) => String(t.id || '').trim()),
+    ]);
 
     const leases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
     const notifications = readJsonFile<any[]>(NOTIFS_FILE, []);
     const landlordNotifications = readJsonFile<any[]>(LANDLORD_NOTIFS_FILE, []);
     const notices = readJsonFile<any[]>(NOTICES_FILE, []);
     const incidents = readJsonFile<any[]>(INCIDENTS_FILE, []);
-    const users = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
-    const listings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
+    const users = readJsonFile<any[]>(USERS_FILE, [], 'email').filter((u) => !isFakeServerUser(u));
+    const listings = readJsonFile<any[]>(LISTINGS_FILE, []).filter(
+      (l) => !isFakeServerListing(l) && !removedSet.has(String(l.id).trim())
+    );
     const properties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
     const conversations = readJsonFile<any[]>(CONVERSATIONS_FILE, []);
     const payments = readJsonFile<any[]>(PAYMENTS_FILE, []);
-    let adminPassword = 'Omega#Admin2027!LocaSecurity';
-    try {
-      const adminPath = path.join(DATA_DIR, 'admin.json');
-      if (fs.existsSync(adminPath)) {
-        const parsedAdmin = JSON.parse(fs.readFileSync(adminPath, 'utf8'));
-        if (parsedAdmin?.password) adminPassword = parsedAdmin.password;
-      }
-    } catch {}
+    const verifiedPayments = readJsonFile<any[]>(VERIFIED_PAYMENTS_FILE, []);
+    const inspections = readJsonObject<Record<string, any>>(INSPECTIONS_FILE, {});
+    const registeredTenants = readJsonFile<any[]>(REGISTERED_TENANTS_FILE, []);
+    const securityAlerts = readJsonFile<any[]>(SECURITY_ALERTS_FILE, []);
 
-    // Filtrage contextuel si locataire spécifique demandé, sinon envoi complet pour synchronisation globale
-    return NextResponse.json({
-      success: true,
-      leases,
-      notifications,
-      landlordNotifications,
-      notices,
-      incidents,
-      users,
-      listings,
-      properties,
-      conversations,
-      payments,
-      adminPassword,
-      timestamp: new Date().toISOString(),
+    const adminObj = readJsonObject<{ password?: string }>('admin.json', {
+      password: 'Omega#Admin2027!LocaSecurity',
     });
+    const adminPassword = adminObj.password || 'Omega#Admin2027!LocaSecurity';
+
+    return NextResponse.json(
+      {
+        success: true,
+        leases,
+        notifications,
+        landlordNotifications,
+        notices,
+        incidents,
+        users,
+        listings,
+        trashListings,
+        removedListingIds: Array.from(removedSet).filter(Boolean),
+        properties,
+        conversations,
+        payments,
+        verifiedPayments,
+        inspections,
+        registeredTenants,
+        securityAlerts,
+        adminPassword,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          Pragma: 'no-cache',
+          Expires: '0',
+        },
+      }
+    );
   } catch (e) {
     console.error('Erreur GET /api/sync:', e);
     return NextResponse.json({ success: false, error: 'Erreur serveur sync' }, { status: 500 });
@@ -320,124 +353,135 @@ export async function POST(req: NextRequest) {
       notices: incomingNotices,
       incidents: incomingIncidents,
       user: incomingUser,
+      users: incomingUsers,
       removedListingId,
+      removedListingIds: incomingRemovedIds,
+      restoredListingId,
+      trashListings: incomingTrashListings,
       properties: incomingProperties,
       listings: incomingListings,
       conversations: incomingConversations,
       payments: incomingPayments,
+      verifiedPayments: incomingVerifiedPayments,
+      inspections: incomingInspections,
+      registeredTenants: incomingRegisteredTenants,
+      securityAlerts: incomingSecurityAlerts,
+      adminPassword: incomingAdminPassword,
     } = body;
 
-    // 1. Synchronisation et fusion des baux (rejet strict des baux fictifs)
+    if (incomingAdminPassword && typeof incomingAdminPassword === 'string') {
+      writeJsonObject('admin.json', {
+        password: incomingAdminPassword.trim(),
+        updatedAt: new Date().toISOString(),
+      });
+    }
+
+    // 1. Synchronisation et fusion des baux
     if (Array.isArray(incomingLeases) && incomingLeases.length > 0) {
       const currentLeases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
       const mergedMap = new Map<string, any>();
-      // Déposer d'abord les baux serveur authentiques
       currentLeases.forEach((l) => {
         if (l && l.id && !isFakeServerLease(l)) {
           mergedMap.set(l.id, l);
         }
       });
-      // Écraser ou ajouter avec les baux entrants récents authentiques
       incomingLeases.forEach((l) => {
         if (l && l.id && !isFakeServerLease(l)) {
           const existing = mergedMap.get(l.id);
-          // Si le bail existe déjà, préserver ou fusionner les signatures
           if (existing) {
-            mergedMap.set(l.id, { ...existing, ...l });
+            const signedByTenant = Boolean(existing.signedByTenant || l.signedByTenant);
+            const signedByLandlord = Boolean(existing.signedByLandlord || l.signedByLandlord);
+            const status =
+              l.status === 'resilie' || existing.status === 'resilie'
+                ? l.reactivatedAt && (!existing.resiliatedAt || l.reactivatedAt >= existing.resiliatedAt)
+                  ? 'actif'
+                  : 'resilie'
+                : signedByTenant || l.status === 'actif' || existing.status === 'actif'
+                ? 'actif'
+                : l.status || existing.status;
+            mergedMap.set(l.id, {
+              ...existing,
+              ...l,
+              status,
+              signedByTenant,
+              signedByLandlord,
+              tenantSignedAt: l.tenantSignedAt || existing.tenantSignedAt,
+              tenantSignature: l.tenantSignature || existing.tenantSignature,
+              landlordSignature: l.landlordSignature || existing.landlordSignature,
+            });
           } else {
             mergedMap.set(l.id, l);
           }
         }
       });
-      const updatedLeases = Array.from(mergedMap.values());
-      writeJsonFile(LEASES_FILE, updatedLeases);
+      writeJsonFile(LEASES_FILE, Array.from(mergedMap.values()));
     }
 
-    // 2. Synchronisation et fusion des notifications
+    // 2. Synchronisation et fusion des notifications locataires
     if (Array.isArray(incomingNotifs) && incomingNotifs.length > 0) {
       const currentNotifs = readJsonFile<any[]>(NOTIFS_FILE, []);
       const notifsMap = new Map<string, any>();
-      currentNotifs.forEach((n) => notifsMap.set(n.id, n));
+      currentNotifs.forEach((n) => {
+        if (n && n.id) notifsMap.set(n.id, n);
+      });
       incomingNotifs.forEach((n) => {
         if (n && n.id) {
-          notifsMap.set(n.id, n);
+          const existing = notifsMap.get(n.id);
+          notifsMap.set(n.id, existing ? { ...existing, ...n, read: Boolean(existing.read || n.read) } : n);
         }
       });
-      const updatedNotifs = Array.from(notifsMap.values());
-      writeJsonFile(NOTIFS_FILE, updatedNotifs);
+      writeJsonFile(NOTIFS_FILE, Array.from(notifsMap.values()));
     }
 
-    // 3. Synchronisation de l'utilisateur avec garantie d'unicité absolue
-    if (incomingUser && incomingUser.email && !isFakeServerUser(incomingUser)) {
-      const currentUsers = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
-      const cleanEmail = incomingUser.email.trim().toLowerCase();
-      const idx = currentUsers.findIndex(
-        (u) => u.email && u.email.trim().toLowerCase() === cleanEmail
-      );
-
-      // CAS PARTICULIER STRICT JOJO VOG : matricule et identité scellés pour toujours, mot de passe unique distinct Lolo1000$
-      if (cleanEmail === 'jojovog007@gmail.com') {
-        incomingUser.matricule = 'LOCA-MAT-BJ-17635';
-        incomingUser.firstName = 'Jojo';
-        incomingUser.lastName = 'VOG';
-        incomingUser.name = 'Jojo VOG';
-        incomingUser.phone = incomingUser.phone || '+229 97 00 12 34';
-        incomingUser.password = incomingUser.password || 'Lolo1000$';
-        incomingUser.isIdentitySealed = true;
+    // 3. Synchronisation des utilisateurs (unitaire ET liste complète)
+    if ((incomingUser && incomingUser.email) || (Array.isArray(incomingUsers) && incomingUsers.length > 0)) {
+      const currentUsers = [...readJsonFile<any[]>(USERS_FILE, [], 'email').filter((u) => !isFakeServerUser(u))];
+      if (Array.isArray(incomingUsers)) {
+        incomingUsers.forEach((u) => mergeUserIntoList(currentUsers, u));
       }
-
-      // CAS PARTICULIER STRICT JOHANE VOGLOSSOU (BAILLEUR) : numéro officiel unique +229 01 95 44 44 30, mot de passe unique distinct Forever1122$
-      if (cleanEmail === 'jobovog@gmail.com') {
-        incomingUser.matricule = 'LOCA-MAT-BJ-84291';
-        incomingUser.firstName = 'Johane';
-        incomingUser.lastName = 'Voglossou';
-        incomingUser.name = 'VOGLOSSOU JOHANE';
-        incomingUser.phone = '+229 01 95 44 44 30';
-        incomingUser.password = incomingUser.password || 'Forever1122$';
-        incomingUser.isIdentitySealed = true;
-      }
-
-      // CAS PARTICULIER STRICT THÉODORA DJIGLA (LOCATAIRE) : matricule LOCA-MAT-BJ-24702, mot de passe scellé Jesusmonroi@2026
-      if (cleanEmail === 'theodoradjigla@gmail.com') {
-        incomingUser.matricule = 'LOCA-MAT-BJ-24702';
-        incomingUser.firstName = 'Théodora';
-        incomingUser.lastName = 'DJIGLA';
-        incomingUser.name = 'Théodora DJIGLA';
-        incomingUser.phone = incomingUser.phone || '+229 01 97 30 73 74';
-        incomingUser.password = incomingUser.password || 'Jesusmonroi@2026';
-        incomingUser.emailVerified = true;
-        incomingUser.isIdentitySealed = true;
-      }
-
-      if (idx !== -1) {
-        // Préserver le matricule existant et l'identité scellée
-        const existing = currentUsers[idx];
-        const immutableMatricule = existing.matricule || incomingUser.matricule;
-        const isSealed = Boolean(existing.isIdentitySealed || incomingUser.isIdentitySealed);
-
-        currentUsers[idx] = {
-          ...existing,
-          ...incomingUser,
-          companyName: incomingUser.companyName !== undefined ? incomingUser.companyName : existing.companyName,
-          avatarUrl: incomingUser.avatarUrl || existing.avatarUrl,
-          password: incomingUser.password || existing.password,
-          matricule: immutableMatricule,
-          firstName: isSealed ? (existing.firstName || incomingUser.firstName) : (incomingUser.firstName || existing.firstName),
-          lastName: isSealed ? (existing.lastName || incomingUser.lastName) : (incomingUser.lastName || existing.lastName),
-          name: isSealed ? (existing.name || incomingUser.name) : (incomingUser.name || existing.name),
-          phone: cleanEmail === 'jobovog@gmail.com' ? '+229 01 95 44 44 30' : (incomingUser.phone || existing.phone),
-          isIdentitySealed: isSealed,
-        };
-      } else {
-        if (incomingUser.firstName && incomingUser.lastName && incomingUser.phone) {
-          incomingUser.isIdentitySealed = true;
-        }
-        currentUsers.unshift(incomingUser);
+      if (incomingUser && incomingUser.email) {
+        mergeUserIntoList(currentUsers, incomingUser);
       }
       writeJsonFile(USERS_FILE, currentUsers);
     }
 
-    // 4. Retrait d'annonce après contresignature si requis
+    // 4. Gestion de la corbeille & des retraits d'annonces
+    let removedIdsList = [...readJsonFile<string[]>(REMOVED_LISTING_IDS_FILE, [])];
+    if (removedListingId) {
+      if (!removedIdsList.includes(removedListingId)) {
+        removedIdsList.push(removedListingId);
+      }
+    }
+    if (Array.isArray(incomingRemovedIds)) {
+      incomingRemovedIds.forEach((rid) => {
+        if (rid && !removedIdsList.includes(rid)) removedIdsList.push(rid);
+      });
+    }
+    if (restoredListingId) {
+      removedIdsList = removedIdsList.filter((rid) => rid !== restoredListingId);
+    }
+    writeJsonFile(REMOVED_LISTING_IDS_FILE, removedIdsList);
+
+    if (Array.isArray(incomingTrashListings)) {
+      const currentTrash = readJsonFile<any[]>(TRASH_LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
+      const trashMap = new Map<string, any>();
+      currentTrash.forEach((t) => {
+        if (t && t.id && t.id !== restoredListingId) trashMap.set(t.id, t);
+      });
+      incomingTrashListings.forEach((t) => {
+        if (t && t.id && !isFakeServerListing(t) && t.id !== restoredListingId) {
+          trashMap.set(t.id, { ...(trashMap.get(t.id) || {}), ...t });
+        }
+      });
+      writeJsonFile(TRASH_LISTINGS_FILE, Array.from(trashMap.values()));
+    } else if (restoredListingId) {
+      const currentTrash = readJsonFile<any[]>(TRASH_LISTINGS_FILE, []);
+      writeJsonFile(
+        TRASH_LISTINGS_FILE,
+        currentTrash.filter((t) => t && t.id !== restoredListingId)
+      );
+    }
+
     if (removedListingId) {
       const currentListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
       const filtered = currentListings.filter(
@@ -446,7 +490,7 @@ export async function POST(req: NextRequest) {
       writeJsonFile(LISTINGS_FILE, filtered);
     }
 
-    // 5. Synchronisation et fusion des propriétés / patrimoine immobilier
+    // 5. Synchronisation et fusion des propriétés
     if (Array.isArray(incomingProperties) && incomingProperties.length > 0) {
       const currentProperties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
       const propsMap = new Map<string, any>();
@@ -456,36 +500,29 @@ export async function POST(req: NextRequest) {
       incomingProperties.forEach((p) => {
         if (p && p.id && !isFakeServerProperty(p)) {
           const existing = propsMap.get(p.id);
-          if (existing) {
-            propsMap.set(p.id, { ...existing, ...p });
-          } else {
-            propsMap.set(p.id, p);
-          }
+          propsMap.set(p.id, existing ? { ...existing, ...p } : p);
         }
       });
-      const updatedProperties = Array.from(propsMap.values());
-      writeJsonFile(PROPERTIES_FILE, updatedProperties);
+      writeJsonFile(PROPERTIES_FILE, Array.from(propsMap.values()));
     }
 
     // 6. Synchronisation et fusion des annonces / publications
     if (Array.isArray(incomingListings) && incomingListings.length > 0) {
-      const currentListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
+      const removedSet = new Set(removedIdsList);
+      const currentListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter(
+        (l) => !isFakeServerListing(l) && !removedSet.has(l.id)
+      );
       const listingsMap = new Map<string, any>();
       currentListings.forEach((l) => {
-        if (l && l.id && !isFakeServerListing(l)) listingsMap.set(l.id, l);
+        if (l && l.id && !isFakeServerListing(l) && !removedSet.has(l.id)) listingsMap.set(l.id, l);
       });
       incomingListings.forEach((l) => {
-        if (l && l.id && !isFakeServerListing(l)) {
+        if (l && l.id && !isFakeServerListing(l) && !removedSet.has(l.id)) {
           const existing = listingsMap.get(l.id);
-          if (existing) {
-            listingsMap.set(l.id, { ...existing, ...l });
-          } else {
-            listingsMap.set(l.id, l);
-          }
+          listingsMap.set(l.id, existing ? { ...existing, ...l } : l);
         }
       });
-      const updatedListings = Array.from(listingsMap.values());
-      writeJsonFile(LISTINGS_FILE, updatedListings);
+      writeJsonFile(LISTINGS_FILE, Array.from(listingsMap.values()));
     }
 
     // 7. Synchronisation et fusion des conversations
@@ -500,8 +537,8 @@ export async function POST(req: NextRequest) {
           const existing = convsMap.get(c.id);
           if (existing) {
             const msgMap = new Map<string, any>();
-            (existing.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
-            (c.messages || []).forEach((m: any) => msgMap.set(m.id || m.timestamp, m));
+            (existing.messages || []).forEach((m: any) => msgMap.set(m.id || `${m.time}-${m.text}`, m));
+            (c.messages || []).forEach((m: any) => msgMap.set(m.id || `${m.time}-${m.text}`, m));
             const allMessages = Array.from(msgMap.values());
             const lastMsg = allMessages.length > 0 ? allMessages[allMessages.length - 1] : null;
             const cIsNewer = (c.messages?.length || 0) > (existing.messages?.length || 0);
@@ -515,8 +552,8 @@ export async function POST(req: NextRequest) {
               unreadBy: unreadSource.unreadBy,
               isRead: unreadSource.isRead ?? !unreadSource.hasUnread,
               messages: allMessages,
-              lastMessage: lastMsg ? lastMsg.text : (c.lastMessage || existing.lastMessage),
-              lastMessageTime: lastMsg ? (lastMsg.time || c.lastMessageTime) : (c.lastMessageTime || existing.lastMessageTime),
+              lastMessage: lastMsg ? lastMsg.text : c.lastMessage || existing.lastMessage,
+              lastMessageTime: lastMsg ? lastMsg.time || c.lastMessageTime : c.lastMessageTime || existing.lastMessageTime,
             });
           } else {
             convsMap.set(c.id, c);
@@ -526,7 +563,7 @@ export async function POST(req: NextRequest) {
       writeJsonFile(CONVERSATIONS_FILE, Array.from(convsMap.values()));
     }
 
-    // 8. Synchronisation et fusion des paiements déclarés
+    // 8. Synchronisation et fusion des paiements déclarés et vérifiés
     if (Array.isArray(incomingPayments) && incomingPayments.length > 0) {
       const currentPayments = readJsonFile<any[]>(PAYMENTS_FILE, []);
       const payMap = new Map<string, any>();
@@ -537,13 +574,36 @@ export async function POST(req: NextRequest) {
         if (p && p.id) {
           const existing = payMap.get(p.id);
           if (existing) {
-            payMap.set(p.id, { ...existing, ...p });
+            const isVerified = Boolean(existing.isVerified || p.isVerified);
+            payMap.set(p.id, {
+              ...existing,
+              ...p,
+              isVerified,
+              status: isVerified ? 'paye' : p.status || existing.status,
+              receiptNumber: isVerified && existing.receiptNumber?.startsWith('QUITT-')
+                ? existing.receiptNumber
+                : p.receiptNumber || existing.receiptNumber,
+            });
           } else {
             payMap.set(p.id, p);
           }
         }
       });
       writeJsonFile(PAYMENTS_FILE, Array.from(payMap.values()));
+    }
+
+    if (Array.isArray(incomingVerifiedPayments) && incomingVerifiedPayments.length > 0) {
+      const currentVerified = readJsonFile<any[]>(VERIFIED_PAYMENTS_FILE, []);
+      const verMap = new Map<string, any>();
+      currentVerified.forEach((p) => {
+        if (p && p.id) verMap.set(p.id, p);
+      });
+      incomingVerifiedPayments.forEach((p) => {
+        if (p && p.id) {
+          verMap.set(p.id, { ...(verMap.get(p.id) || {}), ...p, isVerified: true, status: 'paye' });
+        }
+      });
+      writeJsonFile(VERIFIED_PAYMENTS_FILE, Array.from(verMap.values()));
     }
 
     // 9. Synchronisation et fusion des notifications bailleur
@@ -562,7 +622,7 @@ export async function POST(req: NextRequest) {
       writeJsonFile(LANDLORD_NOTIFS_FILE, Array.from(lnMap.values()));
     }
 
-    // 10. Synchronisation et fusion des préavis (départs locataires & congés bailleurs)
+    // 10. Synchronisation et fusion des préavis
     if (Array.isArray(incomingNotices) && incomingNotices.length > 0) {
       const currentNotices = readJsonFile<any[]>(NOTICES_FILE, []);
       const noticesMap = new Map<string, any>();
@@ -572,7 +632,19 @@ export async function POST(req: NextRequest) {
       incomingNotices.forEach((n) => {
         if (n && n.id) {
           const existing = noticesMap.get(n.id);
-          noticesMap.set(n.id, existing ? { ...existing, ...n } : n);
+          if (existing) {
+            const isConfirmed = existing.status === 'confirme' || n.status === 'confirme' || Boolean(existing.landlordConfirmedAt || n.landlordConfirmedAt);
+            noticesMap.set(n.id, {
+              ...existing,
+              ...n,
+              status: isConfirmed ? 'confirme' : n.status || existing.status,
+              landlordConfirmedAt: n.landlordConfirmedAt || existing.landlordConfirmedAt,
+              landlordReplyMessage: n.landlordReplyMessage || existing.landlordReplyMessage,
+              landlordReplyDate: n.landlordReplyDate || existing.landlordReplyDate,
+            });
+          } else {
+            noticesMap.set(n.id, n);
+          }
         }
       });
       writeJsonFile(NOTICES_FILE, Array.from(noticesMap.values()));
@@ -594,30 +666,80 @@ export async function POST(req: NextRequest) {
       writeJsonFile(INCIDENTS_FILE, Array.from(incMap.values()));
     }
 
+    // 12. Synchronisation et fusion des états des lieux (inspections)
+    if (incomingInspections && typeof incomingInspections === 'object' && !Array.isArray(incomingInspections)) {
+      const currentInspections = readJsonObject<Record<string, any>>(INSPECTIONS_FILE, {});
+      const mergedInspections: Record<string, any> = { ...currentInspections };
+      Object.entries(incomingInspections).forEach(([leaseId, data]) => {
+        if (leaseId && data) {
+          mergedInspections[leaseId] = {
+            ...(mergedInspections[leaseId] || {}),
+            ...(data as object),
+          };
+        }
+      });
+      writeJsonObject(INSPECTIONS_FILE, mergedInspections);
+    }
+
+    // 13. Synchronisation des locataires enregistrés / invités
+    if (Array.isArray(incomingRegisteredTenants) && incomingRegisteredTenants.length > 0) {
+      const currentTenants = readJsonFile<any[]>(REGISTERED_TENANTS_FILE, []);
+      const tenMap = new Map<string, any>();
+      currentTenants.forEach((t) => {
+        if (t && (t.id || t.email)) tenMap.set(t.email ? t.email.toLowerCase() : t.id, t);
+      });
+      incomingRegisteredTenants.forEach((t) => {
+        if (t && (t.id || t.email)) {
+          const key = t.email ? t.email.toLowerCase() : t.id;
+          tenMap.set(key, { ...(tenMap.get(key) || {}), ...t });
+        }
+      });
+      writeJsonFile(REGISTERED_TENANTS_FILE, Array.from(tenMap.values()));
+    }
+
+    // 14. Synchronisation des alertes de sécurité Admin
+    if (Array.isArray(incomingSecurityAlerts) && incomingSecurityAlerts.length > 0) {
+      const currentAlerts = readJsonFile<any[]>(SECURITY_ALERTS_FILE, []);
+      const alertMap = new Map<string, any>();
+      currentAlerts.forEach((a) => {
+        if (a && a.id) alertMap.set(a.id, a);
+      });
+      incomingSecurityAlerts.forEach((a) => {
+        if (a && a.id) {
+          alertMap.set(a.id, { ...(alertMap.get(a.id) || {}), ...a });
+        }
+      });
+      writeJsonFile(SECURITY_ALERTS_FILE, Array.from(alertMap.values()));
+    }
+
     // Retourner l'état unifié complet
-    const finalLeases = readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l));
-    const finalNotifs = readJsonFile<any[]>(NOTIFS_FILE, []);
-    const finalLandlordNotifs = readJsonFile<any[]>(LANDLORD_NOTIFS_FILE, []);
-    const finalNotices = readJsonFile<any[]>(NOTICES_FILE, []);
-    const finalIncidents = readJsonFile<any[]>(INCIDENTS_FILE, []);
-    const finalUsers = readJsonFile<any[]>(USERS_FILE, []).filter((u) => !isFakeServerUser(u));
-    const finalListings = readJsonFile<any[]>(LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
-    const finalProperties = readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p));
-    const finalConversations = readJsonFile<any[]>(CONVERSATIONS_FILE, []);
-    const finalPayments = readJsonFile<any[]>(PAYMENTS_FILE, []);
+    const finalRemovedIds = readJsonFile<string[]>(REMOVED_LISTING_IDS_FILE, []);
+    const finalTrash = readJsonFile<any[]>(TRASH_LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
+    const removedSet = new Set<string>([
+      ...finalRemovedIds.map((id) => String(id).trim()),
+      ...finalTrash.map((t) => String(t.id || '').trim()),
+    ]);
 
     return NextResponse.json({
       success: true,
-      leases: finalLeases,
-      notifications: finalNotifs,
-      landlordNotifications: finalLandlordNotifs,
-      notices: finalNotices,
-      incidents: finalIncidents,
-      users: finalUsers,
-      listings: finalListings,
-      properties: finalProperties,
-      conversations: finalConversations,
-      payments: finalPayments,
+      leases: readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l)),
+      notifications: readJsonFile<any[]>(NOTIFS_FILE, []),
+      landlordNotifications: readJsonFile<any[]>(LANDLORD_NOTIFS_FILE, []),
+      notices: readJsonFile<any[]>(NOTICES_FILE, []),
+      incidents: readJsonFile<any[]>(INCIDENTS_FILE, []),
+      users: readJsonFile<any[]>(USERS_FILE, [], 'email').filter((u) => !isFakeServerUser(u)),
+      listings: readJsonFile<any[]>(LISTINGS_FILE, []).filter(
+        (l) => !isFakeServerListing(l) && !removedSet.has(String(l.id).trim())
+      ),
+      trashListings: finalTrash,
+      removedListingIds: Array.from(removedSet).filter(Boolean),
+      properties: readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p)),
+      conversations: readJsonFile<any[]>(CONVERSATIONS_FILE, []),
+      payments: readJsonFile<any[]>(PAYMENTS_FILE, []),
+      verifiedPayments: readJsonFile<any[]>(VERIFIED_PAYMENTS_FILE, []),
+      inspections: readJsonObject<Record<string, any>>(INSPECTIONS_FILE, {}),
+      registeredTenants: readJsonFile<any[]>(REGISTERED_TENANTS_FILE, []),
+      securityAlerts: readJsonFile<any[]>(SECURITY_ALERTS_FILE, []),
       timestamp: new Date().toISOString(),
     });
   } catch (e) {

@@ -124,7 +124,30 @@ export const NOTICE_REASONS_CATALOG: {
     },
   ];
 
-export const INITIAL_NOTICES: Notice[] = [];
+export const INITIAL_NOTICES: Notice[] = [
+  {
+    id: 'PREAV-2026-001',
+    tenantName: 'Jojo VOG',
+    tenantPhone: '+229 97 00 12 34',
+    tenantEmail: 'jojovog007@gmail.com',
+    propertyName: 'CHAMBRE SALON SANITAIRE',
+    unitNumber: 'Lot 1 (Chambre Salon Sanitaire • 45 m²)',
+    monthlyRent: 25000,
+    reasonType: 'depart_locataire',
+    reasonTitle: 'Départ Volontaire Notifié par le Locataire',
+    reasonDetails: 'Préavis de départ volontaire notifié officiellement par le locataire depuis son Espace Résident.',
+    noticeMonths: 3,
+    noticeDate: '23/11/2026',
+    effectiveDate: '23/02/2027',
+    deliveryMethod: 'email_officiel',
+    status: 'notifie',
+    legalBasis: 'Résiliation unilatérale à l’initiative du preneur avec respect du préavis contractuel',
+    createdAt: '2026-11-23T08:00:00.000Z',
+    landlordName: 'VOGLOSSOU JOHANE',
+    landlordEmail: 'jobovog@gmail.com',
+    landlordPhone: '+229 01 95 44 44 30',
+  },
+];
 
 const NOTICES_STORAGE_KEY = 'locagestion:notices:v2';
 
@@ -200,6 +223,14 @@ export class NoticeService {
           }
         }
       }
+
+      // Intégrer les préavis initiaux authentiques s'ils ne sont pas encore dans le cache local
+      INITIAL_NOTICES.forEach((initN) => {
+        if (!sanitized.some((n) => n.id === initN.id)) {
+          sanitized.push(initN);
+          needsSave = true;
+        }
+      });
 
       // Auto-réparation : si une notification de préavis de départ reçu (notice_received) est présente
       // dans la cloche du bailleur mais que l'objet préavis a été purgé, le reconstruire automatiquement

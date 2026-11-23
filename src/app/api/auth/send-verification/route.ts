@@ -1,26 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
+import { readJsonObject, writeJsonObject } from '@/lib/server/server-store';
 
-const CODES_FILE = path.join(process.cwd(), 'data', 'reset_codes.json');
+const CODES_FILE = 'reset_codes.json';
 
 function getStoredCodes(): Record<string, { code: string; expiresAt: number }> {
-  try {
-    if (!fs.existsSync(CODES_FILE)) return {};
-    const raw = fs.readFileSync(CODES_FILE, 'utf8');
-    return JSON.parse(raw) || {};
-  } catch {
-    return {};
-  }
+  return readJsonObject<Record<string, { code: string; expiresAt: number }>>(CODES_FILE, {});
 }
 
 function saveStoredCode(email: string, code: string, expiresAt: number) {
   try {
-    const codes = getStoredCodes();
+    const codes = { ...getStoredCodes() };
     codes[email.trim().toLowerCase()] = { code: code.trim(), expiresAt };
-    fs.mkdirSync(path.dirname(CODES_FILE), { recursive: true });
-    fs.writeFileSync(CODES_FILE, JSON.stringify(codes, null, 2), 'utf8');
+    writeJsonObject(CODES_FILE, codes);
   } catch {}
 }
 

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/context/space-context';
 import { AuthService } from '@/lib/services/auth-service';
+import { SyncService } from '@/lib/services/sync-service';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -47,8 +48,9 @@ export default function LoginPage() {
   const [isRequestingCode, setIsRequestingCode] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Détection automatique des liens de réinitialisation en 1 clic (?resetEmail=...&code=...)
+  // Détection automatique des liens de réinitialisation en 1 clic (?resetEmail=...&code=...) et synchronisation initiale
   useEffect(() => {
+    SyncService.sync().catch(() => {});
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const resetEmail = urlParams.get('resetEmail') || urlParams.get('email');
@@ -88,19 +90,15 @@ export default function LoginPage() {
     try {
       let res = login(cleanId, cleanPass);
       if (!res.success) {
-        // Synchronisation de secours avec le serveur avant de rejeter la connexion
+        // Synchronisation complète avec le serveur central (utilisateurs nouvellement créés, mots de passe, baux, etc.)
         try {
-          const syncRes = await fetch('/api/sync', { cache: 'no-store' });
-          if (syncRes.ok) {
-            const syncData = await syncRes.json();
-            if (syncData?.adminPassword) {
-              AuthService.setAdminPassword(syncData.adminPassword);
-            }
-          }
+          await SyncService.sync();
         } catch {}
         res = login(cleanId, cleanPass);
       }
-      if (!res.success) {
+      if (res.success) {
+        SyncService.sync().catch(() => {});
+      } else {
         setErrorMsg(res.error || 'Identifiants invalides.');
       }
     } catch (err) {
@@ -124,7 +122,13 @@ export default function LoginPage() {
 
     setIsRequestingCode(true);
     try {
-      const targetUser = AuthService.findUserByIdentifier(cleanId);
+      let targetUser = AuthService.findUserByIdentifier(cleanId);
+      if (!targetUser) {
+        try {
+          await SyncService.sync();
+        } catch {}
+        targetUser = AuthService.findUserByIdentifier(cleanId);
+      }
       if (!targetUser) {
         setForgotError("Aucun compte n'a été trouvé avec cette adresse email ou ce numéro de téléphone.");
         setIsRequestingCode(false);
