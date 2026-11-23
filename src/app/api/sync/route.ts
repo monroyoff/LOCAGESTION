@@ -82,8 +82,6 @@ function writeJsonFile<T>(filename: string, data: T) {
 function isFakeServerLease(l: any): boolean {
   if (!l || !l.id) return true;
   if (
-    l.id === 'BAIL-2026-422' ||
-    l.id === 'BAIL-2026-BJ-17635' ||
     l.id === 'BAIL-2026-MAG-102' ||
     l.id === 'BAIL-2026-COM-205'
   ) {
@@ -175,9 +173,11 @@ function isFakeServerListing(l: any): boolean {
     authorEmail === 'jobovog@gmail.com' ||
     authorEmail === 'jojovog007@gmail.com' ||
     authorEmail === 'theodoradjigla@gmail.com' ||
+    authorEmail === 'viviimmo.bj@gmail.com' ||
     authorId === 'usr-bailleur-voglossou' ||
     authorId === 'usr-tenant-jojovog' ||
-    authorId === 'usr-tenant-theodora'
+    authorId === 'usr-tenant-theodora' ||
+    authorId === 'usr-vivi-immo'
   ) {
     return false;
   }

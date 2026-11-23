@@ -549,6 +549,54 @@ export const TenantNotificationService = {
   },
 
   /**
+   * Action Bailleur : Accusé de réception officiel d'un préavis de départ notifié par le locataire
+   */
+  notifyNoticeReceptionConfirmed(params: {
+    noticeId: string;
+    effectiveDate: string;
+    tenantName: string;
+    tenantEmail?: string;
+    tenantPhone?: string;
+    propertyName: string;
+    landlordName?: string;
+  }) {
+    return this.addNotification({
+      title: 'Accusé de Réception de Préavis Confirmé',
+      message: `${params.landlordName || 'Votre bailleur'} a officiellement accusé réception et validé votre préavis de départ (${params.noticeId}) pour le ${params.effectiveDate} (${params.propertyName}).`,
+      type: 'notice_issued',
+      link: '/portal?tab=preavis',
+      tenantName: params.tenantName,
+      tenantEmail: params.tenantEmail,
+      actor: params.landlordName || 'Votre Bailleur',
+      actionLabel: 'Consulter mon préavis',
+    });
+  },
+
+  /**
+   * Action Bailleur : Réponse apportée par le bailleur au préavis du locataire
+   */
+  notifyNoticeReplied(params: {
+    noticeId: string;
+    tenantName: string;
+    tenantEmail?: string;
+    tenantPhone?: string;
+    propertyName: string;
+    landlordName?: string;
+    message: string;
+  }) {
+    return this.addNotification({
+      title: 'Réponse du Bailleur à votre Préavis',
+      message: `${params.landlordName || 'Votre bailleur'} vous a répondu concernant le préavis ${params.noticeId} : « ${params.message} »`,
+      type: 'notice_issued',
+      link: '/portal?tab=preavis',
+      tenantName: params.tenantName,
+      tenantEmail: params.tenantEmail,
+      actor: params.landlordName || 'Votre Bailleur',
+      actionLabel: 'Lire la réponse',
+    });
+  },
+
+  /**
    * Action Bailleur : Rappel de paiement de loyer
    */
   notifyReminderSent(params: {

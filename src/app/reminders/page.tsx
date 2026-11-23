@@ -32,6 +32,8 @@ import {
   Hammer,
   DoorOpen,
   CalendarCheck,
+  FileWarning,
+  MessageSquare,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { UserSpace } from '@/lib/types';
@@ -77,6 +79,9 @@ export default function RemindersCenterPage() {
   const [showIssueNoticeModal, setShowIssueNoticeModal] = useState(false);
   const [selectedNoticeForDetails, setSelectedNoticeForDetails] = useState<Notice | null>(null);
   const [selectedNoticeForEmail, setSelectedNoticeForEmail] = useState<Notice | null>(null);
+  const [selectedNoticeForReply, setSelectedNoticeForReply] = useState<Notice | null>(null);
+  const [replyMessage, setReplyMessage] = useState<string>('');
+  const [isSendingReply, setIsSendingReply] = useState<boolean>(false);
 
   useEffect(() => {
     const handleUpdate = () => {
@@ -91,14 +96,76 @@ export default function RemindersCenterPage() {
     };
   }, [user]);
 
+  // Détection URL ou présence de préavis de départ nécessitant action
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      const noticeId = urlParams.get('noticeId');
+      if (tabParam === 'preavis' || noticeId) {
+        setActiveTab('preavis');
+      } else if (NoticeService.getPendingDepartureNoticesCount(user) > 0) {
+        setActiveTab('preavis');
+      }
+    }
+  }, [user, notices.length]);
+
   const refreshNotices = () => {
     setNotices(NoticeService.getLandlordNotices(user));
   };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
-    notifyAction(msg, 'Relance transmise !', 'success');
+    notifyAction(msg, 'Action validée !', 'success');
     setTimeout(() => setToastMessage(null), 4000);
+  };
+
+  // Demandes de préavis de départ reçues des locataires en attente de traitement
+  const pendingDepartureNotices = notices.filter(
+    (n) => n.reasonType === 'depart_locataire' && (n.status === 'notifie' || !n.landlordConfirmedAt)
+  );
+
+  // Actions de confirmation et de réponse directe
+  const handleConfirmReception = (noticeId: string) => {
+    NoticeService.confirmNoticeReception(noticeId, user);
+    refreshNotices();
+    showToast('✓ Réception officielle confirmée avec succès ! Le locataire a été notifié.');
+  };
+
+  const handleOpenReplyModal = (notice: Notice) => {
+    setSelectedNoticeForReply(notice);
+    setReplyMessage(
+      `Bonjour M./Mme ${notice.tenantName},\n\nJ'accuse bonne réception de votre notification de préavis de départ pour le logement ${notice.propertyName} (${notice.unitNumber}), fixant votre départ au ${notice.effectiveDate}.\n\nJe prends contact avec vous afin de convenir du créneau pour l'état des lieux de sortie contradictoire et la restitution des clés.\n\nCordialement,\n${user?.companyName || user?.name || 'Votre Bailleur'}`
+    );
+  };
+
+  const handleSendReply = (channel: 'internal' | 'whatsapp' | 'email') => {
+    if (!selectedNoticeForReply || !replyMessage.trim()) return;
+    setIsSendingReply(true);
+
+    try {
+      NoticeService.replyToNotice(selectedNoticeForReply.id, replyMessage, user);
+
+      if (channel === 'whatsapp') {
+        const cleanPhone = (selectedNoticeForReply.tenantPhone || '').replace(/\D/g, '');
+        if (cleanPhone) {
+          window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(replyMessage)}`, '_blank');
+        }
+      } else if (channel === 'email') {
+        const recipient = selectedNoticeForReply.tenantEmail || '';
+        window.location.href = `mailto:${recipient}?subject=${encodeURIComponent(
+          `Accusé de réception & Réponse au préavis ${selectedNoticeForReply.id}`
+        )}&body=${encodeURIComponent(replyMessage)}`;
+      }
+
+      refreshNotices();
+      showToast('✓ Réponse transmise au locataire avec succès.');
+      setSelectedNoticeForReply(null);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSendingReply(false);
+    }
   };
 
   const pendingOverdue: any[] = [];
@@ -229,11 +296,119 @@ export default function RemindersCenterPage() {
             >
               <Scale className="w-3.5 h-3.5 text-rose-600" />
               <span>Préavis & Congés</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-black bg-rose-100 text-rose-800">
-                {activeNoticesCount}
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  pendingDepartureNotices.length > 0
+                    ? 'bg-rose-500 text-white animate-pulse'
+                    : 'bg-rose-100 text-rose-800'
+                }`}
+              >
+                {pendingDepartureNotices.length > 0
+                  ? `${pendingDepartureNotices.length} à traiter`
+                  : activeNoticesCount}
               </span>
             </button>
           </div>
+
+          {/* BANDEAU PRIORITAIRE : DEMANDES DE PRÉAVIS DE DÉPART REÇUES DES LOCATAIRES */}
+          {pendingDepartureNotices.length > 0 && (
+            <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-600 via-rose-700 to-pink-700 text-white shadow-xl space-y-4 animate-in slide-in-from-top-3 border border-rose-500 ring-4 ring-rose-500/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
+                    <FileWarning className="w-5 h-5 text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm sm:text-base font-black text-white">
+                        Préavis de Départ Reçu du Locataire
+                      </h3>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-white text-rose-700 uppercase tracking-wider shadow-sm">
+                        {pendingDepartureNotices.length} demande{pendingDepartureNotices.length > 1 ? 's' : ''} à traiter
+                      </span>
+                    </div>
+                    <p className="text-xs text-rose-100">
+                      Un locataire a formellement notifié son départ. Confirmez la réception de son acte officiel ou contactez-le pour coordonner l'état des lieux.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                {pendingDepartureNotices.map((depNotice) => (
+                  <div
+                    key={depNotice.id}
+                    className="bg-white/10 backdrop-blur-md rounded-2xl p-4 sm:p-5 border border-white/20 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm"
+                  >
+                    <div className="space-y-2 min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono text-xs font-black bg-white text-rose-900 px-2.5 py-0.5 rounded-lg shadow-xs">
+                          {depNotice.id}
+                        </span>
+                        <span className="text-sm font-black text-white">
+                          {depNotice.tenantName}
+                        </span>
+                        <span className="text-xs text-rose-200">
+                          • {depNotice.propertyName} ({depNotice.unitNumber})
+                        </span>
+                        <span className="text-xs font-bold text-white bg-black/25 px-2.5 py-0.5 rounded-md">
+                          {formatFCFA(depNotice.monthlyRent)}/mois
+                        </span>
+                        <span className="text-[10px] font-black bg-amber-400 text-slate-900 px-2 py-0.5 rounded-md">
+                          En attente de confirmation
+                        </span>
+                      </div>
+                      <p className="text-xs text-rose-100 leading-snug">
+                        <strong>Motif invoqué :</strong> {depNotice.reasonDetails || depNotice.reasonTitle}
+                      </p>
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-rose-200 pt-0.5">
+                        <span>Notifié le : <strong>{depNotice.noticeDate}</strong></span>
+                        <span>Date de libération exigible : <strong>{depNotice.effectiveDate}</strong></span>
+                        <span className="px-2 py-0.5 rounded-md bg-white/20 text-white font-black text-[10px]">
+                          Délai légal : {depNotice.noticeMonths} mois
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => handleConfirmReception(depNotice.id)}
+                        className="px-4 py-2.5 rounded-xl bg-white hover:bg-rose-50 text-rose-700 text-xs font-black shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                        title="Accuser réception officiellement et notifier le locataire"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Confirmer la Réception</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenReplyModal(depNotice)}
+                        className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black shadow-md flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                        title="Répondre au locataire"
+                      >
+                        <MessageSquare className="w-4 h-4 text-brand-400" />
+                        <span>Répondre au Locataire</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          generateNoticePDF(depNotice);
+                          showToast(`PDF officiel du préavis ${depNotice.id} téléchargé.`);
+                        }}
+                        className="px-3 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                        title="Télécharger l'acte"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>PDF</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* ==================================================================== */}
           {/* VUE 1 : RELANCES AUTOMATIQUES & RAPPELS DU 25 / 5                    */}
@@ -668,9 +843,21 @@ export default function RemindersCenterPage() {
                               <span className="font-mono text-xs font-black text-slate-900 bg-white px-2 py-0.5 rounded-lg border border-slate-200 shadow-2xs">
                                 {item.id}
                               </span>
-                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
-                                {item.reasonTitle}
-                              </span>
+                              {item.reasonType === 'depart_locataire' ? (
+                                item.status === 'notifie' || !item.landlordConfirmedAt ? (
+                                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-500 text-white shadow-xs animate-pulse">
+                                    🚨 À traiter : Départ Notifié par le Locataire
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs">
+                                    ✓ Réception Confirmée le {item.landlordConfirmedAt}
+                                  </span>
+                                )
+                              ) : (
+                                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+                                  {item.reasonTitle}
+                                </span>
+                              )}
                               <span className="text-[10px] font-bold text-slate-500">
                                 Mode : {item.deliveryMethod.toUpperCase()}
                               </span>
@@ -694,6 +881,16 @@ export default function RemindersCenterPage() {
                               « {item.reasonDetails} »
                             </p>
 
+                            {/* Réponse enregistrée par le bailleur */}
+                            {item.landlordReplyMessage && (
+                              <div className="p-2 rounded-xl bg-brand-50 border border-brand-200 text-[11px] text-brand-900 mt-1 space-y-0.5">
+                                <span className="font-bold text-brand-700 block">
+                                  Votre réponse officielle ({item.landlordReplyDate || 'transmise'}) :
+                                </span>
+                                <p className="italic text-slate-700">« {item.landlordReplyMessage} »</p>
+                              </div>
+                            )}
+
                             <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 pt-1">
                               <span>
                                 Notifié le : <strong>{item.noticeDate}</strong>
@@ -715,7 +912,34 @@ export default function RemindersCenterPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2 self-start lg:self-auto shrink-0">
+                          <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto shrink-0">
+                            {/* Boutons d'action spécifiques si préavis reçu du locataire */}
+                            {item.reasonType === 'depart_locataire' && (
+                              <>
+                                {(item.status === 'notifie' || !item.landlordConfirmedAt) && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleConfirmReception(item.id)}
+                                    className="py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                                    title="Confirmer officiellement la réception"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Confirmer réception</span>
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenReplyModal(item)}
+                                  className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black shadow-sm flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                                  title="Répondre au locataire"
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5 text-brand-400" />
+                                  <span>Répondre</span>
+                                </button>
+                              </>
+                            )}
+
                             <button
                               type="button"
                               onClick={() => setSelectedNoticeForDetails(item)}
@@ -876,6 +1100,109 @@ export default function RemindersCenterPage() {
                 >
                   <Send className="w-4 h-4" />
                   <span>Diffuser maintenant (28 locataires)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Réponse Officielle au Préavis du Locataire */}
+      {selectedNoticeForReply && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+            <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center font-bold">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm">
+                    Répondre au Préavis de Départ
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    {selectedNoticeForReply.tenantName} • {selectedNoticeForReply.propertyName} ({selectedNoticeForReply.unitNumber})
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedNoticeForReply(null)}
+                className="p-1 rounded-xl text-slate-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4 text-xs">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1.5">
+                  Modèles de réponses rapides (cliquez pour insérer) :
+                </label>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReplyMessage(
+                        `Bonjour M./Mme ${selectedNoticeForReply.tenantName},\n\nJ'accuse bonne réception officielle de votre préavis de départ pour le logement ${selectedNoticeForReply.propertyName} (${selectedNoticeForReply.unitNumber}), prenant effet le ${selectedNoticeForReply.effectiveDate}.\n\nJe prends contact avec vous afin de convenir du créneau pour l'état des lieux de sortie contradictoire et la remise des clés.\n\nCordialement,\n${user?.companyName || user?.name || 'Votre Bailleur'}`
+                      )
+                    }
+                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left text-[11px] text-slate-700 font-medium transition-colors cursor-pointer"
+                  >
+                    1. 📄 Accusé de réception formel & état des lieux
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setReplyMessage(
+                        `Bonjour M./Mme ${selectedNoticeForReply.tenantName},\n\nVotre préavis de départ pour le ${selectedNoticeForReply.effectiveDate} a bien été pris en compte.\n\nNous vous rappelons que les loyers demeurent exigibles jusqu'au terme convenu. Votre dépôt de garantie vous sera restitué sous 30 jours après remise des clés conforme.\n\nCordialement,\n${user?.companyName || user?.name || 'Votre Bailleur'}`
+                      )
+                    }
+                    className="p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-left text-[11px] text-slate-700 font-medium transition-colors cursor-pointer"
+                  >
+                    2. 💳 Rappel des loyers et restitution de caution
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Message officiel au locataire :
+                </label>
+                <textarea
+                  rows={5}
+                  value={replyMessage}
+                  onChange={(e) => setReplyMessage(e.target.value)}
+                  className="w-full p-3 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 leading-relaxed font-sans"
+                  placeholder="Rédigez votre réponse officielle..."
+                />
+              </div>
+
+              <div className="pt-2 flex flex-wrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedNoticeForReply(null)}
+                  className="py-2.5 px-4 rounded-xl border border-slate-200 font-bold hover:bg-slate-50 text-slate-700 cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  disabled={isSendingReply}
+                  onClick={() => handleSendReply('internal')}
+                  className="py-2.5 px-4 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Enregistrer & Notifier</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isSendingReply}
+                  onClick={() => handleSendReply('whatsapp')}
+                  className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black shadow-md flex items-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  <span>WhatsApp</span>
                 </button>
               </div>
             </div>

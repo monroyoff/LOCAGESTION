@@ -1435,6 +1435,11 @@ function TenantPortalContent() {
             >
               <FileText className="w-4 h-4" />
               <span>Mon Bail & Contrat</span>
+              {(currentLease?.status === 'en_attente_signature' || (currentLease && !currentLease.signedByTenant && !currentLease.tenantSignature?.date)) && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-blue-500 text-white animate-pulse">
+                  1
+                </span>
+              )}
             </button>
 
             <button
@@ -4969,6 +4974,9 @@ function TenantPortalContent() {
         propertyName={tenant.property}
         unitNumber={tenant.unit}
         monthlyRent={tenant.monthlyRent}
+        landlordName={tenant.landlord?.name || 'VOGLOSSOU JOHANE'}
+        landlordEmail={tenant.landlord?.email || 'jobovog@gmail.com'}
+        landlordPhone={tenant.landlord?.phone || tenant.landlord?.whatsapp || '+229 01 95 44 44 30'}
       />
 
       {/* Modal d'État des Lieux en Lecture Seule pour le Locataire (Multi-Baux Compatible) */}

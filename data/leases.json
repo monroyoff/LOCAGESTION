@@ -54,5 +54,61 @@
     "transmittedAt": "01/11/2026",
     "tenantSignedAt": "01/11/2026",
     "invitationCode": "LOCA-INV-7842"
+  },
+  {
+    "id": "BAIL-2026-422",
+    "tenant": "Jojo VOG",
+    "tenantId": "usr-tenant-jojovog",
+    "tenantEmail": "jojovog007@gmail.com",
+    "tenantPhone": "+229 97 00 12 34",
+    "tenantMatricule": "LOCA-MAT-BJ-17635",
+    "tenantAddress": "Zogbadjè, Abomey-Calavi",
+    "property": "Résidence UAC Calavi",
+    "unit": "Studio Meublé N° 3 (25 m²)",
+    "propertyAddress": "Zogbadjè (Campus UAC), Abomey-Calavi",
+    "propertyDistrict": "Zogbadjè",
+    "propertyCity": "Abomey-Calavi",
+    "propertyLocation": "Zogbadjè, Abomey-Calavi, Bénin",
+    "propertyUsage": "habitation",
+    "country": "Bénin",
+    "governingLaw": "Loi n° 2018-12 du 02 juillet 2018 (Bénin)",
+    "rent": 35000,
+    "deposit": 105000,
+    "advanceMonths": 3,
+    "charges": 3000,
+    "utilitiesDeposit": 15000,
+    "totalDueAtEntry": 158000,
+    "startDate": "15/11/2026",
+    "endDate": "14/11/2027",
+    "durationMonths": 12,
+    "status": "actif",
+    "signedByLandlord": true,
+    "signedByTenant": true,
+    "landlordId": "usr-bailleur-voglossou",
+    "landlordName": "VOGLOSSOU JOHANE",
+    "landlordPhone": "+229 01 95 44 44 30",
+    "landlordWhatsapp": "+229 01 95 44 44 30",
+    "landlordEmail": "jobovog@gmail.com",
+    "landlordIfu": "3201984210987",
+    "landlordAddress": "Haie Vive, Cotonou, Bénin",
+    "landlordPaymentMethods": {
+      "wave": "+229 01 95 44 44 30",
+      "mtn": "+229 01 95 44 44 30",
+      "moov": "+229 01 95 44 44 30",
+      "bank": "BJ061 01001 001234567890 45 (BOA Bénin)"
+    },
+    "landlordSignature": {
+      "signedBy": "VOGLOSSOU JOHANE",
+      "date": "15/11/2026",
+      "signatureDataUrl": ""
+    },
+    "tenantSignature": {
+      "signedBy": "Jojo VOG",
+      "date": "15/11/2026",
+      "signatureDataUrl": ""
+    },
+    "transmittedAt": "15/11/2026",
+    "tenantSignedAt": "15/11/2026",
+    "invitationCode": "LOCA-INV-7843"
   }
 ]

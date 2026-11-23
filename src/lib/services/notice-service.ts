@@ -20,7 +20,7 @@ export type NoticeDeliveryMethod =
   | 'email_officiel'
   | 'whatsapp_email';
 
-export type NoticeStatus = 'en_cours' | 'notifie' | 'cloture' | 'annule';
+export type NoticeStatus = 'en_cours' | 'notifie' | 'confirme' | 'cloture' | 'annule';
 
 export interface Notice {
   id: string; // Ex: 'PREAV-2026-001'
@@ -44,6 +44,12 @@ export interface Notice {
   departureInspectionDate?: string;
   notes?: string;
   createdAt: string;
+  landlordName?: string;
+  landlordEmail?: string;
+  landlordPhone?: string;
+  landlordConfirmedAt?: string;
+  landlordReplyMessage?: string;
+  landlordReplyDate?: string;
 }
 
 export const NOTICE_REASONS_CATALOG: {
@@ -245,12 +251,36 @@ export class NoticeService {
     if (user.role === 'admin' || user.email === 'admin@locagestion.site') return this.getNotices();
     const all = this.getNotices();
     const landlordLeases = LeaseService.getLeasesForLandlord(user);
+
     if (landlordLeases.length === 0) {
       if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return all;
-      return [];
+      return all.filter((n) => n.landlordEmail && areEmailsEqual(n.landlordEmail, user.email));
     }
-    const propNames = new Set(landlordLeases.map((l) => l.property.toLowerCase().trim()));
-    return all.filter((n) => propNames.has((n.propertyName || '').toLowerCase().trim()));
+
+    const propNames = new Set(landlordLeases.map((l) => (l.property || '').toLowerCase().trim()));
+    const tenantNames = new Set(landlordLeases.map((l) => (l.tenant || '').toLowerCase().trim()));
+    const tenantEmails = new Set(landlordLeases.map((l) => (l.tenantEmail || '').toLowerCase().trim()));
+    const tenantPhones = new Set(landlordLeases.map((l) => (l.tenantPhone || '').trim()));
+
+    return all.filter((n) => {
+      if (user.email && n.landlordEmail && areEmailsEqual(user.email, n.landlordEmail)) return true;
+      if (propNames.has((n.propertyName || '').toLowerCase().trim())) return true;
+      if (tenantNames.has((n.tenantName || '').toLowerCase().trim())) return true;
+      if (n.tenantEmail && tenantEmails.has(n.tenantEmail.toLowerCase().trim())) return true;
+      if (n.tenantPhone && tenantPhones.has(n.tenantPhone.trim())) return true;
+      if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+      return false;
+    });
+  }
+
+  /**
+   * Compte les demandes de préavis de départ reçues des locataires nécessitant une action du bailleur
+   */
+  static getPendingDepartureNoticesCount(user?: AuthUser | null): number {
+    const landlordNotices = this.getLandlordNotices(user);
+    return landlordNotices.filter(
+      (n) => n.reasonType === 'depart_locataire' && (n.status === 'notifie' || !n.landlordConfirmedAt)
+    ).length;
   }
 
   static saveNotices(notices: Notice[]): void {
@@ -300,6 +330,9 @@ export class NoticeService {
     noticeMonths: number;
     effectiveDate: string;
     reasonDetails: string;
+    landlordName?: string;
+    landlordEmail?: string;
+    landlordPhone?: string;
   }): Notice {
     const today = new Date();
     const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
@@ -327,12 +360,110 @@ export class NoticeService {
         tenantName: data.tenantName,
         property: data.propertyName,
         unit: data.unitNumber,
+        noticeId: newNotice.id,
       });
     } catch (e) {
       console.error('Erreur notif départ bailleur:', e);
     }
 
     return newNotice;
+  }
+
+  /**
+   * Confirmation officielle de la réception du préavis par le bailleur
+   */
+  static confirmNoticeReception(id: string, landlordUser?: AuthUser | null): Notice | null {
+    const notices = this.getNotices();
+    const today = new Date();
+    const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+    const lName = landlordUser?.companyName || landlordUser?.name || 'Votre Bailleur';
+
+    let updatedNotice: Notice | null = null;
+    const updated = notices.map((n) => {
+      if (n.id === id) {
+        updatedNotice = {
+          ...n,
+          status: 'confirme' as NoticeStatus,
+          landlordConfirmedAt: formattedToday,
+          landlordName: lName,
+          landlordEmail: landlordUser?.email || n.landlordEmail,
+        };
+        return updatedNotice;
+      }
+      return n;
+    });
+
+    if (updatedNotice) {
+      this.saveNotices(updated);
+
+      // Notification pour le locataire
+      TenantNotificationService.notifyNoticeReceptionConfirmed({
+        noticeId: (updatedNotice as Notice).id,
+        effectiveDate: (updatedNotice as Notice).effectiveDate,
+        tenantName: (updatedNotice as Notice).tenantName,
+        tenantEmail: (updatedNotice as Notice).tenantEmail,
+        tenantPhone: (updatedNotice as Notice).tenantPhone,
+        propertyName: (updatedNotice as Notice).propertyName,
+        landlordName: lName,
+      });
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('locagestion:notices_updated'));
+        window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+        window.dispatchEvent(new Event('storage'));
+      }
+    }
+    return updatedNotice;
+  }
+
+  /**
+   * Réponse officielle apportée par le bailleur au locataire
+   */
+  static replyToNotice(
+    id: string,
+    message: string,
+    landlordUser?: AuthUser | null
+  ): Notice | null {
+    const notices = this.getNotices();
+    const today = new Date();
+    const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} à ${today.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    const lName = landlordUser?.companyName || landlordUser?.name || 'Votre Bailleur';
+
+    let updatedNotice: Notice | null = null;
+    const updated = notices.map((n) => {
+      if (n.id === id) {
+        updatedNotice = {
+          ...n,
+          landlordReplyMessage: message.trim(),
+          landlordReplyDate: formattedToday,
+          landlordName: lName,
+        };
+        return updatedNotice;
+      }
+      return n;
+    });
+
+    if (updatedNotice) {
+      this.saveNotices(updated);
+
+      // Notification dans l'espace résident
+      TenantNotificationService.notifyNoticeReplied({
+        noticeId: (updatedNotice as Notice).id,
+        tenantName: (updatedNotice as Notice).tenantName,
+        tenantEmail: (updatedNotice as Notice).tenantEmail,
+        tenantPhone: (updatedNotice as Notice).tenantPhone,
+        propertyName: (updatedNotice as Notice).propertyName,
+        landlordName: lName,
+        message: message.trim(),
+      });
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('locagestion:notices_updated'));
+        window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+        window.dispatchEvent(new Event('storage'));
+      }
+    }
+    return updatedNotice;
   }
 
   static updateNoticeStatus(id: string, status: NoticeStatus): void {

@@ -152,7 +152,8 @@ export function Header({
       const targetId = n.paymentId || 'decl-initial-01';
       router.push(`/payments?tab=pending&verify=${targetId}`);
     } else if (n.type === 'notice_received') {
-      router.push('/reminders');
+      const url = '/reminders?tab=preavis' + (n.noticeId ? `&noticeId=${encodeURIComponent(n.noticeId)}` : '');
+      router.push(url);
     } else {
       router.push('/leases');
     }
@@ -251,11 +252,16 @@ export function Header({
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
           <button
             onClick={onToggleSidebar}
-            className="lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
+            className="relative lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
             aria-label="Ouvrir le menu"
             title="Menu principal"
           >
             <Menu className="w-5 h-5" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white font-black text-[10px] flex items-center justify-center shadow-md animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
 
           <div className="flex flex-col justify-center">

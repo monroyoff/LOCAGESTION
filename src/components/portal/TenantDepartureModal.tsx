@@ -26,6 +26,9 @@ interface TenantDepartureModalProps {
   propertyName?: string;
   unitNumber?: string;
   monthlyRent?: number;
+  landlordName?: string;
+  landlordEmail?: string;
+  landlordPhone?: string;
 }
 
 const DEPARTURE_REASONS = [
@@ -46,6 +49,9 @@ export function TenantDepartureModal({
   propertyName = 'Logement',
   unitNumber = 'Lot',
   monthlyRent = 0,
+  landlordName = '',
+  landlordEmail = '',
+  landlordPhone = '',
 }: TenantDepartureModalProps) {
   const [noticeMonths, setNoticeMonths] = useState<number>(3);
   const [selectedReason, setSelectedReason] = useState<string>('');
@@ -107,6 +113,9 @@ export function TenantDepartureModal({
         noticeMonths,
         effectiveDate,
         reasonDetails: `${selectedReason} — ${reasonDetails}`,
+        landlordName,
+        landlordEmail,
+        landlordPhone,
       });
 
       notifySave(
