@@ -63,6 +63,20 @@ export async function POST(req: NextRequest) {
       body.isIdentitySealed = true;
     }
 
+    // RÈGLE D'OR : Le compte démarcheur vividpari@gmail.com (PARI VIVID / VIVI IMMO) est scellé
+    if (cleanEmail === 'vividpari@gmail.com') {
+      body.id = body.id || 'usr-demarcheur-mwr2q8mb';
+      body.matricule = 'LOCA-MAT-BJ-50341';
+      body.firstName = 'PARI';
+      body.lastName = 'VIVID';
+      body.name = 'PARI VIVID';
+      body.companyName = body.companyName || 'VIVI IMMO';
+      body.phone = body.phone || '+229 0132789056';
+      body.password = body.password || 'Zamour007';
+      body.emailVerified = true;
+      body.isIdentitySealed = true;
+    }
+
     // RÈGLE SPÉCIALE SUPER-ADMIN : Sauvegarde persistante du mot de passe admin
     if (cleanEmail === 'admin@locagestion.site') {
       writeJsonObject('admin.json', {

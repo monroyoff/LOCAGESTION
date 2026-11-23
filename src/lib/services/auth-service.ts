@@ -77,6 +77,9 @@ export function generateUserMatricule(country?: string, role?: string, seed?: st
   if (cleanSeed.includes('theodoradjigla') || cleanSeed.includes('usr-tenant-theodora')) {
     return 'LOCA-MAT-BJ-24702';
   }
+  if (cleanSeed.includes('vividpari') || cleanSeed.includes('usr-demarcheur-mwr2q8mb')) {
+    return 'LOCA-MAT-BJ-50341';
+  }
 
   const code = getCountryMatriculeCode(country);
 
@@ -190,24 +193,24 @@ export const INITIAL_REGISTERED_USERS: AuthUser[] = [
     emailVerified: true,
   },
   {
-    id: 'usr-vivi-immo',
-    matricule: 'LOCA-MAT-BJ-96011',
+    id: 'usr-demarcheur-mwr2q8mb',
+    matricule: 'LOCA-MAT-BJ-50341',
     name: 'PARI VIVID',
-    firstName: 'Pari',
-    lastName: 'Vivid',
-    email: 'viviimmo.bj@gmail.com',
-    phone: '+229 96 00 11 22',
+    firstName: 'PARI',
+    lastName: 'VIVID',
+    email: 'vividpari@gmail.com',
+    phone: '+229 0132789056',
     role: 'demarcheur',
     companyName: 'VIVI IMMO',
-    birthDate: '10/10/1990',
-    birthPlace: 'Cotonou',
+    birthDate: '1998-06-15',
+    birthPlace: 'Dakar',
     residenceCountry: 'Bénin',
-    residenceCity: 'Cotonou',
-    residenceDistrict: 'Akpakpa',
+    residenceCity: 'Allada',
+    residenceDistrict: 'Allada',
     projectCountry: 'Bénin',
     avatarUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-    registeredAt: '20/11/2026',
-    password: 'Forever1122$',
+    registeredAt: '22/11/2026',
+    password: 'Zamour007',
     accountStatus: 'active',
     isIdentitySealed: true,
     emailVerified: true,
@@ -436,7 +439,8 @@ export function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
     id === 'usr-demarcheur-cotonou' ||
     id === 'usr-demarcheur-abidjan' ||
     id === 'usr-demarcheur-dakar' ||
-    id === 'usr-demarcheur-lome'
+    id === 'usr-demarcheur-lome' ||
+    id === 'usr-vivi-immo'
   ) return true;
   const cleanName = (u.name || '').trim().toLowerCase();
   if (
@@ -472,7 +476,8 @@ export function isFakeDemoUser(u?: Partial<AuthUser> | null): boolean {
       cleanEmail.includes('littoralimmo.bj') ||
       cleanEmail.includes('ivoirelogis.ci') ||
       cleanEmail.includes('terangaimmo.sn') ||
-      cleanEmail.includes('lome-immo.tg')
+      cleanEmail.includes('lome-immo.tg') ||
+      cleanEmail === 'viviimmo.bj@gmail.com'
     ) return true;
   }
   return false;
@@ -495,11 +500,13 @@ export const AuthService = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          // Élimination des faux utilisateurs démo ET de tout ancien snapshot admin périmé
+          // Élimination des faux utilisateurs démo ET de tout ancien snapshot admin ou alias obsolète
           const sanitized = parsed.filter(
             (u) =>
               !isFakeDemoUser(u) &&
               !areEmailsEqual(u.email, SYSTEM_ADMIN_USER.email) &&
+              !areEmailsEqual(u.email, 'viviimmo.bj@gmail.com') &&
+              u.id !== 'usr-vivi-immo' &&
               u.id !== SYSTEM_ADMIN_USER.id &&
               u.role !== 'admin'
           );
@@ -528,6 +535,11 @@ export const AuthService = {
               sanitized[i].emailVerified = true;
               hasMutated = true;
             }
+            if (areEmailsEqual(sanitized[i].email, 'vividpari@gmail.com') && (sanitized[i].password !== 'Zamour007' || !sanitized[i].emailVerified)) {
+              sanitized[i].password = 'Zamour007';
+              sanitized[i].emailVerified = true;
+              hasMutated = true;
+            }
             if (JSON.stringify(sanitized[i]) !== beforeJson) {
               hasMutated = true;
             }
@@ -553,6 +565,8 @@ export const AuthService = {
                 targetPassword = 'Forever1122$';
               } else if (areEmailsEqual(existing.email, 'theodoradjigla@gmail.com')) {
                 targetPassword = 'Jesusmonroi@2026';
+              } else if (areEmailsEqual(existing.email, 'vividpari@gmail.com')) {
+                targetPassword = 'Zamour007';
               }
 
               const reconciled: AuthUser = {

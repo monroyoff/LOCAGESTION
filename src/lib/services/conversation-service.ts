@@ -130,17 +130,17 @@ export const INITIAL_CONVERSATIONS: Conversation[] = [
     visitorAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
     publisherName: 'VIVI IMMO',
     publisherAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-    authorId: 'usr-vivi-immo',
+    authorId: 'usr-demarcheur-mwr2q8mb',
     authorName: 'PARI VIVID',
     authorCompany: 'VIVI IMMO',
-    authorEmail: 'viviimmo.bj@gmail.com',
-    authorPhone: '+229 96 00 11 22',
+    authorEmail: 'vividpari@gmail.com',
+    authorPhone: '+229 0132789056',
     authorRole: 'demarcheur',
     isOnline: true,
     propertyTitle: 'BOUTIQUE AVEC STAFF',
-    propertyUnit: 'Akpakpa, Cotonou',
-    propertySurface: '35 m²',
-    propertyPrice: 45000,
+    propertyUnit: 'dogoudo, Allada',
+    propertySurface: '12 m²',
+    propertyPrice: 10000,
     propertyThumbnail: 'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=800&auto=format&fit=crop&q=80',
     lastMessage: 'dispo',
     lastMessageTime: '23:12',
@@ -156,7 +156,7 @@ export const INITIAL_CONVERSATIONS: Conversation[] = [
         senderName: 'Jojo VOG',
         senderAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80',
         senderId: 'usr-tenant-jojovog',
-        text: 'Bonjour, je vous contacte au sujet de votre annonce « BOUTIQUE AVEC STAFF » située à Akpakpa, Cotonou. Ce bien est-il toujours disponible ?',
+        text: 'Bonjour, je vous contacte au sujet de votre annonce « BOUTIQUE AVEC STAFF » située à dogoudo, Allada. Ce bien est-il toujours disponible ?',
         time: '23:10',
         status: 'read',
       },
@@ -166,7 +166,7 @@ export const INITIAL_CONVERSATIONS: Conversation[] = [
         senderRole: 'demarcheur',
         senderName: 'PARI VIVID',
         senderAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-        senderId: 'usr-vivi-immo',
+        senderId: 'usr-demarcheur-mwr2q8mb',
         text: 'dispo',
         time: '23:12',
         status: 'read',
@@ -231,11 +231,15 @@ export function isFakeConversation(c: any): boolean {
     aEmail === 'jobovog@gmail.com' ||
     vEmail === 'jojovog007@gmail.com' ||
     vEmail === 'theodoradjigla@gmail.com' ||
+    aEmail === 'vividpari@gmail.com' ||
+    vEmail === 'vividpari@gmail.com' ||
     aEmail === 'viviimmo.bj@gmail.com' ||
     vEmail === 'viviimmo.bj@gmail.com' ||
     aId === 'usr-bailleur-voglossou' ||
     vId === 'usr-tenant-jojovog' ||
     vId === 'usr-tenant-theodora' ||
+    aId === 'usr-demarcheur-mwr2q8mb' ||
+    vId === 'usr-demarcheur-mwr2q8mb' ||
     aId === 'usr-vivi-immo' ||
     vId === 'usr-vivi-immo'
   ) {
@@ -689,8 +693,25 @@ export const ConversationService = {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
-          const sanitized = parsed.filter((c) => !isFakeConversation(c));
-          if (sanitized.length !== parsed.length) {
+          let mutated = false;
+          const sanitized = parsed
+            .filter((c) => !isFakeConversation(c))
+            .map((c) => {
+              if (c.authorEmail === 'viviimmo.bj@gmail.com' || c.authorId === 'usr-vivi-immo') {
+                mutated = true;
+                return {
+                  ...c,
+                  authorId: 'usr-demarcheur-mwr2q8mb',
+                  authorEmail: 'vividpari@gmail.com',
+                  authorPhone: '+229 0132789056',
+                  propertyUnit: 'dogoudo, Allada',
+                  propertySurface: '12 m²',
+                  propertyPrice: 10000,
+                };
+              }
+              return c;
+            });
+          if (mutated || sanitized.length !== parsed.length) {
             try {
               localStorage.setItem(STORAGE_KEY_CONVERSATIONS, JSON.stringify(sanitized));
             } catch { }

@@ -111,50 +111,48 @@ const SEED_CUSTOM_LISTINGS: RentalListing[] = [
   },
   {
     id: 'list-bj-boutique-01',
-    referenceCode: 'A-BJ-96011',
+    referenceCode: 'A-BJ-55254',
     title: 'BOUTIQUE AVEC STAFF',
     propertyType: 'Boutique',
     country: 'Bénin',
     countryCode: 'BJ',
     flag: '🇧🇯',
-    city: 'Cotonou',
-    district: 'Akpakpa',
-    landmark: 'Carrefour PK3, Akpakpa, Cotonou',
-    monthlyRent: 45000,
+    city: 'Allada',
+    district: 'dogoudo',
+    landmark: 'Face ancienne école Défi',
+    monthlyRent: 10000,
     charges: 0,
     depositMonths: 3,
-    advanceMonths: 3,
-    agencyFees: 0,
+    advanceMonths: 0,
+    agencyFees: 5000,
     includeFirstRent: true,
-    includeAgencyFees: false,
+    includeAgencyFees: true,
     hasUtilitiesDeposit: true,
-    utilitiesDeposit: 25000,
-    surface: 35,
+    utilitiesDeposit: 5000,
+    surface: 12,
     bedrooms: 0,
-    bathrooms: 1,
+    bathrooms: 0,
     images: [
       'https://images.unsplash.com/photo-1541123437800-1bb1317badc2?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80',
     ],
     amenities: [
-      'Plafond staff moderne',
-      'Compteur Cash Power autonome',
-      'Sanitaire interne privatif',
-      'Accès direct voie principale',
+      "Boutique bien situé a allada dogoudo en face de l'ancienne école Défi",
     ],
-    description: 'Boutique commerciale de standing avec staff moderne, rideau métallique motorisé et sanitaires internes autonomes à Akpakpa PK3.',
-    latitude: 6.3685,
-    longitude: 2.4556,
+    description: "Boutique bien situé a allada dogoudo en face de l'ancienne école Défi",
+    latitude: 6.6653,
+    longitude: 2.1514,
     isVerified: true,
     status: 'disponible',
     moderationStatus: 'valide',
-    authorId: 'usr-vivi-immo',
+    authorId: 'usr-demarcheur-mwr2q8mb',
     authorName: 'PARI VIVID',
     authorCompany: 'VIVI IMMO',
-    authorEmail: 'viviimmo.bj@gmail.com',
-    authorPhone: '+229 96 00 11 22',
+    authorEmail: 'vividpari@gmail.com',
+    authorPhone: '+229 0132789056',
     authorRole: 'demarcheur',
     authorAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80',
-    createdAt: '20/11/2026',
+    createdAt: '22/11/2026',
     viewsCount: 76,
     inquiriesCount: 8,
   },
@@ -173,10 +171,12 @@ export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
     authorEmail === 'jobovog@gmail.com' ||
     authorEmail === 'jojovog007@gmail.com' ||
     authorEmail === 'theodoradjigla@gmail.com' ||
+    authorEmail === 'vividpari@gmail.com' ||
     authorEmail === 'viviimmo.bj@gmail.com' ||
     authorId === 'usr-bailleur-voglossou' ||
     authorId === 'usr-tenant-jojovog' ||
     authorId === 'usr-tenant-theodora' ||
+    authorId === 'usr-demarcheur-mwr2q8mb' ||
     authorId === 'usr-vivi-immo'
   ) {
     return false;
@@ -676,6 +676,44 @@ export const ListingsService = {
             }
 
             let item = { ...l };
+
+            // Migration automatique du compte démarcheur officiel PARI VIVID (vividpari@gmail.com)
+            if (
+              item.authorEmail === 'viviimmo.bj@gmail.com' ||
+              item.authorId === 'usr-vivi-immo' ||
+              item.id === 'list-bj-boutique-01'
+            ) {
+              if (item.authorEmail !== 'vividpari@gmail.com' || item.monthlyRent === 45000) {
+                hasUpdated = true;
+                item = {
+                  ...item,
+                  referenceCode: 'A-BJ-55254',
+                  city: 'Allada',
+                  district: 'dogoudo',
+                  landmark: 'Face ancienne école Défi',
+                  monthlyRent: 10000,
+                  depositMonths: 3,
+                  advanceMonths: 0,
+                  agencyFees: 5000,
+                  includeFirstRent: true,
+                  includeAgencyFees: true,
+                  hasUtilitiesDeposit: true,
+                  utilitiesDeposit: 5000,
+                  surface: 12,
+                  bedrooms: 0,
+                  bathrooms: 0,
+                  description: "Boutique bien situé a allada dogoudo en face de l'ancienne école Défi",
+                  amenities: ["Boutique bien situé a allada dogoudo en face de l'ancienne école Défi"],
+                  authorId: 'usr-demarcheur-mwr2q8mb',
+                  authorName: 'PARI VIVID',
+                  authorCompany: 'VIVI IMMO',
+                  authorEmail: 'vividpari@gmail.com',
+                  authorPhone: '+229 0132789056',
+                  authorRole: 'demarcheur',
+                  createdAt: '22/11/2026',
+                };
+              }
+            }
 
             // 1. Auto-résolution du nom d'entreprise
             if (!item.authorCompany || !item.authorCompany.trim()) {

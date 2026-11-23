@@ -58,7 +58,8 @@ function isFakeServerUser(u: any): boolean {
     id === 'usr-demarcheur-cotonou' ||
     id === 'usr-demarcheur-abidjan' ||
     id === 'usr-demarcheur-dakar' ||
-    id === 'usr-demarcheur-lome'
+    id === 'usr-demarcheur-lome' ||
+    id === 'usr-vivi-immo'
   )
     return true;
   const name = (u.name || '').trim().toLowerCase();
@@ -93,7 +94,8 @@ function isFakeServerUser(u: any): boolean {
     email.includes('littoralimmo.bj') ||
     email.includes('ivoirelogis.ci') ||
     email.includes('terangaimmo.sn') ||
-    email.includes('lome-immo.tg')
+    email.includes('lome-immo.tg') ||
+    email === 'viviimmo.bj@gmail.com'
   )
     return true;
   return false;
@@ -117,10 +119,12 @@ function isFakeServerListing(l: any): boolean {
     authorEmail === 'jobovog@gmail.com' ||
     authorEmail === 'jojovog007@gmail.com' ||
     authorEmail === 'theodoradjigla@gmail.com' ||
+    authorEmail === 'vividpari@gmail.com' ||
     authorEmail === 'viviimmo.bj@gmail.com' ||
     authorId === 'usr-bailleur-voglossou' ||
     authorId === 'usr-tenant-jojovog' ||
     authorId === 'usr-tenant-theodora' ||
+    authorId === 'usr-demarcheur-mwr2q8mb' ||
     authorId === 'usr-vivi-immo'
   ) {
     return false;
@@ -233,13 +237,15 @@ function mergeUserIntoList(currentUsers: any[], incomingUser: any) {
     incomingUser.password = incomingUser.password || 'Jesusmonroi@2026';
     incomingUser.emailVerified = true;
     incomingUser.isIdentitySealed = true;
-  } else if (cleanEmail === 'viviimmo.bj@gmail.com') {
-    incomingUser.matricule = 'LOCA-MAT-BJ-96011';
-    incomingUser.firstName = 'Pari';
-    incomingUser.lastName = 'Vivid';
+  } else if (cleanEmail === 'vividpari@gmail.com') {
+    incomingUser.id = incomingUser.id || 'usr-demarcheur-mwr2q8mb';
+    incomingUser.matricule = 'LOCA-MAT-BJ-50341';
+    incomingUser.firstName = 'PARI';
+    incomingUser.lastName = 'VIVID';
     incomingUser.name = 'PARI VIVID';
-    incomingUser.phone = incomingUser.phone || '+229 96 00 11 22';
-    incomingUser.password = incomingUser.password || 'Forever1122$';
+    incomingUser.companyName = incomingUser.companyName || 'VIVI IMMO';
+    incomingUser.phone = incomingUser.phone || '+229 0132789056';
+    incomingUser.password = incomingUser.password || 'Zamour007';
     incomingUser.emailVerified = true;
     incomingUser.isIdentitySealed = true;
   }
