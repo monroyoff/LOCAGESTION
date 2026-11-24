@@ -211,9 +211,9 @@ export function LandingSearchSection() {
           {/* Submit Search Button */}
           <Link
             href="/listings"
-            className="w-full lg:w-auto px-space-xl py-4 rounded-full bg-primary-container text-on-primary font-label-lg text-label-lg flex items-center justify-center gap-space-xs shadow-[0_8px_20px_-2px_rgba(255,81,106,0.5)] hover:brightness-110 active:scale-95 transition-all shrink-0"
+            className="w-full lg:w-auto px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl lg:rounded-full bg-primary-container text-on-primary font-bold text-sm sm:text-base flex items-center justify-center gap-2 shadow-[0_6px_20px_rgba(255,81,106,0.4)] hover:brightness-110 active:scale-98 transition-all shrink-0 whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-[20px]">search</span>
+            <span className="material-symbols-outlined text-[18px] sm:text-[20px]">search</span>
             <span>Explorer les Biens</span>
           </Link>
         </div>

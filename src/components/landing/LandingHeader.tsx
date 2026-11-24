@@ -16,16 +16,20 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
   // Détermination dynamique de la destination de l'Espace Compte selon l'état de connexion
   let accountUrl = '/auth/login';
   let accountLabel = 'Espace Compte';
+  let accountMobileLabel = 'Connexion';
   if (user) {
     if (isTenant || user.role === 'locataire') {
       accountUrl = '/portal';
       accountLabel = 'Mon Espace Résident';
+      accountMobileLabel = 'Résident';
     } else if (isDemarcheur || user.role === 'demarcheur') {
       accountUrl = '/listings';
       accountLabel = 'Mon Espace Annonces';
+      accountMobileLabel = 'Annonces';
     } else {
       accountUrl = '/dashboard';
       accountLabel = 'Mon Tableau de Bord';
+      accountMobileLabel = 'Dashboard';
     }
   }
 
@@ -54,22 +58,22 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
           : 'bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]'
       }`}
     >
-      <div className="h-20 w-full px-gutter md:px-margin-tablet lg:px-margin-desktop flex items-center justify-between gap-space-md max-w-7xl mx-auto">
+      <div className="h-16 sm:h-20 w-full px-3 sm:px-gutter md:px-margin-tablet lg:px-margin-desktop flex items-center justify-between gap-2 sm:gap-space-md max-w-7xl mx-auto">
         {/* Brand Logo with micro-hover bounce & luminous halo */}
-        <div className="flex items-center gap-space-md">
+        <div className="flex items-center gap-space-sm sm:gap-space-md shrink-0">
           <Link
             href="/"
-            className="flex items-center gap-space-sm group focus:outline-none"
+            className="flex items-center gap-2 sm:gap-space-sm group focus:outline-none"
             data-path="accueil"
           >
-            <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(255,178,183,0.5)] transition-all duration-300">
-              <span className="material-symbols-outlined text-[24px]">real_estate_agent</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(255,178,183,0.5)] transition-all duration-300 shrink-0">
+              <span className="material-symbols-outlined text-[20px] sm:text-[24px]">real_estate_agent</span>
             </div>
             <div className="flex flex-col leading-none">
-              <span className="font-headline-sm text-headline-sm tracking-tight text-on-surface font-extrabold">
+              <span className="text-base sm:text-headline-sm tracking-tight text-on-surface font-extrabold whitespace-nowrap">
                 LOCA<span className="text-primary-container">GESTION</span>
               </span>
-              <span className="font-label-sm text-label-sm text-secondary tracking-wider uppercase font-semibold">
+              <span className="text-[9px] sm:text-label-sm text-secondary tracking-wider uppercase font-semibold">
                 PropTech OHADA
               </span>
             </div>
@@ -101,36 +105,37 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
         </nav>
 
         {/* Action Controls & Account Button */}
-        <div className="flex items-center gap-space-sm">
+        <div className="flex items-center gap-1.5 sm:gap-space-sm shrink-0">
           {/* Quick Verify Quittance Button (Desktop/Tablet) */}
           <a
             href="#guichet-verification"
-            className="hidden sm:inline-flex items-center gap-space-xs px-space-md py-space-sm rounded-full bg-surface-container font-label-lg text-label-lg text-tertiary hover:bg-surface-container-high hover:text-on-surface border border-tertiary/20 hover:border-tertiary/40 transition-all shadow-sm active:scale-95"
+            className="hidden sm:inline-flex items-center gap-space-xs px-3.5 py-2 sm:px-space-md sm:py-space-sm rounded-full bg-surface-container font-label-lg text-xs sm:text-label-lg text-tertiary hover:bg-surface-container-high hover:text-on-surface border border-tertiary/20 hover:border-tertiary/40 transition-all shadow-sm active:scale-95 whitespace-nowrap"
             data-path="verification-quittance"
           >
-            <span className="material-symbols-outlined text-[18px]">verified</span>
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px]">verified</span>
             Vérifier Quittance
           </a>
 
-          {/* Account Login / Dashboard Button */}
+          {/* Account Login / Dashboard Button (Mobile-First Compact) */}
           <Link
             href={accountUrl}
-            className="inline-flex items-center justify-center gap-2 px-space-lg py-space-sm rounded-full bg-primary-container text-on-primary-container font-label-lg text-label-lg shadow-[0_8px_24px_-2px_rgba(255,81,106,0.5)] hover:brightness-110 active:scale-95 transition-all group"
+            className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-space-lg sm:py-space-sm rounded-full bg-primary-container text-on-primary-container font-semibold text-xs sm:text-label-lg shadow-[0_4px_16px_rgba(255,81,106,0.35)] hover:brightness-110 active:scale-95 transition-all whitespace-nowrap group shrink-0"
             data-path="authentification"
           >
-            <span>{accountLabel}</span>
-            <div className="w-6 h-6 rounded-full bg-on-primary-container/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-on-primary-container text-[15px]">person</span>
+            <span className="hidden sm:inline">{accountLabel}</span>
+            <span className="sm:hidden font-bold tracking-tight">{accountMobileLabel}</span>
+            <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-on-primary-container/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined text-on-primary-container text-[13px] sm:text-[15px]">person</span>
             </div>
           </Link>
 
           {/* Mobile Menu Hamburger Toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="xl:hidden p-2 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant focus:outline-none transition-colors"
+            className="xl:hidden p-1.5 sm:p-2 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant focus:outline-none transition-colors shrink-0"
             aria-label="Menu Mobile"
           >
-            <span className="material-symbols-outlined text-[24px]">
+            <span className="material-symbols-outlined text-[20px] sm:text-[24px]">
               {mobileMenuOpen ? 'close' : 'menu'}
             </span>
           </button>

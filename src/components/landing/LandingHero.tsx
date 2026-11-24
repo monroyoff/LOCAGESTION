@@ -13,14 +13,14 @@ export function LandingHero() {
 
       <div className="relative max-w-7xl mx-auto flex flex-col items-center text-center">
         {/* Regulatory Trust Badge with Floating & Pulse Micro-interactions */}
-        <div className="inline-flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-high/90 text-on-surface shadow-md backdrop-blur-xl mb-space-lg border border-surface-variant/40 animate-float-slow">
-          <span className="inline-block w-2.5 h-2.5 rounded-full bg-secondary animate-pulse animate-pulse-badge" />
-          <span className="font-label-sm text-label-sm tracking-wider uppercase text-on-surface font-semibold">
+        <div className="inline-flex items-center gap-1.5 sm:gap-space-xs px-3 py-1.5 sm:px-space-md sm:py-space-xs rounded-full bg-surface-container-high/90 text-on-surface shadow-md backdrop-blur-xl mb-space-md sm:mb-space-lg border border-surface-variant/40 animate-float-slow max-w-full">
+          <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-secondary animate-pulse animate-pulse-badge shrink-0" />
+          <span className="font-label-sm text-[10px] sm:text-label-sm tracking-wider uppercase text-on-surface font-semibold truncate">
             1ère PropTech SaaS des 14 pays UEMOA &amp; CEMAC
           </span>
-          <span className="text-outline mx-1">•</span>
-          <span className="font-label-sm text-label-sm text-secondary font-bold inline-flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">gavel</span> Conforme OHADA
+          <span className="text-outline mx-0.5 sm:mx-1 shrink-0">•</span>
+          <span className="font-label-sm text-[10px] sm:text-label-sm text-secondary font-bold inline-flex items-center gap-1 shrink-0">
+            <span className="material-symbols-outlined text-[12px] sm:text-[14px]">gavel</span> Conforme OHADA
           </span>
         </div>
 
@@ -37,24 +37,24 @@ export function LandingHero() {
           Fin définitive des feuilles volantes, des cautions abusives et des litiges d’expulsion. LOCAGESTION numérise le bail OHADA, automatise les encaissements Mobile Money et certifie vos quittances infalsifiables avec validité bancaire et consulaire.
         </p>
 
-        {/* Action Cluster */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-space-md w-full sm:w-auto">
+        {/* Action Cluster - Mobile-First & Pro Responsive */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-space-md w-full max-w-sm sm:max-w-none mx-auto sm:mx-0">
           <Link
             href="/auth/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-space-sm px-space-xl py-4 rounded-full bg-primary-container text-on-primary font-headline-sm text-headline-sm shadow-[0_10px_35px_-4px_rgba(255,81,106,0.6)] hover:brightness-110 active:scale-95 transition-all group"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl sm:rounded-full bg-primary-container text-on-primary font-bold text-sm sm:text-base shadow-[0_8px_25px_rgba(255,81,106,0.45)] hover:brightness-110 active:scale-98 transition-all whitespace-nowrap group"
             data-path="authentification"
           >
             <span>Créer un Compte Gratuit</span>
-            <span className="material-symbols-outlined text-[20px] group-hover:translate-x-1 transition-transform">
+            <span className="material-symbols-outlined text-[18px] sm:text-[20px] group-hover:translate-x-1 transition-transform shrink-0">
               arrow_forward
             </span>
           </Link>
           <a
             href="#guichet-verification"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-space-sm px-space-lg py-4 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant font-label-lg text-label-lg shadow-md border border-surface-container-highest transition-all active:scale-95 group"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:px-6 sm:py-4 rounded-xl sm:rounded-full bg-surface-container-high/90 text-on-surface hover:bg-surface-variant font-semibold text-xs sm:text-sm shadow-md border border-surface-container-highest transition-all active:scale-98 whitespace-nowrap group"
           >
             <span
-              className="material-symbols-outlined text-secondary text-[22px] group-hover:rotate-12 transition-transform"
+              className="material-symbols-outlined text-secondary text-[20px] sm:text-[22px] group-hover:rotate-12 transition-transform shrink-0"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >
               qr_code_scanner
