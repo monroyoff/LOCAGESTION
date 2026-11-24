@@ -25,9 +25,9 @@ export function LandingHero() {
         </div>
 
         {/* Main Catchphrase */}
-        <h1 className="font-headline-xl text-headline-xl-mobile sm:text-headline-xl text-on-surface max-w-5xl tracking-tight leading-tight font-extrabold">
-          La Révolution Immobilière en Afrique :
-          <span className="block mt-1 bg-gradient-to-r from-primary-container via-primary-fixed to-secondary bg-clip-text text-transparent drop-shadow-sm">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl text-on-surface max-w-5xl tracking-tight leading-tight font-extrabold [text-wrap:balance]">
+          La Révolution Immobilière <span className="whitespace-nowrap">en Afrique&nbsp;:</span>
+          <span className="block mt-1 sm:mt-2 bg-gradient-to-r from-primary-container via-primary-fixed to-secondary bg-clip-text text-transparent drop-shadow-sm [text-wrap:balance]">
             Baux Sécurisés, Annonces &amp; Loyers Protégés
           </span>
         </h1>
