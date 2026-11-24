@@ -140,12 +140,12 @@ export function LandingFooter() {
               Support Direct
             </span>
             <a
-              className="inline-flex items-center gap-space-sm px-space-md py-space-sm rounded-full bg-secondary-container text-on-secondary-container font-label-lg text-label-lg hover:opacity-90 active:scale-95 transition-all shadow-sm"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-secondary-container text-on-secondary font-semibold text-xs hover:opacity-90 active:scale-95 transition-all shadow-sm w-fit whitespace-nowrap"
               href="https://wa.me/22500000000"
               target="_blank"
               rel="noopener noreferrer"
             >
-              <span className="material-symbols-outlined text-[20px]">chat</span>
+              <span className="material-symbols-outlined text-[17px]">chat</span>
               Assistance WhatsApp
             </a>
             <p className="font-body-sm text-body-sm text-on-surface-variant mt-space-xs leading-relaxed">

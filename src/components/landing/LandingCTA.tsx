@@ -27,15 +27,15 @@ export function LandingCTA() {
             Rejoignez plus de 12 000 bailleurs, résidents et agences immobilières dans les 14 pays UEMOA &amp; CEMAC. Configuration gratuite en moins de 3 minutes.
           </p>
 
-          {/* CTA Action Cluster - Mobile-First & Pro Responsive */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-space-md w-full max-w-sm sm:max-w-none mx-auto sm:mx-0">
+          {/* CTA Action Cluster - Refined Pro Compact */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3.5 w-full max-w-xs sm:max-w-none mx-auto">
             <Link
               href="/auth/register"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl sm:rounded-full bg-primary-container text-on-primary font-bold text-sm sm:text-base shadow-[0_8px_25px_rgba(255,81,106,0.45)] hover:brightness-110 active:scale-98 transition-all whitespace-nowrap group"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-primary-container text-on-primary font-semibold text-xs sm:text-sm shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all whitespace-nowrap group"
               data-path="authentification"
             >
-              <span>Créer mon Compte Immédiatement</span>
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px] group-hover:translate-x-1 transition-transform shrink-0">
+              <span>Créer mon Compte Gratuit</span>
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px] group-hover:translate-x-0.5 transition-transform shrink-0">
                 chevron_right
               </span>
             </Link>
@@ -43,12 +43,12 @@ export function LandingCTA() {
               href="https://wa.me/22500000000"
               target="_blank"
               rel="noopener noreferrer"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:px-6 sm:py-4 rounded-xl sm:rounded-full bg-secondary-container text-on-secondary font-semibold text-xs sm:text-sm shadow-md hover:opacity-90 active:scale-98 transition-all whitespace-nowrap group"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-secondary-container text-on-secondary font-medium text-xs sm:text-sm shadow-sm hover:opacity-90 active:scale-95 transition-all whitespace-nowrap group"
             >
-              <span className="material-symbols-outlined text-[18px] sm:text-[20px] group-hover:scale-110 transition-transform shrink-0">
+              <span className="material-symbols-outlined text-[16px] sm:text-[18px] group-hover:scale-110 transition-transform shrink-0">
                 chat
               </span>
-              <span>Parler à un Expert WhatsApp</span>
+              <span>Expert WhatsApp</span>
             </a>
           </div>
 

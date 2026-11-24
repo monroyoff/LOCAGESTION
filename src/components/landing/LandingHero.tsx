@@ -37,29 +37,29 @@ export function LandingHero() {
           Fin définitive des feuilles volantes, des cautions abusives et des litiges d’expulsion. LOCAGESTION numérise le bail OHADA, automatise les encaissements Mobile Money et certifie vos quittances infalsifiables avec validité bancaire et consulaire.
         </p>
 
-        {/* Action Cluster - Mobile-First & Pro Responsive */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-space-md w-full max-w-sm sm:max-w-none mx-auto sm:mx-0">
+        {/* Action Cluster - Refined Pro Compact */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3.5 w-full max-w-xs sm:max-w-none mx-auto">
           <Link
             href="/auth/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:px-8 sm:py-4 rounded-xl sm:rounded-full bg-primary-container text-on-primary font-bold text-sm sm:text-base shadow-[0_8px_25px_rgba(255,81,106,0.45)] hover:brightness-110 active:scale-98 transition-all whitespace-nowrap group"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-primary-container text-on-primary font-semibold text-xs sm:text-sm shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all whitespace-nowrap group"
             data-path="authentification"
           >
             <span>Créer un Compte Gratuit</span>
-            <span className="material-symbols-outlined text-[18px] sm:text-[20px] group-hover:translate-x-1 transition-transform shrink-0">
+            <span className="material-symbols-outlined text-[16px] sm:text-[18px] group-hover:translate-x-0.5 transition-transform shrink-0">
               arrow_forward
             </span>
           </Link>
           <a
             href="#guichet-verification"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3.5 sm:px-6 sm:py-4 rounded-xl sm:rounded-full bg-surface-container-high/90 text-on-surface hover:bg-surface-variant font-semibold text-xs sm:text-sm shadow-md border border-surface-container-highest transition-all active:scale-98 whitespace-nowrap group"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant font-medium text-xs sm:text-sm border border-surface-container-highest transition-all active:scale-95 whitespace-nowrap group shadow-sm"
           >
             <span
-              className="material-symbols-outlined text-secondary text-[20px] sm:text-[22px] group-hover:rotate-12 transition-transform shrink-0"
+              className="material-symbols-outlined text-secondary text-[17px] sm:text-[19px] group-hover:rotate-12 transition-transform shrink-0"
               style={{ fontVariationSettings: "'FILL' 1" }}
             >
               qr_code_scanner
             </span>
-            <span>Vérifier une Quittance en Direct</span>
+            <span>Vérifier une Quittance</span>
           </a>
         </div>
 

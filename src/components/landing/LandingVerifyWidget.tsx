@@ -59,9 +59,9 @@ export function LandingVerifyWidget() {
                 type="button"
                 onClick={handleVerify}
                 disabled={isVerifying}
-                className="w-full sm:w-auto px-6 py-3 sm:py-2.5 rounded-full bg-secondary-container text-on-secondary font-bold text-xs sm:text-sm flex items-center justify-center gap-2 hover:brightness-110 active:scale-95 transition-all shrink-0 shadow-sm whitespace-nowrap"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-full bg-secondary-container text-on-secondary font-semibold text-xs flex items-center justify-center gap-1.5 hover:brightness-105 active:scale-95 transition-all shrink-0 shadow-sm whitespace-nowrap"
               >
-                <span className={`material-symbols-outlined text-[18px] ${isVerifying ? 'animate-spin' : ''}`}>
+                <span className={`material-symbols-outlined text-[16px] ${isVerifying ? 'animate-spin' : ''}`}>
                   {isVerifying ? 'sync' : 'search_check'}
                 </span>
                 <span>{isVerifying ? 'Vérification...' : 'Authentifier'}</span>

@@ -82,11 +82,11 @@ export function LandingSpaces() {
             </div>
             <Link
               href="/auth/register"
-              className="w-full py-3 px-4 sm:px-6 rounded-xl sm:rounded-full bg-surface-container-high hover:bg-surface-variant text-on-surface font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border border-surface-container-highest group-hover:border-primary/30 whitespace-nowrap active:scale-98"
+              className="w-full py-2.5 px-4 rounded-full bg-surface-container-high hover:bg-surface-variant text-on-surface font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-surface-container-highest group-hover:border-primary/40 whitespace-nowrap active:scale-95 shadow-sm"
               data-path="espaces-gestion"
             >
               <span>Accéder à l'Espace Bailleur</span>
-              <span className="material-symbols-outlined text-[16px] sm:text-[18px] group-hover:translate-x-1 transition-transform">
+              <span className="material-symbols-outlined text-[15px] group-hover:translate-x-0.5 transition-transform">
                 arrow_forward
               </span>
             </Link>
@@ -147,11 +147,11 @@ export function LandingSpaces() {
             </div>
             <Link
               href="/auth/register"
-              className="w-full py-3 px-4 sm:px-6 rounded-xl sm:rounded-full bg-surface-container-high hover:bg-surface-variant text-on-surface font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border border-surface-container-highest group-hover:border-secondary/30 whitespace-nowrap active:scale-98"
+              className="w-full py-2.5 px-4 rounded-full bg-surface-container-high hover:bg-surface-variant text-on-surface font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-surface-container-highest group-hover:border-secondary/40 whitespace-nowrap active:scale-95 shadow-sm"
               data-path="espaces-gestion"
             >
               <span>Découvrir l'Espace Résident</span>
-              <span className="material-symbols-outlined text-[16px] sm:text-[18px] group-hover:translate-x-1 transition-transform">
+              <span className="material-symbols-outlined text-[15px] group-hover:translate-x-0.5 transition-transform">
                 arrow_forward
               </span>
             </Link>
@@ -212,11 +212,11 @@ export function LandingSpaces() {
             </div>
             <Link
               href="/auth/register"
-              className="w-full py-3 px-4 sm:px-6 rounded-xl sm:rounded-full bg-surface-container-high hover:bg-surface-variant text-on-surface font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border border-surface-container-highest group-hover:border-tertiary/30 whitespace-nowrap active:scale-98"
+              className="w-full py-2.5 px-4 rounded-full bg-surface-container-high hover:bg-surface-variant text-on-surface font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-surface-container-highest group-hover:border-tertiary/40 whitespace-nowrap active:scale-95 shadow-sm"
               data-path="espaces-gestion"
             >
               <span>Rejoindre le Réseau Démarcheurs</span>
-              <span className="material-symbols-outlined text-[16px] sm:text-[18px] group-hover:translate-x-1 transition-transform">
+              <span className="material-symbols-outlined text-[15px] group-hover:translate-x-0.5 transition-transform">
                 arrow_forward
               </span>
             </Link>
