@@ -22,6 +22,7 @@ import { PaymentService } from '@/lib/services/payment-service';
 import { notifyAction } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 import { SkeletonLandlordDashboard } from '@/components/ui/SkeletonLoader';
+import { LandingPage } from '@/components/landing/LandingPage';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -184,6 +185,10 @@ export default function DashboardPage() {
 
   if (isDemarcheur) {
     return null;
+  }
+
+  if (!user && !isLoading) {
+    return <LandingPage />;
   }
 
   return (

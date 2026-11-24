@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import '@/styles/landing.css';
 import { SpaceProvider } from '@/lib/context/space-context';
 import { GlobalDownloadToast } from '@/components/ui/GlobalDownloadToast';
 import { GlobalCenterToast } from '@/components/ui/GlobalCenterToast';
@@ -92,6 +93,18 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className="h-full" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+          rel="stylesheet"
+        />
+      </head>
       <body
         className="h-full bg-[#F4F6F9] text-slate-900 antialiased selection:bg-brand-500 selection:text-white"
         suppressHydrationWarning
