@@ -142,6 +142,35 @@ export default function ListingsPage() {
     return () => clearTimeout(timer);
   }, []);
 
+  // Restauration automatique de l'état de recherche et de la position de défilement au retour de la messagerie
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const shouldRestore = params.get('restore') === '1';
+      const savedRaw = sessionStorage.getItem('locagestion:listings_search_state');
+      if (savedRaw && shouldRestore) {
+        const saved = JSON.parse(savedRaw);
+        if (saved.searchQuery !== undefined) setSearchQuery(saved.searchQuery);
+        if (saved.selectedCountry !== undefined) setSelectedCountry(saved.selectedCountry);
+        if (saved.selectedCity !== undefined) setSelectedCity(saved.selectedCity);
+        if (saved.currentDistrict !== undefined) setCurrentDistrict(saved.currentDistrict);
+        if (saved.pricePresetIdx !== undefined) setPricePresetIdx(saved.pricePresetIdx);
+        if (saved.customMinPrice !== undefined) setCustomMinPrice(saved.customMinPrice);
+        if (saved.customMaxPrice !== undefined) setCustomMaxPrice(saved.customMaxPrice);
+        if (saved.selectedPropertyType !== undefined) setSelectedPropertyType(saved.selectedPropertyType);
+        if (saved.dateFilter !== undefined) setDateFilter(saved.dateFilter);
+        if (saved.sortBy !== undefined) setSortBy(saved.sortBy);
+        if (saved.activeView !== undefined) setActiveView(saved.activeView);
+        if (typeof saved.scrollY === 'number' && saved.scrollY > 0) {
+          setTimeout(() => {
+            window.scrollTo({ top: saved.scrollY, behavior: 'instant' as ScrollBehavior });
+          }, 350);
+        }
+      }
+    } catch { }
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     setIsLocating(true);
@@ -167,7 +196,7 @@ export default function ListingsPage() {
       const dist = getUserResidenceDistrict();
       setSelectedCountry(country);
       setCurrentDistrict(dist);
-      detectUserGeoLocation().then((geo) => setUserLocation(geo)).catch(() => {});
+      detectUserGeoLocation().then((geo) => setUserLocation(geo)).catch(() => { });
     };
     window.addEventListener('locagestion:residence_updated', handleResidenceUpdate);
     return () => window.removeEventListener('locagestion:residence_updated', handleResidenceUpdate);
@@ -251,37 +280,10 @@ export default function ListingsPage() {
     };
   }, []);
 
-  // Synchronisation de l'affichage avec l'URL (?view=my_listings, ?q=, ?dateFilter=, ?sortBy=, ?restore=1) et les événements globaux
+  // Synchronisation de l'affichage avec l'URL (?view=my_listings, ?q=, ?dateFilter=, ?sortBy=) et les événements globaux
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-
-      // Restauration de la recherche exacte et de la position après retour depuis la messagerie (?restore=1)
-      if (params.get('restore') === '1') {
-        try {
-          const savedRaw = sessionStorage.getItem('locagestion:listings_search_state');
-          if (savedRaw) {
-            const saved = JSON.parse(savedRaw);
-            if (typeof saved.searchQuery === 'string') setSearchQuery(saved.searchQuery);
-            if (typeof saved.selectedCountry === 'string') setSelectedCountry(saved.selectedCountry);
-            if (typeof saved.selectedCity === 'string') setSelectedCity(saved.selectedCity);
-            if (typeof saved.currentDistrict === 'string') setCurrentDistrict(saved.currentDistrict);
-            if (typeof saved.pricePresetIdx === 'number') setPricePresetIdx(saved.pricePresetIdx);
-            if (typeof saved.customMinPrice === 'string') setCustomMinPrice(saved.customMinPrice);
-            if (typeof saved.customMaxPrice === 'string') setCustomMaxPrice(saved.customMaxPrice);
-            if (typeof saved.selectedPropertyType === 'string') setSelectedPropertyType(saved.selectedPropertyType);
-            if (saved.dateFilter === 'all' || saved.dateFilter === '7_days') setDateFilter(saved.dateFilter);
-            if (saved.sortBy) setSortBy(saved.sortBy);
-            if (saved.activeView === 'all' || saved.activeView === 'my_listings') setActiveView(saved.activeView);
-            if (typeof saved.scrollY === 'number' && saved.scrollY > 0) {
-              setTimeout(() => {
-                window.scrollTo({ top: saved.scrollY, behavior: 'smooth' });
-              }, 120);
-            }
-          }
-        } catch {}
-      }
-
       if (params.get('view') === 'my_listings') {
         setActiveView('my_listings');
       }
@@ -748,7 +750,7 @@ export default function ListingsPage() {
     customMaxPrice !== '' ||
     dateFilter !== 'all' ||
     sortBy !== 'proximity';
-    selectedCity !== 'all' ||
+  selectedCity !== 'all' ||
     pricePresetIdx !== 0 ||
     customMinPrice !== '' ||
     customMaxPrice !== '' ||
@@ -763,8 +765,8 @@ export default function ListingsPage() {
     const publisherName = listing.authorCompany?.trim()
       ? listing.authorCompany.trim()
       : listing.authorName?.trim()
-      ? listing.authorName.trim()
-      : resolveListingAuthorCompany(listing) || 'Bailleur / Propriétaire';
+        ? listing.authorName.trim()
+        : resolveListingAuthorCompany(listing) || 'Bailleur / Propriétaire';
 
     const convId = `conv-listing-${listing.id}`;
     const initialText = `Bonjour, je vous contacte au sujet de votre annonce « ${listing.title} » située à ${listing.district}, ${listing.city} (${listing.surface} m², ${formatFCFA(listing.monthlyRent)}/mois). Ce bien est-il toujours disponible ?`;
@@ -776,7 +778,7 @@ export default function ListingsPage() {
       if (stored) {
         try {
           existingList = JSON.parse(stored);
-        } catch {}
+        } catch { }
       }
       if (!Array.isArray(existingList)) existingList = [];
 
@@ -870,7 +872,7 @@ export default function ListingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversations: existingList }),
-      }).catch(() => {});
+      }).catch(() => { });
 
       // Notification pour le Bailleur / Démarcheur dans sa cloche
       const notifId = `notif-msg-${Date.now()}`;
@@ -914,27 +916,29 @@ export default function ListingsPage() {
       console.error('Erreur ouverture discussion annonce:', e);
     }
 
-    // Sauvegarder l'état exact de la recherche d'annonces et la position de défilement pour pouvoir y revenir en 1 clic
-    try {
-      sessionStorage.setItem(
-        'locagestion:listings_search_state',
-        JSON.stringify({
-          searchQuery,
-          selectedCountry,
-          selectedCity,
-          currentDistrict,
-          pricePresetIdx,
-          customMinPrice,
-          customMaxPrice,
-          selectedPropertyType,
-          dateFilter,
-          sortBy,
-          activeView,
-          scrollY: typeof window !== 'undefined' ? window.scrollY : 0,
-          lastListingId: listing.id,
-        })
-      );
-    } catch {}
+    router.push(`/messages?convId=${encodeURIComponent(convId)}&listingId=${encodeURIComponent(listing.id)}`);
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(
+          'locagestion:listings_search_state',
+          JSON.stringify({
+            searchQuery,
+            selectedCountry,
+            selectedCity,
+            currentDistrict,
+            pricePresetIdx,
+            customMinPrice,
+            customMaxPrice,
+            selectedPropertyType,
+            dateFilter,
+            sortBy,
+            activeView,
+            scrollY: window.scrollY || 0,
+            lastListingId: listing.id,
+          })
+        );
+      } catch { }
+    }
 
     router.push(`/messages?convId=${encodeURIComponent(convId)}&listingId=${encodeURIComponent(listing.id)}&from=listings`);
   };
@@ -1006,15 +1010,15 @@ export default function ListingsPage() {
       if (stored) {
         try {
           existingList = JSON.parse(stored);
-        } catch {}
+        } catch { }
       }
       if (!Array.isArray(existingList)) existingList = [];
 
       const publisherName = listing.authorCompany?.trim()
         ? listing.authorCompany.trim()
         : listing.authorName?.trim()
-        ? listing.authorName.trim()
-        : resolveListingAuthorCompany(listing) || 'Bailleur / Propriétaire';
+          ? listing.authorName.trim()
+          : resolveListingAuthorCompany(listing) || 'Bailleur / Propriétaire';
 
       const existingIndex = existingList.findIndex(
         (c) => c.id === convId || (c.listingId && c.listingId === listing.id)
@@ -1101,7 +1105,7 @@ export default function ListingsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ conversations: existingList }),
-      }).catch(() => {});
+      }).catch(() => { });
       window.dispatchEvent(new CustomEvent('locagestion:conversations_updated'));
       window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
       window.dispatchEvent(new Event('storage'));
@@ -1129,7 +1133,7 @@ export default function ListingsPage() {
       <div className="flex-1 flex flex-col min-w-0 lg:pl-72">
         <Header
           onToggleSidebar={() => setSidebarOpen(true)}
-          onOpenQuickAction={() => {}}
+          onOpenQuickAction={() => { }}
         />
 
         <main className="flex-1 p-4 sm:p-8 space-y-6 max-w-7xl mx-auto w-full">
@@ -1170,11 +1174,10 @@ export default function ListingsPage() {
               <button
                 type="button"
                 onClick={() => handleSwitchView('all')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeView === 'all'
-                    ? 'bg-white text-slate-900 shadow-sm font-black'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                }`}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeView === 'all'
+                  ? 'bg-white text-slate-900 shadow-sm font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                  }`}
               >
                 <Compass className={`w-4 h-4 ${activeView === 'all' ? 'text-brand-500' : 'text-slate-400'}`} />
                 <span>Toutes les annonces</span>
@@ -1186,20 +1189,18 @@ export default function ListingsPage() {
               <button
                 type="button"
                 onClick={() => handleSwitchView('my_listings')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                  activeView === 'my_listings'
-                    ? 'bg-gradient-to-r from-brand-500 to-rose-600 text-white shadow-md shadow-brand-500/25 font-black'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
-                }`}
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${activeView === 'my_listings'
+                  ? 'bg-gradient-to-r from-brand-500 to-rose-600 text-white shadow-md shadow-brand-500/25 font-black'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                  }`}
               >
                 <Layers className="w-4 h-4" />
                 <span>Mes publications</span>
                 <span
-                  className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                    activeView === 'my_listings'
-                      ? 'bg-white/20 text-white'
-                      : 'bg-brand-50 text-brand-600 border border-brand-200'
-                  }`}
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeView === 'my_listings'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-brand-50 text-brand-600 border border-brand-200'
+                    }`}
                 >
                   {myListings.length}
                 </span>
@@ -1266,22 +1267,20 @@ export default function ListingsPage() {
                   <button
                     type="button"
                     onClick={() => setMyListingsFilter('all')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      myListingsFilter === 'all'
-                        ? 'bg-slate-900 text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${myListingsFilter === 'all'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                      }`}
                   >
                     Toutes ({myListings.length})
                   </button>
                   <button
                     type="button"
                     onClick={() => setMyListingsFilter('disponible')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      myListingsFilter === 'disponible'
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${myListingsFilter === 'disponible'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                      }`}
                   >
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                     <span>En ligne ({myListings.filter((l) => l.status === 'disponible').length})</span>
@@ -1289,11 +1288,10 @@ export default function ListingsPage() {
                   <button
                     type="button"
                     onClick={() => setMyListingsFilter('en_pause')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      myListingsFilter === 'en_pause'
-                        ? 'bg-amber-500 text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${myListingsFilter === 'en_pause'
+                      ? 'bg-amber-500 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                      }`}
                   >
                     <PauseCircle className="w-3.5 h-3.5" />
                     <span>En pause ({myListings.filter((l) => l.status === 'en_pause').length})</span>
@@ -1301,11 +1299,10 @@ export default function ListingsPage() {
                   <button
                     type="button"
                     onClick={() => setMyListingsFilter('reserve_loue')}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      myListingsFilter === 'reserve_loue'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'text-slate-600 hover:text-slate-900'
-                    }`}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${myListingsFilter === 'reserve_loue'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                      }`}
                   >
                     Réservées / Louées ({myListings.filter((l) => l.status === 'reserve' || l.status === 'loue').length})
                   </button>
@@ -1332,11 +1329,10 @@ export default function ListingsPage() {
                   <button
                     type="button"
                     onClick={() => setMyListings7DaysOnly((prev) => !prev)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      myListings7DaysOnly
-                        ? 'bg-rose-500 text-white shadow-xs'
-                        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-                    }`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${myListings7DaysOnly
+                      ? 'bg-rose-500 text-white shadow-xs'
+                      : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                      }`}
                     title="Afficher uniquement mes annonces des 7 derniers jours"
                   >
                     <Calendar className="w-3.5 h-3.5" />
@@ -1383,11 +1379,10 @@ export default function ListingsPage() {
                     return (
                       <div
                         key={listing.id}
-                        className={`rounded-3xl border transition-all flex flex-col justify-between overflow-hidden group shadow-soft hover:shadow-lg ${
-                          isPaused
-                            ? 'bg-amber-50/20 border-amber-300/80 ring-1 ring-amber-400/20'
-                            : 'bg-white border-slate-200/90 hover:border-brand-500/40'
-                        }`}
+                        className={`rounded-3xl border transition-all flex flex-col justify-between overflow-hidden group shadow-soft hover:shadow-lg ${isPaused
+                          ? 'bg-amber-50/20 border-amber-300/80 ring-1 ring-amber-400/20'
+                          : 'bg-white border-slate-200/90 hover:border-brand-500/40'
+                          }`}
                       >
                         {/* Photo avec badge de statut - Cliquer pour ouvrir la gestion */}
                         <div
@@ -1398,9 +1393,8 @@ export default function ListingsPage() {
                           <img
                             src={listing.images[0] || 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800&auto=format&fit=crop&q=80'}
                             alt={listing.title}
-                            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
-                              isPaused ? 'grayscale-[30%] opacity-80' : ''
-                            }`}
+                            className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${isPaused ? 'grayscale-[30%] opacity-80' : ''
+                              }`}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/30" />
 
@@ -1521,11 +1515,10 @@ export default function ListingsPage() {
                                 e.stopPropagation();
                                 handleTogglePause(listing.id);
                               }}
-                              className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${
-                                isPaused
-                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
-                                  : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200'
-                              }`}
+                              className={`py-2 px-2 rounded-xl text-[11px] font-bold transition-all flex items-center justify-center gap-1 cursor-pointer min-w-0 ${isPaused
+                                ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs'
+                                : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200'
+                                }`}
                               title={isPaused ? "Réactiver l'annonce" : "Mettre en pause l'annonce"}
                             >
                               {isPaused ? (
@@ -1580,613 +1573,607 @@ export default function ListingsPage() {
             <>
               {/* Console de recherche & filtres multi-critères */}
               <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-soft space-y-4">
-            {/* Ligne 1 : Mot-clé, Pays, Ville, Montant (Les 3 filtres demandés) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              {/* Filtre 1 : Pays */}
-              <div>
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5 mb-1.5">
-                  <Globe className="w-3.5 h-3.5 text-brand-500" />
-                  <span>Pays</span>
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedCountry}
-                    onChange={(e) => handleCountryChange(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer"
-                  >
-                    <option value="all">🌍 Tous les pays ({Object.keys(COUNTRIES_CITIES).length})</option>
-                    {Object.entries(COUNTRIES_CITIES).map(([country, data]) => (
-                      <option key={country} value={country}>
-                        {data.flag} {country}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
-                    ▼
+                {/* Ligne 1 : Mot-clé, Pays, Ville, Montant (Les 3 filtres demandés) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                  {/* Filtre 1 : Pays */}
+                  <div>
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5 mb-1.5">
+                      <Globe className="w-3.5 h-3.5 text-brand-500" />
+                      <span>Pays</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedCountry}
+                        onChange={(e) => handleCountryChange(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="all">🌍 Tous les pays ({Object.keys(COUNTRIES_CITIES).length})</option>
+                        {Object.entries(COUNTRIES_CITIES).map(([country, data]) => (
+                          <option key={country} value={country}>
+                            {data.flag} {country}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Filtre 2 : Ville */}
+                  <div>
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5 mb-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-brand-500" />
+                      <span>Ville</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedCity}
+                        onChange={(e) => setSelectedCity(e.target.value)}
+                        className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="all">📍 Toutes les villes ({availableCities.length})</option>
+                        {availableCities.map((city) => (
+                          <option key={city} value={city}>
+                            {city}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Filtre 3 : Montant / Budget (FCFA) */}
+                  <div>
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5 mb-1.5">
+                      <Coins className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Budget Loyer (FCFA)</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={customMinPrice || customMaxPrice ? 'custom' : pricePresetIdx}
+                        onChange={(e) => {
+                          if (e.target.value === 'custom') return;
+                          setPricePresetIdx(parseInt(e.target.value, 10));
+                          setCustomMinPrice('');
+                          setCustomMaxPrice('');
+                        }}
+                        className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer"
+                      >
+                        {PRICE_PRESETS.map((preset, idx) => (
+                          <option key={idx} value={idx}>
+                            💰 {preset.label}
+                          </option>
+                        ))}
+                        {(customMinPrice || customMaxPrice) && (
+                          <option value="custom">
+                            Personnalisé ({customMinPrice ? `${formatFCFA(customMinPrice)} min` : ''}
+                            {customMinPrice && customMaxPrice ? ' - ' : ''}
+                            {customMaxPrice ? `${formatFCFA(customMaxPrice)} max` : ''})
+                          </option>
+                        )}
+                      </select>
+                      <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
+                        ▼
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Champ Recherche Libre (Quartier, Repère, Mot-clé) */}
+                  <div>
+                    <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5 mb-1.5">
+                      <Search className="w-3.5 h-3.5 text-slate-400" />
+                      <span>Recherche par mot-clé</span>
+                    </label>
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        id="listings-search-input"
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Référence officielle (ex: LOCA-BJ-...), quartier, repère..."
+                        className="w-full pl-9 pr-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium"
+                      />
+                      {searchQuery && (
+                        <button
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Boutons d'accès rapide : 7 derniers jours & Plus récents */}
+                    <div className="flex items-center gap-2 pt-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = dateFilter === '7_days' ? 'all' : '7_days';
+                          setDateFilter(next);
+                          if (next === '7_days') {
+                            showToast('Filtre activé : Annonces publiées lors des 7 derniers jours.');
+                          }
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${dateFilter === '7_days'
+                          ? 'bg-rose-500 text-white shadow-sm ring-2 ring-rose-300'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                          }`}
+                        title="Afficher uniquement les annonces publiées ces 7 derniers jours"
+                      >
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>7 derniers jours</span>
+                        {dateFilter === '7_days' && <Check className="w-3 h-3 ml-0.5" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = sortBy === 'recent' ? 'proximity' : 'recent';
+                          setSortBy(next);
+                          if (next === 'recent') {
+                            showToast('Tri activé : les annonces les plus récentes s’affichent en premier.');
+                          }
+                        }}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${sortBy === 'recent'
+                          ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300'
+                          : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
+                          }`}
+                        title="Trier les annonces des plus récentes aux plus anciennes"
+                      >
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>Plus récents</span>
+                        {sortBy === 'recent' && <Check className="w-3 h-3 ml-0.5" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Filtre 2 : Ville */}
-              <div>
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5 mb-1.5">
-                  <MapPin className="w-3.5 h-3.5 text-brand-500" />
-                  <span>Ville</span>
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedCity}
-                    onChange={(e) => setSelectedCity(e.target.value)}
-                    className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer"
+                {/* Raccourcis Pays (Zone UEMOA & CEMAC) */}
+                <div className="pt-2 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase mr-1 whitespace-nowrap hidden sm:inline">
+                    Pays :
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleCountryChange('all')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${selectedCountry === 'all'
+                      ? 'bg-rose-500 text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                      }`}
                   >
-                    <option value="all">📍 Toutes les villes ({availableCities.length})</option>
-                    {availableCities.map((city) => (
-                      <option key={city} value={city}>
-                        {city}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
-                    ▼
-                  </div>
+                    🌍 Tous ({listings.length})
+                  </button>
+                  {Object.entries(COUNTRIES_CITIES).map(([country, data]) => {
+                    const count = countryCounts[country] || 0;
+                    return (
+                      <button
+                        key={country}
+                        type="button"
+                        onClick={() => handleCountryChange(country)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${selectedCountry === country
+                          ? 'bg-rose-500 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                          }`}
+                      >
+                        <span>{data.flag}</span>
+                        <span>{country}</span>
+                        <span
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${selectedCountry === country ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-500'
+                            }`}
+                        >
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
-              </div>
 
-              {/* Filtre 3 : Montant / Budget (FCFA) */}
-              <div>
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5 mb-1.5">
-                  <Coins className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Budget Loyer (FCFA)</span>
-                </label>
-                <div className="relative">
-                  <select
-                    value={customMinPrice || customMaxPrice ? 'custom' : pricePresetIdx}
-                    onChange={(e) => {
-                      if (e.target.value === 'custom') return;
-                      setPricePresetIdx(parseInt(e.target.value, 10));
-                      setCustomMinPrice('');
-                      setCustomMaxPrice('');
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all appearance-none cursor-pointer"
-                  >
-                    {PRICE_PRESETS.map((preset, idx) => (
-                      <option key={idx} value={idx}>
-                        💰 {preset.label}
-                      </option>
+                {/* Ligne 2 : Type de Bien, Tranches Précises Min/Max & Tri */}
+                <div className="pt-3 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Type de bien (Pills) */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase mr-1 hidden sm:inline">
+                      Type :
+                    </span>
+                    {PROPERTY_TYPES.map((type) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setSelectedPropertyType(type)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${selectedPropertyType === type
+                          ? 'bg-slate-900 text-white shadow-sm'
+                          : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
+                          }`}
+                      >
+                        {type}
+                      </button>
                     ))}
-                    {(customMinPrice || customMaxPrice) && (
-                      <option value="custom">
-                        Personnalisé ({customMinPrice ? `${formatFCFA(customMinPrice)} min` : ''}
-                        {customMinPrice && customMaxPrice ? ' - ' : ''}
-                        {customMaxPrice ? `${formatFCFA(customMaxPrice)} max` : ''})
-                      </option>
+                  </div>
+
+                  {/* Tri & Réinitialiser */}
+                  <div className="flex items-center gap-2.5 self-start md:self-auto">
+                    <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/60">
+                      <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
+                      <select
+                        value={sortBy}
+                        onChange={(e) => setSortBy(e.target.value as any)}
+                        className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
+                      >
+                        <option value="recent">⏱️ Plus récents d’abord</option>
+                        <option value="proximity">📍 Plus proches de moi (GPS)</option>
+                        <option value="featured">⭐ En vedette</option>
+                        <option value="price_asc">💰 Loyer croissant</option>
+                        <option value="price_desc">💎 Loyer décroissant</option>
+                        <option value="surface_desc">📐 Plus grand (m²)</option>
+                      </select>
+                    </div>
+
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        onClick={resetFilters}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-all border border-rose-200 cursor-pointer"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        <span>Effacer</span>
+                      </button>
                     )}
-                  </select>
-                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-xs">
-                    ▼
                   </div>
                 </div>
+
+                {/* Badges des filtres actifs */}
+                {hasActiveFilters && (
+                  <div className="pt-2 flex items-center gap-2 flex-wrap text-xs">
+                    <span className="text-[11px] font-bold text-slate-400">Filtres actifs :</span>
+                    {selectedCountry !== 'all' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
+                        <span>Pays : {selectedCountry}</span>
+                        <button onClick={() => setSelectedCountry('all')} className="hover:text-rose-500">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+
+                    {selectedCity !== 'all' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
+                        <span>Ville : {selectedCity}</span>
+                        <button onClick={() => setSelectedCity('all')} className="hover:text-rose-500">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+
+                    {(minRent > 0 || maxRent > 0) && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
+                        <span>
+                          Budget : {minRent > 0 ? `${formatFCFA(minRent)} min` : ''}
+                          {minRent > 0 && maxRent > 0 ? ' - ' : ''}
+                          {maxRent > 0 ? `${formatFCFA(maxRent)} max` : ''}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setPricePresetIdx(0);
+                            setCustomMinPrice('');
+                            setCustomMaxPrice('');
+                          }}
+                          className="hover:text-rose-500"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+
+                    {selectedPropertyType !== 'Tous' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
+                        <span>Type : {selectedPropertyType}</span>
+                        <button onClick={() => setSelectedPropertyType('Tous')} className="hover:text-rose-500">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+
+                    {dateFilter === '7_days' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold border border-rose-200">
+                        <Calendar className="w-3 h-3 text-rose-500" />
+                        <span>7 derniers jours</span>
+                        <button onClick={() => setDateFilter('all')} className="hover:text-rose-900 ml-0.5">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+
+                    {sortBy === 'recent' && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-200">
+                        <Clock className="w-3 h-3 text-indigo-500" />
+                        <span>Tri : Plus récents</span>
+                        <button onClick={() => setSortBy('proximity')} className="hover:text-indigo-900 ml-0.5">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+
+                    {searchQuery && (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-900 text-[11px] font-bold border border-brand-200">
+                        <Tag className="w-3 h-3 text-brand-600" />
+                        <span>Recherche : « {searchQuery} » (Tous pays et villes)</span>
+                        <button onClick={() => setSearchQuery('')} className="hover:text-rose-500 ml-0.5">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Champ Recherche Libre (Quartier, Repère, Mot-clé) */}
-              <div>
-                <label className="text-[11px] font-black uppercase tracking-wider text-slate-600 flex items-center gap-1.5 mb-1.5">
-                  <Search className="w-3.5 h-3.5 text-slate-400" />
-                  <span>Recherche par mot-clé</span>
-                </label>
-                <div className="relative">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    id="listings-search-input"
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Référence officielle (ex: LOCA-BJ-...), quartier, repère..."
-                    className="w-full pl-9 pr-3.5 py-2.5 rounded-2xl bg-slate-50 border border-slate-200/90 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium"
-                  />
-                  {searchQuery && (
+              {/* Results Summary Bar */}
+              <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1 flex-wrap gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span>
+                    {filteredListings.length}{' '}
+                    {filteredListings.length > 1 ? 'logements trouvés' : 'logement trouvé'}
+                  </span>
+                  {hasActiveFilters && (
                     <button
-                      onClick={() => setSearchQuery('')}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                      type="button"
+                      onClick={resetFilters}
+                      className="text-[11px] font-bold text-brand-600 hover:text-brand-700 underline cursor-pointer ml-1"
                     >
-                      <X className="w-3 h-3" />
+                      (Filtres actifs : Cliquer ici pour réinitialiser et voir toutes les annonces)
                     </button>
                   )}
                 </div>
-
-                {/* Boutons d'accès rapide : 7 derniers jours & Plus récents */}
-                <div className="flex items-center gap-2 pt-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = dateFilter === '7_days' ? 'all' : '7_days';
-                      setDateFilter(next);
-                      if (next === '7_days') {
-                        showToast('Filtre activé : Annonces publiées lors des 7 derniers jours.');
-                      }
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      dateFilter === '7_days'
-                        ? 'bg-rose-500 text-white shadow-sm ring-2 ring-rose-300'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
-                    }`}
-                    title="Afficher uniquement les annonces publiées ces 7 derniers jours"
-                  >
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>7 derniers jours</span>
-                    {dateFilter === '7_days' && <Check className="w-3 h-3 ml-0.5" />}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const next = sortBy === 'recent' ? 'proximity' : 'recent';
-                      setSortBy(next);
-                      if (next === 'recent') {
-                        showToast('Tri activé : les annonces les plus récentes s’affichent en premier.');
-                      }
-                    }}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                      sortBy === 'recent'
-                        ? 'bg-indigo-600 text-white shadow-sm ring-2 ring-indigo-300'
-                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200/80'
-                    }`}
-                    title="Trier les annonces des plus récentes aux plus anciennes"
-                  >
-                    <Clock className="w-3.5 h-3.5" />
-                    <span>Plus récents</span>
-                    {sortBy === 'recent' && <Check className="w-3 h-3 ml-0.5" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Raccourcis Pays (Zone UEMOA & CEMAC) */}
-            <div className="pt-2 flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-              <span className="text-[10px] font-bold text-slate-400 uppercase mr-1 whitespace-nowrap hidden sm:inline">
-                Pays :
-              </span>
-              <button
-                type="button"
-                onClick={() => handleCountryChange('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                  selectedCountry === 'all'
-                    ? 'bg-rose-500 text-white shadow-sm'
-                    : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-                }`}
-              >
-                🌍 Tous ({listings.length})
-              </button>
-              {Object.entries(COUNTRIES_CITIES).map(([country, data]) => {
-                const count = countryCounts[country] || 0;
-                return (
-                  <button
-                    key={country}
-                    type="button"
-                    onClick={() => handleCountryChange(country)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
-                      selectedCountry === country
-                        ? 'bg-rose-500 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-                    }`}
-                  >
-                    <span>{data.flag}</span>
-                    <span>{country}</span>
-                    <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-                        selectedCountry === country ? 'bg-white/20 text-white' : 'bg-slate-200/80 text-slate-500'
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Ligne 2 : Type de Bien, Tranches Précises Min/Max & Tri */}
-            <div className="pt-3 border-t border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-              {/* Type de bien (Pills) */}
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                <span className="text-[10px] font-bold text-slate-400 uppercase mr-1 hidden sm:inline">
-                  Type :
+                <span className="text-[11px] text-slate-400">
+                  Devise officielle : <strong>FCFA (XOF / XAF)</strong>
                 </span>
-                {PROPERTY_TYPES.map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setSelectedPropertyType(type)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                      selectedPropertyType === type
-                        ? 'bg-slate-900 text-white shadow-sm'
-                        : 'bg-slate-100 text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-                    }`}
-                  >
-                    {type}
-                  </button>
-                ))}
               </div>
 
-              {/* Tri & Réinitialiser */}
-              <div className="flex items-center gap-2.5 self-start md:self-auto">
-                <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200/60">
-                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="bg-transparent text-xs font-bold text-slate-800 focus:outline-none cursor-pointer"
-                  >
-                    <option value="recent">⏱️ Plus récents d’abord</option>
-                    <option value="proximity">📍 Plus proches de moi (GPS)</option>
-                    <option value="featured">⭐ En vedette</option>
-                    <option value="price_asc">💰 Loyer croissant</option>
-                    <option value="price_desc">💎 Loyer décroissant</option>
-                    <option value="surface_desc">📐 Plus grand (m²)</option>
-                  </select>
-                </div>
-
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-bold transition-all border border-rose-200 cursor-pointer"
-                  >
-                    <RotateCcw className="w-3 h-3" />
-                    <span>Effacer</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Badges des filtres actifs */}
-            {hasActiveFilters && (
-              <div className="pt-2 flex items-center gap-2 flex-wrap text-xs">
-                <span className="text-[11px] font-bold text-slate-400">Filtres actifs :</span>
-                {selectedCountry !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
-                    <span>Pays : {selectedCountry}</span>
-                    <button onClick={() => setSelectedCountry('all')} className="hover:text-rose-500">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {selectedCity !== 'all' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
-                    <span>Ville : {selectedCity}</span>
-                    <button onClick={() => setSelectedCity('all')} className="hover:text-rose-500">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {(minRent > 0 || maxRent > 0) && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 text-[11px] font-bold border border-emerald-200">
-                    <span>
-                      Budget : {minRent > 0 ? `${formatFCFA(minRent)} min` : ''}
-                      {minRent > 0 && maxRent > 0 ? ' - ' : ''}
-                      {maxRent > 0 ? `${formatFCFA(maxRent)} max` : ''}
-                    </span>
-                    <button
-                      onClick={() => {
-                        setPricePresetIdx(0);
-                        setCustomMinPrice('');
-                        setCustomMaxPrice('');
-                      }}
-                      className="hover:text-rose-500"
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {selectedPropertyType !== 'Tous' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 text-slate-800 text-[11px] font-bold">
-                    <span>Type : {selectedPropertyType}</span>
-                    <button onClick={() => setSelectedPropertyType('Tous')} className="hover:text-rose-500">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {dateFilter === '7_days' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold border border-rose-200">
-                    <Calendar className="w-3 h-3 text-rose-500" />
-                    <span>7 derniers jours</span>
-                    <button onClick={() => setDateFilter('all')} className="hover:text-rose-900 ml-0.5">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {sortBy === 'recent' && (
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 text-[11px] font-bold border border-indigo-200">
-                    <Clock className="w-3 h-3 text-indigo-500" />
-                    <span>Tri : Plus récents</span>
-                    <button onClick={() => setSortBy('proximity')} className="hover:text-indigo-900 ml-0.5">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-
-                {searchQuery && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-900 text-[11px] font-bold border border-brand-200">
-                    <Tag className="w-3 h-3 text-brand-600" />
-                    <span>Recherche : « {searchQuery} » (Tous pays et villes)</span>
-                    <button onClick={() => setSearchQuery('')} className="hover:text-rose-500 ml-0.5">
-                      <X className="w-3 h-3" />
-                    </button>
-                  </span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Results Summary Bar */}
-          <div className="flex items-center justify-between text-xs font-bold text-slate-500 px-1 flex-wrap gap-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span>
-                {filteredListings.length}{' '}
-                {filteredListings.length > 1 ? 'logements trouvés' : 'logement trouvé'}
-              </span>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  className="text-[11px] font-bold text-brand-600 hover:text-brand-700 underline cursor-pointer ml-1"
-                >
-                  (Filtres actifs : Cliquer ici pour réinitialiser et voir toutes les annonces)
-                </button>
-              )}
-            </div>
-            <span className="text-[11px] text-slate-400">
-              Devise officielle : <strong>FCFA (XOF / XAF)</strong>
-            </span>
-          </div>
-
-          {/* ==================================================================== */}
-          {/* GRILLE DES RÉSULTATS                                                 */}
-          {/* ==================================================================== */}
-          {isLoading ? (
-            <SkeletonListingGrid count={6} />
-          ) : filteredListings.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredListings.map((listing) => {
-                return (
-                  <div
-                    key={listing.id}
-                    className="bg-white rounded-3xl border border-slate-200/80 shadow-soft overflow-hidden flex flex-col justify-between group hover:shadow-card-hover transition-all"
-                  >
-                    <div>
-                      {/* Image Header with Price Tag & Badges (Click to inspect all photos & details) */}
+              {/* ==================================================================== */}
+              {/* GRILLE DES RÉSULTATS                                                 */}
+              {/* ==================================================================== */}
+              {isLoading ? (
+                <SkeletonListingGrid count={6} />
+              ) : filteredListings.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {filteredListings.map((listing) => {
+                    return (
                       <div
-                        onClick={() => {
-                          setSelectedListingForDetail(listing);
-                          setCurrentDetailPhotoIdx(0);
-                        }}
-                        className="relative h-52 overflow-hidden cursor-pointer group/img"
-                        title="Cliquer pour voir toutes les photos et la description complète"
+                        key={listing.id}
+                        className="bg-white rounded-3xl border border-slate-200/80 shadow-soft overflow-hidden flex flex-col justify-between group hover:shadow-card-hover transition-all"
                       >
-                        <img
-                          src={listing.images[0]}
-                          alt={listing.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
-
-                        {/* Top Badges (Left) */}
-                        <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[70%]">
-                          <span className="px-2.5 py-1 rounded-full bg-brand-500 text-white text-[10px] font-black shadow-md flex items-center gap-1">
-                            <span>{listing.flag}</span>
-                            <span>{listing.country}</span>
-                          </span>
-
-                          <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10">
-                            {listing.propertyType}
-                          </span>
-                        </div>
-
-                        {/* Top Badges (Right - Photos count) */}
-                        {listing.images.length > 1 && (
-                          <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 flex items-center gap-1 shadow-sm">
-                            <ImageIcon className="w-3 h-3" />
-                            <span>{listing.images.length} photos</span>
-                          </div>
-                        )}
-
-                        {/* Bottom rent overlay */}
-                        <div className="absolute bottom-3 left-4 right-4 text-white flex items-baseline justify-between">
-                          <div>
-                            <span className="text-2xl font-black tracking-tight">
-                              {formatFCFA(listing.monthlyRent)}
-                            </span>
-                            <span className="text-xs text-slate-300 font-semibold"> / mois</span>
-                          </div>
-                          {listing.surface > 0 && (
-                            <span className="text-xs font-bold text-white/90 bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-lg">
-                              {listing.surface} m²
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Listing Content */}
-                      <div className="p-5 space-y-3">
-                        {/* Ligne Référence Officielle & Certification Bailleur (Strictement sur une seule ligne) */}
-                        <div className="flex items-center justify-between gap-1.5 flex-nowrap overflow-x-auto no-scrollbar py-0.5">
+                        <div>
+                          {/* Image Header with Price Tag & Badges (Click to inspect all photos & details) */}
                           <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (typeof navigator !== 'undefined' && navigator.clipboard) {
-                                navigator.clipboard.writeText(listing.referenceCode || listing.id);
-                                showToast(`Référence ${listing.referenceCode || listing.id} copiée !`);
-                              }
+                            onClick={() => {
+                              setSelectedListingForDetail(listing);
+                              setCurrentDetailPhotoIdx(0);
                             }}
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-black border border-slate-200/90 shadow-2xs transition-all cursor-pointer group/ref shrink-0 whitespace-nowrap"
-                            title="Cliquer pour copier la référence officielle"
+                            className="relative h-52 overflow-hidden cursor-pointer group/img"
+                            title="Cliquer pour voir toutes les photos et la description complète"
                           >
-                            <span className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Réf</span>
-                            <span className="text-slate-900 group-hover/ref:text-brand-600 transition-colors whitespace-nowrap">
-                              {listing.referenceCode || listing.id}
-                            </span>
-                            <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500 transition-colors shrink-0" />
-                          </div>
+                            <img
+                              src={listing.images[0]}
+                              alt={listing.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
 
-                          <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
-                            {isListingFromLast7Days(listing) && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black border border-rose-200 shadow-2xs shrink-0 whitespace-nowrap">
-                                ✨ Récent (-7j)
+                            {/* Top Badges (Left) */}
+                            <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[70%]">
+                              <span className="px-2.5 py-1 rounded-full bg-brand-500 text-white text-[10px] font-black shadow-md flex items-center gap-1">
+                                <span>{listing.flag}</span>
+                                <span>{listing.country}</span>
                               </span>
-                            )}
-                            {listing.isVerified && (
-                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200/70 shrink-0 whitespace-nowrap">
-                                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                                <span className="whitespace-nowrap">Bailleur Vérifié</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
 
-                        <h3
-                          onClick={() => {
-                            setSelectedListingForDetail(listing);
-                            setCurrentDetailPhotoIdx(0);
-                          }}
-                          className="font-extrabold text-base text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1 cursor-pointer"
-                          title="Cliquer pour voir la description complète"
-                        >
-                          {listing.title}
-                        </h3>
-
-                        <div
-                          onClick={() => {
-                            setSelectedListingForDetail(listing);
-                            setCurrentDetailPhotoIdx(0);
-                          }}
-                          className="text-xs text-slate-500 space-y-1 cursor-pointer"
-                        >
-                          <div className="flex items-center justify-between gap-2 flex-wrap">
-                            <div className="flex items-center gap-1 font-bold text-slate-800">
-                              <MapPin className="w-3.5 h-3.5 text-brand-500 shrink-0" />
-                              <span>
-                                {listing.district}, {listing.city} ({listing.country})
+                              <span className="px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10">
+                                {listing.propertyType}
                               </span>
                             </div>
-                            {listing.distanceKm !== undefined && (
-                              <span className="text-[10px] font-black text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
-                                <Compass className="w-3 h-3 text-brand-500" />
-                                <span>{listing.distanceKm < 1 ? '< 1 km' : `~${listing.distanceKm} km`}</span>
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center justify-between gap-2 text-[11px] text-slate-400">
-                            <p className="italic truncate">
-                              Repère : « {listing.landmark} »
-                            </p>
-                            {listing.createdAt && (
-                              <span className="shrink-0 font-medium text-[10px] text-slate-400 flex items-center gap-1">
-                                <Clock className="w-3 h-3 text-slate-400" />
-                                <span>{listing.createdAt}</span>
-                              </span>
-                            )}
-                          </div>
-                        </div>
 
-                        {/* Identité de l'Annonceur / Agence (Visible sur toute la plateforme) */}
-                        {(() => {
-                          const resolvedCompany = resolveListingAuthorCompany(listing);
-                          const hasCompany = Boolean(resolvedCompany);
-                          const publisherName = resolvedCompany || listing.authorName || 'Bailleur Certifié';
+                            {/* Top Badges (Right - Photos count) */}
+                            {listing.images.length > 1 && (
+                              <div className="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/10 flex items-center gap-1 shadow-sm">
+                                <ImageIcon className="w-3 h-3" />
+                                <span>{listing.images.length} photos</span>
+                              </div>
+                            )}
 
-                          return (
+                            {/* Bottom rent overlay */}
+                            <div className="absolute bottom-3 left-4 right-4 text-white flex items-baseline justify-between">
+                              <div>
+                                <span className="text-2xl font-black tracking-tight">
+                                  {formatFCFA(listing.monthlyRent)}
+                                </span>
+                                <span className="text-xs text-slate-300 font-semibold"> / mois</span>
+                              </div>
+                              {listing.surface > 0 && (
+                                <span className="text-xs font-bold text-white/90 bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-lg">
+                                  {listing.surface} m²
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Listing Content */}
+                          <div className="p-5 space-y-3">
+                            {/* Ligne Référence Officielle & Certification Bailleur (Strictement sur une seule ligne) */}
+                            <div className="flex items-center justify-between gap-1.5 flex-nowrap overflow-x-auto no-scrollbar py-0.5">
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                                    navigator.clipboard.writeText(listing.referenceCode || listing.id);
+                                    showToast(`Référence ${listing.referenceCode || listing.id} copiée !`);
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-mono font-black border border-slate-200/90 shadow-2xs transition-all cursor-pointer group/ref shrink-0 whitespace-nowrap"
+                                title="Cliquer pour copier la référence officielle"
+                              >
+                                <span className="text-[10px] font-sans font-bold text-slate-400 uppercase tracking-wider">Réf</span>
+                                <span className="text-slate-900 group-hover/ref:text-brand-600 transition-colors whitespace-nowrap">
+                                  {listing.referenceCode || listing.id}
+                                </span>
+                                <Copy className="w-3 h-3 text-slate-400 group-hover/ref:text-brand-500 transition-colors shrink-0" />
+                              </div>
+
+                              <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
+                                {isListingFromLast7Days(listing) && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black border border-rose-200 shadow-2xs shrink-0 whitespace-nowrap">
+                                    ✨ Récent (-7j)
+                                  </span>
+                                )}
+                                {listing.isVerified && (
+                                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-black border border-emerald-200/70 shrink-0 whitespace-nowrap">
+                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                    <span className="whitespace-nowrap">Bailleur Vérifié</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <h3
+                              onClick={() => {
+                                setSelectedListingForDetail(listing);
+                                setCurrentDetailPhotoIdx(0);
+                              }}
+                              className="font-extrabold text-base text-slate-900 group-hover:text-brand-600 transition-colors line-clamp-1 cursor-pointer"
+                              title="Cliquer pour voir la description complète"
+                            >
+                              {listing.title}
+                            </h3>
+
                             <div
                               onClick={() => {
                                 setSelectedListingForDetail(listing);
                                 setCurrentDetailPhotoIdx(0);
                               }}
-                              className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs cursor-pointer group/pub hover:bg-slate-50/60 p-2 rounded-xl transition-colors"
-                              title="Cliquer pour afficher la fiche complète de l'annonceur"
+                              className="text-xs text-slate-500 space-y-1 cursor-pointer"
                             >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <div className="w-7 h-7 rounded-xl bg-slate-900 text-brand-400 flex items-center justify-center text-xs font-black shrink-0 shadow-sm group-hover/pub:bg-brand-500 group-hover/pub:text-white transition-colors">
-                                  {hasCompany ? (
-                                    <Building2 className="w-4 h-4" />
-                                  ) : (
-                                    <User className="w-4 h-4" />
-                                  )}
-                                </div>
-                                <div className="min-w-0 truncate">
-                                  <span className="text-[10px] text-slate-400 block leading-tight font-medium">
-                                    Publié par
-                                  </span>
-                                  <span className="font-extrabold text-slate-900 text-[11px] truncate block group-hover/pub:text-brand-600 transition-colors">
-                                    {publisherName}
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div className="flex items-center gap-1 font-bold text-slate-800">
+                                  <MapPin className="w-3.5 h-3.5 text-brand-500 shrink-0" />
+                                  <span>
+                                    {listing.district}, {listing.city} ({listing.country})
                                   </span>
                                 </div>
+                                {listing.distanceKm !== undefined && (
+                                  <span className="text-[10px] font-black text-brand-700 bg-brand-50 border border-brand-200 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                                    <Compass className="w-3 h-3 text-brand-500" />
+                                    <span>{listing.distanceKm < 1 ? '< 1 km' : `~${listing.distanceKm} km`}</span>
+                                  </span>
+                                )}
                               </div>
-                              <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
-                                Statut: {resolveListingAuthorRole(listing)}
-                              </span>
+                              <div className="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                                <p className="italic truncate">
+                                  Repère : « {listing.landmark} »
+                                </p>
+                                {listing.createdAt && (
+                                  <span className="shrink-0 font-medium text-[10px] text-slate-400 flex items-center gap-1">
+                                    <Clock className="w-3 h-3 text-slate-400" />
+                                    <span>{listing.createdAt}</span>
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          );
-                        })()}
-                      </div>
-                    </div>
 
-                    {/* Actions */}
-                    <div className="p-5 pt-0 flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedListingForDetail(listing);
-                          setCurrentDetailPhotoIdx(0);
-                        }}
-                        className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
-                        title="Voir photos et détails complets"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleContactPublisher(listing)}
-                        className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold text-center transition-all shadow-sm cursor-pointer"
-                      >
-                        Contacter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleOpenVisitModal(listing)}
-                        className="flex-1 py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold text-center shadow-pink-glow transition-all cursor-pointer"
-                      >
-                        Demander visite
-                      </button>
-                    </div>
+                            {/* Identité de l'Annonceur / Agence (Visible sur toute la plateforme) */}
+                            {(() => {
+                              const resolvedCompany = resolveListingAuthorCompany(listing);
+                              const hasCompany = Boolean(resolvedCompany);
+                              const publisherName = resolvedCompany || listing.authorName || 'Bailleur Certifié';
+
+                              return (
+                                <div
+                                  onClick={() => {
+                                    setSelectedListingForDetail(listing);
+                                    setCurrentDetailPhotoIdx(0);
+                                  }}
+                                  className="pt-2.5 border-t border-slate-100 flex items-center justify-between gap-2 text-xs cursor-pointer group/pub hover:bg-slate-50/60 p-2 rounded-xl transition-colors"
+                                  title="Cliquer pour afficher la fiche complète de l'annonceur"
+                                >
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <div className="w-7 h-7 rounded-xl bg-slate-900 text-brand-400 flex items-center justify-center text-xs font-black shrink-0 shadow-sm group-hover/pub:bg-brand-500 group-hover/pub:text-white transition-colors">
+                                      {hasCompany ? (
+                                        <Building2 className="w-4 h-4" />
+                                      ) : (
+                                        <User className="w-4 h-4" />
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 truncate">
+                                      <span className="text-[10px] text-slate-400 block leading-tight font-medium">
+                                        Publié par
+                                      </span>
+                                      <span className="font-extrabold text-slate-900 text-[11px] truncate block group-hover/pub:text-brand-600 transition-colors">
+                                        {publisherName}
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                    Statut: {resolveListingAuthorRole(listing)}
+                                  </span>
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="p-5 pt-0 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedListingForDetail(listing);
+                              setCurrentDetailPhotoIdx(0);
+                            }}
+                            className="p-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+                            title="Voir photos et détails complets"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleContactPublisher(listing)}
+                            className="flex-1 py-2.5 px-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold text-center transition-all shadow-sm cursor-pointer"
+                          >
+                            Contacter
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenVisitModal(listing)}
+                            className="flex-1 py-2.5 px-3 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold text-center shadow-pink-glow transition-all cursor-pointer"
+                          >
+                            Demander visite
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-soft max-w-lg mx-auto space-y-4">
+                  <div className="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                    <Search className="w-8 h-8" />
                   </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-soft max-w-lg mx-auto space-y-4">
-              <div className="w-16 h-16 rounded-3xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                <Search className="w-8 h-8" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-black text-lg text-slate-900">
-                  Aucun logement ne correspond à vos filtres
-                </h3>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto">
-                  Essayez d'élargir votre recherche en sélectionnant « Tous les pays », une ville différente ou en ajustant la tranche de budget.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={resetFilters}
-                className="py-2.5 px-5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-pink-glow transition-all cursor-pointer"
-              >
-                Réinitialiser tous les filtres
-              </button>
-            </div>
-          )}
+                  <div className="space-y-1">
+                    <h3 className="font-black text-lg text-slate-900">
+                      Aucun logement ne correspond à vos filtres
+                    </h3>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                      Essayez d'élargir votre recherche en sélectionnant « Tous les pays », une ville différente ou en ajustant la tranche de budget.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="py-2.5 px-5 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-pink-glow transition-all cursor-pointer"
+                  >
+                    Réinitialiser tous les filtres
+                  </button>
+                </div>
+              )}
             </>
           )}
         </main>
@@ -2240,8 +2227,8 @@ export default function ListingsPage() {
                     {((selectedListingForVisit.descriptionLines && selectedListingForVisit.descriptionLines.length > 0)
                       ? selectedListingForVisit.descriptionLines
                       : selectedListingForVisit.description
-                      ? selectedListingForVisit.description.split('\n').filter((l) => l.trim().length > 0)
-                      : selectedListingForVisit.amenities
+                        ? selectedListingForVisit.description.split('\n').filter((l) => l.trim().length > 0)
+                        : selectedListingForVisit.amenities
                     ).map((line, idx) => (
                       <div key={idx} className="flex items-start gap-1.5 text-[11px] text-slate-700 font-medium">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
@@ -2284,11 +2271,10 @@ export default function ListingsPage() {
                       key={slot}
                       type="button"
                       onClick={() => setVisitTimeSlot(slot)}
-                      className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center ${
-                        visitTimeSlot === slot
-                          ? 'border-brand-500 bg-brand-50 text-brand-600 ring-2 ring-brand-500/20'
-                          : 'border-slate-200 bg-slate-50 text-slate-600'
-                      }`}
+                      className={`py-2 px-2 rounded-xl border text-[11px] font-bold text-center ${visitTimeSlot === slot
+                        ? 'border-brand-500 bg-brand-50 text-brand-600 ring-2 ring-brand-500/20'
+                        : 'border-slate-200 bg-slate-50 text-slate-600'
+                        }`}
                     >
                       {slot}
                     </button>
@@ -2419,11 +2405,10 @@ export default function ListingsPage() {
                       key={idx}
                       type="button"
                       onClick={() => setCurrentDetailPhotoIdx(idx)}
-                      className={`relative w-16 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${
-                        currentDetailPhotoIdx === idx
-                          ? 'border-brand-500 ring-2 ring-brand-500/20 scale-105'
-                          : 'border-slate-200 opacity-70 hover:opacity-100'
-                      }`}
+                      className={`relative w-16 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition-all cursor-pointer ${currentDetailPhotoIdx === idx
+                        ? 'border-brand-500 ring-2 ring-brand-500/20 scale-105'
+                        : 'border-slate-200 opacity-70 hover:opacity-100'
+                        }`}
                     >
                       <img src={img} alt="Aperçu" className="w-full h-full object-cover" />
                     </button>
@@ -2475,8 +2460,8 @@ export default function ListingsPage() {
                     {((selectedListingForDetail.descriptionLines && selectedListingForDetail.descriptionLines.length > 0)
                       ? selectedListingForDetail.descriptionLines
                       : selectedListingForDetail.description
-                      ? selectedListingForDetail.description.split('\n').filter((l) => l.trim().length > 0)
-                      : selectedListingForDetail.amenities
+                        ? selectedListingForDetail.description.split('\n').filter((l) => l.trim().length > 0)
+                        : selectedListingForDetail.amenities
                     ).length} points clés
                   </span>
                 </div>
@@ -2485,8 +2470,8 @@ export default function ListingsPage() {
                   {((selectedListingForDetail.descriptionLines && selectedListingForDetail.descriptionLines.length > 0)
                     ? selectedListingForDetail.descriptionLines
                     : selectedListingForDetail.description
-                    ? selectedListingForDetail.description.split('\n').filter((l) => l.trim().length > 0)
-                    : selectedListingForDetail.amenities
+                      ? selectedListingForDetail.description.split('\n').filter((l) => l.trim().length > 0)
+                      : selectedListingForDetail.amenities
                   ).map((line, idx) => (
                     <div key={idx} className="flex items-start gap-2 text-xs text-slate-800 font-medium">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
