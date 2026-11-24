@@ -29,6 +29,16 @@ export default function DashboardPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { user, activeSpace, switchSpace, isLandlord, isTenant, isDemarcheur } = useSpace();
+  const [hasAuthSession, setHasAuthSession] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return !!localStorage.getItem('locagestion_auth_user');
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [userProperties, setUserProperties] = useState<Property[]>([]);
 
@@ -185,6 +195,10 @@ export default function DashboardPage() {
 
   if (isDemarcheur) {
     return null;
+  }
+
+  if (!user && !hasAuthSession) {
+    return <LandingPage />;
   }
 
   if (!user && !isLoading) {
