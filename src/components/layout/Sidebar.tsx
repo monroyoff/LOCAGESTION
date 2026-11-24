@@ -635,9 +635,9 @@ export function Sidebar({
   const landlordItems: NavItem[] = [
     {
       name: 'Tableau de bord',
-      href: '/',
+      href: '/dashboard',
       icon: LayoutDashboard,
-      active: pathname === '/',
+      active: pathname === '/dashboard' || pathname === '/',
     },
     {
       name: 'Biens & Lots',

@@ -33,6 +33,7 @@ const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
 
 // Routes strictement réservées au Bailleur (inaccessibles au Démarcheur et au Locataire)
 const LANDLORD_ONLY_PREFIXES = [
+  '/dashboard',
   '/properties',
   '/leases',
   '/tenants',
@@ -104,7 +105,7 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
       } else if (current.role === 'demarcheur') {
         router.replace('/listings');
       } else {
-        router.replace('/');
+        router.replace('/dashboard');
       }
       return;
     }
@@ -112,7 +113,7 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     // 2.bis Protection stricte de l'Espace Super-Admin (Isolation Étanche)
     if (pathname?.startsWith('/admin')) {
       if (current.role !== 'admin' || !areEmailsEqual(current.email, SYSTEM_ADMIN_USER.email)) {
-        router.replace('/');
+        router.replace('/dashboard');
         return;
       }
     }
@@ -120,11 +121,10 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     // 3. Contrôle d'accès strict selon le rôle (3 espaces étanches / RLS Applicatif)
     if (pathname.startsWith('/portal')) {
       if (current.role !== 'locataire') {
-        router.replace(current.role === 'demarcheur' ? '/listings' : '/');
+        router.replace(current.role === 'demarcheur' ? '/listings' : '/dashboard');
         return;
       }
     } else if (
-      pathname === '/' ||
       LANDLORD_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))
     ) {
       if (current.role === 'demarcheur') {

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSpace } from '@/lib/context/space-context';
 
 interface LandingHeaderProps {
   activePath?: string;
@@ -10,6 +11,23 @@ interface LandingHeaderProps {
 export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { user, isTenant, isDemarcheur } = useSpace();
+
+  // Détermination dynamique de la destination de l'Espace Compte selon l'état de connexion
+  let accountUrl = '/auth/login';
+  let accountLabel = 'Espace Compte';
+  if (user) {
+    if (isTenant || user.role === 'locataire') {
+      accountUrl = '/portal';
+      accountLabel = 'Mon Espace Résident';
+    } else if (isDemarcheur || user.role === 'demarcheur') {
+      accountUrl = '/listings';
+      accountLabel = 'Mon Espace Annonces';
+    } else {
+      accountUrl = '/dashboard';
+      accountLabel = 'Mon Tableau de Bord';
+    }
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -94,13 +112,13 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
             Vérifier Quittance
           </a>
 
-          {/* Account Login Button */}
+          {/* Account Login / Dashboard Button */}
           <Link
-            href="/auth/login"
+            href={accountUrl}
             className="inline-flex items-center justify-center gap-2 px-space-lg py-space-sm rounded-full bg-primary-container text-on-primary-container font-label-lg text-label-lg shadow-[0_8px_24px_-2px_rgba(255,81,106,0.5)] hover:brightness-110 active:scale-95 transition-all group"
             data-path="authentification"
           >
-            <span>Espace Compte</span>
+            <span>{accountLabel}</span>
             <div className="w-6 h-6 rounded-full bg-on-primary-container/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
               <span className="material-symbols-outlined text-on-primary-container text-[15px]">person</span>
             </div>
@@ -147,12 +165,14 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
                 Vérifier une Quittance
               </a>
               <Link
-                href="/auth/login"
+                href={accountUrl}
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-full bg-primary-container text-on-primary font-label-lg text-label-lg shadow-md"
               >
-                <span className="material-symbols-outlined text-[18px]">login</span>
-                Connexion / Créer un Compte
+                <span className="material-symbols-outlined text-[18px]">
+                  {user ? 'dashboard' : 'login'}
+                </span>
+                {accountLabel}
               </Link>
             </div>
           </div>
