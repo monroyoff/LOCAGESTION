@@ -40,7 +40,7 @@ export function LandingCTA() {
               </span>
             </Link>
             <a
-              href="https://wa.me/22500000000"
+              href="https://wa.me/2290195444430?text=Bonjour%20LOCAGESTION%2C%20je%20souhaite%20parler%20%C3%A0%20un%20expert."
               target="_blank"
               rel="noopener noreferrer"
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-secondary-container text-on-secondary font-medium text-xs sm:text-sm shadow-sm hover:opacity-90 active:scale-95 transition-all whitespace-nowrap group"

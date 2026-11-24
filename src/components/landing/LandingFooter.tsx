@@ -141,7 +141,7 @@ export function LandingFooter() {
             </span>
             <a
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-secondary-container text-on-secondary font-semibold text-xs hover:opacity-90 active:scale-95 transition-all shadow-sm w-fit whitespace-nowrap"
-              href="https://wa.me/22500000000"
+              href="https://wa.me/2290195444430?text=Bonjour%20LOCAGESTION%2C%20je%20souhaite%20avoir%20une%20assistance."
               target="_blank"
               rel="noopener noreferrer"
             >
