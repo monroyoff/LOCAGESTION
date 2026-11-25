@@ -273,15 +273,13 @@ export function LandingPricing() {
               </ul>
             </div>
 
-            <a
-              href="https://wa.me/2290195444430?text=Bonjour%20LOCAGESTION%2C%20je%20souhaite%20des%20informations%20sur%20la%20Formule%20Agences%20%26%20Syndics."
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-xs border border-surface-container-high/80 transition-all text-center"
+            <Link
+              href="/auth/register"
+              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-xs border border-surface-container-high/80 hover:border-primary/50 transition-all text-center"
             >
-              <span className="material-symbols-outlined text-[16px]">chat</span>
-              <span>Parler à un Conseiller Pro</span>
-            </a>
+              <span>Activer la Formule Pro</span>
+              <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+            </Link>
           </div>
         </div>
 
