@@ -41,7 +41,7 @@ export function LandingHero() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3.5 w-full max-w-xs sm:max-w-none mx-auto">
           <Link
             href="/auth/register"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 rounded-full bg-primary-container text-on-primary font-semibold text-xs sm:text-sm shadow-sm hover:shadow-md hover:brightness-105 active:scale-95 transition-all whitespace-nowrap group"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 sm:px-7 sm:py-3 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm shadow-[0_4px_20px_rgba(244,63,110,0.35)] hover:brightness-105 active:scale-95 transition-all whitespace-nowrap group"
             data-path="authentification"
           >
             <span>Créer un Compte Gratuit</span>
