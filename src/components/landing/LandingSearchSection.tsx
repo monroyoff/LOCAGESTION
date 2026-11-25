@@ -211,7 +211,7 @@ export function LandingSearchSection() {
           {/* Submit Search Button - Pro Sleek */}
           <Link
             href="/listings"
-            className="w-full lg:w-auto px-6 py-2.5 lg:px-7 lg:py-3 rounded-full bg-primary-container text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_4px_16px_rgba(244,63,110,0.35)] hover:brightness-110 active:scale-95 transition-all shrink-0 whitespace-nowrap"
+            className="w-full lg:w-auto px-5 py-2.5 lg:px-6 lg:py-3 rounded-full bg-primary-container text-on-primary font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm hover:brightness-105 active:scale-95 transition-all shrink-0 whitespace-nowrap"
           >
             <span className="material-symbols-outlined text-[17px] sm:text-[19px]">search</span>
             <span>Explorer les Biens</span>
