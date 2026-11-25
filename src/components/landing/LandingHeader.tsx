@@ -81,30 +81,24 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
               <span className="material-symbols-outlined text-[19px] sm:text-[24px]">real_estate_agent</span>
             </div>
             <div className="flex flex-col leading-none">
-              <span className="text-sm sm:text-headline-sm tracking-tight text-on-surface font-extrabold whitespace-nowrap">
+              <span className="text-[15px] sm:text-xl lg:text-[22px] tracking-tight text-on-surface font-extrabold whitespace-nowrap">
                 LOCA<span className="text-primary-container">GESTION</span>
               </span>
-              <span className="text-[9px] sm:text-label-sm text-secondary tracking-wider uppercase font-semibold whitespace-nowrap">
-                PropTech de l'Immobilier
+              <span className="text-[7.5px] sm:text-[9px] text-secondary font-bold tracking-tight uppercase whitespace-nowrap block mt-0.5">
+                PROTECH DE L'IMMOBILIER
               </span>
             </div>
           </Link>
 
-          {/* Trigger Menu Déroulant Mobile — Placé à gauche, en bas du nom LOCAGESTION */}
+          {/* Trigger Menu Mobile — Placé à gauche, en bas du nom LOCAGESTION (Bouton seul sans texte) */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden mt-0.5 flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high/90 hover:bg-surface-variant text-on-surface text-[10px] font-bold border border-surface-container-highest/60 shadow-sm active:scale-95 transition-all"
-            aria-label="Menu déroulant navigation"
+            className="lg:hidden mt-1 w-7 h-7 flex items-center justify-center rounded-full bg-surface-container-high/90 hover:bg-surface-variant text-on-surface border border-surface-container-highest/60 shadow-sm active:scale-95 transition-all"
+            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            title="Menu"
           >
-            <span className="material-symbols-outlined text-[13px] text-primary">
+            <span className="material-symbols-outlined text-[16px] text-primary">
               {mobileMenuOpen ? 'close' : 'menu'}
-            </span>
-            <span>Menu déroulant</span>
-            <span
-              className="material-symbols-outlined text-[12px] text-on-surface-variant transition-transform duration-200"
-              style={{ transform: mobileMenuOpen ? 'rotate(180deg)' : 'none' }}
-            >
-              expand_more
             </span>
           </button>
         </div>
