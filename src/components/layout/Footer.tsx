@@ -8,7 +8,7 @@ export function Footer() {
       <div className="flex items-center gap-1.5 flex-wrap">
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-white/80 border border-slate-200/70 shadow-2xs text-[9px] font-medium text-slate-600">
           <span className="text-[10px] leading-none">🇧🇯</span>
-          <span>Créée au Bénin pour l'Afrique</span>
+          <span>Créée au Bénin pour l'Afrique par Johane VOGLOSSOU</span>
         </span>
         <span className="text-[9px] text-slate-400 font-normal hidden sm:inline">
           • Plateforme Immobilière & Gestion Locative UEMOA & CEMAC
