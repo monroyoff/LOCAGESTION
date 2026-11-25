@@ -183,8 +183,7 @@ export function LandingFooter() {
         {/* Bottom Copyright & Security Signatures */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-space-md pt-space-md border-t border-surface-container-high/50 text-on-surface-variant font-body-sm text-body-sm">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-1.5 sm:gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-surface-container-high/40 border border-on-surface-variant/25 shadow-2xs text-[9px] font-medium text-on-surface-variant">
-              <span className="text-[10px] leading-none">🇧🇯</span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-surface-container-high/40 border border-on-surface-variant/25 shadow-2xs text-[9px] font-medium text-on-surface-variant">
               <span>Créée au Bénin pour l'Afrique par Johane VOGLOSSOU</span>
             </span>
             <span className="text-[9px] sm:text-[10px] text-on-surface-variant self-center text-center sm:text-left">

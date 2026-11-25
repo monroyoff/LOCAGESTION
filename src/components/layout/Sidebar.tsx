@@ -1135,13 +1135,8 @@ export function Sidebar({
             </div>
           </div>
 
-          {/* Mention discrète Créée au Bénin pour l'Afrique (en bas à gauche) */}
-          <div className="mt-1.5 px-1 flex items-center justify-between text-[8px] text-slate-500 font-normal">
-            <span className="flex items-center gap-1 text-slate-400 truncate">
-              <span className="text-[9px] leading-none">🇧🇯</span>
-              <span>Créée au Bénin pour l'Afrique par Johane VOGLOSSOU</span>
-            </span>
-            <span className="text-slate-600 shrink-0 ml-1">UEMOA & CEMAC</span>
+          <div className="mt-1 px-1 flex items-center justify-end text-[8px] text-slate-600 font-normal">
+            <span>UEMOA & CEMAC</span>
           </div>
         </div>
       </aside>
