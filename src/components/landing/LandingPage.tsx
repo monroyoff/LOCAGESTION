@@ -9,6 +9,7 @@ import { LandingPainPoints } from './LandingPainPoints';
 import { LandingSpaces } from './LandingSpaces';
 import { LandingVerifyWidget } from './LandingVerifyWidget';
 import { LandingPillars } from './LandingPillars';
+import { LandingPricing } from './LandingPricing';
 import { LandingCTA } from './LandingCTA';
 import { LandingFooter } from './LandingFooter';
 import { LandingScrollToTop } from './LandingScrollToTop';
@@ -45,6 +46,9 @@ function LandingPageContent() {
 
           {/* Les 5 Piliers Différenciateurs LOCAGESTION */}
           <LandingPillars />
+
+          {/* Grille Tarifaire & Modèle Split Payment */}
+          <LandingPricing />
 
           {/* Appel à l'Action Final Premium */}
           <LandingCTA />
