@@ -27,7 +27,7 @@ export function LandingPainPoints() {
               <div className="w-12 h-12 rounded-2xl bg-primary-container/20 text-primary-container flex items-center justify-center mb-space-md group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-[28px]">contract_delete</span>
               </div>
-              <div className="font-label-sm text-label-sm text-outline font-bold uppercase mb-1">
+              <div className="font-label-sm text-label-sm text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">
                 Problème #1
               </div>
               <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mb-space-sm">
@@ -49,7 +49,7 @@ export function LandingPainPoints() {
               <div className="w-12 h-12 rounded-2xl bg-secondary-container/20 text-secondary flex items-center justify-center mb-space-md group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-[28px]">qr_code_2</span>
               </div>
-              <div className="font-label-sm text-label-sm text-outline font-bold uppercase mb-1">
+              <div className="font-label-sm text-label-sm text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">
                 Problème #2
               </div>
               <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mb-space-sm">
@@ -71,7 +71,7 @@ export function LandingPainPoints() {
               <div className="w-12 h-12 rounded-2xl bg-tertiary-container/20 text-tertiary flex items-center justify-center mb-space-md group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-[28px]">balance</span>
               </div>
-              <div className="font-label-sm text-label-sm text-outline font-bold uppercase mb-1">
+              <div className="font-label-sm text-label-sm text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">
                 Problème #3
               </div>
               <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mb-space-sm">
@@ -95,7 +95,7 @@ export function LandingPainPoints() {
                 <div className="w-12 h-12 rounded-2xl bg-primary-container/20 text-primary flex items-center justify-center mb-space-md group-hover:scale-110 transition-transform">
                   <span className="material-symbols-outlined text-[28px]">point_of_sale</span>
                 </div>
-                <div className="font-label-sm text-label-sm text-outline font-bold uppercase mb-1">
+                <div className="font-label-sm text-label-sm text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">
                   Problème #4
                 </div>
                 <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mb-space-sm">
@@ -119,7 +119,7 @@ export function LandingPainPoints() {
 
               {/* Inline Metric Card Component */}
               <div className="w-full md:w-64 p-space-md rounded-2xl bg-surface-container-lowest shrink-0 shadow-inner border border-surface-container-high">
-                <span className="font-label-sm text-label-sm text-outline uppercase font-bold block mb-1">
+                <span className="font-label-sm text-label-sm text-slate-500 dark:text-slate-400 uppercase font-bold block mb-1">
                   Impact Constaté
                 </span>
                 <div className="font-headline-xl text-headline-xl text-secondary font-extrabold tracking-tight">
@@ -144,7 +144,7 @@ export function LandingPainPoints() {
               <div className="w-12 h-12 rounded-2xl bg-secondary-container/20 text-secondary flex items-center justify-center mb-space-md group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-[28px]">flight_takeoff</span>
               </div>
-              <div className="font-label-sm text-label-sm text-outline font-bold uppercase mb-1">
+              <div className="font-label-sm text-label-sm text-slate-500 dark:text-slate-400 font-bold uppercase mb-1">
                 Problème #5
               </div>
               <h3 className="font-headline-sm text-headline-sm text-on-surface font-bold mb-space-sm">

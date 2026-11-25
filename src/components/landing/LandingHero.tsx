@@ -64,26 +64,26 @@ export function LandingHero() {
         </div>
 
         {/* Reassurance & Trust Badges */}
-        <div className="flex flex-wrap items-center justify-center gap-space-md mt-space-lg font-label-sm text-label-sm text-on-surface-variant">
+        <div className="flex flex-wrap items-center justify-center gap-space-md mt-space-lg text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
           <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-secondary text-[16px]">gavel</span>
+            <span className="material-symbols-outlined text-secondary text-[16px] sm:text-[18px]">gavel</span>
             Baux Conformes au Droit OHADA
           </span>
-          <span className="text-outline">•</span>
+          <span className="text-slate-400 dark:text-slate-600">•</span>
           <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-secondary text-[16px]">qr_code_2</span>
+            <span className="material-symbols-outlined text-secondary text-[16px] sm:text-[18px]">qr_code_2</span>
             Quittances Certifiées par QR Code
           </span>
-          <span className="text-outline">•</span>
+          <span className="text-slate-400 dark:text-slate-600">•</span>
           <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-secondary text-[16px]">verified_user</span>
+            <span className="material-symbols-outlined text-secondary text-[16px] sm:text-[18px]">verified_user</span>
             Reversements Mobile Money Sécurisés
           </span>
         </div>
 
         {/* Payment Rails & Social Proof Bar */}
         <div className="mt-space-xl pt-space-md w-full max-w-4xl">
-          <p className="font-label-sm text-label-sm uppercase tracking-widest text-outline text-center mb-space-md font-bold">
+          <p className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 font-extrabold text-center mb-space-md">
             Interconnexion Directe aux Opérateurs Financiers Locaux &amp; Régionaux
           </p>
           <div className="grid grid-cols-2 gap-space-md items-center lg:grid-cols-5">
