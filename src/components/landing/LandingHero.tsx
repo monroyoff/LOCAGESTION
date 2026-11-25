@@ -63,21 +63,21 @@ export function LandingHero() {
           </a>
         </div>
 
-        {/* Micro Metrics Pill */}
+        {/* Reassurance & Trust Badges */}
         <div className="flex flex-wrap items-center justify-center gap-space-md mt-space-lg font-label-sm text-label-sm text-on-surface-variant">
           <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-secondary text-[16px]">verified</span>
-            Commission 2% sur chaque Loyer encaissé
+            <span className="material-symbols-outlined text-secondary text-[16px]">gavel</span>
+            Baux Conformes au Droit OHADA
           </span>
           <span className="text-outline">•</span>
           <span className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-secondary text-[16px]">bolt</span>
-            3% pour chaque bail signé
+            <span className="material-symbols-outlined text-secondary text-[16px]">qr_code_2</span>
+            Quittances Certifiées par QR Code
           </span>
           <span className="text-outline">•</span>
           <span className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-secondary text-[16px]">verified_user</span>
-            Rapide &amp; Sécurisé
+            Reversements Mobile Money Sécurisés
           </span>
         </div>
 
