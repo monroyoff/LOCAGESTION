@@ -93,7 +93,7 @@ export function LandingSearchSection() {
   return (
     <section
       id="annonces-et-recherche"
-      className="w-full px-gutter md:px-margin-tablet lg:px-margin-desktop py-space-xl bg-surface-container-lowest border-y border-surface-container-high/30"
+      className="w-full px-gutter md:px-margin-tablet lg:px-margin-desktop py-space-xl bg-surface-container-lowest dark:border-none border-y border-surface-container-high/30"
     >
       <div className="max-w-7xl mx-auto flex flex-col gap-space-lg">
         {/* Section Heading with Asymmetric Overline */}

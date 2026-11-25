@@ -63,7 +63,7 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
     <header
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-surface/95 backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.35)] border-b border-surface-container-high/60'
+          ? 'bg-surface/95 backdrop-blur-2xl shadow-[0_4px_24px_rgba(0,0,0,0.35)] dark:border-transparent border-b border-surface-container-high/60'
           : 'bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]'
       }`}
     >

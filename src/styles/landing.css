@@ -131,7 +131,7 @@
   --color-inverse-on-surface: #2c3039;
 
   --header-glass-bg: rgba(15, 19, 28, 0.85);
-  --header-glass-border: rgba(255, 255, 255, 0.05);
+  --header-glass-border: transparent;
   --card-glass-bg: rgba(28, 32, 40, 0.85);
   --card-glass-border: rgba(255, 255, 255, 0.06);
   --dropdown-glass-bg: rgba(24, 28, 36, 0.95);

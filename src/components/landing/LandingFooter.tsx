@@ -22,7 +22,7 @@ export function LandingFooter() {
   ];
 
   return (
-    <footer className="w-full bg-surface-container-lowest mt-space-xl border-t border-surface-container-high/40">
+    <footer className="w-full bg-surface-container-lowest mt-space-xl dark:border-none border-t border-surface-container-high/40">
       <div className="w-full px-gutter md:px-margin-tablet lg:px-margin-desktop py-space-xl max-w-7xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-space-lg mb-space-xl">
           {/* Brand & Purpose Column (2 cols on lg) */}
