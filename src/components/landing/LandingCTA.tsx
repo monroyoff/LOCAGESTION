@@ -5,7 +5,7 @@ import Link from 'next/link';
 
 export function LandingCTA() {
   return (
-    <section className="w-full px-gutter md:px-margin-tablet lg:px-margin-desktop py-space-xl">
+    <section id="tarifs" className="w-full px-gutter md:px-margin-tablet lg:px-margin-desktop py-space-xl scroll-mt-20">
       <div className="max-w-6xl mx-auto rounded-3xl bg-gradient-to-br from-surface-container-high via-surface-container to-surface-container-lowest p-space-lg sm:p-space-xl relative overflow-hidden shadow-2xl border border-surface-container-high/60">
         {/* Luminous Halo accent with micro-animation */}
         <div className="absolute -right-20 -bottom-20 w-80 h-80 rounded-full bg-primary-container/25 blur-[100px] pointer-events-none animate-pulse-halo" />

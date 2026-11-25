@@ -50,6 +50,32 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
     if (mobileMenuOpen) setMobileMenuOpen(false);
   };
 
+  // Défilement fluide fiable vers les sections
+  const handleNavClick = (e: React.MouseEvent, path: string, href: string) => {
+    e.preventDefault();
+    setMobileMenuOpen(false);
+
+    if (path === 'accueil') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    const targetId = href.replace('#', '');
+    setTimeout(() => {
+      const element = document.getElementById(targetId);
+      if (element) {
+        const headerOffset = 80;
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth',
+        });
+      }
+    }, 120);
+  };
+
   // Liens pour la navigation avec métadonnées riches (icônes & descriptions pour menu mobile pro)
   const navLinks = [
     {
@@ -107,9 +133,23 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
           : 'bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]'
       }`}
     >
-      <div className="h-[74px] sm:h-20 w-full px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-3 max-w-7xl mx-auto relative">
-        {/* Brand Logo & Menu Déroulant Mobile à gauche, en bas du nom LOCAGESTION */}
-        <div className="flex flex-col items-start justify-center shrink-0">
+      <div className="h-16 sm:h-20 w-full px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-3 max-w-7xl mx-auto relative">
+        {/* Brand Logo & Bouton Menu Mobile (Alignés sur une seule ligne propre sans débordement) */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Trigger Menu Mobile — Ergonomique, 36px, tactile, aligné à gauche */}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden w-9 h-9 rounded-xl bg-surface-container-high hover:bg-surface-variant text-on-surface flex items-center justify-center border border-surface-container-highest shadow-sm active:scale-95 transition-all shrink-0"
+            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu navigation'}
+            title="Menu de navigation"
+          >
+            <span className="material-symbols-outlined text-[20px] text-primary transition-transform duration-200">
+              {mobileMenuOpen ? 'close' : 'menu'}
+            </span>
+          </button>
+
+          {/* Logo Brand */}
           <Link
             href="/"
             onClick={handleScrollToTop}
@@ -129,18 +169,6 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
               </span>
             </div>
           </Link>
-
-          {/* Trigger Menu Mobile — Ergonomique, professionnel et confortable (w-9 h-9, 36px) */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden mt-1.5 w-9 h-9 rounded-xl bg-surface-container-high hover:bg-surface-variant text-on-surface flex items-center justify-center border border-surface-container-highest shadow-sm active:scale-95 transition-all"
-            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu navigation'}
-            title="Menu de navigation"
-          >
-            <span className="material-symbols-outlined text-[20px] text-primary transition-transform duration-200">
-              {mobileMenuOpen ? 'close' : 'menu'}
-            </span>
-          </button>
         </div>
 
         {/* Desktop Navigation Pill - STRICTEMENT MONO-LIGNE & COMPACT */}
@@ -154,11 +182,7 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
               <a
                 key={link.path}
                 href={link.href}
-                onClick={(e) => {
-                  if (link.path === 'accueil') {
-                    handleScrollToTop(e);
-                  }
-                }}
+                onClick={(e) => handleNavClick(e, link.path, link.href)}
                 className={`px-3 py-1.5 xl:px-4 xl:py-2 rounded-full text-xs xl:text-sm font-semibold whitespace-nowrap shrink-0 transition-all duration-200 ${
                   isActive
                     ? 'bg-surface-container-high text-on-surface shadow-sm font-bold'
@@ -211,93 +235,85 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
         </div>
       </div>
 
-      {/* Menu Déroulant Mobile — Ancré à gauche en bas du logo, Spacieux, Pro & Haute Définition */}
+      {/* Menu Déroulant Mobile — 100% OPAQUE, Spacieux, Pro & Navigation Active */}
       {mobileMenuOpen && (
         <>
-          {/* Backdrop avec flou moderne pour fermer au clic extérieur */}
+          {/* Backdrop sombre couvrant tout l'écran */}
           <div
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity"
+            className="fixed inset-0 z-[60] bg-black/75 backdrop-blur-sm lg:hidden transition-opacity"
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          {/* Menu déroulant premium — Largeur généreuse, typographie aérée, icônes dédiées */}
-          <div className="absolute left-3 top-[calc(100%+6px)] w-[calc(100vw-24px)] max-w-[370px] rounded-3xl bg-surface-container-lowest/98 dark:bg-[#0c1017]/98 backdrop-blur-2xl border border-surface-container-high p-4 shadow-[0_20px_50px_rgba(0,0,0,0.55)] z-50 animate-in slide-in-from-top-3 duration-200 lg:hidden">
+          {/* Menu déroulant — FOND SOLIDE OPAQUE (Blanc pur en mode jour / Noir profond en nuit), zéro transparence indésirable */}
+          <div className="fixed top-[70px] left-3 right-3 sm:left-6 sm:w-[380px] sm:right-auto max-h-[calc(100vh-84px)] overflow-y-auto rounded-3xl bg-white dark:bg-[#0c1017] text-slate-900 dark:text-white border border-slate-200 dark:border-slate-800 p-4 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] z-[70] animate-in fade-in zoom-in-95 duration-200 lg:hidden">
             {/* Header du menu mobile */}
-            <div className="flex items-center justify-between pb-3 mb-2 border-b border-surface-container-high/60">
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-surface-container-high flex items-center justify-center text-primary shadow-sm border border-surface-container-highest">
+                <div className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-primary shadow-sm border border-slate-200 dark:border-slate-700">
                   <span className="material-symbols-outlined text-[18px]">widgets</span>
                 </div>
                 <div>
-                  <div className="text-xs font-bold text-on-surface tracking-tight">Navigation Plateforme</div>
-                  <div className="text-[10px] text-secondary font-semibold uppercase tracking-wider">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white tracking-tight">Navigation Plateforme</div>
+                  <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">
                     {isDark ? '🌙 Mode Nuit Actif' : '☀️ Mode Jour Actif'}
                   </div>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-variant flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition-all border border-surface-container-highest/60"
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 active:scale-90 transition-all border border-slate-200 dark:border-slate-700"
                 aria-label="Fermer le menu"
               >
                 <span className="material-symbols-outlined text-[17px]">close</span>
               </button>
             </div>
 
-            {/* Liste des rubriques avec grandes icônes thématiques et descriptifs clairs */}
+            {/* Rubriques avec grandes icônes thématiques et descriptifs clairs */}
             <div className="flex flex-col gap-1.5 py-1">
               {navLinks.map((link) => {
                 const isActive = activePath === link.path;
                 return (
-                  <a
+                  <button
                     key={link.path}
-                    href={link.href}
-                    onClick={(e) => {
-                      if (link.path === 'accueil') {
-                        handleScrollToTop(e);
-                      } else {
-                        setMobileMenuOpen(false);
-                      }
-                    }}
-                    className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl transition-all ${
+                    type="button"
+                    onClick={(e) => handleNavClick(e, link.path, link.href)}
+                    className={`w-full flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl text-left transition-all ${
                       isActive
-                        ? 'bg-surface-container-high text-on-surface shadow-sm font-bold border border-surface-container-highest'
-                        : 'hover:bg-surface-container-high/70 text-on-surface active:bg-surface-container-high'
+                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm font-bold border border-slate-200 dark:border-slate-700'
+                        : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/80 text-slate-900 dark:text-white active:bg-slate-200 dark:active:bg-slate-800'
                     }`}
-                    data-path={link.path}
                   >
                     <div className={`w-10 h-10 rounded-xl ${link.iconBg} flex items-center justify-center shrink-0 shadow-sm`}>
                       <span className="material-symbols-outlined text-[20px]">{link.icon}</span>
                     </div>
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-[13.5px] font-bold truncate leading-tight">{link.label}</span>
-                      <span className="text-[11px] text-on-surface-variant truncate font-normal mt-0.5">{link.description}</span>
+                      <span className="text-[13.5px] font-bold truncate leading-tight text-slate-900 dark:text-white">{link.label}</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate font-normal mt-0.5">{link.description}</span>
                     </div>
-                    <span className="material-symbols-outlined text-[18px] text-on-surface-variant/60 shrink-0">
+                    <span className="material-symbols-outlined text-[18px] text-slate-400 shrink-0">
                       chevron_right
                     </span>
-                  </a>
+                  </button>
                 );
               })}
             </div>
 
-            {/* Bloc d'actions prioritaires : Vérification QR Code & Espace Connexion */}
-            <div className="pt-3 mt-2 border-t border-surface-container-high/60 flex flex-col gap-2">
-              <a
-                href="#guichet-verification"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-surface-container hover:bg-surface-container-high text-tertiary font-bold text-xs border border-tertiary/25 active:scale-95 transition-all shadow-sm"
-                data-path="verification-quittance"
+            {/* Actions : Vérification QR Code & Espace Connexion */}
+            <div className="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={(e) => handleNavClick(e, 'verification-quittance', '#guichet-verification')}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 font-bold text-xs border border-slate-200 dark:border-slate-700 active:scale-95 transition-all shadow-sm"
               >
-                <span className="material-symbols-outlined text-[17px]">verified</span>
+                <span className="material-symbols-outlined text-[17px] text-emerald-500">verified</span>
                 Vérifier une Quittance (QR Code)
-              </a>
+              </button>
 
               <Link
                 href={accountUrl}
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-[0_4px_16px_rgba(244,63,110,0.35)] active:scale-95 transition-all"
-                data-path="authentification"
               >
                 <span className="material-symbols-outlined text-[17px]">
                   {user ? 'dashboard' : 'login'}
@@ -311,7 +327,7 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold text-secondary hover:underline"
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
               >
                 <span className="material-symbols-outlined text-[14px]">support_agent</span>
                 Assistance WhatsApp : +229 01 95 44 44 30
