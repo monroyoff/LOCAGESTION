@@ -94,7 +94,7 @@ export function LandingHero() {
               </div>
               <div className="text-left leading-none">
                 <span className="font-label-md text-label-md text-on-surface block font-bold">Wave CI/SN</span>
-                <span className="font-label-sm text-label-sm text-secondary">0% Frais cachés</span>
+                <span className="font-label-sm text-label-sm text-secondary">Transfert Instantané</span>
               </div>
             </div>
 
