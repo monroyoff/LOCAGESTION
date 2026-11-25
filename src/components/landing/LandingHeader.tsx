@@ -84,8 +84,8 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
               <span className="text-sm sm:text-headline-sm tracking-tight text-on-surface font-extrabold whitespace-nowrap">
                 LOCA<span className="text-primary-container">GESTION</span>
               </span>
-              <span className="text-[9px] sm:text-label-sm text-secondary tracking-wider uppercase font-semibold">
-                PropTech OHADA
+              <span className="text-[9px] sm:text-label-sm text-secondary tracking-wider uppercase font-semibold whitespace-nowrap">
+                PropTech de l'Immobilier
               </span>
             </div>
           </Link>
