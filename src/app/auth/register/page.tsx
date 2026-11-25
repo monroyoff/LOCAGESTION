@@ -259,6 +259,10 @@ export default function RegisterPage() {
         setErrorMsg('Veuillez renseigner votre ou vos prénom(s).');
         return false;
       }
+      if (role === 'demarcheur' && !ifuNumber.trim()) {
+        setErrorMsg('Le numéro IFU fiscal est requis pour les démarcheurs et agents immobiliers.');
+        return false;
+      }
       return true;
     }
 
@@ -430,7 +434,7 @@ export default function RegisterPage() {
           residenceDistrict: residenceDistrict.trim() || undefined,
           projectCountry: targetProjectCountry,
           companyName: companyName.trim() ? companyName.trim() : undefined,
-          ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
+          ifuNumber: (role === 'bailleur' || role === 'demarcheur') && ifuNumber.trim() ? ifuNumber.trim() : undefined,
           password: password || 'demo1234',
         },
         { autoLogin: false, emailVerified: false }
@@ -486,7 +490,7 @@ export default function RegisterPage() {
           projectCountry: targetProjectCountry,
           companyName: companyName.trim() ? companyName.trim() : undefined,
           // IFU uniquement pour le bailleur (pas d'obligation pour démarcheur)
-          ifuNumber: role === 'bailleur' && ifuNumber.trim() ? ifuNumber.trim() : undefined,
+          ifuNumber: (role === 'bailleur' || role === 'demarcheur') && ifuNumber.trim() ? ifuNumber.trim() : undefined,
           password: password || 'demo1234',
         },
         { autoLogin: true, emailVerified: true }
@@ -857,24 +861,38 @@ export default function RegisterPage() {
                 </div>
               </div>
 
-              {/* Pour le Démarcheur : Enseigne / Nom d'agence uniquement (PAS d'obligation d'IFU) */}
+              {/* Pour le Démarcheur : Enseigne et Numéro IFU requis */}
               {role === 'demarcheur' && (
-                <div className="pt-3 border-t border-white/10 space-y-2">
+                <div className="pt-3 border-t border-white/10 space-y-3">
                   <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Briefcase className="w-3.5 h-3.5 text-amber-400" />
-                    <span>Enseigne commerciale ou agence (Optionnel)</span>
+                    <span>Informations professionnelles &amp; Conformité légale</span>
                   </div>
-                  <div>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="ex: Agence Immobilière Prestige (Optionnel)"
-                      className="w-full px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-                    />
-                    <span className="text-[10px] text-slate-500 mt-1 block">
-                      En tant que démarcheur, aucun numéro fiscal IFU n'est requis.
-                    </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        Enseigne commerciale ou agence (Optionnel)
+                      </label>
+                      <input
+                        type="text"
+                        value={companyName}
+                        onChange={(e) => setCompanyName(e.target.value)}
+                        placeholder="ex: Agence Immobilière Prestige"
+                        className="w-full px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-semibold text-slate-300 block mb-1">
+                        Numéro IFU fiscal <span className="text-amber-400 font-bold">* (Requis)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={ifuNumber}
+                        onChange={(e) => setIfuNumber(e.target.value)}
+                        placeholder="ex: 0202110485960"
+                        className="w-full px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/15 text-white text-xs placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                      />
+                    </div>
                   </div>
                 </div>
               )}

@@ -56,7 +56,7 @@ L'architecture applicative repose sur **3 espaces strictement cloisonnés** déf
 │ - Dashboard KPIs│               │ - Quittances    │               │ - Feed annonces │
 │ - Propriétés    │               │ - Paiements     │               │ - Mes pubs (CRUD)│
 │ - Baux & Tenants│               │ - Incidents     │               │ - Visites       │
-│ - Relances/Mises│               │ - Messagerie    │               │ - Pas d'IFU     │
+│ - Relances/Mises│               │ - Messagerie    │               │ - IFU requis    │
 │ - Incidents     │               │ - Départ/Préavis│               │   requis        │
 └─────────────────┘               └─────────────────┘               └─────────────────┘
 ```
@@ -82,7 +82,7 @@ L'architecture applicative repose sur **3 espaces strictement cloisonnés** déf
 ### 3. Espace Démarcheur / Agent Immobilier (`role: 'demarcheur'`)
 - **Point d'entrée :** `/listings`.
 - **Règles métier fondamentales :**
-  - **AUCUNE OBLIGATION D'IFU :** Les démarcheurs et agents de terrain ne sont pas soumis à l'obligation de renseigner un Numéro d'Identifiant Fiscal Unique (IFU), à l'inverse du bailleur qui le renseigne facultativement pour la conformité fiscale des quittances.
+  - **NUMÉRO IFU EXIGÉ :** Les démarcheurs et agents immobiliers doivent renseigner leur Numéro d'Identifiant Fiscal Unique (IFU) pour la traçabilité légale, la validation de leurs mandats et la protection de leurs honoraires.
   - **Console "Mes publications" :** Vue dédiée filtrable pour piloter ses mandats : **Modifier** l'annonce, **Mettre en pause** (masquage public immédiat), **Réactiver** ou **Supprimer**.
   - **Publication d'annonces optimisée Afrique :** Prise en compte des spécificités locales (repères géographiques, type de compteur d'eau/courant Cash Power, gardiennage, forage).
 
@@ -192,7 +192,7 @@ L'authentification a été modernisée pour offrir une expérience fluide, sécu
 Le formulaire est orchestré sous forme de questions séquentielles ("questions l'une après l'autre", 6 étapes) :
 
 1. **Étape 1 — Espace en Primo :** Sélection du rôle principal (`Bailleur`, `Locataire`, ou `Démarcheur`).
-2. **Étape 2 — Identité :** Nom & Prénoms. Si entreprise/agence : raison sociale. Pour le bailleur : Numéro IFU (facultatif). **Aucun IFU n'est requis ni demandé au démarcheur.**
+2. **Étape 2 — Identité :** Nom & Prénoms. Si entreprise/agence : raison sociale. Pour le bailleur : Numéro IFU (facultatif). Pour le démarcheur et agent : **Numéro IFU exigé** pour la conformité et traçabilité légale.
 3. **Étape 3 — Coordonnées :** Email obligatoire ET Numéro de téléphone obligatoire avec sélecteur d'indicatifs nationaux.
 4. **Étape 4 — État Civil :** Date de naissance et Lieu de naissance mondial (aucune restriction géographique).
 5. **Étape 5 — Résidence & Géolocalisation :**
@@ -386,8 +386,8 @@ Tout modèle d'Intelligence Artificielle ou ingénieur reprenant ce projet **DOI
 1. **Ne jamais casser la séparation des 3 Espaces :**
    - Bailleur (`/`), Résident/Locataire (`/portal`), Démarcheur (`/listings`).
    - Ne jamais rajouter les boutons d'annonces dans la Sidebar du Bailleur.
-2. **Respecter la règle de l'IFU Démarcheur :**
-   - **L'IFU n'est jamais obligatoire pour un Démarcheur.** Seul le Bailleur peut le renseigner pour ses quittances fiscales.
+2. **Respecter la règle de l'IFU Démarcheur & Agent :**
+   - **L'IFU est exigé pour les démarcheurs et agents immobiliers** afin de garantir la conformité des mandats, la traçabilité des intermédiaires et la protection légale des commissions.
 3. **Conserver la double compatibilité Email & Téléphone :**
    - Toute fonctionnalité d'authentification ou d'identification doit supporter aussi bien un numéro de téléphone africain/international qu'une adresse email.
 4. **Prise en charge de la Diaspora :**

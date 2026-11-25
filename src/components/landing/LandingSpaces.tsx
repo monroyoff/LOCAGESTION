@@ -181,7 +181,7 @@ export function LandingSpaces() {
                     check_circle
                   </span>
                   <span>
-                    <strong>0 IFU exigé à l'inscription</strong> : accessibilité immédiate pour démarcheurs indépendants
+                    <strong>Numéro IFU exigé</strong> : vérification et conformité légale des démarcheurs et agents
                   </span>
                 </li>
                 <li className="flex items-start gap-2">
