@@ -165,13 +165,13 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
           {/* Account Login / Dashboard Button (Mobile-First Compact) */}
           <Link
             href={accountUrl}
-            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-primary-container text-on-primary-container font-bold text-xs sm:text-[13px] shadow-[0_4px_16px_rgba(255,81,106,0.3)] hover:brightness-110 active:scale-95 transition-all whitespace-nowrap group shrink-0"
+            className="inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-primary-container text-white font-bold text-xs sm:text-[13px] shadow-[0_4px_16px_rgba(244,63,110,0.35)] hover:brightness-110 active:scale-95 transition-all whitespace-nowrap group shrink-0"
             data-path="authentification"
           >
             <span className="hidden sm:inline">{accountLabel}</span>
             <span className="sm:hidden tracking-tight">{accountMobileLabel}</span>
-            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-on-primary-container/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-              <span className="material-symbols-outlined text-on-primary-container text-[12px] sm:text-[13px]">person</span>
+            <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+              <span className="material-symbols-outlined text-white text-[12px] sm:text-[13px]">person</span>
             </div>
           </Link>
         </div>
@@ -232,7 +232,7 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
                 <Link
                   href={accountUrl}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-full bg-primary-container text-on-primary-container font-bold text-xs shadow-md"
+                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-full bg-primary-container text-white font-bold text-xs shadow-md hover:brightness-110 active:scale-95 transition-all"
                   data-path="authentification"
                 >
                   <span className="material-symbols-outlined text-[16px]">

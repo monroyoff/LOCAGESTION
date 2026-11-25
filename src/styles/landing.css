@@ -111,9 +111,9 @@
   --color-on-surface-variant: #e3bdbf;
 
   --color-primary: #ffb2b7;
-  --color-primary-container: #ff516a;
-  --color-on-primary: #67001b;
-  --color-on-primary-container: #5b0017;
+  --color-primary-container: #f43f6e;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffffff;
 
   --color-secondary: #4edea3;
   --color-secondary-container: #00a572;
@@ -156,7 +156,7 @@
   --color-on-surface-variant: #334155;
 
   --color-primary: #e11d48;
-  --color-primary-container: #ff3366;
+  --color-primary-container: #f43f6e;
   --color-on-primary: #ffffff;
   --color-on-primary-container: #ffffff;
 
@@ -207,11 +207,11 @@
 
 /* Glow effects */
 .glow-primary {
-  box-shadow: 0 10px 35px -4px rgba(255, 81, 106, 0.55);
+  box-shadow: 0 10px 35px -4px rgba(244, 63, 110, 0.45);
 }
 
 .glow-primary:hover {
-  box-shadow: 0 14px 45px -2px rgba(255, 81, 106, 0.7);
+  box-shadow: 0 14px 45px -2px rgba(244, 63, 110, 0.6);
 }
 
 .glow-secondary {
