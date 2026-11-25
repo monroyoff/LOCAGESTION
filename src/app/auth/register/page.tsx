@@ -523,7 +523,7 @@ export default function RegisterPage() {
       {/* Top Header & Brand */}
       <div className="sm:mx-auto sm:w-full sm:max-w-2xl relative z-10">
         <div className="flex items-center justify-between mb-4">
-          <Link href="/auth/login" className="flex items-center gap-3 group">
+          <Link href="/" className="flex items-center gap-3 group" title="Retourner à la page d'accueil">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform">
               <svg
                 width="20"
@@ -548,18 +548,29 @@ export default function RegisterPage() {
                 LOCA<span className="text-brand-400">GESTION</span>
               </span>
               <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider block">
-                Gestion Locative UEMOA & CEMAC
+                PROTECH DE L'IMMOBILIER
               </span>
             </div>
           </Link>
 
-          <Link
-            href="/auth/login"
-            className="text-xs font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"
-          >
-            <span>Déjà inscrit ?</span>
-            <span className="text-brand-400 font-black">Connexion</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link
+              href="/"
+              className="text-xs font-semibold text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"
+              title="Retourner à la page d'accueil"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-brand-400" />
+              <span className="hidden sm:inline">Accueil</span>
+            </Link>
+
+            <Link
+              href="/auth/login"
+              className="text-xs font-bold text-slate-400 hover:text-white transition-colors flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10"
+            >
+              <span className="hidden sm:inline">Déjà inscrit ?</span>
+              <span className="text-brand-400 font-black">Connexion</span>
+            </Link>
+          </div>
         </div>
 
         {/* Step Counter & Progress Bar */}

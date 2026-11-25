@@ -10,6 +10,7 @@ import {
   Lock,
   Mail,
   ArrowRight,
+  ArrowLeft,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -305,10 +306,26 @@ export default function LoginPage() {
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-brand-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
+      {/* Bouton de retour vers la Landing Page */}
+      <div className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 hover:border-white/20 text-xs font-semibold backdrop-blur-md transition-all active:scale-95 shadow-sm group"
+          title="Retourner à la page d'accueil"
+        >
+          <ArrowLeft className="w-4 h-4 text-brand-400 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Retour à l'accueil</span>
+        </Link>
+      </div>
+
       <div className="sm:mx-auto sm:w-full sm:max-w-md relative z-10 px-4">
-        {/* Logo */}
-        <div className="flex items-center justify-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
+        {/* Logo cliquable vers la Landing Page */}
+        <Link
+          href="/"
+          className="flex items-center justify-center gap-3 mb-6 group cursor-pointer focus:outline-none"
+          title="Retourner à la page d'accueil"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform">
             <svg
               width="24"
               height="24"
@@ -332,10 +349,10 @@ export default function LoginPage() {
               LOCA<span className="text-brand-400">GESTION</span>
             </span>
             <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-              SaaS Gestion Locative UEMOA & CEMAC
+              PROTECH DE L'IMMOBILIER
             </span>
           </div>
-        </div>
+        </Link>
 
         <h2 className="text-center text-2xl sm:text-3xl font-black tracking-tight text-white">
           Connexion à votre espace
@@ -476,8 +493,16 @@ export default function LoginPage() {
           <span>Zone FCFA</span>
         </div>
 
-        {/* Public Legal Links (Google Play Compliance & Confidentiality) */}
+        {/* Public Legal Links (Google Play Compliance & Confidentiality) & Accueil */}
         <div className="mt-4 flex items-center justify-center gap-4 text-xs text-slate-400 flex-wrap">
+          <Link
+            href="/"
+            className="text-brand-400 hover:text-brand-300 font-semibold flex items-center gap-1 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Page d'accueil</span>
+          </Link>
+          <span>•</span>
           <Link
             href="/privacy"
             className="text-slate-400 hover:text-white underline transition-colors"
