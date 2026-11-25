@@ -1,12 +1,15 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 
 export interface PropertyCardData {
   id: string;
   code: string;
   title: string;
   price: string;
+  numericPrice?: number;
+  propertyType?: string;
   location: string;
   proximity: string;
   proximityIcon: string;
@@ -40,7 +43,10 @@ export function LandingPropertyCard({ property }: LandingPropertyCardProps) {
   };
 
   return (
-    <div className="flex flex-col rounded-2xl bg-surface-container shadow-md overflow-hidden group hover:-translate-y-1.5 transition-all duration-300 border border-surface-container-high/50 hover:border-surface-variant">
+    <Link
+      href={`/listings?ref=${property.code}`}
+      className="flex flex-col rounded-2xl bg-surface-container shadow-md overflow-hidden group hover:-translate-y-1.5 transition-all duration-300 border border-surface-container-high/50 hover:border-surface-variant block cursor-pointer"
+    >
       {/* Property Visual & Overlays */}
       <div className="relative h-60 w-full overflow-hidden bg-surface-container-high">
         <img
@@ -136,6 +142,6 @@ export function LandingPropertyCard({ property }: LandingPropertyCardProps) {
           </span>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
