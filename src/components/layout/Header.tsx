@@ -32,6 +32,8 @@ import {
   LeaseService,
   LandlordNotification,
 } from '@/lib/services/lease-service';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import {
   TenantNotificationService,
   TenantNotification,
@@ -63,6 +65,7 @@ export function Header({
   const { isLandlord, isTenant, isDemarcheur, isAdmin, activeSpace, user } = useSpace();
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   // Notifications Bailleur
   const [notifications, setNotifications] = useState<LandlordNotification[]>([]);
@@ -636,7 +639,14 @@ export function Header({
 
               <button
                 type="button"
-                onClick={() => router.push('/leases/new')}
+                onClick={() => {
+                  const check = PlanService.canLandlordSignNewLease(user);
+                  if (!check.allowed) {
+                    setIsUpgradeModalOpen(true);
+                    return;
+                  }
+                  router.push('/leases/new');
+                }}
                 className="hidden sm:inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer shrink-0"
               >
                 <Plus className="w-4 h-4 stroke-[3]" />
@@ -691,6 +701,16 @@ export function Header({
         isOpen={isSearchModalOpen}
         onClose={() => setIsSearchModalOpen(false)}
         initialQuery={searchVal}
+      />
+
+      {/* Upgrade Plan Modal */}
+      <UpgradePlanModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setIsUpgradeModalOpen(false);
+          router.push('/leases/new');
+        }}
       />
     </>
   );

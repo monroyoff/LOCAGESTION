@@ -19,6 +19,8 @@ import { useSpace } from '@/lib/context/space-context';
 import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
 import { IncidentService } from '@/lib/services/incident-service';
 import { PaymentService } from '@/lib/services/payment-service';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import { notifyAction } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 import { SkeletonLandlordDashboard } from '@/components/ui/SkeletonLoader';
@@ -41,6 +43,7 @@ export default function DashboardPage() {
   });
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [userProperties, setUserProperties] = useState<Property[]>([]);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 350);
@@ -258,7 +261,14 @@ export default function DashboardPage() {
                 + Encaisser
               </button>
               <button
-                onClick={() => router.push('/leases/new')}
+                onClick={() => {
+                  const check = PlanService.canLandlordSignNewLease(user);
+                  if (!check.allowed) {
+                    setIsUpgradeModalOpen(true);
+                    return;
+                  }
+                  router.push('/leases/new');
+                }}
                 className="py-2.5 px-4 rounded-2xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow transition-all active:scale-95 cursor-pointer"
               >
                 + Nouveau bail
@@ -391,6 +401,16 @@ export default function DashboardPage() {
           onSuccess={(msg) => showToast(msg)}
         />
       )}
+
+      {/* Modal d'upgrade forfait (Bailleur 2/2 baux signés) */}
+      <UpgradePlanModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setIsUpgradeModalOpen(false);
+          router.push('/leases/new');
+        }}
+      />
     </div>
   );
 }

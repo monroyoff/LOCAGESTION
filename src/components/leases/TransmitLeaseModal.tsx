@@ -25,6 +25,8 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import { Lease, LeaseService } from '@/lib/services/lease-service';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import { formatFCFA } from '@/lib/money/format';
 import { notifySave, notifyAction } from '@/lib/notifications/action-notifier';
 import { useAuth } from '@/lib/context/space-context';
@@ -76,6 +78,7 @@ export function TransmitLeaseModal({
   const router = useRouter();
   const { user } = useAuth();
   const [isTransmitting, setIsTransmitting] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showConfigHelp, setShowConfigHelp] = useState(false);
@@ -186,6 +189,13 @@ export function TransmitLeaseModal({
   };
 
   const handleTransmit = async () => {
+    const planCheck = PlanService.canLandlordSignNewLease(user);
+    if (!planCheck.allowed) {
+      setIsTransmitting(false);
+      setIsUpgradeModalOpen(true);
+      return;
+    }
+
     setIsTransmitting(true);
 
     try {
@@ -617,6 +627,15 @@ export function TransmitLeaseModal({
           </div>
         )}
       </div>
+
+      <UpgradePlanModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setIsUpgradeModalOpen(false);
+          notifySave('Formule Sérénité activée avec succès ! Vous pouvez maintenant transmettre le bail.', 'Abonnement activé');
+        }}
+      />
     </div>
   );
 }

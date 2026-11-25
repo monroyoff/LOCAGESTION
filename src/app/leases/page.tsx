@@ -43,6 +43,8 @@ import { useSpace } from '@/lib/context/space-context';
 import { notifyAction, notifySave, notifyDelete } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
 import { SkeletonLeaseCard } from '@/components/ui/SkeletonLoader';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 
 export default function LeasesPage() {
   const router = useRouter();
@@ -63,6 +65,16 @@ export default function LeasesPage() {
   const [leaseToTerminate, setLeaseToTerminate] = useState<Lease | null>(null);
   const [selectedInspectionLease, setSelectedInspectionLease] = useState<Lease | null>(null);
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState(() => PlanService.getUserPlan(spaceCtx.user?.id));
+
+  useEffect(() => {
+    const handlePlanChange = () => {
+      setCurrentPlan(PlanService.getUserPlan(spaceCtx.user?.id));
+    };
+    window.addEventListener('locagestion:plan_changed', handlePlanChange);
+    return () => window.removeEventListener('locagestion:plan_changed', handlePlanChange);
+  }, [spaceCtx.user?.id]);
 
   // État des baux réactifs gérés par le LeaseService
   const [leases, setLeases] = useState<Lease[]>([]);
@@ -327,10 +339,43 @@ export default function LeasesPage() {
                 Génération conforme OHADA / UEMOA & CEMAC, transmission directe aux comptes locataires et
                 contresignature électronique tactile.
               </p>
+
+              {/* Statut du Plan & Quota Baux Découverte / Sérénité */}
+              <div className="flex items-center gap-2 mt-2 flex-wrap">
+                {currentPlan === 'decouverte' ? (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-xs">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span className="font-semibold text-amber-800 dark:text-amber-300">
+                      Formule Découverte : {PlanService.getActiveSignedLeases(spaceCtx.user).length}/2 baux signés
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsUpgradeModalOpen(true)}
+                      className="ml-1 text-[11px] font-bold text-brand-600 dark:text-brand-400 hover:underline cursor-pointer"
+                    >
+                      Activer Sérénité (Illimité)
+                    </button>
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-xs">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span className="font-semibold text-emerald-800 dark:text-emerald-300">
+                      ⚡ Formule {currentPlan === 'pro' ? 'Entreprise & Pro' : 'Sérénité'} : Baux signés illimités
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
 
             <button
-              onClick={() => router.push('/leases/new')}
+              onClick={() => {
+                const planCheck = PlanService.canLandlordSignNewLease(spaceCtx.user);
+                if (!planCheck.allowed) {
+                  setIsUpgradeModalOpen(true);
+                  return;
+                }
+                router.push('/leases/new');
+              }}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
@@ -916,6 +961,16 @@ export default function LeasesPage() {
           )}
         </div>
       )}
+
+      {/* Modale d'Upgrade Formule Sérénité (Plafond 2 baux) */}
+      <UpgradePlanModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setIsUpgradeModalOpen(false);
+          router.push('/leases/new');
+        }}
+      />
     </div>
   );
 }

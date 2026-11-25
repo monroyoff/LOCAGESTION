@@ -1,5 +1,6 @@
 export type UserSpace = 'bailleur' | 'locataire' | 'demarcheur' | 'admin';
 export type LandlordSubRole = 'bailleur' | 'demarcheur';
+export type SubscriptionPlan = 'decouverte' | 'serenite' | 'pro';
 
 export type PaymentMethod =
   | 'wave'
@@ -302,6 +303,7 @@ export interface AuthUser {
   isIdentitySealed?: boolean; // Scellement officiel de l'identité (Nom, Prénom, Numéro, Matricule vérifiés et protégés)
   registeredAt: string;
   password?: string;
+  subscriptionPlan?: SubscriptionPlan; // 'decouverte' | 'serenite' | 'pro'
   emailVerified?: boolean; // Statut de confirmation email (lien de validation ou code à 6 chiffres)
   adminSessionVersion?: string; // Version de session pour invalidation et déconnexion globale
   accountStatus?: 'active' | 'blocked_temporary' | 'blocked_permanent'; // Statut de modération du compte

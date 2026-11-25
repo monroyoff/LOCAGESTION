@@ -79,6 +79,8 @@ import {
   generateParaphDataUrl,
 } from '@/lib/signatures/paraph-generator';
 import { TransmitLeaseModal } from '@/components/leases/TransmitLeaseModal';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { getUserResidenceCountry } from '@/lib/services/geo-service';
 import { useAuth } from '@/lib/context/space-context';
@@ -546,7 +548,17 @@ export default function NewLeasePage() {
   const [emergencyContactRelation, setEmergencyContactRelation] = useState('');
 
   const [isTransmitModalOpen, setIsTransmitModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [currentPlan, setCurrentPlan] = useState(() => PlanService.getUserPlan(user?.id));
   const [preparedLease, setPreparedLease] = useState<Lease | null>(null);
+
+  useEffect(() => {
+    const handlePlanChange = () => {
+      setCurrentPlan(PlanService.getUserPlan(user?.id));
+    };
+    window.addEventListener('locagestion:plan_changed', handlePlanChange);
+    return () => window.removeEventListener('locagestion:plan_changed', handlePlanChange);
+  }, [user?.id]);
 
   const handleSelectRegisteredTenant = (id: string) => {
     setSelectedRegisteredTenantId(id);
@@ -827,6 +839,13 @@ export default function NewLeasePage() {
       transmittedAt: new Date().toLocaleDateString('fr-FR'),
     };
 
+    const planCheck = PlanService.canLandlordSignNewLease(user);
+    if (!planCheck.allowed) {
+      setPreparedLease(lease);
+      setIsUpgradeModalOpen(true);
+      return;
+    }
+
     setPreparedLease(lease);
     setIsTransmitModalOpen(true);
   };
@@ -909,6 +928,35 @@ export default function NewLeasePage() {
               </button>
             </div>
           </div>
+
+          {/* Bannière d'avertissement Quota Découverte (2 baux signés actifs) */}
+          {!PlanService.canLandlordSignNewLease(user).allowed && (
+            <div className="rounded-3xl p-5 bg-gradient-to-r from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-300">
+              <div className="flex items-start sm:items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/15 text-amber-600 flex items-center justify-center shrink-0 shadow-inner">
+                  <Sparkles className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-full border border-amber-200">
+                      Quota Formule Découverte Atteint (2/2 Baux Signés)
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 font-semibold mt-1">
+                    Vous avez déjà <strong>2 baux signés à votre actif</strong>. Pour sceller et signer ce 3ᵉ contrat, l&apos;activation de la <strong>Formule Sérénité</strong> (0 F fixe, baux illimités) est requise.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-black shadow-md flex items-center gap-2 shrink-0 cursor-pointer active:scale-95 transition-all"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>Activer Sérénité (0 F fixe)</span>
+              </button>
+            </div>
+          )}
 
           {isLoading ? (
             <SkeletonStepperForm />
@@ -3586,6 +3634,19 @@ export default function NewLeasePage() {
         onSave={(updated) => {
           setInspectionData(updated);
           InspectionService.saveInspection(preparedLease?.id || 'BAIL-2026-N09', updated);
+        }}
+      />
+
+      {/* Modal d'Activation Obligatoire Formule Sérénité (3e bail & +) */}
+      <UpgradePlanModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        onSuccess={() => {
+          setIsUpgradeModalOpen(false);
+          notifySave(
+            'Formule Sérénité activée avec succès ! Vous bénéficiez désormais de la signature illimitée.',
+            'Abonnement Activé'
+          );
         }}
       />
     </div>
