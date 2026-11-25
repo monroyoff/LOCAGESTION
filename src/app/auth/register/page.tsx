@@ -524,24 +524,12 @@ export default function RegisterPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-2xl relative z-10">
         <div className="flex items-center justify-between mb-4">
           <Link href="/" className="flex items-center gap-3 group" title="Retourner à la page d'accueil">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-brand-600 via-brand-500 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform">
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-white"
-              >
-                <path
-                  d="M3 10.5L12 3L21 10.5V20C21 20.5523 20.5523 21 20 21H15V14H9V21H4C3.44772 21 3 20.5523 3 20V10.5Z"
-                  fill="currentColor"
-                />
-                <path
-                  d="M12 7.5L6 12.5V19H8V12H16V19H18V12.5L12 7.5Z"
-                  fill="rgba(255,255,255,0.4)"
-                />
-              </svg>
+            <div className="w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg shadow-brand-500/30 group-hover:scale-105 transition-transform shrink-0">
+              <img
+                src="/icon-192.png"
+                alt="LOCAGESTION Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div>
               <span className="text-xl font-black tracking-tight text-white block">

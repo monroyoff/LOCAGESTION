@@ -28,8 +28,12 @@ export function LandingFooter() {
           {/* Brand & Purpose Column (2 cols on lg) */}
           <div className="lg:col-span-2 flex flex-col gap-space-md">
             <div className="flex items-center gap-space-sm">
-              <div className="w-10 h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary border border-primary/20">
-                <span className="material-symbols-outlined text-[24px]">real_estate_agent</span>
+              <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center shrink-0 shadow-md">
+                <img
+                  src="/icon-192.png"
+                  alt="LOCAGESTION Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <span className="font-headline-sm text-headline-sm text-on-surface font-extrabold">
                 LOCA<span className="text-primary-container">GESTION</span>

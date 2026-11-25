@@ -881,25 +881,13 @@ export function Sidebar({
               href={isTenant ? '/portal' : isDemarcheur ? '/listings' : '/'}
               className="flex items-center gap-3 group"
             >
-              {/* Pink/Rose House Logo Icon */}
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-600 flex items-center justify-center shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform">
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="text-white"
-                >
-                  <path
-                    d="M3 10.5L12 3L21 10.5V20C21 20.5523 20.5523 21 20 21H15V14H9V21H4C3.44772 21 3 20.5523 3 20V10.5Z"
-                    fill="currentColor"
-                  />
-                  <path
-                    d="M12 7.5L6 12.5V19H8V12H16V19H18V12.5L12 7.5Z"
-                    fill="rgba(255,255,255,0.4)"
-                  />
-                </svg>
+              {/* Nouveau Logo Bouclier Officiel */}
+              <div className="w-10 h-10 rounded-2xl overflow-hidden flex items-center justify-center shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform shrink-0">
+                <img
+                  src="/icon-192.png"
+                  alt="LOCAGESTION Logo"
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div>
                 <span className="text-xl font-black tracking-tight text-white block">

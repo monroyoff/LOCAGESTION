@@ -157,8 +157,12 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
             data-path="accueil"
             title="Retour à l'accueil"
           >
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-surface-container-high flex items-center justify-center text-primary group-hover:scale-110 group-hover:shadow-[0_0_15px_rgba(255,178,183,0.5)] transition-all duration-300 shrink-0">
-              <span className="material-symbols-outlined text-[19px] sm:text-[24px]">real_estate_agent</span>
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl overflow-hidden flex items-center justify-center group-hover:scale-105 transition-all duration-300 shrink-0 shadow-md">
+              <img
+                src="/icon-192.png"
+                alt="LOCAGESTION Logo"
+                className="w-full h-full object-contain"
+              />
             </div>
             <div className="flex flex-col leading-none">
               <span className="text-[15px] sm:text-xl lg:text-[22px] tracking-tight text-on-surface font-extrabold whitespace-nowrap">
