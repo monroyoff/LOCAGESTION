@@ -50,13 +50,53 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
     if (mobileMenuOpen) setMobileMenuOpen(false);
   };
 
-  // Liens pour la navigation (concis sur desktop pour zéro retour à la ligne)
+  // Liens pour la navigation avec métadonnées riches (icônes & descriptions pour menu mobile pro)
   const navLinks = [
-    { label: 'Accueil', shortLabel: 'Accueil', path: 'accueil', href: '#accueil' },
-    { label: 'Espaces Métiers', shortLabel: 'Espaces', path: 'espaces-gestion', href: '#espaces-gestion' },
-    { label: 'Annonces & Logements', shortLabel: 'Annonces', path: 'annonces-et-recherche', href: '#annonces-et-recherche' },
-    { label: 'Tarifs & Offres', shortLabel: 'Tarifs', path: 'tarifs', href: '#tarifs' },
-    { label: 'Sécurité Juridique & OHADA', shortLabel: 'Sécurité', path: 'securite-et-lois-ohada', href: '#securite-et-lois-ohada' },
+    {
+      label: 'Accueil',
+      shortLabel: 'Accueil',
+      path: 'accueil',
+      href: '#accueil',
+      icon: 'home',
+      iconBg: 'bg-primary/15 text-primary',
+      description: 'Haut de page, vision PropTech & chiffres clés',
+    },
+    {
+      label: 'Espaces Métiers',
+      shortLabel: 'Espaces',
+      path: 'espaces-gestion',
+      href: '#espaces-gestion',
+      icon: 'domain',
+      iconBg: 'bg-secondary/15 text-secondary',
+      description: 'Bailleur Propriétaire, Résident & Démarcheur',
+    },
+    {
+      label: 'Annonces & Recherche',
+      shortLabel: 'Annonces',
+      path: 'annonces-et-recherche',
+      href: '#annonces-et-recherche',
+      icon: 'travel_explore',
+      iconBg: 'bg-tertiary/15 text-tertiary',
+      description: 'Logements géolocalisés avec Cash Power & forage',
+    },
+    {
+      label: 'Tarifs & Modèle',
+      shortLabel: 'Tarifs',
+      path: 'tarifs',
+      href: '#tarifs',
+      icon: 'payments',
+      iconBg: 'bg-amber-500/15 text-amber-500',
+      description: '100% transparent, sans frais cachés',
+    },
+    {
+      label: 'Sécurité Juridique & OHADA',
+      shortLabel: 'Sécurité',
+      path: 'securite-et-lois-ohada',
+      href: '#securite-et-lois-ohada',
+      icon: 'gavel',
+      iconBg: 'bg-indigo-500/15 text-indigo-400',
+      description: 'Lois nationales 14 pays UEMOA/CEMAC & baux certifiés',
+    },
   ];
 
   return (
@@ -67,7 +107,7 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
           : 'bg-surface/85 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]'
       }`}
     >
-      <div className="h-16 sm:h-20 w-full px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-3 max-w-7xl mx-auto relative">
+      <div className="h-[74px] sm:h-20 w-full px-3 sm:px-6 lg:px-8 flex items-center justify-between gap-2 sm:gap-3 max-w-7xl mx-auto relative">
         {/* Brand Logo & Menu Déroulant Mobile à gauche, en bas du nom LOCAGESTION */}
         <div className="flex flex-col items-start justify-center shrink-0">
           <Link
@@ -90,14 +130,14 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
             </div>
           </Link>
 
-          {/* Trigger Menu Mobile — Placé à gauche, en bas du nom LOCAGESTION (Bouton seul sans texte) */}
+          {/* Trigger Menu Mobile — Ergonomique, professionnel et confortable (w-9 h-9, 36px) */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden mt-1 w-7 h-7 flex items-center justify-center rounded-full bg-surface-container-high/90 hover:bg-surface-variant text-on-surface border border-surface-container-highest/60 shadow-sm active:scale-95 transition-all"
-            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
-            title="Menu"
+            className="lg:hidden mt-1.5 w-9 h-9 rounded-xl bg-surface-container-high hover:bg-surface-variant text-on-surface flex items-center justify-center border border-surface-container-highest shadow-sm active:scale-95 transition-all"
+            aria-label={mobileMenuOpen ? 'Fermer le menu' : 'Ouvrir le menu navigation'}
+            title="Menu de navigation"
           >
-            <span className="material-symbols-outlined text-[16px] text-primary">
+            <span className="material-symbols-outlined text-[20px] text-primary transition-transform duration-200">
               {mobileMenuOpen ? 'close' : 'menu'}
             </span>
           </button>
@@ -171,70 +211,111 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
         </div>
       </div>
 
-      {/* Menu Déroulant Mobile — STRICTEMENT ancré à gauche en bas du nom LOCAGESTION */}
+      {/* Menu Déroulant Mobile — Ancré à gauche en bas du logo, Spacieux, Pro & Haute Définition */}
       {mobileMenuOpen && (
         <>
-          {/* Backdrop pour fermer en touchant l'arrière-plan */}
+          {/* Backdrop avec flou moderne pour fermer au clic extérieur */}
           <div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[2px] lg:hidden"
+            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden transition-opacity"
             onClick={() => setMobileMenuOpen(false)}
           />
-          {/* Menu déroulant à gauche en bas du logo */}
-          <div className="absolute left-3 top-[calc(100%-4px)] w-[280px] max-w-[calc(100vw-24px)] rounded-2xl glass-dropdown border border-surface-container-high p-3 shadow-2xl z-50 animate-in slide-in-from-top-2 duration-200 lg:hidden">
-            <div className="flex flex-col gap-1.5">
-              <div className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider px-2 py-0.5 flex items-center justify-between">
-                <span>Menu Navigation</span>
-                <span className="text-[10px] text-secondary font-semibold">
-                  {isDark ? '🌙 Mode Nuit' : '☀️ Mode Jour'}
-                </span>
-              </div>
-              {navLinks.map((link) => (
-                <a
-                  key={link.path}
-                  href={link.href}
-                  onClick={(e) => {
-                    if (link.path === 'accueil') {
-                      handleScrollToTop(e);
-                    } else {
-                      setMobileMenuOpen(false);
-                    }
-                  }}
-                  className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-                    activePath === link.path
-                      ? 'bg-surface-container-high text-on-surface font-bold'
-                      : 'bg-surface-container-low text-on-surface hover:bg-surface-container-high'
-                  }`}
-                  data-path={link.path}
-                >
-                  <span>{link.label}</span>
-                  <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
-                    chevron_right
-                  </span>
-                </a>
-              ))}
 
-              <div className="pt-2 border-t border-surface-container-high/60 flex flex-col gap-2">
-                <a
-                  href="#guichet-verification"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-full bg-surface-container text-tertiary font-bold text-xs border border-tertiary/25"
-                  data-path="verification-quittance"
-                >
-                  <span className="material-symbols-outlined text-[16px]">verified</span>
-                  Vérifier une Quittance
-                </a>
-                <Link
-                  href={accountUrl}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-md active:scale-95 transition-all"
-                  data-path="authentification"
-                >
-                  <span className="material-symbols-outlined text-[16px]">
-                    {user ? 'dashboard' : 'login'}
-                  </span>
-                  {accountLabel}
-                </Link>
+          {/* Menu déroulant premium — Largeur généreuse, typographie aérée, icônes dédiées */}
+          <div className="absolute left-3 top-[calc(100%+6px)] w-[calc(100vw-24px)] max-w-[370px] rounded-3xl bg-surface-container-lowest/98 dark:bg-[#0c1017]/98 backdrop-blur-2xl border border-surface-container-high p-4 shadow-[0_20px_50px_rgba(0,0,0,0.55)] z-50 animate-in slide-in-from-top-3 duration-200 lg:hidden">
+            {/* Header du menu mobile */}
+            <div className="flex items-center justify-between pb-3 mb-2 border-b border-surface-container-high/60">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-surface-container-high flex items-center justify-center text-primary shadow-sm border border-surface-container-highest">
+                  <span className="material-symbols-outlined text-[18px]">widgets</span>
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-on-surface tracking-tight">Navigation Plateforme</div>
+                  <div className="text-[10px] text-secondary font-semibold uppercase tracking-wider">
+                    {isDark ? '🌙 Mode Nuit Actif' : '☀️ Mode Jour Actif'}
+                  </div>
+                </div>
               </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-8 h-8 rounded-full bg-surface-container-high hover:bg-surface-variant flex items-center justify-center text-on-surface-variant hover:text-on-surface active:scale-90 transition-all border border-surface-container-highest/60"
+                aria-label="Fermer le menu"
+              >
+                <span className="material-symbols-outlined text-[17px]">close</span>
+              </button>
+            </div>
+
+            {/* Liste des rubriques avec grandes icônes thématiques et descriptifs clairs */}
+            <div className="flex flex-col gap-1.5 py-1">
+              {navLinks.map((link) => {
+                const isActive = activePath === link.path;
+                return (
+                  <a
+                    key={link.path}
+                    href={link.href}
+                    onClick={(e) => {
+                      if (link.path === 'accueil') {
+                        handleScrollToTop(e);
+                      } else {
+                        setMobileMenuOpen(false);
+                      }
+                    }}
+                    className={`flex items-center gap-3 p-2.5 sm:p-3 rounded-2xl transition-all ${
+                      isActive
+                        ? 'bg-surface-container-high text-on-surface shadow-sm font-bold border border-surface-container-highest'
+                        : 'hover:bg-surface-container-high/70 text-on-surface active:bg-surface-container-high'
+                    }`}
+                    data-path={link.path}
+                  >
+                    <div className={`w-10 h-10 rounded-xl ${link.iconBg} flex items-center justify-center shrink-0 shadow-sm`}>
+                      <span className="material-symbols-outlined text-[20px]">{link.icon}</span>
+                    </div>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-[13.5px] font-bold truncate leading-tight">{link.label}</span>
+                      <span className="text-[11px] text-on-surface-variant truncate font-normal mt-0.5">{link.description}</span>
+                    </div>
+                    <span className="material-symbols-outlined text-[18px] text-on-surface-variant/60 shrink-0">
+                      chevron_right
+                    </span>
+                  </a>
+                );
+              })}
+            </div>
+
+            {/* Bloc d'actions prioritaires : Vérification QR Code & Espace Connexion */}
+            <div className="pt-3 mt-2 border-t border-surface-container-high/60 flex flex-col gap-2">
+              <a
+                href="#guichet-verification"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-surface-container hover:bg-surface-container-high text-tertiary font-bold text-xs border border-tertiary/25 active:scale-95 transition-all shadow-sm"
+                data-path="verification-quittance"
+              >
+                <span className="material-symbols-outlined text-[17px]">verified</span>
+                Vérifier une Quittance (QR Code)
+              </a>
+
+              <Link
+                href={accountUrl}
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-2 py-2.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs shadow-[0_4px_16px_rgba(244,63,110,0.35)] active:scale-95 transition-all"
+                data-path="authentification"
+              >
+                <span className="material-symbols-outlined text-[17px]">
+                  {user ? 'dashboard' : 'login'}
+                </span>
+                {accountLabel}
+              </Link>
+
+              {/* Raccourci Assistance Directe WhatsApp */}
+              <a
+                href="https://wa.me/2290195444430?text=Bonjour%20LOCAGESTION%2C%20j'ai%20besoin%20d'une%20assistance."
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 text-[11px] font-semibold text-secondary hover:underline"
+              >
+                <span className="material-symbols-outlined text-[14px]">support_agent</span>
+                Assistance WhatsApp : +229 01 95 44 44 30
+              </a>
             </div>
           </div>
         </>
