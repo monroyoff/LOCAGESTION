@@ -88,26 +88,121 @@
   animation: pulseBadge 2.5s infinite;
 }
 
+/* ==========================================================================
+   LOCAGESTION — Theme Tokens (Mode Sombre / Nuit & Mode Clair / Jour)
+   ========================================================================== */
+
+:root,
+.dark {
+  /* Mode Sombre (Nuit) — Obsidian & Néon PropTech */
+  --color-background: #0f131c;
+  --color-surface: #0f131c;
+  --color-surface-dim: #0f131c;
+  --color-surface-bright: #353942;
+  --color-surface-container-lowest: #0a0e16;
+  --color-surface-container-low: #181c24;
+  --color-surface-container: #1c2028;
+  --color-surface-container-high: #262a33;
+  --color-surface-container-highest: #31353e;
+  --color-surface-variant: #31353e;
+
+  --color-on-background: #dfe2ee;
+  --color-on-surface: #dfe2ee;
+  --color-on-surface-variant: #e3bdbf;
+
+  --color-primary: #ffb2b7;
+  --color-primary-container: #ff516a;
+  --color-on-primary: #67001b;
+  --color-on-primary-container: #5b0017;
+
+  --color-secondary: #4edea3;
+  --color-secondary-container: #00a572;
+  --color-on-secondary: #003824;
+  --color-on-secondary-container: #00311f;
+
+  --color-tertiary: #4cd7f6;
+  --color-tertiary-container: #009eb9;
+  --color-on-tertiary: #003640;
+  --color-on-tertiary-container: #002f38;
+
+  --color-outline: #aa888a;
+  --color-outline-variant: #5b4041;
+  --color-inverse-surface: #dfe2ee;
+  --color-inverse-on-surface: #2c3039;
+
+  --header-glass-bg: rgba(15, 19, 28, 0.85);
+  --header-glass-border: rgba(255, 255, 255, 0.05);
+  --card-glass-bg: rgba(28, 32, 40, 0.85);
+  --card-glass-border: rgba(255, 255, 255, 0.06);
+  --dropdown-glass-bg: rgba(24, 28, 36, 0.95);
+  --dropdown-glass-border: rgba(255, 255, 255, 0.08);
+}
+
+.light {
+  /* Mode Clair (Jour) — Pureté, Haute Lisibilité & Richesse Visuelle */
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-dim: #f1f5f9;
+  --color-surface-bright: #ffffff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f8fafc;
+  --color-surface-container: #f1f5f9;
+  --color-surface-container-high: #e2e8f0;
+  --color-surface-container-highest: #cbd5e1;
+  --color-surface-variant: #f1f5f9;
+
+  --color-on-background: #0f172a;
+  --color-on-surface: #0f172a;
+  --color-on-surface-variant: #334155;
+
+  --color-primary: #e11d48;
+  --color-primary-container: #ff3366;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffffff;
+
+  --color-secondary: #059669;
+  --color-secondary-container: #10b981;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #ffffff;
+
+  --color-tertiary: #0284c7;
+  --color-tertiary-container: #0ea5e9;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #ffffff;
+
+  --color-outline: #cbd5e1;
+  --color-outline-variant: #e2e8f0;
+  --color-inverse-surface: #0f172a;
+  --color-inverse-on-surface: #f8fafc;
+
+  --header-glass-bg: rgba(255, 255, 255, 0.92);
+  --header-glass-border: rgba(226, 232, 240, 0.85);
+  --card-glass-bg: rgba(255, 255, 255, 0.96);
+  --card-glass-border: rgba(226, 232, 240, 0.9);
+  --dropdown-glass-bg: rgba(255, 255, 255, 0.98);
+  --dropdown-glass-border: rgba(226, 232, 240, 0.95);
+}
+
 /* Glassmorphism & Surface Utilities */
 .glass-header {
-  background: rgba(15, 19, 28, 0.82);
+  background: var(--header-glass-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--header-glass-border);
 }
 
 .glass-card {
-  background: rgba(28, 32, 40, 0.85);
+  background: var(--card-glass-bg);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--card-glass-border);
 }
 
 .glass-dropdown {
-  background: rgba(24, 28, 36, 0.95);
+  background: var(--dropdown-glass-bg);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--dropdown-glass-border);
 }
 
 /* Glow effects */

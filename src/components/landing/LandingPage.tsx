@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ThemeProvider, useTheme } from '@/lib/context/theme-context';
 import { LandingHeader } from './LandingHeader';
 import { LandingHero } from './LandingHero';
 import { LandingSearchSection } from './LandingSearchSection';
@@ -10,15 +11,22 @@ import { LandingVerifyWidget } from './LandingVerifyWidget';
 import { LandingPillars } from './LandingPillars';
 import { LandingCTA } from './LandingCTA';
 import { LandingFooter } from './LandingFooter';
+import { LandingScrollToTop } from './LandingScrollToTop';
 
-export function LandingPage() {
+function LandingPageContent() {
+  const { isDark } = useTheme();
+
   return (
-    <div className="dark bg-background font-body-md text-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary min-h-screen flex flex-col w-full overflow-x-hidden">
-      {/* 1. Header with glassmorphism & mobile drawer */}
+    <div
+      className={`${
+        isDark ? 'dark' : 'light'
+      } bg-background font-body-md text-body-md text-on-surface antialiased selection:bg-primary-container selection:text-on-primary min-h-screen flex flex-col w-full overflow-x-hidden transition-colors duration-300`}
+    >
+      {/* 1. Header avec menu déroulant à gauche sur mobile & bascule jour/nuit */}
       <LandingHeader activePath="accueil" />
 
-      {/* 2. Main content container */}
-      <main className="w-full pt-20 bg-background flex-1 flex flex-col">
+      {/* 2. Conteneur principal avec ancrage Accueil pour le retour en haut */}
+      <main id="accueil" className="w-full pt-16 sm:pt-20 bg-background flex-1 flex flex-col scroll-mt-24 transition-colors duration-300">
         <div className="flex flex-col w-full">
           {/* Hero Section */}
           <LandingHero />
@@ -43,8 +51,19 @@ export function LandingPage() {
         </div>
       </main>
 
-      {/* 3. Comprehensive Footer with 14 countries */}
+      {/* 3. Pied de page complet couvrant les 14 pays */}
       <LandingFooter />
+
+      {/* 4. Bouton flottant flèche pour remonter rapidement en haut de page */}
+      <LandingScrollToTop />
     </div>
+  );
+}
+
+export function LandingPage() {
+  return (
+    <ThemeProvider>
+      <LandingPageContent />
+    </ThemeProvider>
   );
 }
