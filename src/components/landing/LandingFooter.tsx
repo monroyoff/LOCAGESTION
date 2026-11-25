@@ -182,13 +182,21 @@ export function LandingFooter() {
 
         {/* Bottom Copyright & Security Signatures */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-space-md pt-space-md border-t border-surface-container-high/50 text-on-surface-variant font-body-sm text-body-sm">
-          <p>© 2025 LOCAGESTION SAS. Tous droits réservés. Conforme aux Actes Uniformes OHADA &amp; Normes Bancaires BCEAO/BEAC.</p>
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-2 sm:gap-3 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 dark:bg-surface-container-high border border-slate-200/80 dark:border-surface-container-highest shadow-2xs text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-200">
+              <span className="text-sm leading-none">🇧🇯</span>
+              <span>Créée au Bénin pour l'Afrique</span>
+            </span>
+            <span className="text-xs text-on-surface-variant self-center text-center sm:text-left">
+              • © 2026 LOCAGESTION SAS. Conforme OHADA &amp; BCEAO/BEAC.
+            </span>
+          </div>
           <div className="flex items-center gap-space-md shrink-0">
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 text-xs">
               <span className="material-symbols-outlined text-[16px] text-secondary">shield</span>
               Cryptage SSL 256-Bit
             </span>
-            <span className="inline-flex items-center gap-1">
+            <span className="inline-flex items-center gap-1 text-xs">
               <span className="material-symbols-outlined text-[16px] text-primary">
                 currency_exchange
               </span>
