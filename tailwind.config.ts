@@ -45,7 +45,7 @@ const config: Config = {
           600: '#059669',
         },
         // Landing Page Design System Tokens (Dynamic Day/Night Adaptation)
-        outline: 'var(--color-outline, #aa888a)',
+        outline: 'var(--color-outline, #f43f6e)',
         'tertiary-fixed': '#acedff',
         'error-container': '#93000a',
         'surface-container-high': 'var(--color-surface-container-high, #262a33)',
@@ -64,7 +64,7 @@ const config: Config = {
         'on-tertiary-fixed': '#001f26',
         'on-secondary-fixed': '#002113',
         'surface-dim': 'var(--color-surface-dim, #0f131c)',
-        primary: 'var(--color-primary, #ffb2b7)',
+        primary: 'var(--color-primary, #f43f6e)',
         'surface-tint': '#ffb2b7',
         'inverse-on-surface': 'var(--color-inverse-on-surface, #2c3039)',
         'on-tertiary': 'var(--color-on-tertiary, #003640)',
@@ -90,7 +90,7 @@ const config: Config = {
         'on-primary-fixed-variant': '#92002a',
         surface: 'var(--color-surface, #0f131c)',
         'on-secondary-container': 'var(--color-on-secondary-container, #00311f)',
-        'on-surface-variant': 'var(--color-on-surface-variant, #e3bdbf)',
+        'on-surface-variant': 'var(--color-on-surface-variant, #f43f6e)',
         'secondary-fixed-dim': '#4edea3',
       },
       spacing: {

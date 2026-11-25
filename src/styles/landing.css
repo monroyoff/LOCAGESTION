@@ -108,9 +108,9 @@
 
   --color-on-background: #dfe2ee;
   --color-on-surface: #dfe2ee;
-  --color-on-surface-variant: #e3bdbf;
+  --color-on-surface-variant: #f43f6e;
 
-  --color-primary: #ffb2b7;
+  --color-primary: #f43f6e;
   --color-primary-container: #f43f6e;
   --color-on-primary: #ffffff;
   --color-on-primary-container: #ffffff;
@@ -125,7 +125,7 @@
   --color-on-tertiary: #003640;
   --color-on-tertiary-container: #002f38;
 
-  --color-outline: #aa888a;
+  --color-outline: #f43f6e;
   --color-outline-variant: #5b4041;
   --color-inverse-surface: #dfe2ee;
   --color-inverse-on-surface: #2c3039;
