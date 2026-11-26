@@ -9,6 +9,7 @@ export type PaymentMethod =
   | 'moov'
   | 'moov_money'
   | 'orange_money'
+  | 'carte_bancaire'
   | 'virement'
   | 'especes'
   | 'cheque';

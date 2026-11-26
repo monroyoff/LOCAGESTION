@@ -83,9 +83,12 @@ export function LandingHero() {
 
         {/* Payment Rails & Social Proof Bar */}
         <div className="mt-space-xl pt-space-md w-full max-w-4xl">
-          <p className="text-[11px] sm:text-xs uppercase tracking-wider text-slate-700 dark:text-slate-300 font-extrabold text-center mb-space-md">
-            Interconnexion Directe aux Opérateurs Financiers Locaux &amp; Régionaux
-          </p>
+          <div className="flex items-center justify-center mb-space-md">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-950 text-[11px] sm:text-xs uppercase tracking-wider font-black shadow-sm">
+              <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              Interconnexion Directe aux Opérateurs Financiers Locaux &amp; Régionaux
+            </span>
+          </div>
           <div className="grid grid-cols-2 gap-space-md items-center lg:grid-cols-5">
             {/* Wave */}
             <div className="flex items-center justify-center gap-space-xs p-space-md rounded-2xl bg-surface-container shadow-sm hover:bg-surface-container-high hover:-translate-y-1 transition-all border border-surface-container-high/40">

@@ -79,6 +79,7 @@ import { TenantNotificationService, TenantNotification } from '@/lib/services/te
 import { ConversationService, Conversation, Message } from '@/lib/services/conversation-service';
 import { TenantSignLeaseModal } from '@/components/leases/TenantSignLeaseModal';
 import { TenantDepartureModal } from '@/components/portal/TenantDepartureModal';
+import { FedaPayCheckoutModal } from '@/components/payments/FedaPayCheckoutModal';
 import { InspectionModal } from '@/components/leases/InspectionModal';
 import { InspectionService, InspectionData, InspectionPhoto } from '@/lib/services/inspection-service';
 import { IncidentService, ReportedIncident } from '@/lib/services/incident-service';
@@ -131,6 +132,8 @@ function TenantPortalContent() {
   const [edlRefreshTick, setEdlRefreshTick] = useState(0);
 
   const [declarationModalOpen, setDeclarationModalOpen] = useState(false);
+  const [fedaPayModalOpen, setFedaPayModalOpen] = useState(false);
+  const [fedaPayLease, setFedaPayLease] = useState<Lease | null>(null);
   const [reportIssueModalOpen, setReportIssueModalOpen] = useState(false);
   const [departureModalOpen, setDepartureModalOpen] = useState(false);
 
@@ -596,6 +599,12 @@ function TenantPortalContent() {
       setDeclaredAmount(String(months * (targetL.rent || 0)));
     }
     setDeclarationModalOpen(true);
+  };
+
+  const openFedaPayModalForLease = (leaseId?: string) => {
+    const targetL = leaseId ? myLeases.find((l) => l.id === leaseId) : (currentLease || myLeases[0]);
+    setFedaPayLease(targetL || null);
+    setFedaPayModalOpen(true);
   };
 
   useEffect(() => {
@@ -1870,11 +1879,19 @@ function TenantPortalContent() {
                           <div className="space-y-2 pt-2 border-t border-slate-100">
                             <button
                               type="button"
-                              onClick={() => openDeclarationModalForLease(l.id)}
-                              className="w-full py-2.5 px-3 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-black shadow-pink-glow flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                              onClick={() => openFedaPayModalForLease(l.id)}
+                              className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
                             >
-                              <Smartphone className="w-3.5 h-3.5" />
-                              <span>Payer ce loyer</span>
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Payer par Mobile Money (FedaPay)</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openDeclarationModalForLease(l.id)}
+                              className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <Smartphone className="w-3.5 h-3.5 text-slate-500" />
+                              <span>Déclarer un paiement espèces / virement</span>
                             </button>
                             <div className="grid grid-cols-2 gap-2">
                               <button
@@ -3896,12 +3913,12 @@ function TenantPortalContent() {
                               onClick={() => {
                                 TenantNotificationService.markAsRead(reminder.id);
                                 setPortalNotifs(TenantNotificationService.getNotifications(user));
-                                setDeclarationModalOpen(true);
+                                openFedaPayModalForLease(currentLease?.id);
                               }}
-                              className="py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
+                              className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
-                              <span>Régulariser / Payer mon loyer</span>
+                              <span>Payer par Mobile Money (FedaPay)</span>
                             </button>
 
                             <div className="flex items-center gap-2 flex-wrap">
@@ -4236,6 +4253,29 @@ function TenantPortalContent() {
             </div>
 
             <form onSubmit={handleDeclarePayment} className="p-6 space-y-4 text-xs">
+              {/* Option Recommandée : Paiement Direct Sécurisé FedaPay */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border border-emerald-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5 text-emerald-800 font-extrabold text-xs">
+                    <Zap className="w-4 h-4 text-emerald-600" />
+                    <span>Paiement Direct Instantané (Mobile Money)</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-700">
+                    Réglez par MTN, Moov, Wave ou Orange Money : quittance officielle scellée délivrée immédiatement sans attente de validation bailleur.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDeclarationModalOpen(false);
+                    openFedaPayModalForLease(declarationLeaseId || currentLease?.id);
+                  }}
+                  className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shrink-0 shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <CreditCard className="w-3.5 h-3.5" />
+                  <span>Payer via FedaPay</span>
+                </button>
+              </div>
               {/* Sélecteur de Bailleur / Bail si compte multi-baux */}
               {myLeases.length > 1 && (
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-2">
@@ -5235,6 +5275,32 @@ function TenantPortalContent() {
           </div>
         </div>
       )}
+
+      {/* Modal FedaPay Checkout Direct avec Quittance Instantanée */}
+      <FedaPayCheckoutModal
+        isOpen={fedaPayModalOpen}
+        onClose={() => setFedaPayModalOpen(false)}
+        lease={fedaPayLease || currentLease || myLeases[0] || null}
+        tenantUser={
+          user
+            ? {
+                id: user.id,
+                name: user.name,
+                phone: user.phone,
+                email: user.email,
+                matricule: user.matricule,
+              }
+            : undefined
+        }
+        onPaymentSuccess={() => {
+          checkLeases();
+          if (user) {
+            setPortalNotifs(TenantNotificationService.getNotifications(user));
+          }
+          setToastMessage('Paiement Mobile Money validé ! Votre quittance officielle a été émise.');
+          setTimeout(() => setToastMessage(null), 5000);
+        }}
+      />
 
       {/* Toast Notification */}
       {toastMessage && (
