@@ -236,8 +236,19 @@ export const PaymentService = {
         let parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
           let hasMutated = false;
-          // Élimination des faux paiements démo
-          const sanitized = parsed.filter((p: PaymentTransaction) => !isFakePayment(p));
+          // Élimination des faux paiements démo et normalisation des quittances officielles
+          const sanitized = parsed
+            .filter((p: PaymentTransaction) => !isFakePayment(p))
+            .map((p: PaymentTransaction) => {
+              if (p.receiptNumber && (p.receiptNumber.startsWith('QUITT-FEDA-') || p.receiptNumber.startsWith('FEDA-'))) {
+                hasMutated = true;
+                return {
+                  ...p,
+                  receiptNumber: p.receiptNumber.replace(/^(QUITT-FEDA-|FEDA-)/, 'LOCA-QUITT-BJ-'),
+                };
+              }
+              return p;
+            });
           if (sanitized.length !== parsed.length) {
             hasMutated = true;
             parsed = sanitized;
@@ -289,8 +300,20 @@ export const PaymentService = {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          const sanitized = parsed.filter((p: PaymentTransaction) => !isFakePayment(p));
-          if (sanitized.length !== parsed.length) {
+          let hasMutatedVer = false;
+          const sanitized = parsed
+            .filter((p: PaymentTransaction) => !isFakePayment(p))
+            .map((p: PaymentTransaction) => {
+              if (p.receiptNumber && (p.receiptNumber.startsWith('QUITT-FEDA-') || p.receiptNumber.startsWith('FEDA-'))) {
+                hasMutatedVer = true;
+                return {
+                  ...p,
+                  receiptNumber: p.receiptNumber.replace(/^(QUITT-FEDA-|FEDA-)/, 'LOCA-QUITT-BJ-'),
+                };
+              }
+              return p;
+            });
+          if (sanitized.length !== parsed.length || hasMutatedVer) {
             try {
               localStorage.setItem(STORAGE_KEY_VERIFIED, JSON.stringify(sanitized));
             } catch (e) { }

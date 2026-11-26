@@ -91,10 +91,25 @@ export function LandingVerifyWidget() {
       : matchedPayment?.method?.toUpperCase() || 'Mobile Money';
   const currentRef = matchedPayment?.receiptNumber || receiptCode.toUpperCase() || 'LOCA-QUITT-BJ-114409497';
 
+  const formatOfficialReceiptNumber = (ref?: string): string => {
+    if (!ref) return 'LOCA-QUITT-BJ-114409497';
+    let formatted = ref.trim().toUpperCase();
+    if (formatted.startsWith('QUITT-FEDA-')) {
+      formatted = formatted.replace('QUITT-FEDA-', 'LOCA-QUITT-BJ-');
+    } else if (formatted.startsWith('FEDA-')) {
+      formatted = formatted.replace('FEDA-', 'LOCA-QUITT-BJ-');
+    } else if (!formatted.startsWith('LOCA-') && formatted.includes('114409497')) {
+      formatted = 'LOCA-QUITT-BJ-114409497';
+    }
+    return formatted;
+  };
+
+  const displayRef = formatOfficialReceiptNumber(currentRef);
+
   return (
     <section
       id="guichet-verification"
-      className="w-full px-gutter md:px-margin-tablet lg:px-margin-desktop py-space-xl relative overflow-hidden"
+      className="w-full px-gutter md:px-margin-tablet lg:px-margin-desktop py-space-xl pb-24 relative overflow-hidden"
     >
       {/* Background ambient subtle blur */}
       <div className="absolute top-1/2 left-1/4 w-80 h-80 rounded-full bg-secondary-container/15 blur-[120px] pointer-events-none" />
@@ -163,34 +178,36 @@ export function LandingVerifyWidget() {
           </form>
         </div>
 
-        {/* Live Certified Receipt Mockup */}
+        {/* Live Certified Receipt Mockup (Zero Overlap & Mobile Responsive) */}
         <div
-          className={`w-full lg:w-[460px] p-space-lg rounded-2xl bg-surface-container-high shadow-2xl relative transition-all duration-500 border border-surface-container-highest ${
+          className={`w-full lg:w-[460px] p-4 sm:p-space-lg rounded-2xl bg-surface-container-high shadow-2xl relative transition-all duration-500 border border-surface-container-highest ${
             isVerifying ? 'opacity-70 scale-95' : 'opacity-100 scale-100'
           }`}
           id="demo-receipt"
         >
-          {/* Official Watermark Stamp with Gentle Rotation Micro-Animation */}
-          <div className="absolute right-6 top-6 w-24 h-24 rounded-full bg-secondary-container/10 flex items-center justify-center text-center pointer-events-none animate-rotate-stamp">
-            <div className="w-20 h-20 rounded-full bg-secondary-container/20 border-2 border-dashed border-secondary/50 flex flex-col items-center justify-center text-[9px] uppercase font-extrabold text-secondary leading-tight shadow-sm">
-              <span>CONFORME</span>
-              <span className="text-[12px] tracking-widest text-on-surface">OHADA</span>
-              <span>CERTIFIÉ</span>
-            </div>
-          </div>
-
-          {/* Receipt Header */}
-          <div className="flex items-center gap-3 pb-space-md border-b border-surface-container/60">
-            <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary shrink-0 shadow-sm">
-              <CheckCircle2 className="w-6 h-6 text-on-secondary" />
-            </div>
-            <div>
-              <div className="font-headline-sm text-headline-sm text-on-surface font-extrabold">
-                Quittance Numérique Certifiée
+          {/* Receipt Header (Clean, Zero Overlap, Mobile Optimized) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-surface-container/60">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary shrink-0 shadow-sm">
+                <CheckCircle2 className="w-6 h-6 text-on-secondary" />
               </div>
-              <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1 font-mono">
-                <span className="inline-block w-2 h-2 rounded-full bg-secondary animate-pulse" />
-                Réf : {currentRef} • SCELLÉ
+              <div className="min-w-0">
+                <h3 className="font-headline-sm text-sm sm:text-base text-on-surface font-extrabold truncate">
+                  Quittance Numérique Certifiée
+                </h3>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                  <span className="font-label-sm text-[11px] text-secondary font-bold font-mono truncate">
+                    Réf : {displayRef}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Official Badge Pill */}
+            <div className="self-start sm:self-center px-2.5 py-1 rounded-full bg-secondary/10 border border-secondary/30 flex items-center gap-1 shrink-0">
+              <span className="text-[9px] font-black uppercase tracking-wider text-secondary">
+                Conforme OHADA ✓
               </span>
             </div>
           </div>
@@ -254,8 +271,8 @@ export function LandingVerifyWidget() {
             </div>
 
             <Link
-              href={`/verify/${encodeURIComponent(currentRef)}`}
-              className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95 text-center"
+              href={`/verify/${encodeURIComponent(displayRef)}`}
+              className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md active:scale-95 text-center relative z-10"
             >
               <span>Consulter le Certificat Officiel Complet</span>
               <ArrowRight className="w-3.5 h-3.5" />
