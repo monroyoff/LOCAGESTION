@@ -269,7 +269,20 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
                 <strong>{payment.propertyName} ({payment.unitNumber})</strong>, et délivre la présente quittance officielle N° <strong className="font-mono text-slate-900">{payment.receiptNumber || 'LOCA-QUITT-BJ-114409497'}</strong>.
               </p>
               <p className="text-[11px] text-slate-600">
-                Mode de règlement constaté : <strong>{payment.method?.toUpperCase() === 'MTN' ? 'MTN Mobile Money (Passerelle FedaPay)' : (payment.method || 'Mobile Money')}</strong>
+                Mode de règlement constaté :{' '}
+                <strong>
+                  {(() => {
+                    const m = (payment.method || '').toLowerCase().trim();
+                    if (m === 'mtn' || m === 'mtn_momo' || m.includes('mtn')) return 'MTN Mobile Money (Passerelle FedaPay)';
+                    if (m === 'moov' || m === 'moov_money' || m.includes('moov')) return 'Moov Money (Passerelle FedaPay)';
+                    if (m === 'wave' || m.includes('wave')) return 'Wave Mobile Money';
+                    if (m === 'orange' || m === 'orange_money' || m.includes('orange')) return 'Orange Money';
+                    if (m === 'celtiis' || m.includes('celtiis')) return 'Celtiis Cash';
+                    if (m.includes('virement')) return 'Virement Bancaire';
+                    if (m.includes('espece')) return 'Règlement en Espèces / Reçu direct';
+                    return payment.method ? payment.method.toUpperCase() : 'MTN Mobile Money (Passerelle FedaPay)';
+                  })()}
+                </strong>
                 {payment.transactionRef && <> • Réf. Transaction : <span className="font-mono font-bold text-slate-800">{payment.transactionRef}</span></>}
               </p>
             </div>

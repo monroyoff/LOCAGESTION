@@ -154,24 +154,16 @@ export function formatNotificationTime(notif?: {
  * Libellé lisible pour les méthodes de paiement
  */
 export function getPaymentMethodLabel(method: string): string {
-  switch (method) {
-    case 'wave':
-      return 'Wave';
-    case 'mtn_momo':
-      return 'MTN Mobile Money';
-    case 'moov_money':
-      return 'Moov Money';
-    case 'orange_money':
-      return 'Orange Money';
-    case 'virement':
-      return 'Virement bancaire';
-    case 'especes':
-      return 'Espèces (Reçu direct)';
-    case 'cheque':
-      return 'Chèque';
-    default:
-      return method;
-  }
+  const m = (method || '').toLowerCase().trim();
+  if (m === 'mtn' || m === 'mtn_momo' || m.includes('mtn')) return 'MTN Mobile Money';
+  if (m === 'moov' || m === 'moov_money' || m.includes('moov')) return 'Moov Money';
+  if (m === 'wave' || m.includes('wave')) return 'Wave Mobile Money';
+  if (m === 'orange' || m === 'orange_money' || m.includes('orange')) return 'Orange Money';
+  if (m === 'celtiis' || m === 'celtiis_cash' || m.includes('celtiis')) return 'Celtiis Cash';
+  if (m === 'virement' || m.includes('virement')) return 'Virement bancaire';
+  if (m === 'especes' || m.includes('espece')) return 'Espèces (Reçu direct)';
+  if (m === 'cheque' || m.includes('cheque')) return 'Chèque bancaire';
+  return method || 'Mobile Money';
 }
 
 /**

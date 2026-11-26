@@ -245,7 +245,14 @@ export const PaymentService = {
                 return {
                   ...p,
                   receiptNumber: p.receiptNumber.replace(/^(QUITT-FEDA-|FEDA-)/, 'LOCA-QUITT-BJ-'),
+                  method: 'mtn' as const,
                 };
+              }
+              if (p.receiptNumber === 'LOCA-QUITT-BJ-114409497' || p.id === 'pay-feda-114409497') {
+                if (p.method !== 'mtn') {
+                  hasMutated = true;
+                  return { ...p, method: 'mtn' as const };
+                }
               }
               return p;
             });
@@ -309,7 +316,14 @@ export const PaymentService = {
                 return {
                   ...p,
                   receiptNumber: p.receiptNumber.replace(/^(QUITT-FEDA-|FEDA-)/, 'LOCA-QUITT-BJ-'),
+                  method: 'mtn' as const,
                 };
+              }
+              if (p.receiptNumber === 'LOCA-QUITT-BJ-114409497' || p.id === 'pay-feda-114409497') {
+                if (p.method !== 'mtn') {
+                  hasMutatedVer = true;
+                  return { ...p, method: 'mtn' as const };
+                }
               }
               return p;
             });

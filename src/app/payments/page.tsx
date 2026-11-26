@@ -25,7 +25,7 @@ import {
   FileText,
   Home,
 } from 'lucide-react';
-import { formatFCFA } from '@/lib/money/format';
+import { formatFCFA, getPaymentMethodLabel } from '@/lib/money/format';
 import { PaymentTransaction, UserSpace } from '@/lib/types';
 import { RecentPaymentsTable } from '@/components/dashboard/RecentPaymentsTable';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
@@ -398,7 +398,7 @@ function PaymentsPageContent() {
                           </span>
                           <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
                             <CreditCard className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Via {p.method.toUpperCase()}</span>
+                            <span>Via {getPaymentMethodLabel(p.method)}</span>
                             <span className="text-slate-300">•</span>
                             <span className="font-mono text-[11px] text-slate-600">
                               Réf: {p.transactionRef || p.receiptNumber}

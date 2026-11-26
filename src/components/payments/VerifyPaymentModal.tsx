@@ -85,20 +85,29 @@ export function VerifyPaymentModal({
   };
 
   const getMethodBadge = (m: string) => {
-    switch (m) {
-      case 'wave':
-        return { label: 'Wave Money', color: 'bg-sky-50 text-sky-700 border-sky-200' };
-      case 'mtn_momo':
-        return { label: 'MTN Mobile Money', color: 'bg-amber-50 text-amber-800 border-amber-200' };
-      case 'moov_money':
-        return { label: 'Moov Money', color: 'bg-blue-50 text-blue-700 border-blue-200' };
-      case 'orange_money':
-        return { label: 'Orange Money', color: 'bg-orange-50 text-orange-700 border-orange-200' };
-      case 'virement':
-        return { label: 'Virement bancaire', color: 'bg-purple-50 text-purple-700 border-purple-200' };
-      default:
-        return { label: m.toUpperCase(), color: 'bg-slate-50 text-slate-700 border-slate-200' };
+    const clean = (m || '').toLowerCase().trim();
+    if (clean === 'mtn' || clean === 'mtn_momo' || clean.includes('mtn')) {
+      return { label: 'MTN Mobile Money', color: 'bg-amber-50 text-amber-800 border-amber-300' };
     }
+    if (clean === 'moov' || clean === 'moov_money' || clean.includes('moov')) {
+      return { label: 'Moov Money', color: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+    if (clean === 'wave' || clean.includes('wave')) {
+      return { label: 'Wave Money', color: 'bg-sky-50 text-sky-700 border-sky-200' };
+    }
+    if (clean === 'orange' || clean === 'orange_money' || clean.includes('orange')) {
+      return { label: 'Orange Money', color: 'bg-orange-50 text-orange-700 border-orange-200' };
+    }
+    if (clean === 'celtiis' || clean.includes('celtiis')) {
+      return { label: 'Celtiis Cash', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+    }
+    if (clean.includes('virement')) {
+      return { label: 'Virement bancaire', color: 'bg-purple-50 text-purple-700 border-purple-200' };
+    }
+    if (clean.includes('espece')) {
+      return { label: 'Espèces', color: 'bg-slate-50 text-slate-700 border-slate-200' };
+    }
+    return { label: m ? m.toUpperCase() : 'Mobile Money', color: 'bg-slate-50 text-slate-700 border-slate-200' };
   };
 
   const badge = getMethodBadge(payment.method);

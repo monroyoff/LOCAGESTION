@@ -69,7 +69,7 @@ import {
   MessageSquare,
   DoorOpen,
 } from 'lucide-react';
-import { formatFCFA, formatNotificationTime } from '@/lib/money/format';
+import { formatFCFA, formatNotificationTime, getPaymentMethodLabel } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { PaymentTransaction } from '@/lib/types';
 import { generateLeasePDF, generateInspectionPDF, generateNoticePDF } from '@/lib/export/pdf-download';
@@ -1976,7 +1976,7 @@ function TenantPortalContent() {
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-500">Moyen de paiement :</span>
-                          <span className="text-slate-700 font-medium">{receiptsList[0]?.method ? receiptsList[0].method.toUpperCase() : 'Mobile Money'}</span>
+                          <span className="text-slate-700 font-medium">{getPaymentMethodLabel(receiptsList[0]?.method)}</span>
                         </div>
                       </div>
                     </div>
@@ -2689,7 +2689,7 @@ function TenantPortalContent() {
                             </>
                           )}
                           <span>•</span>
-                          <span>Payé le {rec.paymentDate} via {rec.method ? rec.method.toUpperCase() : 'WAVE'}</span>
+                          <span>Payé le {rec.paymentDate} via {getPaymentMethodLabel(rec.method)}</span>
                           <span>•</span>
                           <span className="text-emerald-600 font-bold flex items-center gap-1">
                             <ShieldCheck className="w-3 h-3" />

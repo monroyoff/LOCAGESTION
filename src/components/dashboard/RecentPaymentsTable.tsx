@@ -15,6 +15,7 @@ import {
   Phone,
   Building,
   Smartphone,
+  CreditCard,
   ExternalLink,
   Calendar,
   ArrowUpDown,
@@ -130,48 +131,74 @@ export function RecentPaymentsTable({
   };
 
   const getMethodBadge = (method: string) => {
-    switch (method) {
-      case 'wave':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">
-            <Smartphone className="w-3 h-3 text-cyan-600" />
-            <span>Wave</span>
-          </span>
-        );
-      case 'mtn_momo':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
-            <Smartphone className="w-3 h-3 text-amber-600" />
-            <span>MTN MoMo</span>
-          </span>
-        );
-      case 'orange_money':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200">
-            <Smartphone className="w-3 h-3 text-orange-600" />
-            <span>Orange Money</span>
-          </span>
-        );
-      case 'moov_money':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-            <Smartphone className="w-3 h-3 text-blue-600" />
-            <span>Moov</span>
-          </span>
-        );
-      case 'virement':
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">
-            <span>Virement</span>
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
-            <span>Espèces</span>
-          </span>
-        );
+    const m = (method || '').toLowerCase().trim();
+
+    // MTN Mobile Money (mtn, mtn_momo, mtn-money, etc.)
+    if (m === 'mtn' || m === 'mtn_momo' || m.includes('mtn')) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-amber-50 text-amber-800 border border-amber-300 shadow-2xs">
+          <Smartphone className="w-3 h-3 text-amber-600 shrink-0" />
+          <span>MTN MoMo</span>
+        </span>
+      );
     }
+
+    // Moov Money (moov, moov_money, etc.)
+    if (m === 'moov' || m === 'moov_money' || m.includes('moov')) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-blue-50 text-blue-700 border border-blue-200 shadow-2xs">
+          <Smartphone className="w-3 h-3 text-blue-600 shrink-0" />
+          <span>Moov Money</span>
+        </span>
+      );
+    }
+
+    // Wave
+    if (m === 'wave' || m.includes('wave')) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-cyan-50 text-cyan-700 border border-cyan-200 shadow-2xs">
+          <Smartphone className="w-3 h-3 text-cyan-600 shrink-0" />
+          <span>Wave</span>
+        </span>
+      );
+    }
+
+    // Orange Money
+    if (m === 'orange' || m === 'orange_money' || m.includes('orange')) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-orange-50 text-orange-700 border border-orange-200 shadow-2xs">
+          <Smartphone className="w-3 h-3 text-orange-600 shrink-0" />
+          <span>Orange Money</span>
+        </span>
+      );
+    }
+
+    // Celtiis Cash
+    if (m === 'celtiis' || m === 'celtiis_cash' || m.includes('celtiis')) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-purple-50 text-purple-700 border border-purple-200 shadow-2xs">
+          <Smartphone className="w-3 h-3 text-purple-600 shrink-0" />
+          <span>Celtiis</span>
+        </span>
+      );
+    }
+
+    // Virement bancaire
+    if (m === 'virement' || m.includes('virement')) {
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-extrabold bg-indigo-50 text-indigo-700 border border-indigo-200 shadow-2xs">
+          <CreditCard className="w-3 h-3 text-indigo-600 shrink-0" />
+          <span>Virement</span>
+        </span>
+      );
+    }
+
+    // Espèces (Reçu direct)
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">
+        <span>Espèces</span>
+      </span>
+    );
   };
 
   return (
