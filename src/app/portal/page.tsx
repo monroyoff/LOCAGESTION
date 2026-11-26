@@ -245,6 +245,15 @@ function TenantPortalContent() {
       } else if (!queryTab && typeof window !== 'undefined' && !window.location.hash) {
         setActiveTab('accueil');
       }
+
+      // Détection automatique du retour après paiement direct FedaPay sur mobile
+      const fedapayRef = searchParams.get('fedapay_ref') || searchParams.get('payment_status');
+      if (fedapayRef === 'success') {
+        setActiveTab('quittances');
+        setToastMessage('🎉 Paiement Mobile Money validé ! Votre quittance officielle scellée est prête ci-dessous.');
+        setTimeout(() => setToastMessage(null), 8000);
+      }
+
       if (action === 'declare_payment' || action === 'declare') {
         setDeclarationModalOpen(true);
       } else if (action === 'report_issue' || action === 'incident') {
