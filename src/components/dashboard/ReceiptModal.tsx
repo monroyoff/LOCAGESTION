@@ -26,21 +26,44 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
   const { user } = useAuth();
   if (!payment) return null;
 
-  const landlordName = payment.landlordName || user?.companyName || user?.name || 'Bailleur Propriétaire';
+  const isLandlordUser = user?.role === 'bailleur' || user?.role === 'admin';
+  const resolvedLandlordName =
+    payment.landlordName ||
+    (isLandlordUser ? (user?.companyName || user?.name) : null) ||
+    'VOGLOSSOU JOHANE';
+  const resolvedLandlordPhone =
+    payment.landlordPhone ||
+    (isLandlordUser ? user?.phone : null) ||
+    '+229 01 95 44 44 30';
+  const resolvedLandlordIfu =
+    payment.landlordIfu ||
+    (isLandlordUser ? (user?.ifuNumber || user?.ifu) : null) ||
+    '3201984210987';
+  const resolvedLandlordAddress =
+    payment.landlordAddress ||
+    (isLandlordUser ? (user?.propertyAddress || user?.residenceCity) : null) ||
+    'Haie Vive, Cotonou, Bénin';
 
-  const handleDownloadQuittance = () => {
-    generateReceiptPDF({
+  const handleDownloadQuittance = async () => {
+    await generateReceiptPDF({
       id: payment.id,
       receiptNumber: payment.receiptNumber || 'QUITT-2026',
-      tenantName: payment.tenantName || 'Locataire',
-      tenantPhone: payment.tenantPhone || '',
-      propertyName: payment.propertyName || 'Bien immobilier',
-      unitNumber: payment.unitNumber || 'Lot',
+      tenantName: payment.tenantName || 'Jojo VOG',
+      tenantPhone: payment.tenantPhone || '+229 97 00 12 34',
+      tenantEmail: payment.tenantEmail || 'jojovog007@gmail.com',
+      tenantMatricule: payment.tenantMatricule || 'LOCA-MAT-BJ-17635',
+      landlordName: resolvedLandlordName,
+      landlordPhone: resolvedLandlordPhone,
+      landlordAddress: resolvedLandlordAddress,
+      landlordIfu: resolvedLandlordIfu,
+      propertyName: payment.propertyName || 'CHAMBRE SALON SANITAIRE',
+      unitNumber: payment.unitNumber || 'Lot 1',
       period: payment.period || 'Mois en cours',
       amount: payment.amount || 0,
-      expectedAmount: payment.expectedAmount,
+      expectedAmount: payment.expectedAmount || payment.amount || 0,
       paymentDate: payment.paymentDate || new Date().toLocaleDateString('fr-FR'),
-      method: payment.method || 'wave',
+      method: payment.method || 'mtn',
+      transactionRef: payment.transactionRef,
       isVerified: payment.isVerified,
       isAdvance: payment.isAdvance,
       advanceMonthsCount: payment.advanceMonthsCount,
@@ -115,12 +138,12 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
                 Bailleur Émetteur
               </span>
               <h2 className="text-xl font-black text-slate-900">
-                {landlordName}
+                {resolvedLandlordName}
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                {user?.companyName ? `${user.companyName} • ` : ''}{user?.residenceCity || 'Cotonou'}, {user?.residenceCountry || 'Bénin'}<br />
-                {user?.ifuNumber ? `IFU : ${user.ifuNumber}` : 'Bailleur vérifié'}<br />
-                {user?.phone ? `Tél : ${user.phone}` : ''} {user?.email ? `• ${user.email}` : ''}
+                {resolvedLandlordAddress}<br />
+                IFU : {resolvedLandlordIfu}<br />
+                Tél : {resolvedLandlordPhone}
               </p>
             </div>
 
@@ -144,7 +167,9 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               <h4 className="font-extrabold text-sm text-slate-900">
                 {payment.tenantName || 'Locataire Titulaire'}
               </h4>
-              <p className="text-xs text-slate-500 mt-0.5">{payment.tenantPhone || 'N/A'}</p>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {payment.tenantPhone || '+229 97 00 12 34'} • Matricule : <strong className="text-slate-700">{payment.tenantMatricule || 'LOCA-MAT-BJ-17635'}</strong>
+              </p>
             </div>
 
             <div className="p-4 bg-white rounded-2xl border border-slate-200">
@@ -208,13 +233,19 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
           {/* Legal statement & Seal */}
           <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-200 text-xs text-slate-700 leading-relaxed flex items-start gap-3">
             <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <p>
-              Je soussigné, représentant légal de <strong>{user?.companyName || user?.name || landlordName || 'la Direction de Gestion'}</strong>,
-              reconnais avoir reçu de M./Mme <strong>{payment.tenantName}</strong> la somme
-              de <strong>{formatFCFA(payment.amount)}</strong> au titre du règlement du loyer
-              pour la période de <strong>{payment.period}</strong>, pour le logement situé à{' '}
-              <strong>{payment.propertyName} ({payment.unitNumber})</strong>.
-            </p>
+            <div className="space-y-1">
+              <p>
+                Je soussigné, représentant légal de <strong>{resolvedLandlordName}</strong>,
+                reconnais avoir reçu de M./Mme <strong>{payment.tenantName || 'Jojo VOG'}</strong> la somme
+                de <strong>{formatFCFA(payment.amount)}</strong> au titre du règlement du loyer
+                pour la période de <strong>{payment.period}</strong>, pour le logement situé à{' '}
+                <strong>{payment.propertyName} ({payment.unitNumber})</strong>.
+              </p>
+              <p className="text-[11px] text-slate-600">
+                Mode de règlement constaté : <strong>{payment.method?.toUpperCase() === 'MTN' ? 'MTN Mobile Money (Passerelle FedaPay)' : (payment.method || 'Mobile Money')}</strong>
+                {payment.transactionRef && <> • Réf. Transaction : <span className="font-mono font-bold text-slate-800">{payment.transactionRef}</span></>}
+              </p>
+            </div>
           </div>
 
           {/* Digital Signature & Verification QR */}
@@ -228,7 +259,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               </div>
               <div className="text-xs text-slate-500">
                 <span className="font-bold text-slate-800 block">Signé numériquement</span>
-                <span>{user?.name || landlordName} • Bailleur</span>
+                <span>{resolvedLandlordName} • Bailleur</span>
               </div>
             </div>
 
@@ -237,7 +268,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               <div className="text-xs text-slate-500 hidden sm:block">
                 <span className="font-bold text-slate-800 block">Vérification en ligne</span>
                 <span className="text-[10px] text-slate-400 font-mono">
-                  https://locagestion.site/verify/{payment.id}
+                  https://locagestion.site/verify/{payment.id || payment.receiptNumber}
                 </span>
               </div>
               <div className="w-14 h-14 bg-white p-1 rounded-xl border border-slate-300 shadow-sm flex items-center justify-center">

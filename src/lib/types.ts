@@ -135,6 +135,8 @@ export interface PaymentTransaction {
   landlordId?: string;
   landlordEmail?: string;
   landlordPhone?: string;
+  landlordIfu?: string;
+  landlordAddress?: string;
   isAdvance?: boolean;
   advanceMonthsCount?: number;
   advanceMonthsList?: string[];
@@ -300,6 +302,8 @@ export interface AuthUser {
   avatarUrl?: string;
   companyName?: string;     // Nom d'entreprise / Agence (Bailleur / Démarcheur)
   ifuNumber?: string;       // IFU fiscal (Bailleur)
+  ifu?: string;             // Alias IFU
+  propertyAddress?: string; // Adresse du bailleur ou de gestion
   matricule?: string;       // Matricule officiel plateforme (ex: LOCA-MAT-BJ-84291 ou LOCA-MAT-ADMIN-00001)
   isIdentitySealed?: boolean; // Scellement officiel de l'identité (Nom, Prénom, Numéro, Matricule vérifiés et protégés)
   registeredAt: string;

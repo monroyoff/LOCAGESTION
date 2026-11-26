@@ -270,12 +270,18 @@ export function FedaPayCheckoutModal({
     }
   };
 
-  const handleDownloadPDF = () => {
-    generateReceiptPDF({
-      receiptNumber: receiptNumber || 'QUITTANCE-FEDA-2026',
+  const handleDownloadPDF = async () => {
+    await generateReceiptPDF({
+      id: transactionRef ? `pay-feda-${transactionRef}` : `pay-feda-${Date.now()}`,
+      receiptNumber: receiptNumber || 'QUITT-FEDA-114409497',
       landlordName: lease?.landlordSignature?.signedBy || lease?.landlordName || 'VOGLOSSOU JOHANE',
+      landlordPhone: '+229 01 95 44 44 30',
+      landlordAddress: 'Haie Vive, Cotonou, Bénin',
+      landlordIfu: '3201984210987',
       tenantName: tenantUser?.name || 'Jojo VOG',
-      tenantPhone: tenantUser?.phone || '+229 97 00 00 02',
+      tenantPhone: tenantUser?.phone || '+229 97 00 12 34',
+      tenantEmail: tenantUser?.email || 'jojovog007@gmail.com',
+      tenantMatricule: tenantUser?.matricule || 'LOCA-MAT-BJ-17635',
       propertyName: lease?.property || 'CHAMBRE SALON SANITAIRE',
       unitNumber: lease?.unit || 'Lot 1',
       period,
@@ -283,6 +289,7 @@ export function FedaPayCheckoutModal({
       expectedAmount: effectiveRentAmount,
       paymentDate: new Date().toLocaleDateString('fr-FR'),
       method: selectedMethod,
+      transactionRef: transactionRef || undefined,
       isVerified: true,
     });
   };
