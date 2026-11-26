@@ -8,6 +8,7 @@ import { LandingSearchSection } from './LandingSearchSection';
 import { LandingPainPoints } from './LandingPainPoints';
 import { LandingSpaces } from './LandingSpaces';
 import { LandingVerifyWidget } from './LandingVerifyWidget';
+import { LandingMobileAppSection } from './LandingMobileAppSection';
 import { LandingPillars } from './LandingPillars';
 import { LandingPricing } from './LandingPricing';
 import { LandingCTA } from './LandingCTA';
@@ -43,6 +44,9 @@ function LandingPageContent() {
 
           {/* Widget en direct : Guichet Public de Vérification */}
           <LandingVerifyWidget />
+
+          {/* Section Dédiée : Application Mobile Android sur Google Play Store */}
+          <LandingMobileAppSection />
 
           {/* Les 5 Piliers Différenciateurs LOCAGESTION */}
           <LandingPillars />

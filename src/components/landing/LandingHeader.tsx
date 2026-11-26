@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSpace } from '@/lib/context/space-context';
 import { useTheme } from '@/lib/context/theme-context';
+import { GooglePlayBadge, GooglePlayIcon, PLAYSTORE_URL } from './GooglePlayBadge';
 
 interface LandingHeaderProps {
   activePath?: string;
@@ -115,6 +116,15 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
       description: '100% transparent, sans frais cachés',
     },
     {
+      label: 'Application Mobile',
+      shortLabel: 'App Mobile',
+      path: 'application-mobile',
+      href: '#application-mobile',
+      icon: 'smartphone',
+      iconBg: 'bg-emerald-500/15 text-emerald-500',
+      description: 'Disponible sur Google Play Store pour Android',
+    },
+    {
       label: 'Sécurité Juridique & OHADA',
       shortLabel: 'Sécurité',
       path: 'securite-et-lois-ohada',
@@ -200,8 +210,11 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
           })}
         </nav>
 
-        {/* Action Controls, Theme Toggle & Account Button */}
+        {/* Action Controls, Theme Toggle, Google Play Pill & Account Button */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          {/* Official Google Play Store Pill */}
+          <GooglePlayBadge variant="pill" className="hidden xl:inline-flex" />
+
           {/* Day / Night Theme Toggle Button */}
           <button
             onClick={toggleTheme}
@@ -272,6 +285,25 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
                 <span className="material-symbols-outlined text-[17px]">close</span>
               </button>
             </div>
+
+            {/* Bannière Application Google Play Store Mobile */}
+            <a
+              href={PLAYSTORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-slate-900 to-slate-950 text-white border border-slate-700/80 shadow-md mb-2 group active:scale-98 transition-all"
+            >
+              <div className="flex items-center gap-2.5">
+                <GooglePlayIcon className="w-6 h-6 shrink-0 group-hover:scale-110 transition-transform" />
+                <div className="flex flex-col text-left">
+                  <span className="text-[10px] uppercase font-bold text-slate-300 tracking-wider">Application Android</span>
+                  <span className="text-xs font-black text-white">Disponible sur Google Play</span>
+                </div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-500 text-black">
+                Installer
+              </span>
+            </a>
 
             {/* Rubriques avec grandes icônes thématiques et descriptifs clairs */}
             <div className="flex flex-col gap-1.5 py-1">

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { GooglePlayBadge } from './GooglePlayBadge';
 
 export function LandingFooter() {
   const uemoaCountries = [
@@ -51,6 +52,11 @@ export function LandingFooter() {
                 <span className="material-symbols-outlined text-[16px]">lock</span>
                 Paiements Sécurisés
               </span>
+            </div>
+
+            {/* Google Play Store Download in Footer */}
+            <div className="pt-2">
+              <GooglePlayBadge size="sm" />
             </div>
           </div>
 

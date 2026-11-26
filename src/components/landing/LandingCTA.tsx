@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { GooglePlayBadge } from './GooglePlayBadge';
 
 export function LandingCTA() {
   return (
@@ -39,6 +40,7 @@ export function LandingCTA() {
                 chevron_right
               </span>
             </Link>
+            <GooglePlayBadge size="md" className="w-full sm:w-auto justify-center" />
             <a
               href="https://wa.me/2290195444430?text=Bonjour%20LOCAGESTION%2C%20je%20souhaite%20parler%20%C3%A0%20un%20expert."
               target="_blank"

@@ -295,11 +295,10 @@ export function VerifyPaymentModal({
               type="button"
               onClick={handleReject}
               disabled={isSubmitting}
-              className={`w-full sm:w-auto px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                showRejectForm
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20'
-                  : 'bg-slate-100 hover:bg-rose-50 text-rose-700 border border-rose-200'
-              }`}
+              className={`w-full sm:w-auto px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${showRejectForm
+                ? 'bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/20'
+                : 'bg-slate-100 hover:bg-rose-50 text-rose-700 border border-rose-200'
+                }`}
             >
               <Ban className="w-4 h-4" />
               <span>{showRejectForm ? 'Confirmer le rejet' : 'Rejeter / Non reçu'}</span>

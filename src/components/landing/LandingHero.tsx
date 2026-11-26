@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { GooglePlayBadge, GooglePlayIcon, PLAYSTORE_URL } from './GooglePlayBadge';
 
 export function LandingHero() {
   return (
@@ -12,6 +13,25 @@ export function LandingHero() {
       <div className="absolute -bottom-24 left-1/3 w-80 h-80 rounded-full bg-tertiary-container/20 blur-[140px] pointer-events-none animate-pulse-halo" style={{ animationDelay: '5s' }} />
 
       <div className="relative max-w-7xl mx-auto flex flex-col items-center text-center">
+        {/* Play Store Announcement Pill */}
+        <a
+          href={PLAYSTORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-slate-900/95 dark:bg-slate-900 text-white shadow-md backdrop-blur-xl mb-3 border border-slate-700/80 hover:border-emerald-500/80 transition-all active:scale-95 group max-w-full"
+          title="Installer LOCAGESTION depuis Google Play Store"
+        >
+          <GooglePlayIcon className="w-4 h-4 shrink-0 group-hover:scale-110 transition-transform" />
+          <span className="text-[11px] sm:text-xs font-bold truncate">
+            Disponible sur <span className="text-emerald-400 font-extrabold">Google Play Store</span>
+          </span>
+          <span className="text-slate-500 text-[10px] hidden sm:inline">•</span>
+          <span className="text-[10px] text-slate-300 hidden sm:inline">Application Android Officielle</span>
+          <span className="material-symbols-outlined text-[14px] text-emerald-400 group-hover:translate-x-0.5 transition-transform shrink-0">
+            arrow_forward
+          </span>
+        </a>
+
         {/* Regulatory Trust Badge with Floating & Pulse Micro-interactions */}
         <div className="inline-flex items-center gap-1.5 sm:gap-space-xs px-3 py-1.5 sm:px-space-md sm:py-space-xs rounded-full bg-surface-container-high/90 text-on-surface shadow-md backdrop-blur-xl mb-space-md sm:mb-space-lg border border-surface-variant/40 animate-float-slow max-w-full">
           <span className="inline-block w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-secondary animate-pulse animate-pulse-badge shrink-0" />
@@ -37,7 +57,7 @@ export function LandingHero() {
           Fin définitive des feuilles volantes, des cautions abusives et des litiges d’expulsion. LOCAGESTION numérise le bail OHADA, automatise les encaissements Mobile Money et certifie vos quittances infalsifiables avec validité bancaire et consulaire.
         </p>
 
-        {/* Action Cluster - Refined Pro Compact */}
+        {/* Action Cluster - Refined Pro with Google Play */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3.5 w-full max-w-xs sm:max-w-none mx-auto">
           <Link
             href="/auth/register"
@@ -49,6 +69,10 @@ export function LandingHero() {
               arrow_forward
             </span>
           </Link>
+
+          {/* Official Google Play Store Button */}
+          <GooglePlayBadge size="md" className="w-full sm:w-auto justify-center" />
+
           <a
             href="#guichet-verification"
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 sm:px-5 sm:py-3 rounded-full bg-surface-container-high text-on-surface hover:bg-surface-variant font-medium text-xs sm:text-sm border border-surface-container-highest transition-all active:scale-95 whitespace-nowrap group shadow-sm"
@@ -69,6 +93,16 @@ export function LandingHero() {
             <span className="material-symbols-outlined text-secondary text-[16px] sm:text-[18px]">gavel</span>
             Baux Conformes au Droit OHADA
           </span>
+          <span className="text-slate-400 dark:text-slate-600">•</span>
+          <a
+            href={PLAYSTORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 hover:underline font-bold"
+          >
+            <GooglePlayIcon className="w-4 h-4 shrink-0" />
+            Application Google Play (4.9 ★)
+          </a>
           <span className="text-slate-400 dark:text-slate-600">•</span>
           <span className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-secondary text-[16px] sm:text-[18px]">qr_code_2</span>
