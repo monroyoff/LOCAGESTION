@@ -260,7 +260,7 @@ export function UpgradePlanModal({
 
               {/* Plans Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                {/* Formule 1 : Sérénité (0 FCFA fixe, 1.5% split payment) */}
+                {/* Formule 1 : Sérénité (0 FCFA fixe, 2% split payment) */}
                 <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between">
@@ -273,10 +273,10 @@ export function UpgradePlanModal({
                       <Sparkles className="w-3.5 h-3.5 text-primary" />
                     </h4>
                     <div className="text-lg font-extrabold text-primary my-1">
-                      1,5% <span className="text-xs font-normal text-slate-500">/ loyer Mobile Money</span>
+                      2% <span className="text-xs font-normal text-slate-500">/ loyer Mobile Money</span>
                     </div>
                     <p className="text-[11px] text-slate-500 font-medium mb-2">
-                      0 FCFA fixe • Facturé uniquement si loyer perçu
+                      0 FCFA fixe • Facturé uniquement si loyer perçu (98% net reversés)
                     </p>
                     <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
                       <li className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
@@ -285,15 +285,19 @@ export function UpgradePlanModal({
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>Split Payment Mobile Money automatique</span>
+                        <span>Split Payment Mobile Money automatique (98% net)</span>
+                      </li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Gestion des pannes &amp; suivi artisans (photos)</span>
+                      </li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Gestion des préavis &amp; restitution caution sous 30j</span>
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>Reversement instantané sur Mobile Wallet</span>
-                      </li>
-                      <li className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                        <span>Relances WhatsApp automatiques</span>
+                        <span>Relances automatiques par WhatsApp &amp; SMS</span>
                       </li>
                     </ul>
                   </div>
@@ -332,6 +336,14 @@ export function UpgradePlanModal({
                         <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                         <span>Baux, lots &amp; résidences illimités</span>
                       </li>
+                      <li className="flex items-center gap-1.5 font-semibold text-indigo-700 dark:text-indigo-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span>Maintenance multi-lots &amp; carnet artisans</span>
+                      </li>
+                      <li className="flex items-center gap-1.5 font-semibold text-indigo-700 dark:text-indigo-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <span>Préavis de résiliation &amp; contentieux huissier (OHADA)</span>
+                      </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                         <span>Gestion multi-utilisateurs &amp; rôles délégués</span>
@@ -343,10 +355,6 @@ export function UpgradePlanModal({
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                         <span>Exports fiscaux &amp; DGI / IFU automatisés</span>
-                      </li>
-                      <li className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                        <span>Support prioritaire 7j/7 &amp; chargé dédié</span>
                       </li>
                     </ul>
                   </div>

@@ -13,11 +13,11 @@ export function LandingPricing() {
   const faqs = [
     {
       q: 'Y a-t-il des frais fixes ou d\'engagement caché ?',
-      a: 'Absolument aucun. Vous pouvez créer votre compte et gérer vos biens à 0 FCFA/mois. Vous ne réglez la commission Split Payment (1,5%) que si un locataire règle son loyer directement via la passerelle Mobile Money.',
+      a: 'Absolument aucun. Vous pouvez créer votre compte et gérer vos biens à 0 FCFA/mois. Vous ne réglez la commission Split Payment (2%) que si un locataire règle son loyer directement via la passerelle Mobile Money.',
     },
     {
       q: 'Comment fonctionne le reversement sur mon compte bailleur ?',
-      a: 'Dès que le locataire valide son paiement (Wave, MTN Mobile Money, Moov Money, Orange Money ou Celtiis Cash), la transaction est divisée : 98,5% sont automatiquement crédités sur votre compte Mobile Money ou bancaire, et la commission de 1,5% est prélevée pour la plateforme.',
+      a: 'Dès que le locataire valide son paiement (Wave, MTN Mobile Money, Moov Money, Orange Money ou Celtiis Cash), la transaction est divisée : 98% sont automatiquement crédités sur votre compte Mobile Money ou bancaire, et la commission de 2% est prélevée pour la plateforme.',
     },
     {
       q: 'Puis-je continuer à encaisser des loyers en espèces ou par virement ?',
@@ -88,7 +88,7 @@ export function LandingPricing() {
                 Séparation Automatique
               </h4>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                La passerelle sécurisée divise la somme en temps réel : 98,5% pour le bailleur et 1,5% de commission de service pour LOCAGESTION.
+                La passerelle sécurisée divise la somme en temps réel : 98% pour le bailleur et 2% de commission de service pour LOCAGESTION.
               </p>
             </div>
 
@@ -149,6 +149,10 @@ export function LandingPricing() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
+                  <span>Signalement des pannes &amp; modèles de préavis</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Émission de quittances certifiées avec QR Code</span>
                 </li>
                 <li className="flex items-center gap-2">
@@ -186,14 +190,14 @@ export function LandingPricing() {
               </p>
 
               <div className="flex items-baseline gap-1 my-space-md pb-space-md border-b border-surface-container-high/60">
-                <span className="text-3xl sm:text-4xl font-extrabold text-primary">1,5%</span>
+                <span className="text-3xl sm:text-4xl font-extrabold text-primary">2%</span>
                 <span className="text-xs text-on-surface-variant font-medium">/ loyer Mobile Money</span>
               </div>
 
               <ul className="space-y-2.5 text-xs text-on-surface mb-space-lg">
                 <li className="flex items-center gap-2 font-medium">
                   <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
-                  <span><strong>Nombre de lots illimité</strong></span>
+                  <span><strong>Nombre de lots &amp; baux illimité</strong></span>
                 </li>
                 <li className="flex items-center gap-2 font-medium">
                   <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
@@ -201,7 +205,15 @@ export function LandingPricing() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
-                  <span>Reversement instantané sur votre Mobile Wallet</span>
+                  <span>Reversement instantané de <strong>98% net</strong> sur votre wallet</span>
+                </li>
+                <li className="flex items-center gap-2 font-medium text-emerald-600 dark:text-emerald-400">
+                  <span className="material-symbols-outlined text-[16px] shrink-0">handyman</span>
+                  <span><strong>Gestion complète des pannes</strong> (photos, devis &amp; artisans)</span>
+                </li>
+                <li className="flex items-center gap-2 font-medium text-emerald-600 dark:text-emerald-400">
+                  <span className="material-symbols-outlined text-[16px] shrink-0">departure_board</span>
+                  <span><strong>Gestion automatisée des préavis</strong> &amp; restitution caution 30j</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
@@ -253,6 +265,14 @@ export function LandingPricing() {
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Accès complet garanti 30 jours avec baux illimités</span>
+                </li>
+                <li className="flex items-center gap-2 font-medium text-indigo-600 dark:text-indigo-400">
+                  <span className="material-symbols-outlined text-[16px] shrink-0">home_repair_service</span>
+                  <span><strong>Maintenance multi-lots &amp; interventions</strong> (carnet artisans)</span>
+                </li>
+                <li className="flex items-center gap-2 font-medium text-indigo-600 dark:text-indigo-400">
+                  <span className="material-symbols-outlined text-[16px] shrink-0">gavel</span>
+                  <span><strong>Préavis de résiliation &amp; contentieux huissier</strong> (visas OHADA)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
