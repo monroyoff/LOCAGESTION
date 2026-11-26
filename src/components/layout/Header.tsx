@@ -23,6 +23,8 @@ import {
   MessageSquare,
   ShieldAlert,
   Phone,
+  ArrowLeft,
+  Globe,
 } from 'lucide-react';
 import { formatDateFR, formatNotificationTime } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
@@ -259,8 +261,8 @@ export function Header({
   return (
     <>
       <header className="sticky top-0 z-30 bg-[#F4F6F9]/90 backdrop-blur-md px-3.5 sm:px-8 py-3 sm:py-4 border-b border-slate-200/80 flex items-center justify-between gap-3 sm:gap-6">
-        {/* Left: Mobile Menu & Space Badge / Title (Emplacement cliquable pour retourner à l'accueil) */}
-        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+        {/* Left: Mobile Menu & Return to Landing Page Arrow & Space Title */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           <button
             onClick={onToggleSidebar}
             className="relative lg:hidden p-2 sm:p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 shadow-sm transition-colors cursor-pointer shrink-0"
@@ -274,6 +276,19 @@ export function Header({
               </span>
             )}
           </button>
+
+          {/* Flèche de retour direct à la Landing Page (Site public) */}
+          <Link
+            href="/accueil"
+            className="p-2 sm:p-2.5 rounded-2xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-brand-600 shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0 group active:scale-95"
+            title="Retourner à la page d'accueil du site (Landing Page)"
+            aria-label="Retourner à la landing page"
+          >
+            <ArrowLeft className="w-4 h-4 text-slate-700 group-hover:text-brand-600 group-hover:-translate-x-0.5 transition-transform" />
+            <span className="text-[11px] font-extrabold text-slate-700 group-hover:text-brand-600 hidden xs:inline sm:inline">
+              Site
+            </span>
+          </Link>
 
           <div className="flex flex-col justify-center">
             <button

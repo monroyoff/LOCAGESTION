@@ -11,6 +11,7 @@ import {
   Building2,
   CheckCircle2,
   Sparkles,
+  Receipt,
 } from 'lucide-react';
 import { PaymentTransaction } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
@@ -47,7 +48,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
   const handleDownloadQuittance = async () => {
     await generateReceiptPDF({
       id: payment.id,
-      receiptNumber: payment.receiptNumber || 'QUITT-2026',
+      receiptNumber: payment.receiptNumber || 'LOCA-QUITT-BJ-114409497',
       tenantName: payment.tenantName || 'Jojo VOG',
       tenantPhone: payment.tenantPhone || '+229 97 00 12 34',
       tenantEmail: payment.tenantEmail || 'jojovog007@gmail.com',
@@ -112,6 +113,31 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
 
         {/* Receipt Body (Printable Paper Style) */}
         <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-slate-800 bg-[#FAFBFD]">
+          {/* Numéro officiel de Quittance dans le corps du document */}
+          <div className="p-4 bg-slate-900 text-white rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md border border-slate-800">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-500 flex items-center justify-center text-white shrink-0 shadow-sm">
+                <Receipt className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                  Quittance de Loyer Numérique Certifiée N°
+                </span>
+                <span className="text-base sm:text-lg font-mono font-black text-brand-400 tracking-wider">
+                  {payment.receiptNumber || 'LOCA-QUITT-BJ-114409497'}
+                </span>
+              </div>
+            </div>
+            <div className="sm:text-right pl-13 sm:pl-0">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">
+                Période Acquittée
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-white">
+                {payment.period}
+              </span>
+            </div>
+          </div>
+
           {payment.isAdvance && (
             <div className="p-3.5 bg-purple-50 rounded-2xl border border-purple-200 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -239,7 +265,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
                 reconnais avoir reçu de M./Mme <strong>{payment.tenantName || 'Jojo VOG'}</strong> la somme
                 de <strong>{formatFCFA(payment.amount)}</strong> au titre du règlement du loyer
                 pour la période de <strong>{payment.period}</strong>, pour le logement situé à{' '}
-                <strong>{payment.propertyName} ({payment.unitNumber})</strong>.
+                <strong>{payment.propertyName} ({payment.unitNumber})</strong>, et délivre la présente quittance officielle N° <strong className="font-mono text-slate-900">{payment.receiptNumber || 'LOCA-QUITT-BJ-114409497'}</strong>.
               </p>
               <p className="text-[11px] text-slate-600">
                 Mode de règlement constaté : <strong>{payment.method?.toUpperCase() === 'MTN' ? 'MTN Mobile Money (Passerelle FedaPay)' : (payment.method || 'Mobile Money')}</strong>
@@ -268,7 +294,7 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
               <div className="text-xs text-slate-500 hidden sm:block">
                 <span className="font-bold text-slate-800 block">Vérification en ligne</span>
                 <span className="text-[10px] text-slate-400 font-mono">
-                  https://locagestion.site/verify/{payment.id || payment.receiptNumber}
+                  https://locagestion.site/verify/{payment.receiptNumber || payment.id}
                 </span>
               </div>
               <div className="w-14 h-14 bg-white p-1 rounded-xl border border-slate-300 shadow-sm flex items-center justify-center">

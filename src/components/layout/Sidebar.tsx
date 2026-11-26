@@ -30,6 +30,8 @@ import {
   Plus,
   Layers,
   Camera,
+  ArrowLeft,
+  Globe,
 } from 'lucide-react';
 import { UserSpace } from '@/lib/types';
 import { useSpace } from '@/lib/context/space-context';
@@ -907,6 +909,18 @@ export function Sidebar({
               <X className="w-5 h-5" />
             </button>
           </div>
+
+          {/* Bouton Direct Retour Landing Page (Site Public) */}
+          <Link
+            href="/accueil"
+            onClick={onClose}
+            className="flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 text-xs font-bold transition-all mb-4 cursor-pointer group active:scale-95"
+            title="Revenir sur la page d'accueil (Landing Page du site)"
+          >
+            <ArrowLeft className="w-4 h-4 text-brand-400 group-hover:-translate-x-1 transition-transform" />
+            <Globe className="w-4 h-4 text-slate-400 group-hover:text-brand-300 transition-colors" />
+            <span className="truncate">Retourner à la Landing Page</span>
+          </Link>
 
           {/* BADGE DE L'ESPACE EXCLUSIF DE L'UTILISATEUR */}
           <div className="p-3 bg-[#171b24] rounded-2xl border border-white/10 flex items-center gap-2.5 mb-4 shadow-sm">

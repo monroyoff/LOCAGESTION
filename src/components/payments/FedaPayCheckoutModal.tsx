@@ -273,7 +273,7 @@ export function FedaPayCheckoutModal({
   const handleDownloadPDF = async () => {
     await generateReceiptPDF({
       id: transactionRef ? `pay-feda-${transactionRef}` : `pay-feda-${Date.now()}`,
-      receiptNumber: receiptNumber || 'QUITT-FEDA-114409497',
+      receiptNumber: receiptNumber || 'LOCA-QUITT-BJ-114409497',
       landlordName: lease?.landlordSignature?.signedBy || lease?.landlordName || 'VOGLOSSOU JOHANE',
       landlordPhone: '+229 01 95 44 44 30',
       landlordAddress: 'Haie Vive, Cotonou, Bénin',

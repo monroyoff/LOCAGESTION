@@ -29,7 +29,7 @@ export const MONTHS_OF_YEAR = [
 export const INITIAL_DECLARED_PAYMENTS: PaymentTransaction[] = [
   {
     id: 'pay-feda-114409497',
-    receiptNumber: 'QUITT-FEDA-114409497',
+    receiptNumber: 'LOCA-QUITT-BJ-114409497',
     leaseId: 'BAIL-2026-421',
     tenantId: 'usr-tenant-jojovog',
     tenantName: 'Jojo VOG',

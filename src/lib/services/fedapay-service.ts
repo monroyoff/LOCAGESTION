@@ -111,10 +111,11 @@ export const FedaPayService = {
       minute: '2-digit',
     });
 
+    const countryIso = (params.lease?.country || 'BJ').toUpperCase().slice(0, 2);
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
-    const transactionId = `FEDA-TX-${Date.now()}-${randomSuffix}`;
+    const transactionId = `LOCA-TX-${Date.now()}-${randomSuffix}`;
     const reference = `FP-${params.paymentMethod.toUpperCase()}-${randomSuffix}`;
-    const receiptNumber = `QUITTANCE-${now.getFullYear()}-${randomSuffix}`;
+    const receiptNumber = `LOCA-QUITT-${countryIso}-${randomSuffix}`;
 
     // 1. Création de la transaction enregistrée
     const newPayment: PaymentTransaction = {

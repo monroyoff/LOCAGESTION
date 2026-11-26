@@ -488,10 +488,12 @@ export async function generateReceiptPDF(payment: ReceiptPDFData, customFilename
   doc.setDrawColor(226, 232, 240);
   doc.roundedRect(margin, y, contentWidth, 14, 2, 2, 'FD');
 
-  doc.setTextColor(51, 65, 85);
+  doc.setTextColor(15, 23, 42);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text(`QUITTANCE N° : ${payment.receiptNumber}`, margin + 5, y + 6);
+  doc.setFontSize(9.5);
+  doc.text(`QUITTANCE OFFICIELLE N° : ${payment.receiptNumber}`, margin + 5, y + 6);
+  doc.setFontSize(8.5);
+  doc.setTextColor(51, 65, 85);
   doc.text(`PÉRIODE : ${payment.period}`, margin + 5, y + 11);
 
   // Badge Soldé sans caractère cassé
@@ -699,7 +701,7 @@ export async function generateReceiptPDF(payment: ReceiptPDFData, customFilename
   doc.text('Sceau de certification électronique officiel apposé [CONFORME]', margin + 4, y + 17);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
-  const verifyCode = payment.id || payment.receiptNumber;
+  const verifyCode = payment.receiptNumber || payment.id;
   doc.text(`Vérification publique : https://locagestion.site/verify/${verifyCode}`, margin + 4, y + 22.5);
   doc.text('Document probant conforme SYSCOHADA et législation fiscale UEMOA & CEMAC', margin + 4, y + 28);
 
