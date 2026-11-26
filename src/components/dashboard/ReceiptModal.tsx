@@ -17,6 +17,7 @@ import { PaymentTransaction } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 import { generateReceiptPDF } from '@/lib/export/pdf-download';
 import { useAuth } from '@/lib/context/space-context';
+import LocagestionOfficialStamp from '@/components/common/LocagestionOfficialStamp';
 
 interface ReceiptModalProps {
   payment: PaymentTransaction | null;
@@ -278,14 +279,19 @@ export function ReceiptModal({ payment, onClose }: ReceiptModalProps) {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-slate-200">
             {/* Stamp & Signature */}
             <div className="flex items-center gap-3">
-              <div className="w-16 h-16 rounded-2xl border-2 border-brand-500/40 border-dashed flex flex-col items-center justify-center p-2 text-center text-brand-600">
-                <span className="text-[8px] font-black uppercase">Cachet Électronique</span>
-                <span className="text-[9px] font-bold">LOCAGESTION</span>
-                <span className="text-[7px]">Certifié UEMOA & CEMAC</span>
-              </div>
+              <LocagestionOfficialStamp
+                size="md"
+                variant="emerald"
+                tilt={true}
+                date={payment.paymentDate || '26/11/2026'}
+                className="shrink-0"
+              />
               <div className="text-xs text-slate-500">
                 <span className="font-bold text-slate-800 block">Signé numériquement</span>
                 <span>{resolvedLandlordName} • Bailleur</span>
+                <span className="text-[10px] text-emerald-700 font-bold block mt-0.5">
+                  Cachet d&apos;Authentification Officiel Apposé ✓
+                </span>
               </div>
             </div>
 

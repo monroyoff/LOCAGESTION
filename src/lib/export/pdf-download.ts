@@ -705,6 +705,36 @@ export async function generateReceiptPDF(payment: ReceiptPDFData, customFilename
   doc.text(`Vérification publique : https://locagestion.site/verify/${verifyCode}`, margin + 4, y + 22.5);
   doc.text('Document probant conforme SYSCOHADA et législation fiscale UEMOA & CEMAC', margin + 4, y + 28);
 
+  // Dessin du Cachet d'Authentification Numérique Rond Officiel LOCAGESTION (Sceau vectoriel)
+  const stampX = margin + contentWidth - 25 - 20;
+  const stampY = y + 18;
+  const stampR = 13;
+
+  doc.setDrawColor(5, 150, 105); // emerald-600
+  doc.setFillColor(236, 253, 245); // emerald-50
+  doc.circle(stampX, stampY, stampR, 'FD'); // Outer solid ring
+  doc.setLineDashPattern([0.8, 0.8], 0);
+  doc.circle(stampX, stampY, stampR - 1.5, 'S'); // Inner dashed security ring
+  doc.setLineDashPattern([], 0);
+  doc.circle(stampX, stampY, stampR - 3.8, 'S'); // Inner solid ring
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(4);
+  doc.setTextColor(4, 120, 87);
+  doc.text('★ CACHET OFFICIEL ★', stampX, stampY - 6.5, { align: 'center' });
+
+  doc.setFontSize(6);
+  doc.setTextColor(6, 95, 70);
+  doc.text('LOCAGESTION', stampX, stampY - 1.2, { align: 'center' });
+
+  doc.setFontSize(4);
+  doc.setTextColor(4, 120, 87);
+  doc.text('AUTHENTIFIÉ ✓', stampX, stampY + 3.2, { align: 'center' });
+
+  doc.setFontSize(3.3);
+  doc.setTextColor(5, 150, 105);
+  doc.text('OHADA • UEMOA', stampX, stampY + 6.8, { align: 'center' });
+
   // Génération et insertion du QR Code officiel sur la droite
   const qrUrl = `https://locagestion.site/verify/${verifyCode}`;
   try {

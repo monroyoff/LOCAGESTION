@@ -15,6 +15,7 @@ import { formatFCFA } from '@/lib/money/format';
 import { PaymentService } from '@/lib/services/payment-service';
 import { PaymentTransaction } from '@/lib/types';
 import { matchPaymentByCode } from '@/lib/services/receipt-matcher';
+import LocagestionOfficialStamp from '@/components/common/LocagestionOfficialStamp';
 
 export function LandingVerifyWidget() {
   const [receiptCode, setReceiptCode] = useState('LOCA-QUITT-BJ-114409497');
@@ -178,20 +179,25 @@ export function LandingVerifyWidget() {
           </form>
         </div>
 
-        {/* Live Certified Receipt Mockup (Zero Overlap & Mobile Responsive) */}
+        {/* Live Certified Receipt Mockup with Official LOCAGESTION Authentication Stamp */}
         <div
-          className={`w-full lg:w-[460px] p-4 sm:p-space-lg rounded-2xl bg-surface-container-high shadow-2xl relative transition-all duration-500 border border-surface-container-highest ${
+          className={`w-full lg:w-[460px] p-4 sm:p-space-lg rounded-2xl bg-surface-container-high shadow-2xl relative transition-all duration-500 border border-surface-container-highest overflow-hidden ${
             isVerifying ? 'opacity-70 scale-95' : 'opacity-100 scale-100'
           }`}
           id="demo-receipt"
         >
-          {/* Receipt Header (Clean, Zero Overlap, Mobile Optimized) */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-surface-container/60">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary shrink-0 shadow-sm">
+          {/* Subtle Watermark Stamp in Background */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] -rotate-12 z-0">
+            <LocagestionOfficialStamp size="xl" tilt={false} showBackground={false} />
+          </div>
+
+          {/* Receipt Header (Clean, Zero Overlap, Mobile Optimized with Official LOCAGESTION Stamp) */}
+          <div className="flex items-center justify-between gap-2.5 pb-3 border-b border-surface-container/60 relative z-10">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div className="w-10 h-10 rounded-2xl bg-secondary-container flex items-center justify-center text-on-secondary shrink-0 shadow-sm">
                 <CheckCircle2 className="w-6 h-6 text-on-secondary" />
               </div>
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h3 className="font-headline-sm text-sm sm:text-base text-on-surface font-extrabold truncate">
                   Quittance Numérique Certifiée
                 </h3>
@@ -201,15 +207,22 @@ export function LandingVerifyWidget() {
                     Réf : {displayRef}
                   </span>
                 </div>
+                <div className="mt-1">
+                  <span className="text-[9px] font-black uppercase tracking-wider text-secondary/90 bg-secondary/10 px-2 py-0.5 rounded-full border border-secondary/20 inline-block">
+                    Conforme OHADA &amp; UEMOA ✓
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Official Badge Pill */}
-            <div className="self-start sm:self-center px-2.5 py-1 rounded-full bg-secondary/10 border border-secondary/30 flex items-center gap-1 shrink-0">
-              <span className="text-[9px] font-black uppercase tracking-wider text-secondary">
-                Conforme OHADA ✓
-              </span>
-            </div>
+            {/* Cachet d'Authentification Numérique Officiel LOCAGESTION */}
+            <LocagestionOfficialStamp
+              size="md"
+              variant="emerald"
+              tilt={true}
+              date={matchedPayment?.paymentDate || '26/11/2026'}
+              className="shrink-0 -mr-1"
+            />
           </div>
 
           {/* Receipt Fields */}

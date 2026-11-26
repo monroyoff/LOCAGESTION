@@ -22,6 +22,7 @@ import { PaymentService } from '@/lib/services/payment-service';
 import { PaymentTransaction } from '@/lib/types';
 import { SkeletonCertificate } from '@/components/ui/SkeletonLoader';
 import { matchPaymentByCode } from '@/lib/services/receipt-matcher';
+import LocagestionOfficialStamp from '@/components/common/LocagestionOfficialStamp';
 
 interface VerifyPageProps {
   params: {
@@ -133,22 +134,37 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
         <SkeletonCertificate />
       ) : matchedPayment ? (
         <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/90 shadow-2xl space-y-6 relative overflow-hidden animate-in fade-in duration-300">
+          {/* Subtle Watermark Stamp in Background */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.035] -rotate-12 z-0">
+            <LocagestionOfficialStamp size="xl" tilt={false} showBackground={false} />
+          </div>
+
           {/* Certificate banner */}
-          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center gap-3.5 shadow-sm">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
-              <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 flex items-center justify-between gap-3.5 shadow-sm relative z-10">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+                <CheckCircle2 className="w-6 h-6 stroke-[2.5]" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">
+                  Document Officiel Certifié Conforme
+                </span>
+                <h2 className="text-base font-black text-emerald-950">
+                  Quittance de Loyer Authentique &amp; Scellée
+                </h2>
+                <p className="text-[11px] text-emerald-700">
+                  Intégrité cryptographique vérifiée dans le registre public officiel LOCAGESTION.
+                </p>
+              </div>
             </div>
-            <div>
-              <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">
-                Document Officiel Certifié Conforme
-              </span>
-              <h2 className="text-base font-black text-emerald-950">
-                Quittance de Loyer Authentique & Scellée
-              </h2>
-              <p className="text-[11px] text-emerald-700">
-                Intégrité cryptographique vérifiée dans le registre public officiel LOCAGESTION.
-              </p>
-            </div>
+
+            <LocagestionOfficialStamp
+              size="md"
+              variant="emerald"
+              tilt={true}
+              date={paymentDate}
+              className="shrink-0 hidden sm:inline-block ml-auto"
+            />
           </div>
 
           {/* Receipt Key Info */}
@@ -203,6 +219,35 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
               <span className="text-slate-800 font-bold text-sm">Montant Total Encaissé :</span>
               <span className="font-black text-emerald-600 text-xl">
                 {formatFCFA(amount)}
+              </span>
+            </div>
+          </div>
+
+          {/* Official LOCAGESTION Stamped Certification Section */}
+          <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 flex items-center justify-between gap-4 relative z-10">
+            <div className="flex items-center gap-3">
+              <LocagestionOfficialStamp
+                size="md"
+                variant="emerald"
+                tilt={true}
+                date={paymentDate}
+                className="shrink-0"
+              />
+              <div className="text-xs">
+                <span className="font-black text-emerald-950 uppercase tracking-wider text-[10px] block">
+                  Direction de la Sécurisation Locative
+                </span>
+                <span className="font-bold text-slate-800 text-[11px] block">
+                  Sceau d&apos;Authenticité Numérique Déposé
+                </span>
+                <span className="text-[10px] text-emerald-800 font-medium">
+                  Conforme SYSCOHADA, ANDF, DGI &amp; UEMOA
+                </span>
+              </div>
+            </div>
+            <div className="text-right hidden sm:block">
+              <span className="text-[10px] font-mono font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-lg border border-emerald-200 block">
+                SCELLÉ ACTIF ✓
               </span>
             </div>
           </div>
