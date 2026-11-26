@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSpace } from '@/lib/context/space-context';
 import { useTheme } from '@/lib/context/theme-context';
-import { GooglePlayBadge, GooglePlayIcon, PLAYSTORE_URL } from './GooglePlayBadge';
+import { GooglePlayIcon, PLAYSTORE_URL } from './GooglePlayBadge';
 
 interface LandingHeaderProps {
   activePath?: string;
@@ -210,11 +210,8 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
           })}
         </nav>
 
-        {/* Action Controls, Theme Toggle, Google Play Pill & Account Button */}
+        {/* Action Controls, Theme Toggle & Account Button */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          {/* Official Google Play Store Pill */}
-          <GooglePlayBadge variant="pill" className="hidden xl:inline-flex" />
-
           {/* Day / Night Theme Toggle Button */}
           <button
             onClick={toggleTheme}
