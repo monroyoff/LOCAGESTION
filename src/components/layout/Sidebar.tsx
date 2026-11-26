@@ -578,7 +578,7 @@ export function Sidebar({
     ];
 
     events.forEach((ev) => window.addEventListener(ev, updateAllBadges));
-    const interval = setInterval(updateAllBadges, 3000);
+    const interval = setInterval(updateAllBadges, 10000);
 
     return () => {
       events.forEach((ev) => window.removeEventListener(ev, updateAllBadges));

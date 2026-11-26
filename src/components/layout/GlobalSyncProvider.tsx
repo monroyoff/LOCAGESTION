@@ -10,11 +10,11 @@ export function GlobalSyncProvider({ children }: { children: React.ReactNode }) 
 
     // 2. Détection automatique et transparente des nouvelles versions déployées (TWA Android & Mobile)
     const checkVersion = async () => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return; // Ne pas solliciter le serveur si l'onglet est masqué ou en arrière-plan
+      }
       try {
-        const res = await fetch('/api/version', {
-          headers: { 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
-          cache: 'no-store',
-        });
+        const res = await fetch('/api/version');
         if (res.ok) {
           const data = await res.json();
           const savedVersion = localStorage.getItem('locagestion_app_version');
@@ -30,7 +30,7 @@ export function GlobalSyncProvider({ children }: { children: React.ReactNode }) 
     };
 
     checkVersion();
-    const interval = setInterval(checkVersion, 45000);
+    const interval = setInterval(checkVersion, 120000);
     return () => clearInterval(interval);
   }, []);
 

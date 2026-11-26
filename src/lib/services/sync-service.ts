@@ -23,6 +23,7 @@ let syncIntervalId: NodeJS.Timeout | null = null;
 let isSyncing = false;
 let isInitialized = false;
 let lastSyncCompletedAt = 0;
+let lastPushedPayloadStr = '';
 
 export const SyncService = {
   /**
@@ -36,17 +37,21 @@ export const SyncService = {
       return { success: false, leasesCount: 0, notifsCount: 0 };
     }
     const now = Date.now();
-    if (!force && now - lastSyncCompletedAt < 1800) {
+    if (!force && now - lastSyncCompletedAt < 4000) {
       return { success: true, leasesCount: 0, notifsCount: 0 };
     }
 
     isSyncing = true;
     try {
-      const res = await fetch('/api/sync', {
+      const clientEtag = localStorage.getItem('locagestion:sync_etag') || '';
+      const url = clientEtag ? `/api/sync?etag=${encodeURIComponent(clientEtag)}` : '/api/sync';
+
+      const res = await fetch(url, {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache',
           Pragma: 'no-cache',
+          ...(clientEtag ? { 'If-None-Match': clientEtag } : {}),
         },
         cache: 'no-store',
       });
@@ -60,6 +65,17 @@ export const SyncService = {
       if (!data || !data.success) {
         isSyncing = false;
         return { success: false, leasesCount: 0, notifsCount: 0 };
+      }
+
+      // ⚡ OPTIMISATION MAJEURE VERCEL : Si les données n'ont pas changé (ETag / NotModified)
+      if (data.notModified) {
+        lastSyncCompletedAt = Date.now();
+        isSyncing = false;
+        return { success: true, leasesCount: 0, notifsCount: 0 };
+      }
+
+      if (data.etag) {
+        localStorage.setItem('locagestion:sync_etag', data.etag);
       }
 
       const pushPayload: Record<string, any> = {};
@@ -858,11 +874,23 @@ export const SyncService = {
       // 13. ENVOI CONSOLIDÉ DES DELTAS LOCAUX VERS LE SERVEUR CENTRAL
       // =======================================================================
       if (needsServerPush && Object.keys(pushPayload).length > 0) {
-        fetch('/api/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(pushPayload),
-        }).catch(() => {});
+        const payloadStr = JSON.stringify(pushPayload);
+        // Évite la boucle de push infinie si le payload local n'a pas bougé
+        if (payloadStr !== lastPushedPayloadStr) {
+          lastPushedPayloadStr = payloadStr;
+          fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payloadStr,
+          })
+            .then(() => {
+              // Invalider l'ETag local pour que la prochaine synchro prenne en compte le nouvel état
+              try {
+                localStorage.removeItem('locagestion:sync_etag');
+              } catch {}
+            })
+            .catch(() => {});
+        }
       }
 
       lastSyncCompletedAt = Date.now();
@@ -915,6 +943,11 @@ export const SyncService = {
 
       if (!res.ok) return false;
       const data = await res.json();
+      if (data?.success) {
+        try {
+          localStorage.removeItem('locagestion:sync_etag');
+        } catch {}
+      }
       return Boolean(data?.success);
     } catch (e) {
       console.error('Erreur SyncService.push():', e);
@@ -923,8 +956,11 @@ export const SyncService = {
   },
 
   /**
-   * Initialise le moteur de synchronisation temps réel (toutes les 2,5 secondes,
-   * ainsi qu'au focus, retour réseau ou réouverture sur mobile / appli Android).
+   * Initialise le moteur de synchronisation intelligent Web <-> Mobile <-> Android :
+   * - 1 sync immédiat au montage
+   * - Cycle régulier de 45 secondes uniquement quand l'onglet est visible
+   * - Arrêt complet de la boucle en arrière-plan (économise 99% du quota Vercel)
+   * - Réactivation et synchronisation instantanée au focus, retour réseau ou réouverture
    */
   init() {
     if (typeof window === 'undefined' || isInitialized) return;
@@ -933,21 +969,40 @@ export const SyncService = {
     // Premier sync immédiat
     this.sync();
 
-    // Boucle de pulsation temps réel (2,5 secondes) pour une synchronisation instantanée Web <-> Mobile <-> Android
-    syncIntervalId = setInterval(() => {
-      this.sync();
-    }, 2500);
+    const SYNC_INTERVAL_ACTIVE = 45000;
 
-    const handleImmediateSync = () => {
-      this.sync();
+    const startInterval = () => {
+      if (syncIntervalId) clearInterval(syncIntervalId);
+      syncIntervalId = setInterval(() => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+          this.sync();
+        }
+      }, SYNC_INTERVAL_ACTIVE);
     };
 
-    window.addEventListener('focus', handleImmediateSync);
-    window.addEventListener('online', handleImmediateSync);
-    window.addEventListener('pageshow', handleImmediateSync);
+    const stopInterval = () => {
+      if (syncIntervalId) {
+        clearInterval(syncIntervalId);
+        syncIntervalId = null;
+      }
+    };
+
+    startInterval();
+
+    const handleActiveSync = () => {
+      this.sync();
+      startInterval();
+    };
+
+    window.addEventListener('focus', handleActiveSync);
+    window.addEventListener('online', handleActiveSync);
+    window.addEventListener('pageshow', handleActiveSync);
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        this.sync();
+        handleActiveSync();
+      } else {
+        stopInterval();
       }
     });
   },

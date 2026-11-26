@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import {
   readJsonFile,
   writeJsonFile,
@@ -278,7 +279,7 @@ function mergeUserIntoList(currentUsers: any[], incomingUser: any) {
   }
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const removedListingIds = readJsonFile<string[]>(REMOVED_LISTING_IDS_FILE, []);
     const trashListings = readJsonFile<any[]>(TRASH_LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
@@ -309,33 +310,60 @@ export async function GET(_req: NextRequest) {
     });
     const adminPassword = adminObj.password || 'Omega#Admin2027!LocaSecurity';
 
+    const rawData = {
+      leases,
+      notifications,
+      landlordNotifications,
+      notices,
+      incidents,
+      users,
+      listings,
+      trashListings,
+      removedListingIds: Array.from(removedSet).filter(Boolean),
+      properties,
+      conversations,
+      payments,
+      verifiedPayments,
+      inspections,
+      registeredTenants,
+      securityAlerts,
+      adminPassword,
+    };
+
+    // Calcul d'un ETag cryptographique rapide pour économie maximale de bande passante
+    const serialized = JSON.stringify(rawData);
+    const etag = `"${crypto.createHash('md5').update(serialized).digest('hex')}"`;
+
+    const clientEtag = req.headers.get('if-none-match') || req.nextUrl.searchParams.get('etag');
+    if (clientEtag && (clientEtag === etag || clientEtag.replace(/"/g, '') === etag.replace(/"/g, ''))) {
+      return NextResponse.json(
+        {
+          success: true,
+          notModified: true,
+          etag,
+        },
+        {
+          status: 200,
+          headers: {
+            'ETag': etag,
+            'Cache-Control': 'private, no-cache, must-revalidate',
+          },
+        }
+      );
+    }
+
     return NextResponse.json(
       {
         success: true,
-        leases,
-        notifications,
-        landlordNotifications,
-        notices,
-        incidents,
-        users,
-        listings,
-        trashListings,
-        removedListingIds: Array.from(removedSet).filter(Boolean),
-        properties,
-        conversations,
-        payments,
-        verifiedPayments,
-        inspections,
-        registeredTenants,
-        securityAlerts,
-        adminPassword,
+        notModified: false,
+        etag,
+        ...rawData,
         timestamp: new Date().toISOString(),
       },
       {
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-          Pragma: 'no-cache',
-          Expires: '0',
+          'ETag': etag,
+          'Cache-Control': 'private, no-cache, must-revalidate',
         },
       }
     );
@@ -718,34 +746,9 @@ export async function POST(req: NextRequest) {
       writeJsonFile(SECURITY_ALERTS_FILE, Array.from(alertMap.values()));
     }
 
-    // Retourner l'état unifié complet
-    const finalRemovedIds = readJsonFile<string[]>(REMOVED_LISTING_IDS_FILE, []);
-    const finalTrash = readJsonFile<any[]>(TRASH_LISTINGS_FILE, []).filter((l) => !isFakeServerListing(l));
-    const removedSet = new Set<string>([
-      ...finalRemovedIds.map((id) => String(id).trim()),
-      ...finalTrash.map((t) => String(t.id || '').trim()),
-    ]);
-
+    // Retourner une confirmation ultra-légère (économie majeure de bande passante Vercel)
     return NextResponse.json({
       success: true,
-      leases: readJsonFile<any[]>(LEASES_FILE, []).filter((l) => !isFakeServerLease(l)),
-      notifications: readJsonFile<any[]>(NOTIFS_FILE, []),
-      landlordNotifications: readJsonFile<any[]>(LANDLORD_NOTIFS_FILE, []),
-      notices: readJsonFile<any[]>(NOTICES_FILE, []),
-      incidents: readJsonFile<any[]>(INCIDENTS_FILE, []),
-      users: readJsonFile<any[]>(USERS_FILE, [], 'email').filter((u) => !isFakeServerUser(u)),
-      listings: readJsonFile<any[]>(LISTINGS_FILE, []).filter(
-        (l) => !isFakeServerListing(l) && !removedSet.has(String(l.id).trim())
-      ),
-      trashListings: finalTrash,
-      removedListingIds: Array.from(removedSet).filter(Boolean),
-      properties: readJsonFile<any[]>(PROPERTIES_FILE, []).filter((p) => !isFakeServerProperty(p)),
-      conversations: readJsonFile<any[]>(CONVERSATIONS_FILE, []),
-      payments: readJsonFile<any[]>(PAYMENTS_FILE, []),
-      verifiedPayments: readJsonFile<any[]>(VERIFIED_PAYMENTS_FILE, []),
-      inspections: readJsonObject<Record<string, any>>(INSPECTIONS_FILE, {}),
-      registeredTenants: readJsonFile<any[]>(REGISTERED_TENANTS_FILE, []),
-      securityAlerts: readJsonFile<any[]>(SECURITY_ALERTS_FILE, []),
       timestamp: new Date().toISOString(),
     });
   } catch (e) {
