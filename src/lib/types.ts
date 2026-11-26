@@ -304,6 +304,7 @@ export interface AuthUser {
   registeredAt: string;
   password?: string;
   subscriptionPlan?: SubscriptionPlan; // 'decouverte' | 'serenite' | 'pro'
+  subscriptionDetails?: UserSubscriptionDetails; // Détails de validité et renouvellement 30 jours
   emailVerified?: boolean; // Statut de confirmation email (lien de validation ou code à 6 chiffres)
   adminSessionVersion?: string; // Version de session pour invalidation et déconnexion globale
   accountStatus?: 'active' | 'blocked_temporary' | 'blocked_permanent'; // Statut de modération du compte
@@ -337,6 +338,18 @@ export interface SecurityAlert {
   detectedAt: string;
   status: 'non_traite' | 'bloque' | 'autorise_par_admin' | 'supprime';
   adminNotes?: string;
+}
+
+export interface UserSubscriptionDetails {
+  plan: SubscriptionPlan;
+  activatedAt?: string;      // Date ISO d'activation (ex: '2026-11-26T00:00:00.000Z')
+  expiresAt?: string;        // Date ISO d'échéance à J+30 (ex: '2026-12-26T00:00:00.000Z')
+  isExpired?: boolean;       // Forfait expiré au-delà des 30 jours
+  daysRemaining?: number;    // Nombre de jours restants avant échéance
+  pricePaid?: number;        // Montant acquitté (15 000 FCFA pour la formule Pro)
+  currency?: string;         // 'FCFA'
+  lastRenewalAt?: string;    // Date ISO du dernier renouvellement
+  cycleCount?: number;       // Nombre de cycles de 30 jours renouvelés
 }
 
 

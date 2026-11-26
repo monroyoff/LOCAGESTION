@@ -136,7 +136,9 @@ export interface LandlordNotification {
   | 'listing_approved'
   | 'listing_rejected'
   | 'visit_requested'
-  | 'message_received';
+  | 'message_received'
+  | 'subscription_alert'
+  | 'subscription_expired';
   read: boolean;
   leaseId?: string;
   incidentId?: string;

@@ -34,6 +34,7 @@ import {
 } from '@/lib/services/lease-service';
 import { PlanService } from '@/lib/services/plan-service';
 import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
+import { UserSubscriptionDetails } from '@/lib/types';
 import {
   TenantNotificationService,
   TenantNotification,
@@ -73,11 +74,14 @@ export function Header({
   const [tenantNotifs, setTenantNotifs] = useState<TenantNotification[]>([]);
   // Alertes Sécurité Super-Admin
   const [unreadAlertsCount, setUnreadAlertsCount] = useState(0);
+  const [userSub, setUserSub] = useState<UserSubscriptionDetails | null>(null);
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
 
   const updateNotifications = () => {
+    PlanService.checkAndGenerateSubscriptionAlerts(user);
+    setUserSub(PlanService.getUserSubscription(user?.id));
     setNotifications(LeaseService.getLandlordNotifications(user));
     setTenantNotifs(TenantNotificationService.getNotifications(user));
     setUnreadAlertsCount(ModerationService.getUnreadAlertsCount());
@@ -93,6 +97,7 @@ export function Header({
     window.addEventListener('locagestion:notifications_updated', handleStorage);
     window.addEventListener('locagestion:conversations_updated', handleStorage);
     window.addEventListener('locagestion:security_alerts_updated', handleStorage);
+    window.addEventListener('locagestion:plan_changed', handleStorage);
     window.addEventListener('locagestion:auth_changed', handleStorage);
     window.addEventListener('storage', handleStorage);
     return () => {
@@ -103,6 +108,7 @@ export function Header({
       window.removeEventListener('locagestion:notifications_updated', handleStorage);
       window.removeEventListener('locagestion:conversations_updated', handleStorage);
       window.removeEventListener('locagestion:security_alerts_updated', handleStorage);
+      window.removeEventListener('locagestion:plan_changed', handleStorage);
       window.removeEventListener('locagestion:auth_changed', handleStorage);
       window.removeEventListener('storage', handleStorage);
     };
@@ -140,7 +146,9 @@ export function Header({
     LeaseService.markNotificationAsRead(n.id);
     updateNotifications();
 
-    if (n.type === 'visit_requested' || n.type === 'message_received') {
+    if (n.type === 'subscription_alert' || n.type === 'subscription_expired') {
+      setIsUpgradeModalOpen(true);
+    } else if (n.type === 'visit_requested' || n.type === 'message_received') {
       const url = n.convId
         ? `/messages?convId=${encodeURIComponent(n.convId)}`
         : n.listingId
@@ -404,26 +412,34 @@ export function Header({
                           key={n.id}
                           onClick={() => handleLandlordNotifClick(n)}
                           className={`p-3.5 rounded-2xl transition-all space-y-1.5 cursor-pointer group ${!n.read
-                            ? n.type === 'incident_reported' || n.type === 'listing_rejected'
-                              ? 'bg-rose-50/70 border border-rose-200/80 hover:bg-rose-50'
-                              : n.type === 'listing_approved'
-                                ? 'bg-emerald-50/70 border border-emerald-200/80 hover:bg-emerald-50'
-                                : n.type === 'visit_requested' || n.type === 'message_received'
-                                  ? 'bg-brand-50/80 border border-brand-200/90 shadow-xs hover:bg-brand-50'
-                                  : 'bg-amber-50/70 border border-amber-200/60 hover:bg-amber-50'
+                            ? n.type === 'subscription_expired'
+                              ? 'bg-rose-50 border border-rose-300 hover:bg-rose-100/70 shadow-xs'
+                              : n.type === 'subscription_alert'
+                                ? 'bg-amber-50/90 border border-amber-300 hover:bg-amber-100/70 shadow-xs'
+                                : n.type === 'incident_reported' || n.type === 'listing_rejected'
+                                  ? 'bg-rose-50/70 border border-rose-200/80 hover:bg-rose-50'
+                                  : n.type === 'listing_approved'
+                                    ? 'bg-emerald-50/70 border border-emerald-200/80 hover:bg-emerald-50'
+                                    : n.type === 'visit_requested' || n.type === 'message_received'
+                                      ? 'bg-brand-50/80 border border-brand-200/90 shadow-xs hover:bg-brand-50'
+                                      : 'bg-amber-50/70 border border-amber-200/60 hover:bg-amber-50'
                             : 'hover:bg-slate-50 border border-transparent'
                             }`}
                         >
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 truncate">
                               <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${n.type === 'incident_reported' || n.type === 'listing_rejected'
-                                  ? 'bg-rose-500 animate-pulse'
-                                  : n.type === 'listing_approved'
-                                    ? 'bg-emerald-500'
-                                    : n.type === 'visit_requested' || n.type === 'message_received'
-                                      ? 'bg-brand-500 animate-pulse ring-2 ring-brand-200'
-                                      : 'bg-amber-500'
+                                className={`w-2 h-2 rounded-full shrink-0 ${n.type === 'subscription_expired'
+                                  ? 'bg-rose-600 animate-ping'
+                                  : n.type === 'subscription_alert'
+                                    ? 'bg-amber-500 animate-pulse'
+                                    : n.type === 'incident_reported' || n.type === 'listing_rejected'
+                                      ? 'bg-rose-500 animate-pulse'
+                                      : n.type === 'listing_approved'
+                                        ? 'bg-emerald-500'
+                                        : n.type === 'visit_requested' || n.type === 'message_received'
+                                          ? 'bg-brand-500 animate-pulse ring-2 ring-brand-200'
+                                          : 'bg-amber-500'
                                   }`}
                               />
                               <span className="truncate">{n.title}</span>
@@ -622,6 +638,39 @@ export function Header({
           {/* ============================================================== */}
           {isLandlord && (
             <>
+              {/* Badge Forfait Pro & Compte à Rebours 30 jours */}
+              {userSub?.plan === 'pro' && (
+                <button
+                  type="button"
+                  onClick={() => setIsUpgradeModalOpen(true)}
+                  className={`hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold border transition-all cursor-pointer active:scale-95 shrink-0 ${
+                    userSub.isExpired
+                      ? 'bg-rose-50 text-rose-700 border-rose-300 shadow-sm animate-pulse'
+                      : userSub.daysRemaining === 0
+                      ? 'bg-rose-50 text-rose-700 border-rose-300 animate-pulse'
+                      : userSub.daysRemaining === 1
+                      ? 'bg-orange-50 text-orange-700 border-orange-300'
+                      : userSub.daysRemaining === 2
+                      ? 'bg-amber-50 text-amber-700 border-amber-300'
+                      : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                  }`}
+                  title="Gérer ou renouveler votre forfait Formule Pro (15 000 FCFA / 30 jours)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>
+                    {userSub.isExpired
+                      ? '🔴 Pro Expiré (Réactiver)'
+                      : userSub.daysRemaining === 0
+                      ? '🚨 Pro : Expire aujourd’hui'
+                      : userSub.daysRemaining === 1
+                      ? '⚠️ Pro : Expire demain (J-1)'
+                      : userSub.daysRemaining === 2
+                      ? '⏳ Pro : 2j restants (J-2)'
+                      : `👑 Formule Pro (${userSub.daysRemaining}j)`}
+                  </span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {

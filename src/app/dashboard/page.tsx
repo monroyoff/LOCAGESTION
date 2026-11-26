@@ -16,7 +16,7 @@ import { MOCK_KPIS } from '@/lib/data/mock-data';
 import { UserSpace, PaymentTransaction, DashboardKPIs, Property } from '@/lib/types';
 import { PropertyService } from '@/lib/services/property-service';
 import { useSpace } from '@/lib/context/space-context';
-import { Sparkles, CheckCircle2, AlertCircle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
+import { Sparkles, CheckCircle2, AlertCircle, AlertTriangle, ArrowUpRight, Wrench, ArrowRight } from 'lucide-react';
 import { IncidentService } from '@/lib/services/incident-service';
 import { PaymentService } from '@/lib/services/payment-service';
 import { PlanService } from '@/lib/services/plan-service';
@@ -44,6 +44,15 @@ export default function DashboardPage() {
   const [payments, setPayments] = useState<PaymentTransaction[]>([]);
   const [userProperties, setUserProperties] = useState<Property[]>([]);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [subAlert, setSubAlert] = useState(() => PlanService.getSubscriptionAlertBanner(user));
+
+  useEffect(() => {
+    const handlePlanChange = () => {
+      setSubAlert(PlanService.getSubscriptionAlertBanner(user));
+    };
+    window.addEventListener('locagestion:plan_changed', handlePlanChange);
+    return () => window.removeEventListener('locagestion:plan_changed', handlePlanChange);
+  }, [user]);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 350);
@@ -275,6 +284,60 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
+
+          {/* Bannière Alerte Fin d'Abonnement Formule Pro (J-2, J-1, Jour J ou Expiré) */}
+          {subAlert && (
+            <div
+              className={`order-1.5 p-4 sm:p-5 rounded-3xl border-2 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in duration-300 ${
+                subAlert.level === 'expired' || subAlert.level === 'j-0'
+                  ? 'bg-rose-50/90 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800'
+                  : subAlert.level === 'j-1'
+                  ? 'bg-orange-50/90 dark:bg-orange-950/40 border-orange-300 dark:border-orange-800'
+                  : 'bg-amber-50/90 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800'
+              }`}
+            >
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div
+                  className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 shadow-inner ${
+                    subAlert.level === 'expired' || subAlert.level === 'j-0'
+                      ? 'bg-rose-500/20 text-rose-600'
+                      : subAlert.level === 'j-1'
+                      ? 'bg-orange-500/20 text-orange-600'
+                      : 'bg-amber-500/20 text-amber-600'
+                  }`}
+                >
+                  <AlertTriangle className="w-6 h-6 stroke-[2.2]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                        subAlert.level === 'expired' || subAlert.level === 'j-0'
+                          ? 'bg-rose-200 text-rose-900 font-extrabold'
+                          : subAlert.level === 'j-1'
+                          ? 'bg-orange-200 text-orange-900'
+                          : 'bg-amber-200 text-amber-900'
+                      }`}
+                    >
+                      {subAlert.title}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 dark:text-slate-200 font-semibold mt-1">
+                    {subAlert.message}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black shadow-md flex items-center gap-2 shrink-0 cursor-pointer active:scale-95 transition-all"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{subAlert.actionText}</span>
+              </button>
+            </div>
+          )}
 
           {/* 2. Tableau Opérations Récentes & Suivi des Loyers */}
           {/* SUR MOBILE : order-2 (déplacé en haut juste avant le Statut du Parc Immobilier) */}

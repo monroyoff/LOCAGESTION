@@ -67,10 +67,12 @@ export default function LeasesPage() {
   const [isInspectionModalOpen, setIsInspectionModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [currentPlan, setCurrentPlan] = useState(() => PlanService.getUserPlan(spaceCtx.user?.id));
+  const [userSub, setUserSub] = useState(() => PlanService.getUserSubscription(spaceCtx.user?.id));
 
   useEffect(() => {
     const handlePlanChange = () => {
       setCurrentPlan(PlanService.getUserPlan(spaceCtx.user?.id));
+      setUserSub(PlanService.getUserSubscription(spaceCtx.user?.id));
     };
     window.addEventListener('locagestion:plan_changed', handlePlanChange);
     return () => window.removeEventListener('locagestion:plan_changed', handlePlanChange);
@@ -356,11 +358,41 @@ export default function LeasesPage() {
                       Activer Sérénité (Illimité)
                     </button>
                   </div>
+                ) : userSub?.plan === 'pro' ? (
+                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl text-xs border ${
+                    userSub.isExpired
+                      ? 'bg-rose-50 border-rose-300 text-rose-800'
+                      : (userSub.daysRemaining ?? 30) === 0
+                      ? 'bg-rose-50 border-rose-300 text-rose-800 animate-pulse'
+                      : (userSub.daysRemaining ?? 30) <= 2
+                      ? 'bg-amber-50 border-amber-300 text-amber-800'
+                      : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                  }`}>
+                    <span className={`w-2 h-2 rounded-full ${userSub.isExpired || (userSub.daysRemaining ?? 30) === 0 ? 'bg-rose-600' : 'bg-indigo-600'}`} />
+                    <span className="font-semibold">
+                      {userSub.isExpired
+                        ? 'Formule Pro Expirée (30j terminés)'
+                        : (userSub.daysRemaining ?? 30) === 0
+                        ? '🚨 Formule Pro : Expire aujourd’hui !'
+                        : (userSub.daysRemaining ?? 30) === 1
+                        ? '⚠️ Formule Pro : Expire demain (J-1)'
+                        : (userSub.daysRemaining ?? 30) === 2
+                        ? '⏳ Formule Pro : 2 jours restants (J-2)'
+                        : `👑 Formule Entreprise & Pro : Baux illimités (${userSub.daysRemaining}j restants)`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setIsUpgradeModalOpen(true)}
+                      className="ml-1 text-[11px] font-bold text-indigo-700 hover:underline cursor-pointer"
+                    >
+                      {userSub.isExpired || (userSub.daysRemaining ?? 30) <= 2 ? 'Renouveler' : 'Gérer'}
+                    </button>
+                  </div>
                 ) : (
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900/60 text-xs">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
                     <span className="font-semibold text-emerald-800 dark:text-emerald-300">
-                      ⚡ Formule {currentPlan === 'pro' ? 'Entreprise & Pro' : 'Sérénité'} : Baux signés illimités
+                      ⚡ Formule Sérénité : Baux signés illimités (0 F fixe)
                     </span>
                   </div>
                 )}

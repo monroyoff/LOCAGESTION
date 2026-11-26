@@ -246,10 +246,18 @@ export function LandingPricing() {
 
               <div className="flex items-baseline gap-1 my-space-md pb-space-md border-b border-surface-container-high/60">
                 <span className="text-3xl sm:text-4xl font-extrabold text-on-surface">15 000 FCFA</span>
-                <span className="text-xs text-on-surface-variant font-medium">/ mois (ou 500 F/lot)</span>
+                <span className="text-xs text-on-surface-variant font-medium">/ mois (validité 30 jours)</span>
               </div>
 
               <ul className="space-y-2.5 text-xs text-on-surface-variant mb-space-lg">
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
+                  <span>Accès complet garanti 30 jours avec baux illimités</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
+                  <span>Alertes automatiques avant échéance (J-2, J-1 et Jour J)</span>
+                </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Gestion multi-utilisateurs &amp; rôles délégués</span>
@@ -257,10 +265,6 @@ export function LandingPricing() {
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Console Démarcheur &amp; Mandats certifiés</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
-                  <span>Commission dégressive négociée sur volume</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
