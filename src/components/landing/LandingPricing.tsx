@@ -195,36 +195,36 @@ export function LandingPricing() {
               </div>
 
               <ul className="space-y-2.5 text-xs text-on-surface mb-space-lg">
-                <li className="flex items-center gap-2 font-medium">
-                  <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span><strong>Nombre de lots &amp; baux illimité</strong></span>
                 </li>
-                <li className="flex items-center gap-2 font-medium">
-                  <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span><strong>Split Payment automatique</strong> (Wave, MTN, Moov, Orange, Celtiis)</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Reversement instantané de <strong>98% net</strong> sur votre wallet</span>
                 </li>
-                <li className="flex items-center gap-2 font-medium text-emerald-600 dark:text-emerald-400">
-                  <span className="material-symbols-outlined text-[16px] shrink-0">handyman</span>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span><strong>Gestion complète des pannes</strong> (photos, devis &amp; artisans)</span>
                 </li>
-                <li className="flex items-center gap-2 font-medium text-emerald-600 dark:text-emerald-400">
-                  <span className="material-symbols-outlined text-[16px] shrink-0">departure_board</span>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span><strong>Gestion automatisée des préavis</strong> &amp; restitution caution 30j</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Émission &amp; scellement automatique de la quittance</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Relances automatiques par WhatsApp &amp; SMS</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-primary shrink-0">check_circle</span>
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Passeport Solvabilité locataire en direct</span>
                 </li>
               </ul>
@@ -243,7 +243,7 @@ export function LandingPricing() {
           <div className="p-space-lg rounded-3xl bg-surface-container-lowest border border-surface-container-high flex flex-col justify-between shadow-sm hover:shadow-md transition-all">
             <div>
               <div className="flex items-center justify-between gap-2 mb-space-sm">
-                <span className="px-2.5 py-0.5 rounded-full bg-secondary-container/25 text-secondary font-bold text-[10px] uppercase">
+                <span className="px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-bold text-[10px] uppercase border border-surface-container-high/60">
                   Pour Professionnels
                 </span>
                 <span className="text-xs font-semibold text-on-surface-variant">
@@ -261,17 +261,17 @@ export function LandingPricing() {
                 <span className="text-xs text-on-surface-variant font-medium">/ mois (validité 30 jours)</span>
               </div>
 
-              <ul className="space-y-2.5 text-xs text-on-surface-variant mb-space-lg">
+              <ul className="space-y-2.5 text-xs text-on-surface mb-space-lg">
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
-                  <span>Accès complet garanti 30 jours avec baux illimités</span>
+                  <span><strong>Accès complet garanti 30 jours</strong> avec baux illimités</span>
                 </li>
-                <li className="flex items-center gap-2 font-medium text-indigo-600 dark:text-indigo-400">
-                  <span className="material-symbols-outlined text-[16px] shrink-0">home_repair_service</span>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span><strong>Maintenance multi-lots &amp; interventions</strong> (carnet artisans)</span>
                 </li>
-                <li className="flex items-center gap-2 font-medium text-indigo-600 dark:text-indigo-400">
-                  <span className="material-symbols-outlined text-[16px] shrink-0">gavel</span>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span><strong>Préavis de résiliation &amp; contentieux huissier</strong> (visas OHADA)</span>
                 </li>
                 <li className="flex items-center gap-2">
@@ -299,7 +299,7 @@ export function LandingPricing() {
 
             <Link
               href="/auth/register"
-              className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-semibold text-xs border border-surface-container-high/80 hover:border-primary/50 transition-all text-center"
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-bold text-xs border border-surface-container-high/80 hover:border-outline-variant/40 transition-all text-center"
             >
               <span>Activer la Formule Pro</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>

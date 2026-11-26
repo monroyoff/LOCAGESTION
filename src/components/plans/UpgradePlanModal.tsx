@@ -279,24 +279,24 @@ export function UpgradePlanModal({
                       0 FCFA fixe • Facturé uniquement si loyer perçu (98% net reversés)
                     </p>
                     <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-                      <li className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <li className="flex items-center gap-1.5 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Baux &amp; Contrats signés ILLIMITÉS</span>
                       </li>
                       <li className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Split Payment Mobile Money automatique (98% net)</span>
                       </li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <li className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Gestion des pannes &amp; suivi artisans (photos)</span>
                       </li>
-                      <li className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <li className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Gestion des préavis &amp; restitution caution sous 30j</span>
                       </li>
                       <li className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Relances automatiques par WhatsApp &amp; SMS</span>
                       </li>
                     </ul>
@@ -332,28 +332,28 @@ export function UpgradePlanModal({
                       Accès complet garanti 30 jours • Alertes d'échéance à J-2, J-1 et J
                     </p>
                     <ul className="space-y-1.5 text-xs text-slate-800 dark:text-slate-200">
-                      <li className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <li className="flex items-center gap-1.5 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Baux, lots &amp; résidences illimités</span>
                       </li>
-                      <li className="flex items-center gap-1.5 font-semibold text-indigo-700 dark:text-indigo-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <li className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Maintenance multi-lots &amp; carnet artisans</span>
                       </li>
-                      <li className="flex items-center gap-1.5 font-semibold text-indigo-700 dark:text-indigo-300">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                      <li className="flex items-center gap-1.5">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Préavis de résiliation &amp; contentieux huissier (OHADA)</span>
                       </li>
                       <li className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Gestion multi-utilisateurs &amp; rôles délégués</span>
                       </li>
                       <li className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Console Démarcheur &amp; Mandats certifiés</span>
                       </li>
                       <li className="flex items-center gap-1.5">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Exports fiscaux &amp; DGI / IFU automatisés</span>
                       </li>
                     </ul>
