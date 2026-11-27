@@ -730,6 +730,11 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
   - L'action associée et le lien dirigent directement vers la fiche technique `/incidents`.
 - **Affichage Immédiat en Tête de Portail (`/portal`) :**
   - Tout artisan mandaté pour une panne en cours s'affiche en tête absolue de l'Espace Résidentiel (`activeTab === 'accueil'`), dans un bandeau officiel présentant les coordonnées directes de l'artisan, ses notes d'intervention et deux boutons d'action instantanés : **« Appeler »** et **« WhatsApp »**.
+- **Fermeture & Disparition Ergonomique de la Bannière Artisan :**
+  - La bannière d'intervention artisan de l'Accueil Résident intègre une **croix de fermeture dédiée (« X »)** dans l'angle supérieur droit.
+  - Un clic sur la croix « X » ferme et masque immédiatement la bannière.
+  - De même, un clic sur le corps de la bannière ou sur le bouton *« Détails »* redirige vers `/incidents` tout en masquant la bannière d'accueil pour dégager la vue du tableau de bord.
+  - L'état de fermeture est persisté (`locagestion:dismissed_artisan_banners`) pour éviter toute réapparition intempestive au rafraîchissement tant qu'aucun nouvel artisan n'est assigné.
 - **Clic Intégral sur les Cartes de Notifications (`Header.tsx`) :**
   - Dans la cloche de notification, toute la carte de notification locataire est interactive (`cursor-pointer`). Un clic n'importe où sur l'élément ouvre directement le dossier concerné sans obliger l'utilisateur à chercher un sous-bouton miniature.
 - **Élimination des Boucles d'Ouverture et Redirections Fantômes :**

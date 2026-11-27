@@ -168,6 +168,27 @@ function TenantPortalContent() {
   // Historique des incidents déclarés synchronisé avec le service partagé
   const [reportedIncidents, setReportedIncidents] = useState<ReportedIncident[]>([]);
 
+  // Masquage de la bannière artisan mandaté après clic ou fermeture via la croix X
+  const [dismissedArtisanBanners, setDismissedArtisanBanners] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem('locagestion:dismissed_artisan_banners');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const handleDismissArtisanBanner = (incidentId: string) => {
+    setDismissedArtisanBanners((prev) => {
+      const next = Array.from(new Set([...prev, incidentId]));
+      try {
+        localStorage.setItem('locagestion:dismissed_artisan_banners', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+  };
+
   useEffect(() => {
     const loadIncidents = () => {
       setReportedIncidents(IncidentService.getIncidentsForTenant(user));
@@ -1747,17 +1768,35 @@ function TenantPortalContent() {
               )}
 
               {/* Bannière Artisans Mandatés Actifs (Affichée en tête dès l'ouverture du portail) */}
-              {reportedIncidents.filter((i) => i.status !== 'resolu' && i.assignedTechnician).length > 0 && (
+              {reportedIncidents.filter((i) => i.status !== 'resolu' && i.assignedTechnician && !dismissedArtisanBanners.includes(i.id)).length > 0 && (
                 <div className="space-y-3 animate-in slide-in-from-top-3 duration-200">
                   {reportedIncidents
-                    .filter((i) => i.status !== 'resolu' && i.assignedTechnician)
+                    .filter((i) => i.status !== 'resolu' && i.assignedTechnician && !dismissedArtisanBanners.includes(i.id))
                     .map((inc) => (
                       <div
                         key={`hero-artisan-${inc.id}`}
-                        className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-400/80 ring-4 ring-blue-500/20"
+                        onClick={() => {
+                          handleDismissArtisanBanner(inc.id);
+                          router.push('/incidents');
+                        }}
+                        className="relative p-4 sm:p-5 pr-12 rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-400/80 ring-4 ring-blue-500/20 cursor-pointer hover:border-blue-300 transition-all group"
                       >
+                        {/* Bouton croix fermer */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDismissArtisanBanner(inc.id);
+                          }}
+                          className="absolute top-3.5 right-3.5 p-1.5 rounded-full bg-white/10 hover:bg-white/25 text-blue-200 hover:text-white transition-all cursor-pointer z-10"
+                          title="Fermer cette notification"
+                          aria-label="Fermer cette notification"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+
                         <div className="flex items-start sm:items-center gap-3.5 min-w-0">
-                          <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner">
+                          <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform">
                             <Wrench className="w-6 h-6 animate-pulse text-amber-400" />
                           </div>
                           <div className="min-w-0">
@@ -1787,9 +1826,13 @@ function TenantPortalContent() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0 w-full sm:w-auto">
+                        <div
+                          className="flex items-center gap-2.5 self-start sm:self-auto shrink-0 w-full sm:w-auto"
+                          onClick={(e) => e.stopPropagation()}
+                        >
                           <a
                             href={`tel:${inc.assignedTechnician?.phone.replace(/[^0-9+]/g, '')}`}
+                            onClick={(e) => e.stopPropagation()}
                             className="flex-1 sm:flex-none py-2.5 px-4 rounded-xl bg-white hover:bg-blue-50 text-blue-900 text-xs font-black flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
                           >
                             <Phone className="w-3.5 h-3.5 text-blue-600" />
@@ -1799,6 +1842,7 @@ function TenantPortalContent() {
                             href={`https://wa.me/${inc.assignedTechnician?.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
                               `Bonjour ${inc.assignedTechnician?.name},\n\nJe suis le locataire pour l'intervention #${inc.id} (${inc.category}) concernant le logement ${inc.unit}.\nQuand seriez-vous disponible pour intervenir ?\n\nMerci.`
                             )}`}
+                            onClick={(e) => e.stopPropagation()}
                             target="_blank"
                             rel="noreferrer"
                             className="flex-1 sm:flex-none py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
@@ -1808,7 +1852,11 @@ function TenantPortalContent() {
                           </a>
                           <button
                             type="button"
-                            onClick={() => router.push('/incidents')}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDismissArtisanBanner(inc.id);
+                              router.push('/incidents');
+                            }}
                             className="py-2.5 px-3 rounded-xl bg-blue-800/60 hover:bg-blue-800 text-white text-xs font-bold border border-white/20 transition-all cursor-pointer"
                             title="Voir la fiche d'intervention complète"
                           >
@@ -2507,15 +2555,33 @@ function TenantPortalContent() {
               )}
 
             {/* Artisans mandatés actifs pour le locataire */}
-              {reportedIncidents.filter((i) => i.status !== 'resolu' && i.assignedTechnician).length > 0 && (
+              {reportedIncidents.filter((i) => i.status !== 'resolu' && i.assignedTechnician && !dismissedArtisanBanners.includes(i.id)).length > 0 && (
                 <div className="space-y-3">
                   {reportedIncidents
-                    .filter((i) => i.status !== 'resolu' && i.assignedTechnician)
+                    .filter((i) => i.status !== 'resolu' && i.assignedTechnician && !dismissedArtisanBanners.includes(i.id))
                     .map((inc) => (
                       <div
                         key={inc.id}
-                        className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-blue-50/90 border border-blue-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm"
+                        onClick={() => {
+                          handleDismissArtisanBanner(inc.id);
+                          router.push('/incidents');
+                        }}
+                        className="relative p-4 sm:p-5 pr-12 rounded-3xl bg-gradient-to-r from-blue-50/90 via-indigo-50/80 to-blue-50/90 border border-blue-200/90 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm cursor-pointer hover:border-blue-300 transition-all"
                       >
+                        {/* Croix fermer */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDismissArtisanBanner(inc.id);
+                          }}
+                          className="absolute top-3 right-3 p-1.5 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-800 transition-all cursor-pointer z-10"
+                          title="Fermer cette notification"
+                          aria-label="Fermer cette notification"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+
                         <div className="flex items-center gap-3.5">
                           <div className="w-11 h-11 rounded-2xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-md shadow-blue-500/20">
                             <Wrench className="w-5 h-5" />
