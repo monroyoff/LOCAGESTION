@@ -56,6 +56,13 @@ export const SyncService = {
         cache: 'no-store',
       });
 
+      // ⚡ OPTIMISATION HTTP 304 : 0 octet transféré si non modifié
+      if (res.status === 304) {
+        lastSyncCompletedAt = Date.now();
+        isSyncing = false;
+        return { success: true, leasesCount: 0, notifsCount: 0 };
+      }
+
       if (!res.ok) {
         isSyncing = false;
         return { success: false, leasesCount: 0, notifsCount: 0 };

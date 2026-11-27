@@ -336,6 +336,15 @@ export async function GET(req: NextRequest) {
 
     const clientEtag = req.headers.get('if-none-match') || req.nextUrl.searchParams.get('etag');
     if (clientEtag && (clientEtag === etag || clientEtag.replace(/"/g, '') === etag.replace(/"/g, ''))) {
+      if (req.headers.get('if-none-match')) {
+        return new NextResponse(null, {
+          status: 304,
+          headers: {
+            'ETag': etag,
+            'Cache-Control': 'private, no-cache, must-revalidate',
+          },
+        });
+      }
       return NextResponse.json(
         {
           success: true,

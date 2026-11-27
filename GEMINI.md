@@ -21,6 +21,9 @@
 13. [Règle d'Or d'Intégrité Absolue des Comptes & Scellement Immuable](#13-règle-dor-dintégrité-absolue-des-comptes--scellement-immuable)
 14. [Parcours d'Invitation, Vérification Email & Passeport Solvabilité](#14-parcours-dinvitation-vérification-email--passeport-solvabilité)
 15. [Règle d'Exécution Immédiate & Déploiement Instantané Universel (Web, Mobile & Appli)](#15-règle-dexécution-immédiate--déploiement-instantané-universel-web-mobile--appli)
+16. [Certification TWA Android, Google Play Store & Digital Asset Links](#16-certification-twa-android-google-play-store--digital-asset-links)
+17. [Pérennité du Catalogue d'Annonces & Restitution Multi-Baux Intégrale](#17-pérennité-du-catalogue-dannonces--restitution-multi-baux-intégrale)
+18. [Règle d'Or d'Élimination à 100 % des Fuites de Bande Passante & Protection du Quota Vercel](#18-règle-dor-délimination-à-100--des-fuites-de-bande-passante--protection-du-quota-vercel)
 
 ---
 
@@ -400,6 +403,12 @@ Tout modèle d'Intelligence Artificielle ou ingénieur reprenant ce projet **DOI
    - Toujours exécuter `npm run build` (ou `npx tsc --noEmit`) avant de considérer une tâche comme achevée afin de garantir l'absence totale de régressions TypeScript ou Next.js.
 7. **Formatage Monétaire :**
    - Les montants doivent toujours être formatés via `formatFCFA()` (`src/lib/money/format.ts`) pour afficher le symbole `FCFA` avec séparation fine des milliers.
+8. **Élimination à 100 % des Fuites de Bande Passante & Protection des Quotas Vercel (Règle d'Or Inviolable) :**
+   - **Vérification systématique obligatoire à chaque intervention :** Tout modèle IA ou ingénieur reprenant le projet DOIT consulter et valider que l'architecture anti-fuite de bande passante demeure rigoureusement intacte.
+   - **Polling strictement conditionné à la visibilité :** Aucun polling régulier ne doit s'exécuter en arrière-plan. Dès que l'onglet du navigateur ou l'application passe en arrière-plan (`document.visibilityState !== 'visible'`), tout intervalle de synchronisation doit être immédiatement détruit (`clearInterval`). La synchronisation ne reprend qu'au retour effectif en avant-plan (`visibilitychange`, `focus`, `online`).
+   - **Réponse HTTP 304 Not Modified (0 octet) :** La route `/api/sync` doit toujours calculer son ETag MD5 et retourner immédiatement un code HTTP 304 Not Modified (0 octet de payload) ou un payload JSON minifié `notModified: true` lorsqu'aucune donnée n'a été altérée côté serveur.
+   - **Mise en cache Edge Vercel active (`x-vercel-cache: HIT`) :** Interdiction absolue de réintroduire des en-têtes anti-cache globaux (`/(.*): max-age=0, no-cache`) dans `vercel.json` ou `next.config.mjs`. Les assets statiques, images et routes de contrôle de version doivent être servis par le réseau Edge CDN Vercel pour préserver le quota Fast Origin Transfer sous le seuil de sécurité.
+   - **Anti-boucle POST :** Toute écriture locale vers le serveur (`SyncService.push()`) doit impérativement comparer son empreinte avec `lastPushedPayloadStr` pour empêcher toute boucle d'écriture réentrante infinie.
 
 ---
 
@@ -552,6 +561,54 @@ Le fichier `public/.well-known/assetlinks.json` et la route API `src/app/.well-k
   3. `BAIL-2026-COM-205` (Boutique N° 12 Akpakpa — Bailleur AÏCHA TOURÉ — 40 000 FCFA — Actif)
 - Un quatrième bail de test en attente de signature (`BAIL-2026-422`, Studio Meublé Calavi, 35 000 FCFA) est rattaché à l'annonce `A-BJ-17635`. Sa contresignature dans l'Espace Locataire déclenche le retrait immédiat de l'annonce d'Internet avec notification horodatée.
 - Le comparateur d'appartenance `isLeaseMatchingUser` inspecte rigoureusement `l.tenantMatricule || (l as any).matricule` et `isCanonicalJojoVog` pour garantir un affichage sans faille dans `/portal`.
+
+---
+
+## 18. Règle d'Or d'Élimination à 100 % des Fuites de Bande Passante & Protection du Quota Vercel
+
+> **RÈGLE ARCHITECTURALE VITALE POUR LA VIABILITÉ DE LA PLATEFORME (VERCEL & FORFAITS DATA MOBILES)**  
+> **L'ensemble du code de LOCAGESTION doit garantir une consommation de bande passante rigoureusement minimale sur le cloud Vercel (Fast Origin Transfer) ainsi que sur les terminaux mobiles et ordinateurs des utilisateurs. Tout modèle IA ou développeur doit obligatoirement respecter les 4 piliers ci-dessous.**
+
+### 🛑 1. Pilier 1 — Polling Stoppé en Arrière-Plan (Visibility Gating)
+- **Principe absolu :** ZÉRO requête de synchronisation ou de fond ne doit être émise lorsque l'utilisateur n'est pas activement sur l'application.
+- **Mécanisme technique :**
+  - Le service `SyncService.init()` écoute l'événement `document.addEventListener('visibilitychange')`.
+  - Dès que `document.visibilityState !== 'visible'` (onglet masqué, fenêtre minimisée, écran éteint sur smartphone, changement d'application sur Android), le timer est **immédiatement détruit** via `clearInterval(syncIntervalId)` et mis à `null`.
+  - Lorsque l'utilisateur revient en avant-plan (`document.visibilityState === 'visible'`), une synchronisation unique de réveil est déclenchée, puis un nouvel intervalle temporisé démarre.
+- **Intervalle de veille active :** En premier plan, la fréquence de synchronisation est fixée à **45 secondes** (`SYNC_INTERVAL_ACTIVE = 45000`). Toute fréquence inférieure (ex: 5s ou 10s) pour un polling global est strictement interdite car elle épuise inutilement les quotas serveur.
+- **Rattrapage d'événements :** En complément, les événements utilisateur naturels (`window.addEventListener('focus')`, `online`, `pageshow`) assurent la mise à jour immédiate sans surcharger l'intervalle régulier.
+
+### ⚡ 2. Pilier 2 — Réponse Instantanée HTTP 304 Not Modified (0 Octet Transféré)
+- **Empreinte cryptographique ETag (MD5) :**
+  - Dans `/api/sync`, le serveur génère un hash MD5 déterministe de l'état agrégé des données (`leases`, `notifications`, `users`, `listings`, `properties`, etc.).
+  - Le hash est renvoyé au client sous forme d'en-tête standard `ETag: "<hash>"`.
+  - Le client (`SyncService`) stocke ce hash dans `localStorage` (`locagestion:sync_etag`) et le transmet lors de chaque appel via le header `If-None-Match` ainsi que le paramètre d'URL `?etag=`.
+- **Court-circuit HTTP 304 :**
+  - Si le hash transmis par le client correspond exactement à l'ETag actuel du serveur, ce dernier répond **immédiatement en HTTP 304 Not Modified avec un corps vide (0 octet)** ou un JSON ultra-minifié de confirmation `{ success: true, notModified: true, etag }` (71 octets au lieu de dizaines de kilo-octets).
+  - Aucune donnée métier n'est sérialisée ni renvoyée sur le réseau quand rien n'a changé, divisant la bande passante par plus de 1000.
+
+### 🌐 3. Pilier 3 — Mise en Cache Edge Vercel Active (`x-vercel-cache: HIT`)
+- **Préservation du Fast Origin Transfer Vercel :** Le quota gratuit ou payant Vercel ("Fast Origin Transfer") facture chaque octet transféré directement depuis les fonctions Serverless / Node.js vers l'extérieur. Tout ce qui est mis en cache sur le réseau CDN Edge Vercel ne consomme pas le quota Fast Origin !
+- **Configuration Edge CDN (`vercel.json`) :**
+  - Les bundles JavaScript et styles (`/_next/static/(.*)`) sont mis en cache immuable : `Cache-Control: public, max-age=31536000, immutable`.
+  - Les médias, icônes et polices (`/(images|icons|fonts|assets)/(.*)`) sont mis en cache longue durée : `Cache-Control: public, max-age=86400, stale-while-revalidate=604800`.
+  - Les routes légères de détection de version (`/api/version`) disposent d'un cache Edge avec révalidation en arrière-plan : `Cache-Control: public, s-maxage=60, stale-while-revalidate=300`.
+- **Interdiction Formelle :** Ne **JAMAIS** réintroduire dans `vercel.json` ou dans les middlewares une directive globale anti-cache du type `"/(.*)": "max-age=0, no-cache, no-store"` qui forcerait Vercel à désactiver son CDN mondial et acheminerait chaque requête statique vers l'origine.
+
+### 🛡️ 4. Pilier 4 — Garde-Fou Anti-Boucle Infinie d'Écriture (Push Loop Guard)
+- **Problème prévenu :** Dans une architecture de synchronisation bidirectionnelle, un client qui fusionne les données serveur et déclenche un `push()` immédiat au serveur risquerait de provoquer une cascade infinie de requêtes POST.
+- **Verrou d'intégrité :**
+  - `SyncService` maintient en mémoire la variable `lastPushedPayloadStr`.
+  - Avant tout appel `fetch('/api/sync', { method: 'POST' })`, le payload est sérialisé et comparé à `lastPushedPayloadStr`.
+  - Si le contenu est identique au dernier push validé, l'émission est **immédiatement bloquée** côté client, protégeant la plateforme contre toute boucle réentrante.
+
+### 📋 5. Protocole de Vérification Systématique pour les Modèles IA & Développeurs
+Avant de conclure toute tâche impliquant la synchronisation, le réseau, les appels API ou le fichier `vercel.json`, l'IA doit valider les 5 points de contrôle suivants :
+1. ✅ **Visibilité :** Le polling s'arrête-t-il bien quand l'onglet passe en arrière-plan ?
+2. ✅ **ETag / 304 :** L'appel GET `/api/sync` avec `If-None-Match` renvoie-t-il bien un HTTP 304 ou `notModified: true` ?
+3. ✅ **Fréquence :** Aucun `setInterval` régulier n'a-t-il une période agressive inférieure à 45 secondes pour la synchronisation générale ?
+4. ✅ **Headers Edge :** Le fichier `vercel.json` maintient-il la mise en cache CDN Edge des assets et routes appropriées ?
+5. ✅ **Zéro boucle :** Aucun composant React ne déclenche-t-il de `SyncService.sync()` ou `push()` à l'intérieur d'un rendu non stabilisé (`useEffect` sans dépendances appropriées) ?
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
