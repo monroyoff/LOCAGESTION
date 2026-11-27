@@ -29,11 +29,9 @@ import {
   Repeat,
   Plus,
   Layers,
-  Camera,
   ArrowLeft,
   Globe,
   Zap,
-  Archive,
 } from 'lucide-react';
 import { UserSpace, UserSubscriptionDetails } from '@/lib/types';
 import { PlanService } from '@/lib/services/plan-service';
@@ -757,27 +755,11 @@ export function Sidebar({
       sectionKey: 'leases',
     },
     {
-      name: 'États des Lieux',
-      href: '/portal?tab=edl',
-      icon: Camera,
-      portalTab: 'edl',
-      active: pathname === '/portal' && effectivePortalTab === 'edl',
-      mobileOnly: true,
-    },
-    {
       name: 'Passeport Solvabilité',
       href: '/portal?tab=solvabilite',
       icon: ShieldCheck,
       portalTab: 'solvabilite',
       active: pathname === '/portal' && effectivePortalTab === 'solvabilite',
-      mobileOnly: true,
-    },
-    {
-      name: 'Historique des Baux',
-      href: '/portal?tab=historique',
-      icon: Archive,
-      portalTab: 'historique',
-      active: pathname === '/portal' && effectivePortalTab === 'historique',
       mobileOnly: true,
     },
     {
