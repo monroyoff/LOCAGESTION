@@ -8,11 +8,11 @@ export const PROPERTIES_STORAGE_KEY = 'locagestion:properties:v1';
 export const DEFAULT_PROPERTIES: Property[] = [
   {
     id: 'prop-voglossou-allada-01',
-    name: 'Chambre Salon Sanitaire Allada',
+    name: 'CHAMBRE SALON SANITAIRE',
     type: 'Chambre salon sanitaire',
-    address: 'Zone résidentielle Dogoudo, Allada',
-    city: 'Allada',
-    district: 'Dogoudo',
+    address: 'Haie Vive, Cotonou, Bénin',
+    city: 'Cotonou',
+    district: 'Haie Vive',
     country: 'Bénin',
     totalUnits: 1,
     occupiedUnits: 1,
@@ -22,7 +22,7 @@ export const DEFAULT_PROPERTIES: Property[] = [
       'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&auto=format&fit=crop&q=80',
     ],
-    description: 'Chambre spacieuse avec salon sanitaire autonome à Dogoudo, Allada. Compteur d’électricité personnel Cash Power, accès bitumé et sécurisé.',
+    description: 'Chambre spacieuse avec salon sanitaire autonome à Haie Vive, Cotonou. Compteur personnel Cash Power, accès bitumé et sécurisé.',
     amenities: [
       'Compteur électricité personnel Cash Power',
       'Chambre spacieuse et aérée',
@@ -135,7 +135,7 @@ export class PropertyService {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Élimination absolue de tout bien fictif hérité
+          // 1. Élimination absolue de tout bien fictif hérité
           const sanitized = parsed.filter((p) => !isFakeProperty(p));
           let modified = sanitized.length !== parsed.length;
           const merged = [...sanitized];
@@ -153,66 +153,76 @@ export class PropertyService {
             }
           }
 
-          // Auto-synthèse depuis les baux existants pour ne jamais perdre un bien sous bail
-          try {
-            const { LeaseService } = require('./lease-service');
-            const leases = LeaseService.getLeases();
-            for (const lease of leases) {
-              if (lease && lease.property) {
-                const pName = lease.property.trim();
-                const alreadyExists = merged.some(
-                  (p) => p.name.toLowerCase() === pName.toLowerCase() || p.id === `prop-lease-${lease.id}`
-                );
-                if (!alreadyExists) {
-                  const synthProp: Property = {
-                    id: `prop-lease-${lease.id}`,
-                    name: pName,
-                    type: 'Chambre salon sanitaire',
-                    address: lease.propertyAddress || lease.propertyLocation || lease.landlordAddress || 'Haie Vive, Cotonou, Bénin',
-                    city: lease.propertyCity || (lease.propertyLocation?.includes('Allada') ? 'Allada' : 'Cotonou'),
-                    district: lease.propertyDistrict || (lease.propertyLocation?.includes('Haie Vive') ? 'Haie Vive' : 'Haie Vive'),
-                    country: lease.country || 'Bénin',
-                    totalUnits: 1,
-                    occupiedUnits: lease.status === 'actif' ? 1 : 0,
-                    monthlyRevenue: lease.rent || 25000,
-                    imageUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80',
-                    images: ['https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80'],
-                    description: `Propriété associée au contrat ${lease.id}`,
-                    amenities: ['Compteur individuel', 'Sanitaire privatif'],
-                    unitsList: [
-                      {
-                        unit: lease.unit || 'Lot 1',
-                        type: 'Chambre Salon Sanitaire',
-                        surface: 45,
-                        rent: lease.rent || 25000,
-                        tenant: lease.tenant || 'Disponible',
-                        status: lease.status === 'actif' ? 'occupe' : 'vacant',
-                      },
-                    ],
-                    authorId: lease.landlordId,
-                    authorName: lease.landlordName,
-                    authorEmail: lease.landlordEmail,
-                    authorPhone: lease.landlordPhone,
-                    authorMatricule:
-                      lease.landlordId === 'usr-bailleur-voglossou' || lease.landlordEmail === 'jobovog@gmail.com'
-                        ? 'LOCA-MAT-BJ-84291'
-                        : undefined,
-                    authorRole: 'bailleur',
-                    createdAt: lease.startDate || '01/11/2026',
-                  };
-                  merged.push(synthProp);
-                  modified = true;
-                }
-              }
-            }
-          } catch (e) { }
+          // 2. Déduplication canonique stricte pour éliminer tout doublon ou synthèse parasite
+          const { LeaseService } = require('./lease-service');
+          const leases = LeaseService.getLeases();
 
-          if (modified) {
-            localStorage.setItem(PROPERTIES_STORAGE_KEY, JSON.stringify(merged));
+          const deduplicated: Property[] = [];
+          const seenKeys = new Set<string>();
+
+          for (const p of merged) {
+            // Détection canonique des biens
+            const isChambre =
+              p.id === 'prop-voglossou-allada-01' ||
+              p.id === 'prop-voglossou-cotonou-01' ||
+              p.id === 'prop-lease-BAIL-2026-421' ||
+              p.name.toLowerCase().includes('chambre salon sanitaire');
+
+            const isCalavi =
+              p.id === 'prop-voglossou-calavi-02' ||
+              p.id === 'prop-lease-BAIL-2026-422' ||
+              p.name.toLowerCase().includes('calavi');
+
+            const dedupeKey = isChambre ? 'chambre-salon' : isCalavi ? 'residence-calavi' : p.id;
+            if (seenKeys.has(dedupeKey)) {
+              modified = true;
+              continue; // On élimine le doublon parasite !
+            }
+            seenKeys.add(dedupeKey);
+
+            // Harmonisation des données canoniques
+            if (isChambre) {
+              p.id = 'prop-voglossou-cotonou-01';
+              p.name = 'CHAMBRE SALON SANITAIRE';
+              p.address = 'Haie Vive, Cotonou, Bénin';
+              p.city = 'Cotonou';
+              p.district = 'Haie Vive';
+              p.description = 'Chambre spacieuse avec salon sanitaire autonome à Haie Vive, Cotonou. Compteur personnel Cash Power, accès bitumé et sécurisé.';
+            } else if (isCalavi) {
+              p.id = 'prop-voglossou-calavi-02';
+              p.name = 'Résidence UAC Calavi';
+              p.address = 'Zogbadjè (Campus UAC), Abomey-Calavi';
+              p.city = 'Abomey-Calavi';
+              p.district = 'Zogbadjè';
+            }
+
+            // Calcul dynamique de l'occupation basé strictement sur les baux ACTIFS
+            const activeLease = leases.find(
+              (l: any) =>
+                l.status === 'actif' &&
+                ((isChambre && (l.id === 'BAIL-2026-421' || l.property?.toLowerCase().includes('chambre'))) ||
+                 (isCalavi && (l.id === 'BAIL-2026-422' || l.property?.toLowerCase().includes('calavi'))))
+            );
+
+            const isOccupied = Boolean(activeLease);
+            p.occupiedUnits = isOccupied ? p.totalUnits : 0;
+            if (p.unitsList && p.unitsList.length > 0) {
+              p.unitsList = p.unitsList.map((u: any) => ({
+                ...u,
+                status: isOccupied ? 'occupe' : 'vacant',
+                tenant: isOccupied ? activeLease?.tenant || u.tenant : 'Disponible',
+              }));
+            }
+
+            deduplicated.push(p);
           }
 
-          inMemoryProperties = merged;
-          return merged;
+          if (modified || deduplicated.length !== merged.length) {
+            localStorage.setItem(PROPERTIES_STORAGE_KEY, JSON.stringify(deduplicated));
+          }
+
+          inMemoryProperties = deduplicated;
+          return deduplicated;
         }
       }
 
@@ -280,6 +290,8 @@ export class PropertyService {
         if (
           p.authorMatricule === 'LOCA-MAT-BJ-84291' ||
           areEmailsEqual(p.authorEmail, 'jobovog@gmail.com') ||
+          p.name.toLowerCase().includes('chambre') ||
+          p.name.toLowerCase().includes('calavi') ||
           p.name.toLowerCase().includes('allada') ||
           (p.city && p.city.toLowerCase() === 'allada')
         ) {

@@ -1,11 +1,11 @@
 [
   {
-    "id": "prop-voglossou-allada-01",
-    "name": "Chambre Salon Sanitaire Allada",
+    "id": "prop-voglossou-cotonou-01",
+    "name": "CHAMBRE SALON SANITAIRE",
     "type": "Chambre salon sanitaire",
-    "address": "Zone résidentielle Dogoudo, Allada",
-    "city": "Allada",
-    "district": "Dogoudo",
+    "address": "Haie Vive, Cotonou, Bénin",
+    "city": "Cotonou",
+    "district": "Haie Vive",
     "country": "Bénin",
     "totalUnits": 1,
     "occupiedUnits": 1,
@@ -15,10 +15,10 @@
       "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=1200&auto=format&fit=crop&q=80",
       "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=1200&auto=format&fit=crop&q=80"
     ],
-    "description": "Chambre spacieuse avec salon sanitaire autonome à Dogoudo, Allada. Compteur d'électricité personnel Cash Power, accès bitumé et sécurisé.",
+    "description": "Chambre spacieuse avec salon sanitaire autonome à Haie Vive, Cotonou. Compteur personnel Cash Power, accès bitumé et sécurisé.",
     "amenities": [
-      "Compteur électricité personnel",
-      "Chambre spacieuse",
+      "Compteur électricité personnel Cash Power",
+      "Chambre spacieuse et aérée",
       "Sanitaire moderne privatif",
       "Accès sécurisé"
     ],
