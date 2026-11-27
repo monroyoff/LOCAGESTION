@@ -638,6 +638,11 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
    - Un bandeau pédagogique rappelle au bailleur en Sérénité que ses encaissements et quittances sont automatisés à 100% via Mobile Money, avec un raccourci pour débloquer les encaissements manuels en passant en Pro.
 4. **Landing Page & Grille Tarifaire (`LandingPricing.tsx` & `UpgradePlanModal.tsx`) :**
    - Affichage transparent dans les cartes de prix et la FAQ de la règle : Sérénité = 100% Mobile Money automatisé (encaissements manuels bloqués), Pro = tous canaux libres à 0% de commission.
+5. **Console de Déboursement & Reversements Bailleurs Super-Admin (`/admin` & `PayoutService`) :**
+   - Suivi comptable en temps réel des encaissements Mobile Money FedaPay (100 %) conservés sur le compte marchand `acc_3137475447` (MONROY AG).
+   - Décomposition mathématique scellée : 2 % conservés par LOCAGESTION (commission plateforme Sérénité) et 98 % nets à reverser aux bailleurs partenaires.
+   - Gestion des déboursements classiques (retraits et virements vers les comptes Wave, MTN, Moov ou bancaires des bailleurs) pendant la suspension temporaire de l'API Payouts automatisée de FedaPay.
+   - Scellement des preuves de virement (référence de transaction, opérateur, date/heure, administrateur) et notification officielle automatique délivrée au bailleur dans sa cloche.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

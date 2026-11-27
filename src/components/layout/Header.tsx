@@ -172,7 +172,8 @@ export function Header({
       router.push('/incidents');
     } else if (n.type === 'listing_approved' || n.type === 'listing_rejected') {
       router.push('/listings?view=my_listings');
-    } else if (n.type === 'payment_declared') {
+    } else if (n.type === 'payment_declared' || n.type === 'payout_disbursed') {
+      router.push('/payments');
       const targetId = n.paymentId || 'decl-initial-01';
       router.push(`/payments?tab=pending&verify=${targetId}`);
     } else if (n.type === 'notice_received') {

@@ -140,7 +140,8 @@ export interface LandlordNotification {
   | 'message_received'
   | 'subscription_alert'
   | 'subscription_expired'
-  | 'subscription_activated';
+  | 'subscription_activated'
+  | 'payout_disbursed';
   read: boolean;
   leaseId?: string;
   incidentId?: string;

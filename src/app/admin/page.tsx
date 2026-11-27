@@ -51,6 +51,11 @@ import {
   LogIn,
   CreditCard,
   Home,
+  MessageCircle,
+  Wallet,
+  Send,
+  Smartphone,
+  CheckCheck,
 } from 'lucide-react';
 import { useSpace } from '@/lib/context/space-context';
 import { ModerationService } from '@/lib/services/moderation-service';
@@ -62,6 +67,7 @@ import { SkeletonAdminDashboard } from '@/components/ui/SkeletonLoader';
 import { PlanService, PLANS_CONFIG, SubscriptionHistoryItem } from '@/lib/services/plan-service';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { PaymentService } from '@/lib/services/payment-service';
+import { PayoutService, LandlordPayoutRecord, PayoutStats } from '@/lib/services/payout-service';
 import { UserSubscriptionDetails, PaymentTransaction } from '@/lib/types';
 import { notifySave } from '@/lib/notifications/action-notifier';
 
@@ -82,11 +88,28 @@ export default function AdminDashboardPage() {
   const [searchTrashQuery, setSearchTrashQuery] = useState<string>('');
 
   const [users, setUsers] = useState<AuthUser[]>([]);
-  const [activeTab, setActiveTab] = useState<'alerts' | 'listings' | 'users' | 'rules'>('alerts');
+  const [activeTab, setActiveTab] = useState<'alerts' | 'listings' | 'users' | 'rules' | 'payouts'>('alerts');
   const [filterSeverity, setFilterSeverity] = useState<string>('all');
   const [searchAlertQuery, setSearchAlertQuery] = useState<string>('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
   const [copiedItem, setCopiedItem] = useState<string | null>(null);
+
+  // État Console de Reversements Bailleurs (FedaPay Payouts & Formule Sérénité)
+  const [payouts, setPayouts] = useState<LandlordPayoutRecord[]>([]);
+  const [payoutStats, setPayoutStats] = useState<PayoutStats>({
+    totalCollected: 0,
+    totalCommissions: 0,
+    totalDisbursed: 0,
+    totalPending: 0,
+    pendingCount: 0,
+    completedCount: 0,
+  });
+  const [payoutSearchQuery, setPayoutSearchQuery] = useState<string>('');
+  const [payoutStatusFilter, setPayoutStatusFilter] = useState<'all' | 'en_attente' | 'reverse'>('all');
+  const [selectedPayoutToDisburse, setSelectedPayoutToDisburse] = useState<LandlordPayoutRecord | null>(null);
+  const [disburseMethod, setDisburseMethod] = useState<'wave' | 'mtn' | 'moov' | 'virement' | 'autre'>('wave');
+  const [disburseReference, setDisburseReference] = useState<string>('');
+  const [disburseNotes, setDisburseNotes] = useState<string>('');
 
   // État Modale de blocage utilisateur
   const [blockingUser, setBlockingUser] = useState<AuthUser | null>(null);
@@ -190,12 +213,46 @@ export default function AdminDashboardPage() {
     router.push(destination);
   };
 
-  // Charger les données de sécurité, annonces et utilisateurs
+  // Charger les données de sécurité, annonces, utilisateurs et reversements bailleurs
   const refreshData = () => {
     setAlerts(ModerationService.getSecurityAlerts());
     setListings(ListingsService.getAllListings());
     setTrashListings(ListingsService.getTrashListings());
     setUsers(AuthService.getAllKnownUsers());
+    setPayouts(PayoutService.getPayouts());
+    setPayoutStats(PayoutService.getPayoutStats());
+  };
+
+  const handleConfirmDisbursement = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPayoutToDisburse) return;
+    if (!disburseReference.trim()) {
+      alert('Veuillez renseigner la référence officielle du transfert / virement.');
+      return;
+    }
+    const res = PayoutService.markPayoutAsDisbursed(selectedPayoutToDisburse.id, {
+      method: disburseMethod,
+      reference: disburseReference.trim(),
+      notes: disburseNotes.trim(),
+      disbursedBy: effectiveUser?.name || 'Super-Admin MONROY AG',
+    });
+    if (res) {
+      refreshData();
+      setSelectedPayoutToDisburse(null);
+      setDisburseReference('');
+      setDisburseNotes('');
+      setActionSuccessMsg(`Reversement scellé ! Le bailleur ${res.landlordName} a été notifié du virement net de ${formatFCFA(res.netPayoutAmount)}.`);
+      setTimeout(() => setActionSuccessMsg(null), 4500);
+    }
+  };
+
+  const handleRevertPayout = (payoutId: string) => {
+    if (confirm('Voulez-vous repasser ce reversement en attente ?')) {
+      PayoutService.revertPayout(payoutId);
+      refreshData();
+      setActionSuccessMsg('Le reversement a été repassé au statut « En attente ».');
+      setTimeout(() => setActionSuccessMsg(null), 3500);
+    }
   };
 
   const effectiveUser = user || (typeof window !== 'undefined' ? AuthService.getCurrentUser() : null);
@@ -212,10 +269,12 @@ export default function AdminDashboardPage() {
     window.addEventListener('locagestion:security_alerts_updated', handleAlertsUpdate);
     window.addEventListener('locagestion:listings_updated', handleAlertsUpdate);
     window.addEventListener('locagestion:auth_changed', handleAlertsUpdate);
+    window.addEventListener('locagestion:payouts_updated', handleAlertsUpdate);
     return () => {
       window.removeEventListener('locagestion:security_alerts_updated', handleAlertsUpdate);
       window.removeEventListener('locagestion:listings_updated', handleAlertsUpdate);
       window.removeEventListener('locagestion:auth_changed', handleAlertsUpdate);
+      window.removeEventListener('locagestion:payouts_updated', handleAlertsUpdate);
     };
   }, [user, router]);
 
@@ -789,6 +848,24 @@ export default function AdminDashboardPage() {
             >
               <Users className="w-4 h-4" />
               <span>Gestion des Comptes Utilisateurs ({users.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('payouts')}
+              className={`py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'payouts'
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              <CreditCard className="w-4 h-4" />
+              <span>Reversements Bailleurs ({payoutStats.pendingCount > 0 ? `${payoutStats.pendingCount} en attente` : payouts.length})</span>
+              {payoutStats.pendingCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full bg-amber-400 text-slate-950 text-[10px] font-black animate-pulse">
+                  {payoutStats.pendingCount}
+                </span>
+              )}
             </button>
 
             <button
@@ -1980,6 +2057,467 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* TAB 5: CONSOLE DE REVERSEMENTS BAILLEURS (FEDAPAY PAYOUTS & FORMULE SÉRÉNITÉ) */}
+        {activeTab === 'payouts' && (
+          <div className="space-y-6">
+            {/* Bannière d'information & Contexte FedaPay */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-950 via-slate-900 to-slate-900 border-2 border-emerald-500/40 shadow-xl space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+                    <Wallet className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-lg font-black text-white">
+                        Console de Reversements Bailleurs (98 % Net)
+                      </h2>
+                      <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        Formule Sérénité & FedaPay
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Pilotage comptable, suivi des déboursements et scellement des virements de loyers nets aux bailleurs partenaires.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <span className="text-[10px] font-mono px-3 py-1 rounded-xl bg-slate-950 text-slate-300 border border-slate-800">
+                    Marchand : <strong>acc_3137475447</strong> (MONROY AG)
+                  </span>
+                </div>
+              </div>
+
+              {/* Notice FedaPay Support */}
+              <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 flex items-start gap-3 text-xs text-slate-300">
+                <Info className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="text-slate-200">
+                    <strong>Processus de déboursement actuel :</strong> L'API automatisée de Payouts étant momentanément suspendue chez FedaPay, tous les encaissements locataires (100 %) sont conservés en toute sécurité sur votre solde marchand FedaPay.
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Conformément aux directives de FedaPay, effectuez un retrait classique de vos fonds, transférez directement les 98 % nets aux bailleurs via leurs numéros Wave, MTN, Moov ou comptes bancaires indiqués ci-dessous, puis cliquez sur <strong>« Confirmer le reversement »</strong> pour leur délivrer instantanément une notification officielle dans leur espace.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Cartes KPI Financières */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Total Collecté Brut */}
+              <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Total Encaissé (FedaPay)
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center justify-center">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl font-black text-white font-mono">
+                    {formatFCFA(payoutStats.totalCollected)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2">
+                  100 % des loyers perçus sur le compte marchand
+                </p>
+              </div>
+
+              {/* Commission Plateforme 2% */}
+              <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    Commissions LOCAGESTION (2 %)
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-purple-500/20 text-purple-400 border border-purple-500/30 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <span className="text-2xl font-black text-purple-400 font-mono">
+                    {formatFCFA(payoutStats.totalCommissions)}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2">
+                  Revenu net acquis par la plateforme
+                </p>
+              </div>
+
+              {/* En Attente de Virement (98%) */}
+              <div className="p-4 rounded-3xl bg-slate-900 border border-amber-500/40 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">
+                    En Attente de Virement (98 %)
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-amber-400 font-mono">
+                    {formatFCFA(payoutStats.totalPending)}
+                  </span>
+                  <span className="text-xs text-amber-300/80 font-bold">
+                    ({payoutStats.pendingCount})
+                  </span>
+                </div>
+                <p className="text-[10px] text-amber-200/70 mt-2">
+                  À débourser aux bailleurs par virement / Mobile Money
+                </p>
+              </div>
+
+              {/* Déjà Reversé (98%) */}
+              <div className="p-4 rounded-3xl bg-slate-900 border border-emerald-500/30 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+                    Déjà Reversé (98 %)
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center">
+                    <CheckCheck className="w-4 h-4" />
+                  </div>
+                </div>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-emerald-400 font-mono">
+                    {formatFCFA(payoutStats.totalDisbursed)}
+                  </span>
+                  <span className="text-xs text-emerald-300/80 font-bold">
+                    ({payoutStats.completedCount})
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2">
+                  Fonds scellés et confirmés aux bailleurs
+                </p>
+              </div>
+            </div>
+
+            {/* Barre de Recherche et Filtres */}
+            <div className="p-4 rounded-3xl bg-slate-900 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par bailleur, téléphone, quittance, logement..."
+                  value={payoutSearchQuery}
+                  onChange={(e) => setPayoutSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setPayoutStatusFilter('all')}
+                  className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    payoutStatusFilter === 'all'
+                      ? 'bg-emerald-600 text-white font-black'
+                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  Tous ({payouts.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayoutStatusFilter('en_attente')}
+                  className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    payoutStatusFilter === 'en_attente'
+                      ? 'bg-amber-600 text-white font-black'
+                      : 'bg-slate-950 text-amber-400/80 hover:text-amber-300 border border-slate-800'
+                  }`}
+                >
+                  <Clock className="w-3 h-3" />
+                  <span>En attente ({payoutStats.pendingCount})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayoutStatusFilter('reverse')}
+                  className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    payoutStatusFilter === 'reverse'
+                      ? 'bg-emerald-700 text-white font-black'
+                      : 'bg-slate-950 text-emerald-400/80 hover:text-emerald-300 border border-slate-800'
+                  }`}
+                >
+                  <Check className="w-3 h-3" />
+                  <span>Reversés ({payoutStats.completedCount})</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Liste des Lignes de Reversements */}
+            {(() => {
+              const filtered = payouts.filter((p) => {
+                if (payoutStatusFilter !== 'all' && p.status !== payoutStatusFilter) return false;
+                if (payoutSearchQuery.trim()) {
+                  const q = payoutSearchQuery.toLowerCase().trim();
+                  const matchLandlord = p.landlordName.toLowerCase().includes(q) || p.landlordPhone.includes(q);
+                  const matchUnit = p.unitNumber.toLowerCase().includes(q) || p.propertyName.toLowerCase().includes(q);
+                  const matchTenant = p.tenantName.toLowerCase().includes(q) || p.tenantPhone.includes(q);
+                  const matchRef = p.receiptNumber.toLowerCase().includes(q) || (p.disbursementRef && p.disbursementRef.toLowerCase().includes(q));
+                  if (!matchLandlord && !matchUnit && !matchTenant && !matchRef) return false;
+                }
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="p-12 text-center rounded-3xl bg-slate-900 border border-slate-800 space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-500 flex items-center justify-center mx-auto">
+                      <CreditCard className="w-6 h-6" />
+                    </div>
+                    <h3 className="text-sm font-black text-white">Aucun reversement trouvé</h3>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                      Aucune transaction ne correspond à vos filtres actuels. Dès qu'un locataire règle via Mobile Money, la ligne de reversement apparaîtra ici.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filtered.map((p) => {
+                    const isPending = p.status === 'en_attente';
+                    const landlordPhoneClean = (p.landlordPaymentInfo?.wave || p.landlordPhone || '').replace(/\D/g, '');
+                    return (
+                      <div
+                        key={p.id}
+                        className={`p-5 sm:p-6 rounded-3xl border transition-all space-y-4 ${
+                          isPending
+                            ? 'bg-slate-900/95 border-amber-500/50 shadow-lg shadow-amber-950/20'
+                            : 'bg-slate-900/60 border-slate-800'
+                        }`}
+                      >
+                        {/* En-tête de carte */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                          <div className="flex items-center gap-2.5 flex-wrap">
+                            <span
+                              className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full flex items-center gap-1 border ${
+                                isPending
+                                  ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                                  : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                              }`}
+                            >
+                              {isPending ? (
+                                <>
+                                  <Clock className="w-3 h-3" />
+                                  <span>Reversement 98 % en attente</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCheck className="w-3 h-3" />
+                                  <span>98 % Reversé au Bailleur</span>
+                                </>
+                              )}
+                            </span>
+                            <span className="text-xs font-mono font-bold text-slate-400">
+                              Quittance : <strong className="text-slate-200">{p.receiptNumber}</strong>
+                            </span>
+                            <span className="text-xs text-slate-500">•</span>
+                            <span className="text-xs text-slate-400">
+                              Période : <strong className="text-slate-300">{p.period}</strong>
+                            </span>
+                          </div>
+
+                          <div className="text-xs text-slate-400">
+                            Encaissé le : <strong className="text-slate-200">{p.paymentDate}</strong>
+                          </div>
+                        </div>
+
+                        {/* Corps en 3 colonnes */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* Col 1 : Logement & Locataire */}
+                          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 space-y-2 text-xs">
+                            <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                              Logement & Locataire
+                            </span>
+                            <h4 className="font-black text-white text-sm">
+                              {p.unitNumber}
+                            </h4>
+                            <p className="text-slate-400">
+                              {p.propertyName}
+                            </p>
+                            <div className="pt-2 border-t border-slate-800/60 text-slate-400 flex items-center justify-between">
+                              <span>Payé par :</span>
+                              <strong className="text-slate-200 font-bold">{p.tenantName}</strong>
+                            </div>
+                            <div className="text-slate-400 flex items-center justify-between">
+                              <span>Bail lié :</span>
+                              <span className="font-mono text-slate-300">{p.leaseId || 'BAIL-2026-421'}</span>
+                            </div>
+                          </div>
+
+                          {/* Col 2 : Décomposition Financière (Formule Sérénité) */}
+                          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 space-y-2 text-xs">
+                            <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                              Ventilation Financière (Split 2 % / 98 %)
+                            </span>
+                            <div className="flex items-center justify-between text-slate-400">
+                              <span>Loyer brut encaissé (100 %) :</span>
+                              <strong className="text-slate-200 font-mono font-bold">
+                                {formatFCFA(p.totalCollected)}
+                              </strong>
+                            </div>
+                            <div className="flex items-center justify-between text-purple-400">
+                              <span>Commission LOCAGESTION (2 %) :</span>
+                              <span className="font-mono font-bold">
+                                - {formatFCFA(p.platformCommission)}
+                              </span>
+                            </div>
+                            <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+                              <span className="text-xs font-black text-white">Net Garanti Bailleur (98 %) :</span>
+                              <span className="text-base font-black text-emerald-400 font-mono">
+                                {formatFCFA(p.netPayoutAmount)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Col 3 : Coordonnées du Bailleur & Canaux de Virement */}
+                          <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800/80 space-y-2 text-xs">
+                            <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                              Coordonnées de Versement du Bailleur
+                            </span>
+                            <div className="flex items-center justify-between">
+                              <strong className="text-white text-sm">{p.landlordName}</strong>
+                            </div>
+                            <div className="space-y-1.5 pt-1">
+                              {p.landlordPaymentInfo?.wave && (
+                                <div className="flex items-center justify-between p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[11px]">
+                                  <span className="text-amber-300 font-bold">WAVE :</span>
+                                  <span className="font-mono text-white font-bold">{p.landlordPaymentInfo.wave}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(p.landlordPaymentInfo.wave || '');
+                                      setCopiedItem(`wave-${p.id}`);
+                                      setTimeout(() => setCopiedItem(null), 2000);
+                                    }}
+                                    className="p-1 rounded bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 cursor-pointer"
+                                    title="Copier le numéro Wave"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+
+                              {p.landlordPaymentInfo?.mtn && (
+                                <div className="flex items-center justify-between p-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20 text-[11px]">
+                                  <span className="text-yellow-300 font-bold">MTN :</span>
+                                  <span className="font-mono text-white font-bold">{p.landlordPaymentInfo.mtn}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(p.landlordPaymentInfo.mtn || '');
+                                      setCopiedItem(`mtn-${p.id}`);
+                                      setTimeout(() => setCopiedItem(null), 2000);
+                                    }}
+                                    className="p-1 rounded bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-200 cursor-pointer"
+                                    title="Copier le numéro MTN"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+
+                              {p.landlordPaymentInfo?.bank && (
+                                <div className="flex items-center justify-between p-1.5 rounded-lg bg-blue-500/10 border border-blue-500/20 text-[10px]">
+                                  <span className="text-blue-300 font-bold">RIB :</span>
+                                  <span className="font-mono text-slate-300 truncate max-w-[140px]">{p.landlordPaymentInfo.bank}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(p.landlordPaymentInfo.bank || '');
+                                      setCopiedItem(`bank-${p.id}`);
+                                      setTimeout(() => setCopiedItem(null), 2000);
+                                    }}
+                                    className="p-1 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-200 cursor-pointer"
+                                    title="Copier le RIB bancaire"
+                                  >
+                                    <Copy className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bas de carte : Actions et Traçabilité */}
+                        <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-800/80">
+                          {isPending ? (
+                            <div className="flex items-center gap-2 text-xs text-amber-300/80">
+                              <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+                              <span>Ce montant est en attente de virement sur le compte Mobile Money du bailleur.</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs text-emerald-400">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                              <span>
+                                Reversé le <strong>{p.disbursedAt}</strong> via <strong>{p.disbursementMethod?.toUpperCase()}</strong> • Réf: <strong className="font-mono text-white">{p.disbursementRef}</strong> ({p.disbursedBy})
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {isPending ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedPayoutToDisburse(p);
+                                    setDisburseReference('');
+                                    setDisburseNotes('');
+                                    setDisburseMethod('wave');
+                                  }}
+                                  className="py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs flex items-center gap-1.5 transition-all shadow-md shadow-emerald-950/40 cursor-pointer"
+                                >
+                                  <Send className="w-3.5 h-3.5" />
+                                  <span>Confirmer le reversement ({formatFCFA(p.netPayoutAmount)})</span>
+                                </button>
+
+                                <a
+                                  href={`https://wa.me/${landlordPhoneClean}?text=${encodeURIComponent(
+                                    `Bonjour ${p.landlordName}, la plateforme LOCAGESTION vous informe que le loyer de ${p.tenantName} pour ${p.unitNumber} (${p.period}) a été encaissé avec succès. Votre reversement net de ${formatFCFA(p.netPayoutAmount)} (98 %) est en cours d'exécution vers votre compte.`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-300 font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-colors cursor-pointer"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>WhatsApp</span>
+                                </a>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRevertPayout(p.id)}
+                                  className="py-1.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white font-medium text-[11px] border border-slate-700 transition-colors cursor-pointer"
+                                >
+                                  Repasser en attente
+                                </button>
+                                <a
+                                  href={`https://wa.me/${landlordPhoneClean}?text=${encodeURIComponent(
+                                    `Bonjour ${p.landlordName}, LOCAGESTION vous confirme que le virement de vos 98 % nets (${formatFCFA(p.netPayoutAmount)}) pour ${p.unitNumber} (${p.period}) a été effectué avec succès via ${p.disbursementMethod?.toUpperCase()} (Réf : ${p.disbursementRef}).`
+                                  )}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="py-1.5 px-3 rounded-xl bg-emerald-950 hover:bg-emerald-900 text-emerald-300 font-bold text-xs flex items-center gap-1.5 border border-emerald-800/60 transition-colors cursor-pointer"
+                                >
+                                  <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span>Avis WhatsApp</span>
+                                </a>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </div>
+        )}
       </main>
 
       {/* --- MODAL 1 : INSPECTION DÉTAILLÉE D'UNE ANNONCE PAR L'ADMIN --- */}
@@ -2922,6 +3460,154 @@ export default function AdminDashboardPage() {
                 Confirmer le {blockType === 'temporary' ? 'gel' : 'bannissement'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* --- MODAL 4 : VALIDATION DE REVERSEMENT BAILLEUR (98 %) --- */}
+      {selectedPayoutToDisburse && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-lg w-full max-h-[92vh] overflow-y-auto shadow-2xl p-6 sm:p-7 space-y-5 text-white">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold">
+                  <Send className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">
+                    Confirmer le Reversement de Loyer (98 %)
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Bénéficiaire : <strong className="text-white">{selectedPayoutToDisburse.landlordName}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedPayoutToDisburse(null)}
+                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Récapitulatif Financier */}
+            <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Logement concerné :</span>
+                <strong className="text-white">{selectedPayoutToDisburse.unitNumber}</strong>
+              </div>
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Locataire payeur :</span>
+                <span className="text-slate-200">{selectedPayoutToDisburse.tenantName}</span>
+              </div>
+              <div className="flex items-center justify-between text-slate-400">
+                <span>Loyer brut encaissé (100 %) :</span>
+                <span className="font-mono text-slate-200">{formatFCFA(selectedPayoutToDisburse.totalCollected)}</span>
+              </div>
+              <div className="flex items-center justify-between text-purple-400">
+                <span>Commission LOCAGESTION (2 %) :</span>
+                <span className="font-mono font-bold">- {formatFCFA(selectedPayoutToDisburse.platformCommission)}</span>
+              </div>
+              <div className="pt-2 border-t border-slate-800 flex items-center justify-between">
+                <span className="font-black text-white text-xs">Montant net à verser (98 %) :</span>
+                <span className="text-lg font-black text-emerald-400 font-mono">
+                  {formatFCFA(selectedPayoutToDisburse.netPayoutAmount)}
+                </span>
+              </div>
+            </div>
+
+            {/* Coordonnées de Versement */}
+            <div className="space-y-1.5 text-xs">
+              <span className="font-bold text-slate-400 block">Coordonnées du bailleur :</span>
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <div>
+                  <span className="text-slate-400 block text-[10px]">Numéro direct / Wave :</span>
+                  <span className="text-white font-mono font-bold text-xs">{selectedPayoutToDisburse.landlordPaymentInfo?.wave || selectedPayoutToDisburse.landlordPhone}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(selectedPayoutToDisburse.landlordPaymentInfo?.wave || selectedPayoutToDisburse.landlordPhone);
+                    setActionSuccessMsg('Numéro copié !');
+                    setTimeout(() => setActionSuccessMsg(null), 2000);
+                  }}
+                  className="py-1 px-2.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Copier</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Formulaire de confirmation */}
+            <form onSubmit={handleConfirmDisbursement} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 block">
+                  Moyen de paiement utilisé pour le virement : *
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(['wave', 'mtn', 'moov', 'virement', 'autre'] as const).map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setDisburseMethod(m)}
+                      className={`py-2 px-2.5 rounded-xl text-xs font-bold capitalize transition-all border text-center cursor-pointer ${
+                        disburseMethod === m
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-md font-black'
+                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800'
+                      }`}
+                    >
+                      {m === 'virement' ? 'Virement Bancaire' : m.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 block">
+                  Référence de la transaction / SMS opérateur : *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex : TRX-WAVE-89214 ou REF-BOA-202611"
+                  value={disburseReference}
+                  onChange={(e) => setDisburseReference(e.target.value)}
+                  className="w-full p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-300 block">
+                  Notes internes (facultatif) :
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Retrait classique FedaPay puis transfert Wave"
+                  value={disburseNotes}
+                  onChange={(e) => setDisburseNotes(e.target.value)}
+                  className="w-full p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPayoutToDisburse(null)}
+                  className="flex-1 py-2.5 px-4 rounded-xl border border-slate-700 text-slate-300 text-xs font-bold hover:bg-slate-800 cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all cursor-pointer shadow-lg shadow-emerald-950/40 flex items-center justify-center gap-1.5"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>Sceller & Notifier le Bailleur</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
