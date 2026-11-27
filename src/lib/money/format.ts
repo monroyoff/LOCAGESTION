@@ -168,6 +168,92 @@ export function compareNotificationsDesc(
 }
 
 /**
+ * Résout le timestamp numérique précis d'un paiement ou d'une quittance
+ * Prise en charge des dates "JJ/MM/AAAA", dates ISO, timestamps dans les identifiants ou références de transaction
+ */
+export function resolvePaymentTimestamp(
+  p?: {
+    paymentDate?: string;
+    id?: string;
+    transactionRef?: string;
+    period?: string;
+    createdAt?: string | number;
+  } | null
+): number {
+  if (!p) return 0;
+
+  // 1. Si createdAt explicite (timestamp numérique ou string ISO)
+  if (p.createdAt) {
+    const t = typeof p.createdAt === 'number' ? p.createdAt : new Date(p.createdAt).getTime();
+    if (!isNaN(t) && t > 0) return t;
+  }
+
+  // 2. Extraire timestamp millisecondes depuis l'ID ou la référence (ex: pay-feda-1795..., trx_..._1795..., decl-1795...)
+  let embeddedMs = 0;
+  const idMatch = (p.id || '').match(/\d{10,13}/);
+  if (idMatch) {
+    const parsedId = Number(idMatch[0]);
+    if (parsedId > 1600000000000) embeddedMs = parsedId;
+  }
+  const refMatch = (p.transactionRef || '').match(/\d{10,13}/);
+  if (refMatch) {
+    const parsedRef = Number(refMatch[0]);
+    if (parsedRef > 1600000000000 && parsedRef > embeddedMs) embeddedMs = parsedRef;
+  }
+
+  // 3. Parser paymentDate ("JJ/MM/AAAA" ou ISO)
+  let dateMs = 0;
+  if (p.paymentDate) {
+    const parts = p.paymentDate.split('/');
+    if (parts.length === 3) {
+      dateMs = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]), 12, 0, 0).getTime();
+    } else {
+      const parsed = new Date(p.paymentDate).getTime();
+      if (!isNaN(parsed)) dateMs = parsed;
+    }
+  }
+
+  // 4. Si dateMs et embeddedMs existent tous deux, privilégier embeddedMs si cohérent, sinon dateMs
+  if (dateMs > 0 && embeddedMs > 0) {
+    return Math.max(dateMs, embeddedMs);
+  }
+
+  if (dateMs > 0) return dateMs;
+  if (embeddedMs > 0) return embeddedMs;
+
+  // 5. Fallback sur period ("Mois AAAA")
+  if (p.period) {
+    const m = p.period.toLowerCase();
+    const months = ['janvier', 'février', 'fevrier', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'aout', 'septembre', 'octobre', 'novembre', 'décembre', 'decembre'];
+    const yearMatch = p.period.match(/\d{4}/);
+    const year = yearMatch ? Number(yearMatch[0]) : 2026;
+    for (let i = 0; i < months.length; i++) {
+      if (m.includes(months[i])) {
+        const monthIndex = i > 12 ? (i === 13 ? 7 : 11) : (i > 1 ? (i === 2 ? 1 : i) : i);
+        return new Date(year, monthIndex, 1).getTime();
+      }
+    }
+  }
+
+  return 0;
+}
+
+/**
+ * Comparateur chronologique inverse universel pour les quittances et paiements (plus récent au sommet / index 0)
+ */
+export function comparePaymentsDesc(
+  a?: { paymentDate?: string; id?: string; transactionRef?: string; period?: string; createdAt?: string | number } | null,
+  b?: { paymentDate?: string; id?: string; transactionRef?: string; period?: string; createdAt?: string | number } | null
+): number {
+  const timeA = resolvePaymentTimestamp(a);
+  const timeB = resolvePaymentTimestamp(b);
+  if (timeB !== timeA) {
+    return timeB - timeA;
+  }
+  return String(b?.id || '').localeCompare(String(a?.id || ''));
+}
+
+/**
  * Libellé lisible pour les méthodes de paiement
  */
 export function getPaymentMethodLabel(method: string): string {

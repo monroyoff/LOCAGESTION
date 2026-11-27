@@ -5,6 +5,7 @@ import { MOCK_RECENT_PAYMENTS } from '../data/mock-data';
 import { LeaseService, Lease } from './lease-service';
 import { TenantNotificationService } from './tenant-notification-service';
 import { areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
+import { comparePaymentsDesc } from '@/lib/money/format';
 
 const STORAGE_KEY_DECLARED = 'locagestion:declared_payments';
 const STORAGE_KEY_VERIFIED = 'locagestion:verified_payments';
@@ -272,17 +273,17 @@ export const PaymentService = {
               localStorage.setItem(STORAGE_KEY_DECLARED, JSON.stringify(parsed));
             } catch (e) { }
           }
-          return parsed;
+          return parsed.sort(comparePaymentsDesc);
         }
       }
       try {
         localStorage.setItem(STORAGE_KEY_DECLARED, JSON.stringify(INITIAL_DECLARED_PAYMENTS));
       } catch (e) { }
-      return INITIAL_DECLARED_PAYMENTS;
+      return [...INITIAL_DECLARED_PAYMENTS].sort(comparePaymentsDesc);
     } catch (e) {
       console.error('Erreur lecture déclarations:', e);
     }
-    return INITIAL_DECLARED_PAYMENTS;
+    return [...INITIAL_DECLARED_PAYMENTS].sort(comparePaymentsDesc);
   },
 
   /**
@@ -352,7 +353,7 @@ export const PaymentService = {
       });
     } catch {}
 
-    return Array.from(verMap.values());
+    return Array.from(verMap.values()).sort(comparePaymentsDesc);
   },
 
   /**
@@ -375,7 +376,9 @@ export const PaymentService = {
     });
 
     const all = Array.from(map.values());
-    return all.filter((p) => isPaymentMatchingTenant(p, user, currentLease));
+    return all
+      .filter((p) => isPaymentMatchingTenant(p, user, currentLease))
+      .sort(comparePaymentsDesc);
   },
 
   /**
@@ -384,28 +387,32 @@ export const PaymentService = {
   getPaymentsForLandlord(user?: AuthUser | null): PaymentTransaction[] {
     if (!user) return [];
     if (user.role === 'admin' || user.email === 'admin@locagestion.site') {
-      return [...this.getVerifiedPayments(), ...this.getDeclaredPayments()];
+      return [...this.getVerifiedPayments(), ...this.getDeclaredPayments()].sort(comparePaymentsDesc);
     }
     const declared = this.getDeclaredPayments();
     const verified = this.getVerifiedPayments();
     const all = [...verified, ...declared];
-    return all.filter((p) => isPaymentMatchingLandlord(p, user));
+    return all.filter((p) => isPaymentMatchingLandlord(p, user)).sort(comparePaymentsDesc);
   },
 
   getDeclaredPaymentsForLandlord(user?: AuthUser | null): PaymentTransaction[] {
     if (!user) return [];
     if (user.role === 'admin' || user.email === 'admin@locagestion.site') {
-      return this.getDeclaredPayments();
+      return this.getDeclaredPayments().sort(comparePaymentsDesc);
     }
-    return this.getDeclaredPayments().filter((p) => isPaymentMatchingLandlord(p, user));
+    return this.getDeclaredPayments()
+      .filter((p) => isPaymentMatchingLandlord(p, user))
+      .sort(comparePaymentsDesc);
   },
 
   getVerifiedPaymentsForLandlord(user?: AuthUser | null): PaymentTransaction[] {
     if (!user) return [];
     if (user.role === 'admin' || user.email === 'admin@locagestion.site') {
-      return this.getVerifiedPayments();
+      return this.getVerifiedPayments().sort(comparePaymentsDesc);
     }
-    return this.getVerifiedPayments().filter((p) => isPaymentMatchingLandlord(p, user));
+    return this.getVerifiedPayments()
+      .filter((p) => isPaymentMatchingLandlord(p, user))
+      .sort(comparePaymentsDesc);
   },
 
   /**

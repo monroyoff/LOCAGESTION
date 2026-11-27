@@ -70,7 +70,7 @@ import {
   DoorOpen,
   Archive,
 } from 'lucide-react';
-import { formatFCFA, formatNotificationTime, getPaymentMethodLabel } from '@/lib/money/format';
+import { formatFCFA, formatNotificationTime, getPaymentMethodLabel, comparePaymentsDesc } from '@/lib/money/format';
 import { ReceiptModal } from '@/components/dashboard/ReceiptModal';
 import { PaymentTransaction } from '@/lib/types';
 import { generateLeasePDF, generateInspectionPDF, generateNoticePDF } from '@/lib/export/pdf-download';
@@ -1013,6 +1013,22 @@ function TenantPortalContent() {
 
   const [receiptsList, setReceiptsList] = useState<PaymentTransaction[]>([]);
 
+  // La toute dernière quittance émise (tri chronologique strict descendant : la plus récente au sommet / index 0)
+  const latestReceipt = useMemo(() => {
+    if (receiptsList.length === 0) return null;
+    const sorted = [...receiptsList].sort(comparePaymentsDesc);
+    const candidateLeaseId = selectedLeaseId !== 'all' ? selectedLeaseId : currentLease?.id;
+    if (candidateLeaseId && selectedLeaseId !== 'all') {
+      const leaseSpecific = sorted.filter((r) => r.leaseId === candidateLeaseId);
+      if (leaseSpecific.length > 0) {
+        const verified = leaseSpecific.filter((r) => r.isVerified || r.status === 'paye');
+        return verified.length > 0 ? verified[0] : leaseSpecific[0];
+      }
+    }
+    const verified = sorted.filter((r) => r.isVerified || r.status === 'paye');
+    return verified.length > 0 ? verified[0] : sorted[0];
+  }, [receiptsList, selectedLeaseId, currentLease]);
+
   // Calcul dynamique et fonctionnel du score de solvabilité (100/100 en vert au départ)
   const tenantScoring = useMemo(() => {
     return TenantScoringService.calculateScore(
@@ -1060,7 +1076,7 @@ function TenantPortalContent() {
     const syncReceipts = () => {
       try {
         const tenantPayments = PaymentService.getPaymentsForTenant(user, currentLease);
-        setReceiptsList(tenantPayments);
+        setReceiptsList([...tenantPayments].sort(comparePaymentsDesc));
       } catch (err) {
         console.error('Erreur synchronisation quittances:', err);
       }
@@ -1980,7 +1996,7 @@ function TenantPortalContent() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Dernier Règlement Récent */}
                 <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft flex flex-col justify-between space-y-4">
-                  {receiptsList.length > 0 ? (
+                  {latestReceipt ? (
                     <div>
                       <div className="flex items-center justify-between pb-3 border-b border-slate-100">
                         <div className="flex items-center gap-2">
@@ -1990,36 +2006,40 @@ function TenantPortalContent() {
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <h4 className="text-xs font-black text-slate-900">Dernière Quittance Émise</h4>
-                              {receiptsList[0]?.isAdvance && (
+                              {latestReceipt.isAdvance && (
                                 <span className="text-[10px] font-black px-1.5 py-0.2 rounded-full bg-purple-100 text-purple-800 border border-purple-200">
-                                  Loyer d'avance ({receiptsList[0]?.advanceMonthsCount || 1} m)
+                                  Loyer d'avance ({latestReceipt.advanceMonthsCount || 1} m)
                                 </span>
                               )}
                             </div>
-                            <span className="text-[10px] text-slate-400 font-mono">Réf : {receiptsList[0]?.receiptNumber}</span>
+                            <span className="text-[10px] text-slate-400 font-mono">Réf : {latestReceipt.receiptNumber}</span>
                           </div>
                         </div>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          receiptsList[0]?.isVerified
+                          latestReceipt.isVerified
                             ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                             : 'text-amber-700 bg-amber-50 border-amber-200'
                         }`}>
-                          {receiptsList[0]?.isVerified ? 'Soldé ✓' : 'En validation ⏳'}
+                          {latestReceipt.isVerified ? 'Soldé ✓' : 'En validation ⏳'}
                         </span>
                       </div>
 
                       <div className="pt-3 space-y-1.5">
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-500">Période concernée :</span>
-                          <strong className="text-slate-900">{receiptsList[0]?.period}</strong>
+                          <strong className="text-slate-900">{latestReceipt.period}</strong>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-slate-500">Date du règlement :</span>
+                          <strong className="text-slate-900">{latestReceipt.paymentDate || 'Récemment'}</strong>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-500">Montant réglé :</span>
-                          <strong className="text-emerald-700 font-black">{formatFCFA(receiptsList[0]?.amount)}</strong>
+                          <strong className="text-emerald-700 font-black">{formatFCFA(latestReceipt.amount)}</strong>
                         </div>
                         <div className="flex items-center justify-between text-xs">
                           <span className="text-slate-500">Moyen de paiement :</span>
-                          <span className="text-slate-700 font-medium">{getPaymentMethodLabel(receiptsList[0]?.method)}</span>
+                          <span className="text-slate-700 font-medium">{getPaymentMethodLabel(latestReceipt.method)}</span>
                         </div>
                       </div>
                     </div>
@@ -2035,14 +2055,26 @@ function TenantPortalContent() {
                     </div>
                   )}
 
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange('quittances')}
-                    className="w-full py-2.5 px-4 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-slate-200/60"
-                  >
-                    <span>Voir toutes les quittances ({receiptsList.length})</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="pt-2 flex flex-col sm:flex-row items-center gap-2">
+                    {latestReceipt && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedReceipt(latestReceipt)}
+                        className="w-full sm:flex-1 py-2 px-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Ouvrir la quittance (PDF)</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleTabChange('quittances')}
+                      className={`w-full ${latestReceipt ? 'sm:flex-1' : ''} py-2 px-3 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center gap-1 transition-all active:scale-95 cursor-pointer`}
+                    >
+                      <span>Voir toutes les quittances ({receiptsList.length})</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Mon Bailleur & Contact Rapide (Affiché sur grand écran desktop, masqué sur mobile pour une interface épurée) */}
