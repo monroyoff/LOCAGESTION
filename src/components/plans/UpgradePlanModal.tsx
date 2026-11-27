@@ -40,13 +40,20 @@ export function UpgradePlanModal({
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showSimulateTools, setShowSimulateTools] = useState(false);
+  const [selectedPlanTab, setSelectedPlanTab] = useState<'serenite' | 'pro'>('serenite');
   const [currentSub, setCurrentSub] = useState<UserSubscriptionDetails>(() =>
     PlanService.getUserSubscription(user?.id)
   );
 
   useEffect(() => {
     if (isOpen) {
-      setCurrentSub(PlanService.getUserSubscription(user?.id));
+      const sub = PlanService.getUserSubscription(user?.id);
+      setCurrentSub(sub);
+      if (sub.plan === 'pro') {
+        setSelectedPlanTab('pro');
+      } else {
+        setSelectedPlanTab('serenite');
+      }
     }
   }, [isOpen, user?.id]);
 
@@ -67,16 +74,18 @@ export function UpgradePlanModal({
     setIsActivating(true);
     setTimeout(() => {
       const res = PlanService.activateSerenitePlan(user?.id);
+      setCurrentSub(PlanService.getUserSubscription(user?.id));
       setIsActivating(false);
       setSuccessMessage(res.message);
       setIsSuccess(true);
+      notifySave(res.message, 'Formule Sérénité activée');
 
       setTimeout(() => {
         setIsSuccess(false);
         onClose();
         if (onSuccess) onSuccess();
       }, 1500);
-    }, 500);
+    }, 400);
   };
 
   const handleActivateOrRenewPro = () => {
@@ -261,26 +270,36 @@ export function UpgradePlanModal({
               {/* Plans Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                 {/* Formule 1 : Sérénité (0 FCFA fixe, 2% split payment) */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
+                <div
+                  onClick={() => setSelectedPlanTab('serenite')}
+                  className={`p-4 sm:p-5 rounded-2xl transition-all flex flex-col justify-between cursor-pointer relative ${
+                    selectedPlanTab === 'serenite'
+                      ? 'bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-white dark:to-slate-900 border-2 border-emerald-500 shadow-lg shadow-emerald-500/10 ring-2 ring-emerald-500/20'
+                      : 'bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="absolute top-0 right-0 bg-emerald-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-bl-xl uppercase tracking-wider flex items-center gap-1 shadow-xs">
+                    <Sparkles className="w-2.5 h-2.5" /> Recommandé
+                  </div>
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold uppercase text-primary">
+                      <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md">
                         Sans Abonnement Fixe
                       </span>
                     </div>
-                    <h4 className="font-bold text-slate-900 dark:text-white text-sm mt-0.5 flex items-center gap-1.5">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-base mt-2 flex items-center gap-1.5">
                       <span>Formule Sérénité</span>
-                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      <Sparkles className="w-4 h-4 text-emerald-500 fill-emerald-500" />
                     </h4>
-                    <div className="text-lg font-extrabold text-primary my-1">
+                    <div className="text-xl font-black text-emerald-600 dark:text-emerald-400 my-1.5">
                       2% <span className="text-xs font-normal text-slate-500">/ loyer Mobile Money</span>
                     </div>
-                    <p className="text-[11px] text-slate-500 font-medium mb-2">
-                      0 FCFA fixe • Facturé uniquement si loyer perçu (98% net reversés)
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mb-3">
+                      <strong>0 FCFA fixe à vie</strong> • Facturé uniquement si loyer perçu (98% net reversés)
                     </p>
                     <ul className="space-y-1.5 text-xs text-slate-700 dark:text-slate-300">
-                      <li className="flex items-center gap-1.5 font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      <li className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-white">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 stroke-[2.5]" />
                         <span>Baux &amp; Contrats signés ILLIMITÉS</span>
                       </li>
                       <li className="flex items-center gap-1.5">
@@ -304,31 +323,42 @@ export function UpgradePlanModal({
 
                   <button
                     type="button"
-                    onClick={handleActivateSerenite}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleActivateSerenite();
+                    }}
                     disabled={isActivating}
-                    className="mt-4 w-full py-2 px-3 rounded-xl border border-primary/40 text-primary font-bold text-xs hover:bg-primary/10 transition-colors text-center cursor-pointer"
+                    className="mt-4 w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all text-center flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    Activer la Sérénité (0 F fixe)
+                    <Sparkles className="w-3.5 h-3.5 fill-emerald-200" />
+                    <span>Activer la Sérénité (0 F fixe)</span>
                   </button>
                 </div>
 
                 {/* Formule 2 : Entreprise & Pro (15 000 FCFA / 30 jours) */}
-                <div className="p-4 rounded-2xl bg-gradient-to-br from-indigo-500/10 via-brand-500/5 to-surface-container-high border-2 border-indigo-500/80 rounded-2xl relative shadow-md flex flex-col justify-between">
-                  <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-extrabold px-2.5 py-0.5 rounded-bl-xl uppercase tracking-wider">
+                <div
+                  onClick={() => setSelectedPlanTab('pro')}
+                  className={`p-4 sm:p-5 rounded-2xl transition-all relative flex flex-col justify-between cursor-pointer ${
+                    selectedPlanTab === 'pro'
+                      ? 'bg-gradient-to-br from-indigo-500/10 via-indigo-500/5 to-white dark:to-slate-900 border-2 border-indigo-600 shadow-lg shadow-indigo-500/10 ring-2 ring-indigo-500/20'
+                      : 'bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 hover:border-indigo-300'
+                  }`}
+                >
+                  <div className="absolute top-0 right-0 bg-indigo-600 text-white text-[9px] font-black px-2.5 py-0.5 rounded-bl-xl uppercase tracking-wider shadow-xs">
                     {isPro ? 'Votre Formule' : 'Pack Pro 30 Jours'}
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-indigo-700 dark:text-indigo-400">
-                      Agences, Cabinets &amp; Démarcheurs
+                    <span className="text-[10px] font-black uppercase tracking-wider text-indigo-700 dark:text-indigo-400 bg-indigo-100 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md">
+                      Agences &amp; Démarcheurs
                     </span>
-                    <h4 className="font-bold text-slate-900 dark:text-white text-sm mt-0.5 flex items-center gap-1.5">
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-base mt-2 flex items-center gap-1.5">
                       <span>Formule Entreprise &amp; Pro</span>
                       <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
                     </h4>
-                    <div className="text-lg font-extrabold text-slate-900 dark:text-white my-1">
+                    <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 my-1.5">
                       15 000 FCFA <span className="text-xs font-normal text-slate-500">/ 30 jours</span>
                     </div>
-                    <p className="text-[11px] text-indigo-700 dark:text-indigo-300 font-medium mb-2">
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mb-3">
                       Accès complet garanti 30 jours • Alertes d'échéance à J-2, J-1 et J
                     </p>
                     <ul className="space-y-1.5 text-xs text-slate-800 dark:text-slate-200">
@@ -361,9 +391,12 @@ export function UpgradePlanModal({
 
                   <button
                     type="button"
-                    onClick={handleActivateOrRenewPro}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleActivateOrRenewPro();
+                    }}
                     disabled={isActivating}
-                    className="mt-4 w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md active:scale-95 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="mt-4 w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md shadow-indigo-600/25 active:scale-95 transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isActivating ? 'animate-spin' : ''}`} />
                     <span>
@@ -452,29 +485,41 @@ export function UpgradePlanModal({
 
         {/* Modal Footer Actions */}
         {!isSuccess && (
-          <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3">
+          <div className="p-4 sm:p-5 bg-slate-50 dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              className="px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold text-xs hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer order-last sm:order-first text-center"
             >
               Fermer
             </button>
 
-            <button
-              type="button"
-              onClick={handleActivateOrRenewPro}
-              disabled={isActivating}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md active:scale-95 transition-all cursor-pointer"
-            >
-              <Zap className="w-4 h-4 fill-white" />
-              <span>
-                {isPro && !isExpired
-                  ? 'Prolonger 30 jours (15 000 FCFA)'
-                  : 'Activer 30 jours (15 000 FCFA)'}
-              </span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleActivateSerenite}
+                disabled={isActivating}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/25 active:scale-95 transition-all cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4 fill-emerald-200" />
+                <span>Activer la Sérénité (0 F fixe)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleActivateOrRenewPro}
+                disabled={isActivating}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs shadow-md shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer"
+              >
+                <Zap className="w-4 h-4 fill-white" />
+                <span>
+                  {isPro && !isExpired
+                    ? 'Prolonger 30 jours (15 000 F)'
+                    : 'Activer 30 jours (15 000 F)'}
+                </span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
       </div>

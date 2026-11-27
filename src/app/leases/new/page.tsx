@@ -3643,10 +3643,14 @@ export default function NewLeasePage() {
         onClose={() => setIsUpgradeModalOpen(false)}
         onSuccess={() => {
           setIsUpgradeModalOpen(false);
+          setCurrentPlan(PlanService.getUserPlan(user?.id));
           notifySave(
             'Formule Sérénité activée avec succès ! Vous bénéficiez désormais de la signature illimitée.',
             'Abonnement Activé'
           );
+          if (preparedLease) {
+            setIsTransmitModalOpen(true);
+          }
         }}
       />
     </div>

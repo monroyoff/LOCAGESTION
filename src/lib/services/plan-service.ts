@@ -261,20 +261,47 @@ export const PlanService = {
     this.setUserPlan(userId, 'serenite');
 
     if (typeof window !== 'undefined') {
-      const subKey = `${SUB_STORAGE_KEY_PREFIX}${targetId}`;
-      const sub: UserSubscriptionDetails = {
-        plan: 'serenite',
-        activatedAt: new Date().toISOString(),
-        isExpired: false,
-        pricePaid: 0,
-        currency: 'FCFA',
-      };
-      localStorage.setItem(subKey, JSON.stringify(sub));
+      try {
+        const sub: UserSubscriptionDetails = {
+          plan: 'serenite',
+          activatedAt: new Date().toISOString(),
+          isExpired: false,
+          pricePaid: 0,
+          currency: 'FCFA',
+        };
+        const subStr = JSON.stringify(sub);
+        localStorage.setItem(`${SUB_STORAGE_KEY_PREFIX}${targetId}`, subStr);
+        localStorage.setItem(`${PLAN_STORAGE_KEY_PREFIX}${targetId}`, 'serenite');
+
+        if (targetId !== DEFAULT_FALLBACK_USER_ID) {
+          localStorage.setItem(`${SUB_STORAGE_KEY_PREFIX}${DEFAULT_FALLBACK_USER_ID}`, subStr);
+          localStorage.setItem(`${PLAN_STORAGE_KEY_PREFIX}${DEFAULT_FALLBACK_USER_ID}`, 'serenite');
+        }
+
+        // Notification persistante dans la cloche du bailleur
+        LeaseService.addLandlordNotification({
+          id: `notif-serenite-welcome-${Date.now()}`,
+          title: '⚡ Formule Sérénité activée avec succès',
+          message: 'Félicitations ! Votre Formule Sérénité (0 FCFA fixe) est active. Vous bénéficiez désormais de la création et signature électronique de baux illimités.',
+          type: 'subscription_alert',
+          read: false,
+          createdAt: new Date().toISOString(),
+        });
+
+        // Déclencher l'événement réactif pour tout le système
+        window.dispatchEvent(
+          new CustomEvent('locagestion:plan_changed', {
+            detail: { userId: targetId, plan: 'serenite', subscription: sub },
+          })
+        );
+      } catch (e) {
+        console.error('Erreur activation Sérénité:', e);
+      }
     }
 
     return {
       success: true,
-      message: 'Félicitations ! La Formule Sérénité a été activée. Vous bénéficiez désormais de baux illimités.',
+      message: 'Félicitations ! La Formule Sérénité a été activée avec succès. Vous bénéficiez désormais de baux illimités.',
     };
   },
 
