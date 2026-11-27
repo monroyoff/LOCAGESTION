@@ -21,7 +21,11 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
   let accountLabel = 'Espace Compte';
   let accountMobileLabel = 'Connexion';
   if (user) {
-    if (isTenant || user.role === 'locataire') {
+    if (user.role === 'admin') {
+      accountUrl = '/admin';
+      accountLabel = 'Console Super Admin';
+      accountMobileLabel = 'Super Admin';
+    } else if (isTenant || user.role === 'locataire') {
       accountUrl = '/portal';
       accountLabel = 'Mon Espace Résident';
       accountMobileLabel = 'Résident';

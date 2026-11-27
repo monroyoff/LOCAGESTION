@@ -50,6 +50,7 @@ import {
   History,
   LogIn,
   CreditCard,
+  Home,
 } from 'lucide-react';
 import { useSpace } from '@/lib/context/space-context';
 import { ModerationService } from '@/lib/services/moderation-service';
@@ -622,6 +623,15 @@ export default function AdminDashboardPage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="font-bold">IA de Sécurité & Purge 30j Active</span>
           </div>
+
+          <Link
+            href="/accueil"
+            className="px-3.5 py-1.5 rounded-xl bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-200 border border-indigo-500/40 text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm active:scale-95"
+            title="Consulter la Landing Page (Page d'accueil publique)"
+          >
+            <Home className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Landing Page</span>
+          </Link>
 
           <Link
             href="/listings"
