@@ -71,7 +71,11 @@ export async function POST(req: NextRequest) {
       description: description || `Règlement Loyer ${period || 'Novembre 2026'} - LOCAGESTION`,
       amount: finalAmount,
       currency: { iso: 'XOF' },
-      callback_url: callback_url || `${appUrl}/portal?fedapay_ref=success&amount=${finalAmount}&tab=quittances`,
+      callback_url:
+        callback_url ||
+        `${appUrl}/portal?fedapay_rent_check=1&lease_id=${encodeURIComponent(
+          leaseId || ''
+        )}&period=${encodeURIComponent(period || '')}&amount=${finalAmount}&tab=quittances`,
       customer: customerData,
     };
 

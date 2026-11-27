@@ -233,8 +233,17 @@ export function FedaPayCheckoutModal({
       setIsCheckingStatus(false);
 
       if (data.success && data.status === 'approved') {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         await finalizePayment(data.transaction?.reference || `FP-${txId}`);
         return true;
+      } else if (data.status === 'canceled' || data.status === 'declined') {
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+        notifySave(
+          '⚠️ Paiement annulé sur le guichet FedaPay. Aucun montant n’a été débité et aucune quittance n’a été émise.',
+          'Paiement Annulé'
+        );
+        setStep('checkout');
+        return false;
       }
       return false;
     } catch (e) {
@@ -303,12 +312,20 @@ export function FedaPayCheckoutModal({
           }
         }, 3500);
       } else {
-        // Fallback en cas de limitation
-        await finalizePayment(`FP-${Date.now()}`);
+        // En cas d'erreur FedaPay : pas de fausse validation
+        notifySave(
+          data.error || 'Impossible d’initialiser le guichet de paiement FedaPay. Veuillez réessayer.',
+          'Erreur d’initialisation'
+        );
+        setStep('checkout');
       }
     } catch (err) {
       console.error('Erreur FedaPay checkout:', err);
-      await finalizePayment(`FP-${Date.now()}`);
+      notifySave(
+        'Erreur technique lors de la connexion au guichet FedaPay. Aucun montant débité.',
+        'Échec de connexion'
+      );
+      setStep('checkout');
     } finally {
       setIsSubmitting(false);
     }
@@ -628,14 +645,20 @@ export function FedaPayCheckoutModal({
                 </div>
               )}
 
-              {/* Action de secours rapide */}
-              <div className="pt-3 border-t border-slate-100 w-full">
+              {/* Action d'annulation en cours d'attente */}
+              <div className="pt-3 border-t border-slate-100 w-full flex items-center justify-center">
                 <button
                   type="button"
-                  onClick={() => finalizePayment(transactionRef || `FP-${Date.now()}`)}
-                  className="text-[10px] text-slate-400 hover:text-slate-600 underline cursor-pointer"
+                  onClick={() => {
+                    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+                    setStep('checkout');
+                    setIsSubmitting(false);
+                    setIsCheckingStatus(false);
+                    notifySave('Opération interrompue. Aucun débit n’a été effectué.', 'Attente Annulée');
+                  }}
+                  className="py-2 px-4 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-slate-100 text-xs font-semibold cursor-pointer transition-colors"
                 >
-                  Confirmer et émettre la quittance sans attendre
+                  Annuler l’attente et revenir
                 </button>
               </div>
             </div>

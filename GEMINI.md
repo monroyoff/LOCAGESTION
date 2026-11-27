@@ -908,6 +908,13 @@ Le son et la notification de cloche sont impérativement déclenchés lors de :
 - Un simple clic sur ce bouton déclenche et ouvre directement le guichet officiel de règlement Mobile Money (`openFedaPayModalForLease`) pour le bail actif du locataire avec prise en compte instantanée du montant exact du loyer contractuel.
 - L'option de déclaration de règlement manuel (espèces ou virement bancaire) reste disponible via un lien dédié dans le modal de paiement ainsi que dans l'onglet des quittances et le détail des baux.
 
+### 6. Interdiction Absolue de Toute Validation Fantôme, Auto-Validation de Secours ou Émission Indue de Quittance
+- **Zéro Auto-Validation en Fallback :** Interdiction stricte et absolue d'appeler `finalizePayment` ou `processDirectPayment` dans un bloc `catch`, `else` ou de temporisation réseau. Si la passerelle FedaPay échoue ou ne renvoie pas d'URL, l'opération est avortée avec message d'erreur et aucun paiement n'est consigné.
+- **Suppression des Boutons de Complaisance :** Interdiction totale d'afficher un bouton permettant d'émettre une quittance sans vérification réelle (suppression définitive de tout raccourci du type « Confirmer et émettre la quittance sans attendre »).
+- **Interdiction de Hardcoder le Succès dans l'URL :** Le `callback_url` FedaPay ne doit JAMAIS contenir `fedapay_ref=success` ou `status=approved`. Il redirige vers un identifiant de contrôle neutre (`fedapay_rent_check=1&lease_id=...`).
+- **Contrôle Cryptographique & API Serveur Obligatoire (`action: 'verify'`) :** Tout retour de transaction est intercepté par le contrôleur global `FedaPayReturnHandler`. Seule une réponse officielle de l'API FedaPay avec `status === 'approved'` et un montant conforme au loyer autorise le débit et l'émission de la quittance scellée avec QR Code.
+- **Traitement Immédiat de l'Annulation Locataire :** Dès que le statut FedaPay est `canceled` ou `declined`, le système interrompt instantanément les vérifications, affiche une notification claire (*« ⚠️ Règlement annulé. Aucun débit n’a été prélevé sur votre compte Mobile Money et aucune quittance n’a été émise. »*), réinitialise le modal sur l'écran initial et ne délivre strictement aucune quittance.
+
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
 

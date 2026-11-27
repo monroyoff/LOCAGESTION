@@ -4,6 +4,8 @@ import { useEffect, useRef } from 'react';
 import { useSpace } from '@/lib/context/space-context';
 import { PlanService } from '@/lib/services/plan-service';
 import { ListingsService, BOOST_PACKS } from '@/lib/services/listings-service';
+import { LeaseService } from '@/lib/services/lease-service';
+import { FedaPayService } from '@/lib/services/fedapay-service';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { formatFCFA } from '@/lib/money/format';
 
@@ -176,111 +178,244 @@ export function FedaPayReturnHandler() {
               urlParams.has('id') ||
               urlParams.has('tx_id')));
 
-        if (!isPlanCheck) return;
+        if (isPlanCheck) {
+          const rawStatus = (urlParams.get('status') || urlParams.get('payment_status') || '').toLowerCase();
+          const txId =
+            urlParams.get('id') ||
+            urlParams.get('tx_id') ||
+            urlParams.get('transaction_id');
 
-        const rawStatus = (urlParams.get('status') || urlParams.get('payment_status') || '').toLowerCase();
-        const txId =
-          urlParams.get('id') ||
-          urlParams.get('tx_id') ||
-          urlParams.get('transaction_id');
+          // Nettoyage immédiat et strict de l'URL pour empêcher toute réexécution au rechargement
+          urlParams.delete('fedapay_sub_check');
+          urlParams.delete('fedapay_plan');
+          urlParams.delete('fedapay_ref');
+          urlParams.delete('payment_status');
+          urlParams.delete('status');
+          urlParams.delete('plan');
+          urlParams.delete('amount');
+          urlParams.delete('id');
+          urlParams.delete('tx_id');
+          urlParams.delete('transaction_id');
+          const newQuery = urlParams.toString();
+          const newUrl =
+            window.location.pathname + (newQuery ? `?${newQuery}` : '') + window.location.hash;
+          window.history.replaceState({}, '', newUrl);
 
-        // Nettoyage immédiat et strict de l'URL pour empêcher toute réexécution au rechargement
-        urlParams.delete('fedapay_sub_check');
-        urlParams.delete('fedapay_plan');
-        urlParams.delete('fedapay_ref');
-        urlParams.delete('payment_status');
-        urlParams.delete('status');
-        urlParams.delete('plan');
-        urlParams.delete('amount');
-        urlParams.delete('id');
-        urlParams.delete('tx_id');
-        urlParams.delete('transaction_id');
-        const newQuery = urlParams.toString();
-        const newUrl =
-          window.location.pathname + (newQuery ? `?${newQuery}` : '') + window.location.hash;
-        window.history.replaceState({}, '', newUrl);
-
-        // 1. Détection prioritaire de l'annulation par l'utilisateur sur le guichet FedaPay
-        if (rawStatus === 'canceled' || rawStatus === 'declined') {
-          notifySave(
-            '⚠️ Paiement annulé. Votre compte reste sur sa formule actuelle sans aucun débit.',
-            'Paiement Annulé'
-          );
-          return;
-        }
-
-        // 2. Si aucun ID de transaction n'est retourné par FedaPay -> Annulation de sécurité
-        if (!txId) {
-          notifySave(
-            'Opération non finalisée. Aucun paiement validé détecté.',
-            'Paiement Annulé'
-          );
-          return;
-        }
-
-        // 3. Protection anti-rejeu (Replay Attack) : vérifier si ce txId a déjà été validé
-        const alreadyRedeemed = localStorage.getItem(`${REDEEMED_TX_KEY_PREFIX}${txId}`);
-        if (alreadyRedeemed || processedTxRef.current.has(txId)) {
-          console.warn('[FedaPay] Transaction déjà traitée précédemment:', txId);
-          return;
-        }
-        processedTxRef.current.add(txId);
-
-        // 4. VÉRIFICATION STRICTE CÔTÉ SERVEUR SUR L'API OFFICIELLE FEDAPAY
-        const verifyRes = await fetch('/api/payments/fedapay', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'verify', transactionId: txId }),
-        });
-
-        const verifyData = await verifyRes.json();
-
-        // 5. Validation de la réponse officielle FedaPay
-        if (verifyData.success && verifyData.status === 'approved') {
-          // Contrôle financier supplémentaire : le montant payé doit couvrir les 5 000 FCFA
-          const paidAmount = Number(verifyData.amount || verifyData.transaction?.amount || 0);
-          if (paidAmount < 5000) {
-            console.error('[FedaPay Security] Montant insuffisant détecté:', paidAmount);
+          // 1. Détection prioritaire de l'annulation par l'utilisateur sur le guichet FedaPay
+          if (rawStatus === 'canceled' || rawStatus === 'declined') {
             notifySave(
-              'Erreur financière : le montant de la transaction est insuffisant pour la Formule Pro.',
-              'Paiement Non Conforme'
+              '⚠️ Paiement annulé. Votre compte reste sur sa formule actuelle sans aucun débit.',
+              'Paiement Annulé'
             );
             return;
           }
 
-          // Enregistrement du reçu de transaction pour scellement anti-rejeu
-          localStorage.setItem(
-            `${REDEEMED_TX_KEY_PREFIX}${txId}`,
-            JSON.stringify({
-              txId,
-              amount: paidAmount,
-              date: new Date().toISOString(),
-              userId: user?.id,
-            })
-          );
+          // 2. Si aucun ID de transaction n'est retourné par FedaPay -> Annulation de sécurité
+          if (!txId) {
+            notifySave(
+              'Opération non finalisée. Aucun paiement validé détecté.',
+              'Paiement Annulé'
+            );
+            return;
+          }
 
-          // Activation officielle de la formule Pro pour 30 jours
-          PlanService.activateProPlan(user?.id, 30);
-          notifySave(
-            '🎉 Félicitations ! Votre paiement de 5 000 FCFA a été vérifié et validé. Votre Formule Entreprise & Pro (30 jours) est active.',
-            'Abonnement Pro Validé'
-          );
-          window.dispatchEvent(new Event('locagestion:plan_changed'));
-        } else if (verifyData.status === 'canceled' || verifyData.status === 'declined') {
-          notifySave(
-            '⚠️ Paiement annulé. Aucun débit n’a été prélevé sur votre compte.',
-            'Paiement Annulé'
-          );
-        } else if (verifyData.status === 'pending') {
-          notifySave(
-            '⏳ Paiement en attente de confirmation par votre opérateur Mobile Money. Votre forfait sera crédité dès validation bancaire.',
-            'Paiement en Attente'
-          );
-        } else {
-          notifySave(
-            'La transaction n’a pas pu être validée par les services de paiement.',
-            'Paiement Non Validé'
-          );
+          // 3. Protection anti-rejeu (Replay Attack) : vérifier si ce txId a déjà été validé
+          const alreadyRedeemed = localStorage.getItem(`${REDEEMED_TX_KEY_PREFIX}${txId}`);
+          if (alreadyRedeemed || processedTxRef.current.has(txId)) {
+            console.warn('[FedaPay] Transaction déjà traitée précédemment:', txId);
+            return;
+          }
+          processedTxRef.current.add(txId);
+
+          // 4. VÉRIFICATION STRICTE CÔTÉ SERVEUR SUR L'API OFFICIELLE FEDAPAY
+          const verifyRes = await fetch('/api/payments/fedapay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify', transactionId: txId }),
+          });
+
+          const verifyData = await verifyRes.json();
+
+          // 5. Validation de la réponse officielle FedaPay
+          if (verifyData.success && verifyData.status === 'approved') {
+            // Contrôle financier supplémentaire : le montant payé doit couvrir les 5 000 FCFA
+            const paidAmount = Number(verifyData.amount || verifyData.transaction?.amount || 0);
+            if (paidAmount < 5000) {
+              console.error('[FedaPay Security] Montant insuffisant détecté:', paidAmount);
+              notifySave(
+                'Erreur financière : le montant de la transaction est insuffisant pour la Formule Pro.',
+                'Paiement Non Conforme'
+              );
+              return;
+            }
+
+            // Enregistrement du reçu de transaction pour scellement anti-rejeu
+            localStorage.setItem(
+              `${REDEEMED_TX_KEY_PREFIX}${txId}`,
+              JSON.stringify({
+                txId,
+                amount: paidAmount,
+                date: new Date().toISOString(),
+                userId: user?.id,
+              })
+            );
+
+            // Activation officielle de la formule Pro pour 30 jours
+            PlanService.activateProPlan(user?.id, 30);
+            notifySave(
+              '🎉 Félicitations ! Votre paiement de 5 000 FCFA a été vérifié et validé. Votre Formule Entreprise & Pro (30 jours) est active.',
+              'Abonnement Pro Validé'
+            );
+            window.dispatchEvent(new Event('locagestion:plan_changed'));
+          } else if (verifyData.status === 'canceled' || verifyData.status === 'declined') {
+            notifySave(
+              '⚠️ Paiement annulé. Aucun débit n’a été prélevé sur votre compte.',
+              'Paiement Annulé'
+            );
+          } else if (verifyData.status === 'pending') {
+            notifySave(
+              '⏳ Paiement en attente de confirmation par votre opérateur Mobile Money. Votre forfait sera crédité dès validation bancaire.',
+              'Paiement en Attente'
+            );
+          } else {
+            notifySave(
+              'La transaction n’a pas pu être validée par les services de paiement.',
+              'Paiement Non Validé'
+            );
+          }
+          return;
+        }
+
+        // 3. Détection des retours de règlement de loyer FedaPay
+        const isRentCheck =
+          urlParams.has('fedapay_rent_check') ||
+          urlParams.get('type') === 'rent';
+
+        if (isRentCheck) {
+          const rentLeaseId = urlParams.get('lease_id') || '';
+          const rentPeriod = urlParams.get('period') || 'Novembre 2026';
+          const rawStatus = (urlParams.get('status') || urlParams.get('payment_status') || '').toLowerCase();
+          const txId =
+            urlParams.get('id') ||
+            urlParams.get('tx_id') ||
+            urlParams.get('transaction_id');
+
+          // Nettoyage immédiat et strict de l'URL pour empêcher toute réexécution au rechargement
+          urlParams.delete('fedapay_rent_check');
+          urlParams.delete('lease_id');
+          urlParams.delete('period');
+          urlParams.delete('amount');
+          urlParams.delete('type');
+          urlParams.delete('fedapay_ref');
+          urlParams.delete('status');
+          urlParams.delete('payment_status');
+          urlParams.delete('id');
+          urlParams.delete('tx_id');
+          urlParams.delete('transaction_id');
+          const cleanQuery = urlParams.toString();
+          const cleanUrl =
+            window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '') + window.location.hash;
+          window.history.replaceState({}, '', cleanUrl);
+
+          // 1. Détection prioritaire de l'annulation par l'utilisateur sur le guichet FedaPay
+          if (rawStatus === 'canceled' || rawStatus === 'declined') {
+            notifySave(
+              '⚠️ Règlement annulé. Aucun débit n’a été prélevé sur votre compte Mobile Money et aucune quittance n’a été émise.',
+              'Paiement Annulé'
+            );
+            return;
+          }
+
+          // 2. Si aucun ID de transaction n'est retourné par FedaPay -> Annulation de sécurité
+          if (!txId) {
+            notifySave(
+              'Opération non finalisée. Aucun paiement validé détecté pour ce loyer.',
+              'Paiement Annulé'
+            );
+            return;
+          }
+
+          // 3. Protection anti-rejeu (Replay Attack)
+          const alreadyRedeemed = localStorage.getItem(`${REDEEMED_TX_KEY_PREFIX}${txId}`);
+          if (alreadyRedeemed || processedTxRef.current.has(txId)) {
+            console.warn('[FedaPay Rent] Transaction déjà traitée précédemment:', txId);
+            return;
+          }
+          processedTxRef.current.add(txId);
+
+          // 4. VÉRIFICATION STRICTE CÔTÉ SERVEUR SUR L'API OFFICIELLE FEDAPAY
+          const verifyRes = await fetch('/api/payments/fedapay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify', transactionId: txId }),
+          });
+
+          const verifyData = await verifyRes.json();
+
+          // 5. Validation stricte du statut officiel FedaPay
+          if (verifyData.success && verifyData.status === 'approved') {
+            const paidAmount = Number(verifyData.amount || verifyData.transaction?.amount || 0);
+
+            // Scellement anti-rejeu
+            localStorage.setItem(
+              `${REDEEMED_TX_KEY_PREFIX}${txId}`,
+              JSON.stringify({
+                txId,
+                amount: paidAmount,
+                date: new Date().toISOString(),
+                userId: user?.id,
+                type: 'rent',
+                leaseId: rentLeaseId,
+              })
+            );
+
+            // Finalisation officielle du paiement et émission de la quittance
+            const allLeases = LeaseService.getLeases();
+            const lease = allLeases.find((l) => l.id === rentLeaseId) || null;
+
+            await FedaPayService.processDirectPayment({
+              leaseId: rentLeaseId || lease?.id || 'BAIL-2026-483',
+              lease,
+              tenantId: user?.id || 'usr-tenant-theodora',
+              tenantName: user?.name || lease?.tenant || 'Locataire',
+              tenantPhone: user?.phone || lease?.tenantPhone || '',
+              tenantEmail: user?.email || lease?.tenantEmail || '',
+              tenantMatricule: user?.matricule || lease?.tenantMatricule,
+              landlordId: lease?.landlordId || 'usr-bailleur-voglossou',
+              landlordName: lease?.landlordName || 'Bailleur',
+              landlordPhone: lease?.landlordPhone || lease?.landlordWhatsapp || '+229 97 00 00 01',
+              propertyName: lease?.property || 'Logement',
+              unitNumber: lease?.unit || 'Lot 1',
+              rentAmount: paidAmount > 0 ? paidAmount : (lease?.rent || 0),
+              period: rentPeriod,
+              paymentMethod: 'mtn',
+              payerPhone: user?.phone?.replace(/\D/g, '') || '',
+              payerCountryCode: '+229',
+            });
+
+            notifySave(
+              `🎉 Félicitations ! Votre loyer de ${formatFCFA(paidAmount > 0 ? paidAmount : (lease?.rent || 0))} pour ${rentPeriod} a été validé avec succès. Votre quittance officielle scellée est prête.`,
+              'Loyer Réglé avec Succès'
+            );
+            window.dispatchEvent(new CustomEvent('locagestion:payments_updated'));
+            window.dispatchEvent(new CustomEvent('locagestion:payment_verified'));
+          } else if (verifyData.status === 'canceled' || verifyData.status === 'declined') {
+            notifySave(
+              '⚠️ Règlement annulé. Aucun débit n’a été prélevé sur votre compte et aucune quittance n’a été émise.',
+              'Paiement Annulé'
+            );
+          } else if (verifyData.status === 'pending') {
+            notifySave(
+              '⏳ Paiement en cours de validation par votre opérateur Mobile Money. La quittance sera émise dès confirmation du réseau.',
+              'Paiement en Attente'
+            );
+          } else {
+            notifySave(
+              'La transaction n’a pas été validée par les services de paiement.',
+              'Paiement Non Validé'
+            );
+          }
+          return;
         }
       } catch (err) {
         console.error('Erreur traitement retour FedaPay:', err);
