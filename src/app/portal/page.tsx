@@ -224,7 +224,7 @@ function TenantPortalContent() {
       status: 'en_attente',
     });
 
-    setReportedIncidents(IncidentService.getIncidents());
+    setReportedIncidents(IncidentService.getIncidentsForTenant(user));
     setReportIssueModalOpen(false);
     setIssuePhotos([]);
     setIssueDesc('');

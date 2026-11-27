@@ -104,7 +104,7 @@ export function LandlordIncidentModal({
     }
   };
 
-  const handleSaveAll = () => {
+  const handleSaveAll = (explicitStatus?: IncidentStatus) => {
     if (!incident) return;
     const hasArtisan = artisanName.trim().length > 0;
     const tech = hasArtisan
@@ -113,9 +113,12 @@ export function LandlordIncidentModal({
           phone: artisanPhone.trim() || '+229 95 00 22 33',
           trade: artisanTrade.trim() || 'Technicien / Artisan',
         }
-      : incident.assignedTechnician;
+      : undefined;
 
-    const targetStatus = currentStatus === 'en_attente' && hasArtisan ? 'pris_en_charge' : currentStatus;
+    let targetStatus = explicitStatus || currentStatus;
+    if (!explicitStatus && targetStatus === 'en_attente' && hasArtisan) {
+      targetStatus = 'pris_en_charge';
+    }
     const parsedFee = typeof artisanFee === 'number' ? artisanFee : artisanFee ? Number(artisanFee) : 0;
 
     IncidentService.updateIncidentFull(incident.id, {
@@ -130,6 +133,8 @@ export function LandlordIncidentModal({
     notifySave(
       hasArtisan
         ? `Fiche mise à jour ! Artisan mandaté : ${artisanName} (${artisanPhone}) • Frais : ${formatFCFA(parsedFee)} pris en compte dans Dépenses & Travaux.`
+        : targetStatus === 'resolu'
+        ? `Incident clôturé et résolu avec succès !`
         : 'Fiche incident enregistrée avec succès.',
       'Fiche & Dépenses enregistrées'
     );
@@ -400,18 +405,25 @@ export function LandlordIncidentModal({
               </div>
             </div>
 
-            <div className="pt-1 flex flex-wrap items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={handleAssignTechnician}
-                className="py-2 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs transition-colors cursor-pointer"
-              >
-                Enregistrer l'attribution
-              </button>
+            <div className="pt-1 flex flex-wrap items-center justify-between gap-2">
+              <span className="text-[11px] text-slate-300 font-medium">
+                💡 Renseignez l’artisan puis enregistrez via <strong>« Enregistrer les modifications »</strong> en bas.
+              </span>
               <a
                 href={`https://wa.me/${artisanPhone.replace(/[^0-9]/g, '')}?text=${artisanWhatsAppText}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => {
+                  if (artisanName.trim()) {
+                    IncidentService.assignTechnician(incident.id, {
+                      name: artisanName.trim(),
+                      phone: artisanPhone.trim() || '+229 95 00 22 33',
+                      trade: artisanTrade.trim() || 'Technicien / Artisan',
+                    });
+                    setCurrentStatus('pris_en_charge');
+                    if (onStatusUpdated) onStatusUpdated();
+                  }
+                }}
                 className="py-2 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-black text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
@@ -497,9 +509,14 @@ export function LandlordIncidentModal({
 
           {/* Notes de résolution & Clôture */}
           <div className="space-y-2">
-            <label className="font-bold text-slate-700 block">
-              Notes de suivi & constat de résolution :
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="font-bold text-slate-700 block">
+                Notes de suivi & constat de résolution :
+              </label>
+              <span className="text-[11px] text-slate-400 font-medium">
+                S'enregistre avec « Enregistrer les modifications » en bas
+              </span>
+            </div>
             <textarea
               rows={2}
               value={resolutionNotes}
@@ -507,15 +524,6 @@ export function LandlordIncidentModal({
               placeholder="Ex: L'artisan est intervenu le 01/11, le siphon a été nettoyé et le joint remplacé. Tout est fonctionnel."
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
             />
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleSaveNotes}
-                className="py-1.5 px-3 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] cursor-pointer"
-              >
-                Enregistrer les notes
-              </button>
-            </div>
           </div>
         </div>
 
@@ -532,7 +540,7 @@ export function LandlordIncidentModal({
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={handleSaveAll}
+              onClick={() => handleSaveAll()}
               className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-black text-xs flex items-center gap-2 shadow-pink-glow transition-all cursor-pointer active:scale-95"
             >
               <Save className="w-4 h-4" />
@@ -540,10 +548,7 @@ export function LandlordIncidentModal({
             </button>
             <button
               type="button"
-              onClick={() => {
-                handleUpdateStatus('resolu');
-                onClose();
-              }}
+              onClick={() => handleSaveAll('resolu')}
               className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black flex items-center gap-1.5 shadow-sm transition-all cursor-pointer text-xs"
             >
               <CheckCircle2 className="w-4 h-4" />

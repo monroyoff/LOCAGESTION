@@ -16,7 +16,7 @@ import {
   ArrowRight,
   Filter,
 } from 'lucide-react';
-import { ReportedIncident, IncidentService, IncidentStatus } from '@/lib/services/incident-service';
+import { ReportedIncident, IncidentService, IncidentStatus, compareIncidentsDesc } from '@/lib/services/incident-service';
 import { LandlordIncidentModal } from './LandlordIncidentModal';
 
 export function LandlordIncidentsSection() {
@@ -49,7 +49,7 @@ export function LandlordIncidentsSection() {
     if (filter === 'pending') return i.status !== 'resolu';
     if (filter === 'resolved') return i.status === 'resolu';
     return true;
-  });
+  }).sort(compareIncidentsDesc);
 
   const handleQuickStatusChange = (
     id: string,

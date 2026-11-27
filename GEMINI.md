@@ -735,6 +735,20 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
 - **Élimination des Boucles d'Ouverture et Redirections Fantômes :**
   - L'accès aux tickets d'intervention s'effectue via `/incidents`. Les paramètres d'URL temporaires (`action=...`) sont purgés proprement pour empêcher toute réouverture intempestive de formulaires au rechargement de page.
 
+### 5. Règle d'Unification des Enregistrements dans le Modal d'Incident (Bouton Unique « Enregistrer les modifications »)
+- **Interdiction Formelle des Boutons Intermédiaires Dispersés :** Aucun bouton d'enregistrement partiel (tel que *« Enregistrer l'attribution »* ou *« Enregistrer les notes »*) ne doit figurer dans le modal de traitement d'incident (`LandlordIncidentModal`).
+- **Enregistrement Unifié Tout en Bas :** L'ensemble des éléments modifiés dans la fiche (attribution de l'artisan technicien, téléphone WhatsApp, corps de métier, règlement & montant en FCFA répercuté dans *Dépenses & Travaux*, statut du règlement, facture/reçu artisan, notes de suivi & constat de résolution, et statut) DOIT s'enregistrer de façon globale et cohérente par un clic unique sur le bouton d'action principal tout en bas : **« Enregistrer les modifications »** (`handleSaveAll`).
+- **Bouton WhatsApp Express Dédié :** Le bouton vert *« Envoyer le dossier sur WhatsApp à l'artisan »* ouvre directement la messagerie WhatsApp pré-remplie et persiste l'artisan en arrière-plan, sans introduire de bouton concurrent.
+- **Clôture Directe Sécurisée :** Le bouton vert *« Clôturer l'incident (Résolu) »* enregistre l'intégralité des champs saisis tout en basculant le statut à `resolu`.
+
+### 6. Règle d'Or de Tri Chronologique Décroissant Universel des Pannes (« Du plus récent au plus vieux »)
+- **Ordre Strict & Déterministe :** Partout sur la plateforme (Espace Bailleur `/` et `/incidents`, Espace Locataire `/portal`, Espace Super-Admin `/admin`, sur Web, Mobile PWA et application TWA Android), les pannes et constats techniques déclarés sont impérativement restitués **du plus récent au plus vieux**.
+- **Comparateur Universel `compareIncidentsDesc` :**
+  - Prise en charge des horodatages précis `timestamp` (ms) et `createdAtIso`.
+  - Résolution des formats de date `DD/MM/YYYY` et `DD/MM/YYYY à HH:mm`.
+  - En cas d'égalité sur la même journée, départage automatique par le numéro d'incident numérique séquentiel (`INC-2026-727` vs `INC-2026-042`).
+  - Toutes les fonctions d'accès (`IncidentService.getIncidents`, `getIncidentsForTenant`, `getIncidentsForLandlord`, `saveAllIncidents`) ainsi que les listes filtrées dans les composants UI appliquent systématiquement `compareIncidentsDesc`. La dernière panne déclarée s'affiche impérativement tout en haut.
+
 ---
 
 ## 22. Règle d'Or de Notification & Badge Instantanés lors de la Contresignature des Baux

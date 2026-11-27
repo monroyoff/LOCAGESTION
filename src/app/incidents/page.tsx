@@ -39,6 +39,7 @@ import {
   IncidentStatus,
   IncidentUrgency,
   INITIAL_INCIDENTS,
+  compareIncidentsDesc,
 } from '@/lib/services/incident-service';
 import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
 import { LeaseService } from '@/lib/services/lease-service';
@@ -263,7 +264,7 @@ function IncidentsPageContent() {
     }
 
     return true;
-  });
+  }).sort(compareIncidentsDesc);
 
   return (
     <div className="min-h-screen bg-[#F4F6F9] flex text-slate-800">

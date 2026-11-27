@@ -15,6 +15,8 @@ export interface ReportedIncident {
   description: string;
   photos: string[];
   createdAt: string;
+  createdAtIso?: string;
+  timestamp?: number;
   status: IncidentStatus;
   tenantName: string;
   tenantPhone: string;
@@ -42,6 +44,55 @@ export const INITIAL_INCIDENTS: ReportedIncident[] = [];
 
 const INCIDENTS_STORAGE_KEY = 'locagestion:incidents:v1';
 
+/**
+ * Analyse l'horodatage ou la date d'une panne signalée pour un tri déterministe
+ */
+export function parseIncidentTimestamp(inc: ReportedIncident): number {
+  if (inc.timestamp && typeof inc.timestamp === 'number') {
+    return inc.timestamp;
+  }
+  if (inc.createdAtIso) {
+    const t = Date.parse(inc.createdAtIso);
+    if (!isNaN(t)) return t;
+  }
+  const str = inc.createdAt || '';
+  if (str.includes('-') && !str.includes('/')) {
+    const t = Date.parse(str);
+    if (!isNaN(t)) return t;
+  }
+  const match = str.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:.*?(\d{1,2})[h:](\d{1,2}))?/i);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    const hour = match[4] ? parseInt(match[4], 10) : 0;
+    const min = match[5] ? parseInt(match[5], 10) : 0;
+    const d = new Date(year, month, day, hour, min);
+    if (!isNaN(d.getTime())) {
+      const idNum = parseInt((inc.id || '').replace(/\D/g, ''), 10);
+      const tieBreaker = !isNaN(idNum) ? (idNum % 100000) * 1000 : 0;
+      return d.getTime() + tieBreaker;
+    }
+  }
+  const direct = Date.parse(str);
+  if (!isNaN(direct)) return direct;
+
+  const idNum = parseInt((inc.id || '').replace(/\D/g, ''), 10);
+  if (!isNaN(idNum)) return idNum;
+
+  return 0;
+}
+
+/**
+ * Compare deux pannes du plus récent au plus vieux (tri chronologique décroissant)
+ */
+export function compareIncidentsDesc(a: ReportedIncident, b: ReportedIncident): number {
+  const timeA = parseIncidentTimestamp(a);
+  const timeB = parseIncidentTimestamp(b);
+  if (timeA !== timeB) return timeB - timeA;
+  return (b.id || '').localeCompare(a.id || '');
+}
+
 function notifyIncidentsChange() {
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent('locagestion:incidents_updated'));
@@ -66,7 +117,7 @@ export const IncidentService = {
       if (stored) {
         const parsed = JSON.parse(stored) as ReportedIncident[];
         if (Array.isArray(parsed)) {
-          return parsed;
+          return [...parsed].sort(compareIncidentsDesc);
         }
       }
     } catch (e) {
@@ -113,7 +164,7 @@ export const IncidentService = {
         if (inc.tenantName && inc.tenantName.toLowerCase().includes('djigla')) return true;
       }
       return false;
-    });
+    }).sort(compareIncidentsDesc);
   },
 
   getIncidentsForLandlord(user?: AuthUser | null): ReportedIncident[] {
@@ -143,13 +194,14 @@ export const IncidentService = {
       // 6. Si le bailleur n'a aucun bail explicite et que l'incident n'a pas de bailleur tiers exclusif
       if (landlordLeases.length === 0 && (!inc.landlordEmail || areEmailsEqual(inc.landlordEmail, 'jobovog@gmail.com') || areEmailsEqual(inc.landlordEmail, user.email))) return true;
       return false;
-    });
+    }).sort(compareIncidentsDesc);
   },
 
   saveAllIncidents(incidents: ReportedIncident[]): void {
     if (typeof window === 'undefined') return;
     try {
-      localStorage.setItem(INCIDENTS_STORAGE_KEY, JSON.stringify(incidents));
+      const sorted = [...incidents].sort(compareIncidentsDesc);
+      localStorage.setItem(INCIDENTS_STORAGE_KEY, JSON.stringify(sorted));
       notifyIncidentsChange();
       window.dispatchEvent(new Event('storage'));
 
@@ -185,11 +237,14 @@ export const IncidentService = {
       landlordName?: string;
     }
   ): ReportedIncident {
-    const nowFormatted = new Date().toLocaleDateString('fr-FR', {
+    const now = new Date();
+    const nowFormatted = now.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
     });
+    const nowIso = now.toISOString();
+    const nowTimestamp = now.getTime();
 
     const newId = data.id || `INC-2026-${Math.floor(100 + Math.random() * 900)}`;
 
@@ -233,6 +288,8 @@ export const IncidentService = {
       description: data.description,
       photos: data.photos || [],
       createdAt: data.createdAt || nowFormatted,
+      createdAtIso: nowIso,
+      timestamp: nowTimestamp,
       status: data.status || 'en_attente',
       tenantName: data.tenantName || 'Locataire',
       tenantPhone: data.tenantPhone || '',
@@ -249,7 +306,7 @@ export const IncidentService = {
     };
 
     const current = this.getIncidents();
-    const updated = [newIncident, ...current.filter((i) => i.id !== newId)];
+    const updated = [newIncident, ...current.filter((i) => i.id !== newId)].sort(compareIncidentsDesc);
     this.saveAllIncidents(updated);
 
     // Déclencher une notification officielle et enrichie pour le Bailleur
