@@ -158,7 +158,7 @@ export function ConfirmTerminateLeaseModal({
                 Déplacement dans l'Historique de bail & réactivation en 1 clic :
               </span>
               <p className="text-[11px] text-amber-800 leading-relaxed">
-                Ce contrat sera déplacé vers votre onglet <strong>📜 Historique de bail</strong> où il restera conservé avec ses quittances, photos et signatures certifiées. Vous pourrez le réactiver à tout moment en <strong>1 seul clic</strong> pour le restaurer parmi vos baux en cours.
+                Ce contrat sera déplacé vers votre onglet <strong>📜 Historique de bail</strong> où il restera conservé avec ses quittances, photos et signatures certifiées. Vous pourrez le réactiver sous <strong>30 jours en 1 seul clic</strong> pour le restaurer parmi vos baux en cours. Passé ce délai légal de 30 jours, la résiliation est définitive et scellée.
               </p>
             </div>
           </div>

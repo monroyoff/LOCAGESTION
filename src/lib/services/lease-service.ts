@@ -92,11 +92,83 @@ export interface Lease {
     signatureDataUrl?: string;
   };
   resiliatedAt?: string;
+  resiliatedAtIso?: string;
+  resiliatedTimestamp?: number;
   reactivatedAt?: string;
   resiliationReason?: string;
   deletedAt?: string;
+  deletedAtIso?: string;
+  deletedTimestamp?: number;
   deleteReason?: string;
   isArchived?: boolean;
+}
+
+/**
+ * Calcule l'horodatage précis de résiliation ou suppression d'un bail
+ */
+export function parseResiliationTimestamp(lease: Lease): number | null {
+  if (lease.resiliatedTimestamp && typeof lease.resiliatedTimestamp === 'number') {
+    return lease.resiliatedTimestamp;
+  }
+  if (lease.deletedTimestamp && typeof lease.deletedTimestamp === 'number') {
+    return lease.deletedTimestamp;
+  }
+  if (lease.resiliatedAtIso) {
+    const t = Date.parse(lease.resiliatedAtIso);
+    if (!isNaN(t)) return t;
+  }
+  if (lease.deletedAtIso) {
+    const t = Date.parse(lease.deletedAtIso);
+    if (!isNaN(t)) return t;
+  }
+  const dateStr = lease.resiliatedAt || lease.deletedAt;
+  if (!dateStr) return null;
+
+  // ISO test
+  if (dateStr.includes('-') && !dateStr.includes('/')) {
+    const t = Date.parse(dateStr);
+    if (!isNaN(t)) return t;
+  }
+
+  // Format français: DD/MM/YYYY [HH:mm] ou DD/MM/YYYY à HH:mm
+  const match = dateStr.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:.*?(\d{1,2})[h:](\d{1,2}))?/i);
+  if (match) {
+    const day = parseInt(match[1], 10);
+    const month = parseInt(match[2], 10) - 1;
+    const year = parseInt(match[3], 10);
+    const hour = match[4] ? parseInt(match[4], 10) : 0;
+    const min = match[5] ? parseInt(match[5], 10) : 0;
+    const d = new Date(year, month, day, hour, min);
+    if (!isNaN(d.getTime())) return d.getTime();
+  }
+
+  const direct = Date.parse(dateStr);
+  if (!isNaN(direct)) return direct;
+
+  return null;
+}
+
+/**
+ * Retourne le nombre de jours écoulés depuis la résiliation ou suppression du bail
+ */
+export function getDaysSinceResiliation(lease: Lease): number | null {
+  const timestamp = parseResiliationTimestamp(lease);
+  if (!timestamp) return null;
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) return 0;
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Détermine si un bail résilié ou supprimé peut encore être réactivé
+ * Règle d'or : Un bail résilié de plus d'un mois (30 jours) ne peut plus être réactivé.
+ * Le bouton réactiver disparaît sur ce bail résilié au bout de 30 jours.
+ */
+export function canReactivateLease(lease: Lease): boolean {
+  if (lease.status === 'actif') return false;
+  const days = getDaysSinceResiliation(lease);
+  if (days === null) return true; // Si date non connue, réactivation permise
+  return days <= 30;
 }
 
 export interface RegisteredTenant {
@@ -880,7 +952,10 @@ export const LeaseService = {
     const leaseIndex = leases.findIndex((l) => l.id === leaseId);
     if (leaseIndex < 0) return undefined;
 
-    const nowFormatted = new Date().toLocaleDateString('fr-FR', {
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const nowTimestamp = now.getTime();
+    const nowFormatted = now.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -894,14 +969,15 @@ export const LeaseService = {
       status: 'resilie',
       isArchived: true,
       resiliatedAt: nowFormatted,
+      resiliatedAtIso: nowIso,
+      resiliatedTimestamp: nowTimestamp,
       resiliationReason: reason || 'Résiliation à la demande du bailleur',
     };
 
     leases[leaseIndex] = updatedLease;
     this.saveAllLeases(leases);
 
-    const nowIso = new Date().toISOString();
-    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
     // Notification de résiliation pour le bailleur
     this.addLandlordNotification({
@@ -937,7 +1013,10 @@ export const LeaseService = {
     const leaseIndex = leases.findIndex((l) => l.id === leaseId);
     if (leaseIndex < 0) return undefined;
 
-    const nowFormatted = new Date().toLocaleDateString('fr-FR', {
+    const now = new Date();
+    const nowIso = now.toISOString();
+    const nowTimestamp = now.getTime();
+    const nowFormatted = now.toLocaleDateString('fr-FR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
@@ -951,14 +1030,18 @@ export const LeaseService = {
       status: 'supprime',
       isArchived: true,
       deletedAt: nowFormatted,
+      deletedAtIso: nowIso,
+      deletedTimestamp: nowTimestamp,
+      resiliatedAt: targetLease.resiliatedAt || nowFormatted,
+      resiliatedAtIso: targetLease.resiliatedAtIso || nowIso,
+      resiliatedTimestamp: targetLease.resiliatedTimestamp || nowTimestamp,
       deleteReason: reason || 'Supprimé par le bailleur et conservé dans l’historique',
     };
 
     leases[leaseIndex] = updatedLease;
     this.saveAllLeases(leases);
 
-    const nowIso = new Date().toISOString();
-    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
     this.addLandlordNotification({
       id: `notif-${Date.now()}`,
@@ -978,11 +1061,18 @@ export const LeaseService = {
     return updatedLease;
   },
 
-  // Action : Réactiver le bail sans autres démarches (replacer dans les baux en cours)
+  // Action : Réactiver le bail sans autres démarches (replacer dans les baux en cours si <= 30 jours)
   reactivateLease(leaseId: string): Lease | undefined {
     const leases = this.getLeases();
     const leaseIndex = leases.findIndex((l) => l.id === leaseId);
     if (leaseIndex < 0) return undefined;
+
+    const targetLease = leases[leaseIndex];
+    // Règle d'or : un bail résilié de plus d'un mois (30 jours) ne peut plus être réactivé
+    if (!canReactivateLease(targetLease)) {
+      console.warn(`Lease ${leaseId} cannot be reactivated: resiliated > 30 days ago.`);
+      return undefined;
+    }
 
     const nowFormatted = new Date().toLocaleDateString('fr-FR', {
       day: '2-digit',
@@ -992,7 +1082,6 @@ export const LeaseService = {
       minute: '2-digit',
     });
 
-    const targetLease = leases[leaseIndex];
     const updatedLease: Lease = {
       ...targetLease,
       status: 'actif',

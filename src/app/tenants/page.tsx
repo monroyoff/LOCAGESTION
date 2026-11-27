@@ -59,7 +59,7 @@ import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderMo
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
-import { LeaseService, Lease } from '@/lib/services/lease-service';
+import { LeaseService, Lease, canReactivateLease } from '@/lib/services/lease-service';
 import { PlanService } from '@/lib/services/plan-service';
 import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import {
@@ -376,7 +376,16 @@ export default function TenantsPage() {
   };
 
   const handleReactivateTenantLease = (leaseId: string, tenantName: string) => {
-    LeaseService.reactivateLease(leaseId);
+    const target = leases.find((l) => l.id === leaseId);
+    if (target && !canReactivateLease(target)) {
+      showToast(`⛔ Un bail résilié de plus d'un mois (30 jours) ne peut plus être réactivé.`);
+      return;
+    }
+    const result = LeaseService.reactivateLease(leaseId);
+    if (!result) {
+      showToast(`⛔ Délai de réactivation dépassé (plus de 30 jours).`);
+      return;
+    }
     setLastResiliatedId(null);
     setLeases(LeaseService.getLeasesForLandlord(user));
     const msg = `Bail ${leaseId} (${tenantName}) réactivé avec succès ! Liaison rétablie sans autres démarches.`;
@@ -1349,22 +1358,31 @@ export default function TenantsPage() {
                               </div>
 
                               <div className="flex items-center gap-2 self-end sm:self-auto">
-                                {/* Bouton Réactiver le bail sans démarches */}
+                                {/* Bouton Réactiver le bail sans démarches : disparaît au bout de 30 jours */}
                                 {isLeaseResiliated ? (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      handleReactivateTenantLease(
-                                        selectedTenant.lease.id,
-                                        selectedTenant.fullName
-                                      )
-                                    }
-                                    className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
-                                    title="Réactiver le bail sans autres démarches"
-                                  >
-                                    <RotateCcw className="w-3.5 h-3.5" />
-                                    <span>Réactiver le bail</span>
-                                  </button>
+                                  canReactivateLease(currentLeaseObj || selectedTenant.lease) ? (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleReactivateTenantLease(
+                                          selectedTenant.lease.id,
+                                          selectedTenant.fullName
+                                        )
+                                      }
+                                      className="py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-sm transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
+                                      title="Réactiver le bail sans autres démarches (disponible sous 30 jours)"
+                                    >
+                                      <RotateCcw className="w-3.5 h-3.5" />
+                                      <span>Réactiver le bail</span>
+                                    </button>
+                                  ) : (
+                                    <span
+                                      className="py-1 px-2.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-bold"
+                                      title="Ce contrat est résilié depuis plus de 30 jours et ne peut plus être réactivé."
+                                    >
+                                      Résiliation définitive (&gt; 30 j)
+                                    </span>
+                                  )
                                 ) : (
                                   <button
                                     type="button"
@@ -1844,18 +1862,22 @@ export default function TenantsPage() {
         <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4.5 py-3.5 rounded-2xl bg-slate-900 text-white text-xs font-bold shadow-2xl border border-slate-700 animate-in slide-in-from-bottom-5 max-w-md">
           <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="flex-1">{toastMessage}</span>
-          {lastResiliatedId && (
-            <button
-              type="button"
-              onClick={() => {
-                handleReactivateTenantLease(lastResiliatedId, selectedTenant?.fullName || 'Locataire');
-              }}
-              className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-md active:scale-95"
-            >
-              <RotateCcw className="w-3 h-3" />
-              <span>Annuler l'erreur / Réactiver</span>
-            </button>
-          )}
+          {lastResiliatedId && (() => {
+            const target = leases.find((l) => l.id === lastResiliatedId);
+            if (!target || !canReactivateLease(target)) return null;
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  handleReactivateTenantLease(lastResiliatedId, selectedTenant?.fullName || 'Locataire');
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-black flex items-center gap-1.5 cursor-pointer transition-all shrink-0 shadow-md active:scale-95"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Annuler l'erreur / Réactiver</span>
+              </button>
+            );
+          })()}
         </div>
       )}
 

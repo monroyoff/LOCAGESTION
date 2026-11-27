@@ -821,9 +821,11 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
   - Il disparaît immédiatement de la liste des baux en cours et se positionne instantanément dans *Historique de bail*.
 - **Déplacement automatique à la suppression :**
   - La suppression d'un contrat n'entraîne aucune perte de données juridiques : le bail est marqué `status: 'supprime'`, `isArchived: true` avec horodatage `deletedAt` et motif de clôture.
-- **Réactivation en 1 Clic :**
-  - Tout contrat présent dans l'historique dispose d'un bouton d'action **« Réactiver le bail »**.
-  - En un seul clic, le bail est restauré au statut `'actif'` (ou `'en_attente_signature'` si le locataire n'avait pas encore signé), `isArchived` est réinitialisé à `false`, et le bail réintègre instantanément la liste des baux vivants sans perte d'historique.
+- **Réactivation en 1 Clic sous 30 Jours & Règle d'Or de Forclusion au-delà d'1 Mois :**
+  - **Délai Maximal de Réactivation (30 jours) :** Un bail résilié ou supprimé ne peut être réactivé que pendant une période maximale de **30 jours consécutifs (1 mois)** à compter de la date effective de résiliation (`resiliatedAt` / `deletedAt`).
+  - **Disparition Automatique du Bouton « Réactiver le bail » :** Dès que le délai de 30 jours est dépassé, le bouton d'action *« Réactiver le bail »* disparaît obligatoirement et définitivement de l'interface (sur `/leases` et `/tenants`).
+  - **Scellement Définitif de la Résiliation :** Un badge informatif neutre *« Résiliation définitive (> 30 j) »* s'affiche à la place du bouton, certifiant que le contrat est juridiquement forclos et ne peut plus être réactivé directement (tout renouvellement ultérieur exige l'émission d'un nouveau contrat de bail conforme).
+  - **Vérification Imperméable Côté Service (`canReactivateLease`) :** `LeaseService.reactivateLease` bloque systématiquement toute tentative de réactivation dont l'horodatage excède 30 jours.
 
 ---
 
