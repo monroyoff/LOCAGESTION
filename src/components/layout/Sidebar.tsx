@@ -33,6 +33,7 @@ import {
   ArrowLeft,
   Globe,
   Zap,
+  Archive,
 } from 'lucide-react';
 import { UserSpace, UserSubscriptionDetails } from '@/lib/types';
 import { PlanService } from '@/lib/services/plan-service';
@@ -60,7 +61,7 @@ interface NavItem {
   badgeCount?: number;
   badgeColor?: string;
   mobileOnly?: boolean;
-  portalTab?: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis';
+  portalTab?: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis' | 'historique';
   sectionKey?: 'messages' | 'notices' | 'leases' | 'payments' | 'incidents' | 'visits';
 }
 
@@ -69,8 +70,8 @@ interface SidebarProps {
   onClose: () => void;
   activeSpace?: UserSpace;
   onSpaceChange?: (space: UserSpace) => void;
-  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis';
-  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis') => void;
+  activePortalTab?: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis' | 'historique';
+  onPortalTabChange?: (tab: 'accueil' | 'quittances' | 'bail' | 'edl' | 'solvabilite' | 'preavis' | 'historique') => void;
 }
 
 export function Sidebar({
@@ -769,6 +770,14 @@ export function Sidebar({
       icon: ShieldCheck,
       portalTab: 'solvabilite',
       active: pathname === '/portal' && effectivePortalTab === 'solvabilite',
+      mobileOnly: true,
+    },
+    {
+      name: 'Historique des Baux',
+      href: '/portal?tab=historique',
+      icon: Archive,
+      portalTab: 'historique',
+      active: pathname === '/portal' && effectivePortalTab === 'historique',
       mobileOnly: true,
     },
     {

@@ -411,8 +411,13 @@ export const LeaseService = {
 
           // Si des baux initiaux (ex: BAIL-2026-421) sont absents du cache local, les intégrer sans écraser ni dupliquer
           INITIAL_LEASES.forEach((initL) => {
-            if (!leaseMap.has(initL.id)) {
+            const existing = leaseMap.get(initL.id);
+            if (!existing) {
               leaseMap.set(initL.id, initL);
+            } else if (initL.status === 'resilie' && !existing.reactivatedAt) {
+              existing.status = 'resilie';
+              existing.resiliatedAt = existing.resiliatedAt || initL.resiliatedAt;
+              existing.resiliationReason = existing.resiliationReason || initL.resiliationReason;
             }
           });
 
