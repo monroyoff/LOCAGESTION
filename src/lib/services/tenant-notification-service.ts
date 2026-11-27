@@ -623,6 +623,7 @@ export const TenantNotificationService = {
    * Action Bailleur : Rappel de paiement de loyer
    */
   notifyReminderSent(params: {
+    leaseId?: string;
     period: string;
     expectedAmount: number;
     tenantName: string;
@@ -659,6 +660,7 @@ export const TenantNotificationService = {
       actor: params.senderName || 'Bailleur',
       actionLabel: 'Régulariser / Payer',
       metadata: {
+        leaseId: params.leaseId,
         urgencyLevel: params.urgencyLevel || 'courtois',
         period: params.period,
         expectedAmount: params.expectedAmount,

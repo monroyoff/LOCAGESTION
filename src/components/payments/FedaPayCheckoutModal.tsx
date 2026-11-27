@@ -25,6 +25,7 @@ import { formatFCFA } from '@/lib/money/format';
 import { PaymentMethod } from '@/lib/types';
 import { generateReceiptPDF } from '@/lib/export/pdf-download';
 import { notifySave } from '@/lib/notifications/action-notifier';
+import { AuthService } from '@/lib/services/auth-service';
 
 interface FedaPayCheckoutModalProps {
   isOpen: boolean;
@@ -37,6 +38,7 @@ interface FedaPayCheckoutModalProps {
     email?: string;
     matricule?: string;
   };
+  expectedAmount?: number;
   initialPeriod?: string;
   onPaymentSuccess?: (paymentId: string) => void;
 }
@@ -46,13 +48,14 @@ export function FedaPayCheckoutModal({
   onClose,
   lease,
   tenantUser,
+  expectedAmount,
   initialPeriod = 'Novembre 2026',
   onPaymentSuccess,
 }: FedaPayCheckoutModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('mtn');
   const [countryCode, setCountryCode] = useState('+229');
-  const [payerPhone, setPayerPhone] = useState(() => tenantUser?.phone?.replace(/^\+\d+\s*/, '') || '97001234');
-  const [isTestLive100F, setIsTestLive100F] = useState(true); // Mode Test Live 100 FCFA actif par défaut pour tester immédiatement
+  const [payerPhone, setPayerPhone] = useState('');
+  const [isTestLive100F, setIsTestLive100F] = useState(false); // Mode test strictement désactivé par défaut
   const [step, setStep] = useState<'checkout' | 'processing' | 'success'>('checkout');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(false);
@@ -61,6 +64,9 @@ export function FedaPayCheckoutModal({
   const [paymentUrl, setPaymentUrl] = useState('');
   const [receiptNumber, setReceiptNumber] = useState('');
   const [period, setPeriod] = useState(initialPeriod);
+
+  const currentUser = AuthService.getCurrentUser();
+  const isAdmin = currentUser?.role === 'admin';
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -72,10 +78,46 @@ export function FedaPayCheckoutModal({
     };
   }, []);
 
+  // Synchronisation dynamique à chaque ouverture du modal ou changement d'utilisateur/bail
+  useEffect(() => {
+    if (isOpen) {
+      setIsTestLive100F(false);
+      setStep('checkout');
+      setIsSubmitting(false);
+      setIsCheckingStatus(false);
+      setTransactionRef('');
+      setTransactionId('');
+      setPaymentUrl('');
+
+      if (initialPeriod) {
+        setPeriod(initialPeriod);
+      }
+
+      // Pré-remplissage automatique du numéro du locataire connecté
+      const rawPhone = tenantUser?.phone || lease?.tenantPhone || currentUser?.phone || '';
+      if (rawPhone) {
+        const cleanRaw = rawPhone.trim();
+        const match = cleanRaw.match(/^(\+\d{3})\s*(.*)$/);
+        if (match) {
+          setCountryCode(match[1]);
+          setPayerPhone(match[2].replace(/\s+/g, ''));
+        } else {
+          setPayerPhone(cleanRaw.replace(/^\+\d+\s*/, '').replace(/\s+/g, ''));
+        }
+      }
+    }
+  }, [isOpen, tenantUser, lease, initialPeriod, currentUser]);
+
   if (!isOpen) return null;
 
-  const baseRentAmount = lease?.rent || 50000;
-  const effectiveRentAmount = isTestLive100F ? 100 : baseRentAmount;
+  // Calcul strict et déterministe du montant exact du loyer contractuel
+  const baseRentAmount = Number(expectedAmount || lease?.rent || 0);
+  const effectiveRentAmount =
+    isAdmin && isTestLive100F
+      ? 100
+      : baseRentAmount > 0
+      ? baseRentAmount
+      : 100;
   const landlordPlan = 'serenite'; // Sérénité 2%
   const split: RentSplitCalculation = FedaPayService.calculateRentSplit(effectiveRentAmount, landlordPlan);
 
@@ -222,16 +264,16 @@ export function FedaPayCheckoutModal({
           action: 'create',
           amount: effectiveRentAmount,
           rentAmount: effectiveRentAmount,
-          isTestLive: isTestLive100F,
+          isTestLive: isAdmin && isTestLive100F,
           period,
           leaseId: lease?.id,
-          description: isTestLive100F
+          description: (isAdmin && isTestLive100F)
             ? `Test Live FedaPay (100 F) - LOCAGESTION - ${period}`
-            : `Règlement Loyer ${period} - LOCAGESTION`,
+            : `Règlement Loyer ${period} (${formatFCFA(effectiveRentAmount)}) - Bail ${lease?.id || ''} - LOCAGESTION`,
           customer: {
-            firstname: tenantUser?.name?.split(' ')[0] || 'Johane',
-            lastname: tenantUser?.name?.split(' ').slice(1).join(' ') || 'Locataire',
-            email: tenantUser?.email || 'omegafacture@gmail.com',
+            firstname: (tenantUser?.name || lease?.tenant || 'Locataire').split(' ')[0],
+            lastname: (tenantUser?.name || lease?.tenant || 'Locataire').split(' ').slice(1).join(' ') || 'Locataire',
+            email: tenantUser?.email || lease?.tenantEmail || 'locataire@locagestion.site',
             phone: cleanPhone,
             country: cleanCountry,
           },
@@ -273,16 +315,16 @@ export function FedaPayCheckoutModal({
   const handleDownloadPDF = async () => {
     await generateReceiptPDF({
       id: transactionRef ? `pay-feda-${transactionRef}` : `pay-feda-${Date.now()}`,
-      receiptNumber: receiptNumber || 'LOCA-QUITT-BJ-114409497',
-      landlordName: lease?.landlordSignature?.signedBy || lease?.landlordName || 'VOGLOSSOU JOHANE',
-      landlordPhone: '+229 01 95 44 44 30',
-      landlordAddress: 'Haie Vive, Cotonou, Bénin',
-      landlordIfu: '3201984210987',
-      tenantName: tenantUser?.name || 'Jojo VOG',
-      tenantPhone: tenantUser?.phone || '+229 97 00 12 34',
-      tenantEmail: tenantUser?.email || 'jojovog007@gmail.com',
-      tenantMatricule: tenantUser?.matricule || 'LOCA-MAT-BJ-17635',
-      propertyName: lease?.property || 'CHAMBRE SALON SANITAIRE',
+      receiptNumber: receiptNumber || `LOCA-QUITT-${(lease?.country || 'BJ').toUpperCase()}-${Date.now().toString().slice(-8)}`,
+      landlordName: lease?.landlordSignature?.signedBy || lease?.landlordName || 'Bailleur',
+      landlordPhone: lease?.landlordPhone || lease?.landlordWhatsapp || '+229 01 95 44 44 30',
+      landlordAddress: lease?.propertyAddress || 'Cotonou, Bénin',
+      landlordIfu: lease?.landlordIfu || '3201984210987',
+      tenantName: tenantUser?.name || lease?.tenant || 'Locataire',
+      tenantPhone: tenantUser?.phone || lease?.tenantPhone || `${countryCode} ${payerPhone}`,
+      tenantEmail: tenantUser?.email || lease?.tenantEmail || '',
+      tenantMatricule: tenantUser?.matricule || lease?.tenantMatricule || 'LOCA-MAT-BJ-24702',
+      propertyName: lease?.property || 'Logement',
       unitNumber: lease?.unit || 'Lot 1',
       period,
       amount: effectiveRentAmount,
@@ -305,15 +347,16 @@ export function FedaPayCheckoutModal({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  Compte Live MONROY AG
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  Guichet Officiel Sécurisé
                 </span>
-                <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">
-                  • Passerelle FedaPay
+                <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+                  • Passerelle FedaPay Agréée BCEAO
                 </span>
               </div>
               <h3 className="font-extrabold text-sm sm:text-base text-white mt-0.5">
-                Paiement Mobile Money Direct
+                Règlement de Loyer Sécurisé
               </h3>
             </div>
           </div>
@@ -330,32 +373,34 @@ export function FedaPayCheckoutModal({
         <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs">
           {step === 'checkout' && (
             <>
-              {/* Badge Sélecteur Mode Test Live 100 FCFA */}
-              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-3 shadow-xs">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
-                    <FlaskConical className="w-4 h-4" />
+              {/* Badge Sélecteur Mode Test Live 100 FCFA — STRICTEMENT RÉSERVÉ AUX ADMINISTRATEURS */}
+              {isAdmin && (
+                <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-3 shadow-xs">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+                      <FlaskConical className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-bold text-amber-950 block text-xs">
+                        Mode Test Super-Admin (100 FCFA)
+                      </span>
+                      <span className="text-[10px] text-amber-800 block">
+                        Débite 100 F pour tester la passerelle en conditions réelles.
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="font-bold text-amber-950 block text-xs">
-                      Test Réel Live à 100 FCFA
-                    </span>
-                    <span className="text-[10px] text-amber-800 block">
-                      Débite exactement 100 F sur votre Mobile Money pour valider la chaîne.
-                    </span>
-                  </div>
-                </div>
 
-                <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                  <input
-                    type="checkbox"
-                    checked={isTestLive100F}
-                    onChange={(e) => setIsTestLive100F(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
-                </label>
-              </div>
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={isTestLive100F}
+                      onChange={(e) => setIsTestLive100F(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                  </label>
+                </div>
+              )}
 
               {/* Informations du bien et mois de loyer */}
               <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-3">

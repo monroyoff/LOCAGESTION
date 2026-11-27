@@ -136,6 +136,8 @@ function TenantPortalContent() {
   const [declarationModalOpen, setDeclarationModalOpen] = useState(false);
   const [fedaPayModalOpen, setFedaPayModalOpen] = useState(false);
   const [fedaPayLease, setFedaPayLease] = useState<Lease | null>(null);
+  const [fedaPayExpectedAmount, setFedaPayExpectedAmount] = useState<number | undefined>();
+  const [fedaPayInitialPeriod, setFedaPayInitialPeriod] = useState<string>('Novembre 2026');
   const [reportIssueModalOpen, setReportIssueModalOpen] = useState(false);
   const [departureModalOpen, setDepartureModalOpen] = useState(false);
 
@@ -679,11 +681,15 @@ function TenantPortalContent() {
     setDeclarationModalOpen(true);
   };
 
-  const openFedaPayModalForLease = (leaseId?: string) => {
+  const openFedaPayModalForLease = (leaseId?: string, expectedAmount?: number, period?: string) => {
     const targetL = leaseId
       ? myLeases.find((l) => l.id === leaseId)
       : (myLeases.find((l) => l.id === currentLease?.id) || myLeases[0]);
     setFedaPayLease(targetL || null);
+    setFedaPayExpectedAmount(expectedAmount || (targetL ? targetL.rent : undefined));
+    if (period) {
+      setFedaPayInitialPeriod(period);
+    }
     setFedaPayModalOpen(true);
   };
 
@@ -2079,7 +2085,7 @@ function TenantPortalContent() {
                           <div className="space-y-2 pt-2 border-t border-slate-100">
                             <button
                               type="button"
-                              onClick={() => openFedaPayModalForLease(l.id)}
+                              onClick={() => openFedaPayModalForLease(l.id, l.rent)}
                               className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
                             >
                               <CreditCard className="w-3.5 h-3.5" />
@@ -4188,7 +4194,8 @@ function TenantPortalContent() {
                               onClick={() => {
                                 TenantNotificationService.markAsRead(reminder.id);
                                 setPortalNotifs(TenantNotificationService.getNotifications(user));
-                                openFedaPayModalForLease(currentLease?.id);
+                                const targetLeaseId = reminder.metadata?.leaseId || currentLease?.id;
+                                openFedaPayModalForLease(targetLeaseId, reminder.metadata?.expectedAmount, reminder.metadata?.period);
                               }}
                               className="py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs font-black shadow-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-95"
                             >
@@ -5739,6 +5746,8 @@ function TenantPortalContent() {
               }
             : undefined
         }
+        expectedAmount={fedaPayExpectedAmount}
+        initialPeriod={fedaPayInitialPeriod}
         onPaymentSuccess={() => {
           checkLeases();
           if (user) {

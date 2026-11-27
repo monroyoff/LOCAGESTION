@@ -71,6 +71,7 @@ ${senderName}`;
     navigator.clipboard.writeText(messageText);
     setCopied(true);
     TenantNotificationService.notifyReminderSent({
+      leaseId: payment.leaseId,
       period: payment.period,
       expectedAmount: payment.expectedAmount,
       tenantName: payment.tenantName,
@@ -164,6 +165,7 @@ ${senderName}`;
             rel="noopener noreferrer"
             onClick={() => {
               TenantNotificationService.notifyReminderSent({
+                leaseId: payment.leaseId,
                 period: payment.period,
                 expectedAmount: payment.expectedAmount,
                 tenantName: payment.tenantName,

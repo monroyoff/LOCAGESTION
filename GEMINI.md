@@ -30,6 +30,7 @@
 22. [Règle d'Or de Notification & Badge Instantanés lors de la Contresignature des Baux](#22-règle-dor-de-notification--badge-instantanés-lors-de-la-contresignature-des-baux)
 23. [Règle d'Or de Gestion de l'Historique des Baux & Déplacement Automatique des Contrats Résiliés ou Supprimés](#23-règle-dor-de-gestion-de-lhistorique-des-baux--déplacement-automatique-des-contrats-résiliés-ou-supprimés)
 24. [Règle d'Or de Fonctionnement Universel de la Cloche de Notification & Signal Sonore Instantané sur Toute la Plateforme](#24-règle-dor-de-fonctionnement-universel-de-la-cloche-de-notification--signal-sonore-instantané-sur-toute-la-plateforme)
+25. [Règle d'Or d'Intégrité Absolue des Montants de Loyer & Exclusion Stricte du Mode Test pour les Locataires](#25-règle-dor-dintégrité-absolue-des-montants-de-loyer--exclusion-stricte-du-mode-test-pour-les-locataires)
 
 ---
 
@@ -868,6 +869,39 @@ Le son et la notification de cloche sont impérativement déclenchés lors de :
 5. **Relances & Congés :** Émission ou réponse à un préavis de départ ou relance d'impayé.
 6. **Mises à jour temps réel multi-appareils :** Synchronisation `BroadcastChannel('locagestion_realtime')` augmentant le compteur d'alertes non lues.
 7. **Actions utilisateur & Toasts :** Sauvegardes, publications d'annonces et modifications (`notifyAction`).
+
+---
+
+## 25. Règle d'Or d'Intégrité Absolue des Montants de Loyer & Exclusion Stricte du Mode Test pour les Locataires
+
+> **RÈGLE CRITIQUE DE FIDÉLITÉ FINANCIÈRE, DE SÉCURITÉ DES TRANSACTIONS ET DE PRÉVENTION DES FRAUDES**  
+> **Tout paiement de loyer exécuté par un locataire sur la plateforme (Web, Mobile PWA, TWA Android) via Mobile Money (FedaPay) DOIT DÉBITER STRICTEMENT ET EXCLUSIVEMENT LE MONTANT CONTRACTUEL DU BAIL (`lease.rent`).**  
+> **LE MODE TEST À 100 FCFA EST TOTALEMENT INTERDIT PAR DÉFAUT (`isTestLive100F = false`) ET FORMELLEMENT INVISIBLE POUR TOUT LOCATAIRE EN PRODUCTION.**
+
+### 1. Strict Prélèvement du Montant Contractuel du Bail (`lease.rent`)
+- Lorsqu'un locataire clique sur « Payer par Mobile Money (FedaPay) » — que ce soit depuis le tableau de bord d'accueil (`/portal`), l'onglet des Baux & Contrats, une relance de loyer reçue ou une mise en demeure formelle —, le système résout obligatoirement le bail actif correspondant et retient son montant de loyer contractuel exact (ex: **35 000 FCFA** pour le bail `BAIL-2026-483` de DJIGLA).
+- Le panier de paiement détaille avec une transparence absolue :
+  - **Loyer contractuel :** Montant exact en FCFA issu du bail (`effectiveRentAmount = lease.rent`).
+  - **Frais opérateur Mobile Money (~2%) :** Frais marchands FedaPay pris en charge par le locataire.
+  - **Total débité du compte :** Somme mathématique exacte (ex: `35 000 FCFA + 700 FCFA = 35 700 FCFA`).
+  - **Reversement garanti au bailleur (98%) & Commission de service (2%) :** Ventilation selon la formule souscrite.
+
+### 2. Exclusion Stricte du Mode Test 100 FCFA pour les Utilisateurs Locataires
+- L'état `isTestLive100F` est **toujours initialisé à `false`**.
+- À chaque réouverture du modal de paiement ou changement de bail, `isTestLive100F` est impérativement réinitialisé à `false`.
+- Le commutateur « Test Réel Live à 100 FCFA » est strictement réservé au diagnostic technique du **Super-Admin** (`currentUser?.role === 'admin'`). Il ne doit **JAMAIS** être affiché à un locataire (`role: 'locataire'`) ni à un bailleur (`role: 'bailleur'`).
+- Aucun locataire ne peut être débité de 100 FCFA ou déclencher une quittance officielle d'un mois de loyer complet contre un règlement de test de 100 FCFA.
+
+### 3. Suppression de Toute Confusion de Compte & Affichage Officiel Universel
+- L'en-tête du guichet de paiement ne doit afficher aucun nom de marchand interne ou de société tierce (interdiction formelle d'afficher « COMPTE LIVE MONROY AG » aux utilisateurs).
+- L'en-tête affiche de manière officielle et rassurante :
+  - Badge vert : **« Guichet Officiel Sécurisé »** avec pastille pulsante verte.
+  - Mention : **« • Passerelle FedaPay Agréée BCEAO »**.
+  - Titre principal : **« Règlement de Loyer Sécurisé »**.
+
+### 4. Pré-remplissage Infaillible des Coordonnées du Locataire Débiteur
+- Le numéro de téléphone Mobile Money (`payerPhone`) et l'indicatif pays (`countryCode`) sont automatiquement extraits et pré-remplis à partir du compte authentifié du locataire (`tenantUser.phone` ou `lease.tenantPhone`).
+- Les données clients transmises à l'API FedaPay (`customer.firstname`, `customer.lastname`, `customer.email`, `customer.phone`) reflètent fidèlement l'identité du locataire signataire du bail.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
