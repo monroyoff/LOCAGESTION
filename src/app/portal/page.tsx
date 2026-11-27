@@ -375,6 +375,8 @@ function TenantPortalContent() {
 
   // Multi-Baux & Multi-Bailleurs state (Compte Locataire Unique)
   const [myLeases, setMyLeases] = useState<Lease[]>([]);
+  const [resiliatedLeases, setResiliatedLeases] = useState<Lease[]>([]);
+  const [allTenantLeases, setAllTenantLeases] = useState<Lease[]>([]);
   const [selectedLeaseId, setSelectedLeaseId] = useState<string>('all');
   const [declarationLeaseId, setDeclarationLeaseId] = useState<string>('');
   const [incidentLeaseId, setIncidentLeaseId] = useState<string>('');
@@ -512,9 +514,11 @@ function TenantPortalContent() {
       if (aIsHabitation && !bIsHabitation) return -1;
       if (bIsHabitation && !aIsHabitation) return 1;
 
-      // 4. Priorité aux baux actifs
-      if (a.status === 'actif' && b.status !== 'actif') return -1;
-      if (b.status === 'actif' && a.status !== 'actif') return 1;
+      // 4. Priorité absolue aux baux actifs sur les baux résiliés
+      const aIsActive = a.status === 'actif' || (a.status !== 'resilie' && a.status !== 'expire' && a.status !== 'brouillon');
+      const bIsActive = b.status === 'actif' || (b.status !== 'resilie' && b.status !== 'expire' && b.status !== 'brouillon');
+      if (aIsActive && !bIsActive) return -1;
+      if (bIsActive && !aIsActive) return 1;
 
       // 5. Priorité aux baux contresignés par le locataire
       if (a.signedByTenant && !b.signedByTenant) return -1;
@@ -535,19 +539,28 @@ function TenantPortalContent() {
       return timeB - timeA;
     });
 
-    setMyLeases(matchingLeases);
+    // Séparation stricte et étanche : les baux actifs pour les paiements / calculs vs les baux résiliés pour l'historique
+    const activeLeases = matchingLeases.filter((l) => l.status !== 'resilie' && l.status !== 'expire' && l.status !== 'brouillon');
+    const terminatedLeases = matchingLeases.filter((l) => l.status === 'resilie' || l.status === 'expire');
 
-    if (matchingLeases.length > 0) {
-      setDeclarationLeaseId((prev) => prev || matchingLeases[0].id);
-      setIncidentLeaseId((prev) => prev || matchingLeases[0].id);
+    setMyLeases(activeLeases);
+    setResiliatedLeases(terminatedLeases);
+    setAllTenantLeases(matchingLeases);
+
+    if (activeLeases.length > 0) {
+      setDeclarationLeaseId((prev) => activeLeases.some((l) => l.id === prev) ? prev : activeLeases[0].id);
+      setIncidentLeaseId((prev) => activeLeases.some((l) => l.id === prev) ? prev : activeLeases[0].id);
+    } else {
+      setDeclarationLeaseId('');
+      setIncidentLeaseId('');
     }
 
     let targetLease: Lease | null = null;
     if (selectedLeaseId && selectedLeaseId !== 'all') {
-      targetLease = matchingLeases.find((l) => l.id === selectedLeaseId) || null;
+      targetLease = activeLeases.find((l) => l.id === selectedLeaseId) || terminatedLeases.find((l) => l.id === selectedLeaseId) || null;
     }
     if (!targetLease) {
-      targetLease = matchingLeases[0] || (queryLeaseId ? allLeases.find((l) => l.id === queryLeaseId) : null);
+      targetLease = activeLeases[0] || terminatedLeases[0] || (queryLeaseId ? allLeases.find((l) => l.id === queryLeaseId) : null);
     }
     setCurrentLease(targetLease || null);
   };
@@ -589,19 +602,25 @@ function TenantPortalContent() {
     if (leaseId === 'all') {
       if (myLeases.length > 0) {
         setCurrentLease(myLeases[0]);
+      } else if (resiliatedLeases.length > 0) {
+        setCurrentLease(resiliatedLeases[0]);
       }
     } else {
-      const found = myLeases.find((l) => l.id === leaseId);
+      const found = myLeases.find((l) => l.id === leaseId) || resiliatedLeases.find((l) => l.id === leaseId);
       if (found) {
         setCurrentLease(found);
-        setDeclarationLeaseId(found.id);
-        setIncidentLeaseId(found.id);
+        if (myLeases.some((l) => l.id === leaseId)) {
+          setDeclarationLeaseId(found.id);
+          setIncidentLeaseId(found.id);
+        }
       }
     }
   };
 
   const openDeclarationModalForLease = (leaseId?: string) => {
-    const targetL = leaseId ? myLeases.find((l) => l.id === leaseId) : (currentLease || myLeases[0]);
+    const targetL = leaseId
+      ? myLeases.find((l) => l.id === leaseId)
+      : (myLeases.find((l) => l.id === currentLease?.id) || myLeases[0]);
     if (targetL) {
       setDeclarationLeaseId(targetL.id);
       const months = paymentType === 'current' ? 1 : paymentType === 'advance' ? selectedAdvanceMonths.length || 1 : 1 + selectedAdvanceMonths.length;
@@ -611,7 +630,9 @@ function TenantPortalContent() {
   };
 
   const openFedaPayModalForLease = (leaseId?: string) => {
-    const targetL = leaseId ? myLeases.find((l) => l.id === leaseId) : (currentLease || myLeases[0]);
+    const targetL = leaseId
+      ? myLeases.find((l) => l.id === leaseId)
+      : (myLeases.find((l) => l.id === currentLease?.id) || myLeases[0]);
     setFedaPayLease(targetL || null);
     setFedaPayModalOpen(true);
   };
@@ -1320,7 +1341,7 @@ function TenantPortalContent() {
 
       // 4. Filtre par bail / lot sélectionné dans l'onglet quittances
       if (receiptSelectedLeaseId !== 'all') {
-        const targetL = myLeases.find((l) => l.id === receiptSelectedLeaseId);
+        const targetL = allTenantLeases.find((l) => l.id === receiptSelectedLeaseId) || myLeases.find((l) => l.id === receiptSelectedLeaseId);
         if (targetL) {
           if (rec.leaseId && rec.leaseId !== targetL.id) return false;
           if (!rec.leaseId && !(rec.unitNumber === targetL.unit && rec.propertyName === targetL.property)) return false;
@@ -1536,13 +1557,13 @@ function TenantPortalContent() {
             >
               <Camera className="w-4 h-4" />
               <span>États des Lieux</span>
-              {myLeases.length > 0 && (
+              {allTenantLeases.length > 0 && (
                 <span
                   className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
                     activeTab === 'edl' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
                   }`}
                 >
-                  {myLeases.length}
+                  {allTenantLeases.length}
                 </span>
               )}
             </button>
@@ -1933,6 +1954,87 @@ function TenantPortalContent() {
                 </div>
               )}
 
+              {/* SECTION BAUX RÉCILIÉS & CLÔTURÉS (Historique juridique sans aucun paiement exigible) */}
+              {resiliatedLeases.length > 0 && (
+                <div className="bg-rose-50/50 rounded-3xl p-5 border border-rose-200/90 shadow-2xs space-y-3 animate-in fade-in duration-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-rose-200/60">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-xl bg-rose-100 text-rose-700">
+                        <Ban className="w-4 h-4" />
+                      </span>
+                      <div>
+                        <h3 className="text-xs sm:text-sm font-black text-rose-950 uppercase tracking-wider">
+                          Bail Résilié & Clôturé ({resiliatedLeases.length})
+                        </h3>
+                        <p className="text-[11px] text-rose-700/90 font-medium">
+                          Ce contrat a été résilié par votre bailleur. Aucun loyer ni paiement n'est exigible pour ce logement.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-200/80 text-rose-900 border border-rose-300 self-start sm:self-auto shrink-0">
+                      Dissocié & Archivé
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
+                    {resiliatedLeases.map((l) => {
+                      const usage = getUsageInfo(l.propertyUsage);
+                      const UsageIcon = usage.icon;
+                      const landlordName = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                      return (
+                        <div
+                          key={`resil-${l.id}`}
+                          className="bg-white rounded-2xl p-4 border border-rose-200/90 shadow-2xs space-y-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
+                              <Ban className="w-3 h-3 text-rose-600" />
+                              <span>Bail Résilié</span>
+                            </span>
+                            <span className="text-[10px] font-mono font-bold text-slate-400">{l.id}</span>
+                          </div>
+
+                          <div>
+                            <h4 className="font-black text-sm text-slate-900">{l.unit}</h4>
+                            <p className="text-xs text-slate-500 mt-0.5">{l.property} • {l.propertyLocation || 'Cotonou'}</p>
+                          </div>
+
+                          <div className="p-2.5 rounded-xl bg-rose-50/50 border border-rose-100 text-xs space-y-1">
+                            <div className="flex items-center justify-between text-slate-600">
+                              <span>Bailleur :</span>
+                              <strong className="text-slate-800">{landlordName}</strong>
+                            </div>
+                            <div className="flex items-center justify-between text-slate-600">
+                              <span>Date résiliation :</span>
+                              <strong className="text-rose-800 font-bold">{l.resiliatedAt || 'Résilié récemment'}</strong>
+                            </div>
+                            {l.resiliationReason && (
+                              <div className="flex items-center justify-between text-slate-600">
+                                <span>Motif :</span>
+                                <span className="text-slate-700 italic truncate max-w-[180px]">{l.resiliationReason}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentLease(l);
+                              setSelectedLeaseId(l.id);
+                              handleTabChange('bail');
+                            }}
+                            className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-slate-500" />
+                            <span>Consulter le contrat archivé & PDF</span>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Aperçu Rapide des Règlements & Bailleur */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Dernier Règlement Récent */}
@@ -2267,15 +2369,15 @@ function TenantPortalContent() {
               {/* ==================================================================== */}
               {/* SECTION : ÉTATS DES LIEUX & CONSTATS PHOTOS (Multi-Baux Compatible)  */}
               {/* ==================================================================== */}
-              {myLeases.length > 0 && (
+              {allTenantLeases.length > 0 && (
                 <div className="space-y-4">
                   {/* Sélecteur de contrats si pluralité de baux signés */}
-                  {myLeases.length > 1 && (
+                  {allTenantLeases.length > 1 && (
                     <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-soft space-y-3">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
                         <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                           <Camera className="w-4 h-4 text-emerald-600" />
-                          <span>États des lieux par contrat ({myLeases.length} baux souscrits) :</span>
+                          <span>États des lieux par contrat ({allTenantLeases.length} baux au dossier) :</span>
                         </span>
                         <button
                           type="button"
@@ -2297,10 +2399,11 @@ function TenantPortalContent() {
                           }`}
                         >
                           <Layers className="w-3.5 h-3.5" />
-                          <span>Tous les états des lieux ({myLeases.length})</span>
+                          <span>Tous les états des lieux ({allTenantLeases.length})</span>
                         </button>
-                        {myLeases.map((l) => {
+                        {allTenantLeases.map((l) => {
                           const isSel = selectedEdlLeaseId === l.id;
+                          const isRes = l.status === 'resilie' || l.status === 'expire';
                           const usage = getUsageInfo(l.propertyUsage);
                           const UsageIcon = usage.icon;
                           const lPhotos = InspectionService.getInspectionByLeaseId(l.id).photos.length;
@@ -2311,14 +2414,26 @@ function TenantPortalContent() {
                               onClick={() => setSelectedEdlLeaseId(l.id)}
                               className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
                                 isSel
-                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
+                                  ? isRes
+                                    ? 'bg-rose-950 text-white border-rose-950 shadow-md font-black'
+                                    : 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
+                                  : isRes
+                                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
                                   : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
                               }`}
                             >
-                              <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
+                              {isRes ? (
+                                <Ban className={`w-3.5 h-3.5 ${isSel ? 'text-rose-400' : 'text-rose-600'}`} />
+                              ) : (
+                                <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
+                              )}
                               <span>{l.unit}</span>
-                              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                                {l.id}
+                              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                                isRes
+                                  ? isSel ? 'bg-rose-800 text-rose-100' : 'bg-rose-100 text-rose-800 font-bold'
+                                  : isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                              }`}>
+                                {isRes ? 'Résilié' : l.id}
                               </span>
                               {lPhotos > 0 && (
                                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isSel ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -2334,10 +2449,10 @@ function TenantPortalContent() {
 
                   {/* Cartes d'États des Lieux */}
                   {selectedEdlLeaseId === 'all'
-                    ? myLeases.map((l) => renderLeaseInspectionCard(l, myLeases.length > 1))
+                    ? allTenantLeases.map((l) => renderLeaseInspectionCard(l, allTenantLeases.length > 1))
                     : (() => {
-                        const targetL = myLeases.find((l) => l.id === selectedEdlLeaseId) || myLeases[0];
-                        return renderLeaseInspectionCard(targetL, myLeases.length > 1);
+                        const targetL = allTenantLeases.find((l) => l.id === selectedEdlLeaseId) || allTenantLeases[0];
+                        return renderLeaseInspectionCard(targetL, allTenantLeases.length > 1);
                       })()}
                 </div>
               )}
@@ -2471,7 +2586,7 @@ function TenantPortalContent() {
               </div>
 
               {/* Filtre par Bail / Bailleur pour Locataire Multi-Baux */}
-              {myLeases.length > 1 && (
+              {allTenantLeases.length > 1 && (
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -2496,12 +2611,13 @@ function TenantPortalContent() {
                     >
                       Toutes les quittances ({receiptsList.length})
                     </button>
-                    {myLeases.map((l) => {
+                    {allTenantLeases.map((l) => {
                       const count = receiptsList.filter(
                         (r) => r.leaseId === l.id || (r.unitNumber === l.unit && r.propertyName === l.property)
                       ).length;
                       const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
                       const isSel = receiptSelectedLeaseId === l.id;
+                      const isRes = l.status === 'resilie' || l.status === 'expire';
                       return (
                         <button
                           key={l.id}
@@ -2509,15 +2625,19 @@ function TenantPortalContent() {
                           onClick={() => setReceiptSelectedLeaseId(l.id)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border ${
                             isSel
-                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-black'
+                              ? isRes
+                                ? 'bg-rose-700 text-white border-rose-800 shadow-xs font-black'
+                                : 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-black'
+                              : isRes
+                              ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
                               : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                         >
                           <span>{l.unit}</span>
                           <span className={`text-[10px] ml-1.5 px-1.5 py-0.2 rounded-full font-mono ${
-                            isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                            isSel ? 'bg-white/20 text-white' : isRes ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'
                           }`}>
-                            {count}
+                            {isRes ? `Résilié • ${count}` : count}
                           </span>
                           <span className={`text-[10px] ml-1 hidden sm:inline ${isSel ? 'text-white/80' : 'text-slate-400'}`}>
                             ({landlord})
@@ -2801,7 +2921,7 @@ function TenantPortalContent() {
                           : 'text-slate-500 hover:text-slate-900'
                       }`}
                     >
-                      État des Lieux ({myLeases.length})
+                      État des Lieux ({allTenantLeases.length})
                     </button>
                     <button
                       type="button"
@@ -2818,23 +2938,24 @@ function TenantPortalContent() {
                 </div>
               </div>
 
-              {/* SÉLECTEUR DE BAIL ACTIF (Locataire Multi-Baux) */}
-              {myLeases.length > 1 && (
+              {/* SÉLECTEUR DE CONTRATS (Locataire Multi-Contrats : Baux Actifs & Baux Résiliés) */}
+              {allTenantLeases.length > 1 && (
                 <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-soft space-y-2.5">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5 text-brand-500" />
-                      <span>Sélectionnez le contrat à consulter ({myLeases.length} baux actifs) :</span>
+                      <span>Sélectionnez le contrat à consulter ({allTenantLeases.length} contrats au dossier) :</span>
                     </span>
                     <span className="text-[10px] text-slate-400">
                       Bail affiché : <strong className="text-slate-800">{currentLease?.id || 'N/A'}</strong>
                     </span>
                   </div>
                   <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-                    {myLeases.map((l) => {
+                    {allTenantLeases.map((l) => {
                       const usage = getUsageInfo(l.propertyUsage);
                       const UsageIcon = usage.icon;
                       const isSel = currentLease?.id === l.id;
+                      const isResiliated = l.status === 'resilie' || l.status === 'expire';
                       const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
                       return (
                         <button
@@ -2846,14 +2967,26 @@ function TenantPortalContent() {
                           }}
                           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
                             isSel
-                              ? 'bg-slate-900 text-white border-slate-900 shadow-md font-black'
+                              ? isResiliated
+                                ? 'bg-rose-950 text-white border-rose-950 shadow-md font-black'
+                                : 'bg-slate-900 text-white border-slate-900 shadow-md font-black'
+                              : isResiliated
+                              ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200 shadow-2xs'
                               : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
                           }`}
                         >
-                          <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-brand-400' : 'text-slate-500'}`} />
+                          {isResiliated ? (
+                            <Ban className={`w-3.5 h-3.5 ${isSel ? 'text-rose-400' : 'text-rose-600'}`} />
+                          ) : (
+                            <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-brand-400' : 'text-slate-500'}`} />
+                          )}
                           <span>{l.unit} ({usage.label})</span>
-                          <span className={`text-[10px] font-mono font-black ${isSel ? 'text-emerald-400' : 'text-emerald-700'}`}>
-                            {formatFCFA(l.rent)}
+                          <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
+                            isResiliated
+                              ? isSel ? 'bg-rose-800 text-rose-100' : 'bg-rose-200 text-rose-900'
+                              : isSel ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {isResiliated ? 'Résilié' : formatFCFA(l.rent)}
                           </span>
                           <span className={`text-[10px] hidden sm:inline ${isSel ? 'text-white/70' : 'text-slate-400'}`}>
                             • {landlord}
@@ -3335,7 +3468,7 @@ function TenantPortalContent() {
                           États des Lieux Contradictoires
                         </h2>
                         <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                          {myLeases.length} {myLeases.length > 1 ? 'Contrats Actifs' : 'Contrat Actif'}
+                          {myLeases.length} {myLeases.length > 1 ? 'Contrats Actifs' : 'Contrat Actif'}{resiliatedLeases.length > 0 ? ` • ${resiliatedLeases.length} Archivé` : ''}
                         </span>
                         <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
                           Scellé Numérique UEMOA / CEMAC
@@ -3349,10 +3482,10 @@ function TenantPortalContent() {
                 </div>
 
                 {/* Sélecteur de contrats si pluralité */}
-                {myLeases.length > 1 && (
+                {allTenantLeases.length > 1 && (
                   <div className="pt-3 border-t border-slate-100 space-y-2">
                     <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
-                      Filtrer par contrat de location ({myLeases.length} baux en cours) :
+                      Filtrer par contrat de location ({allTenantLeases.length} baux au dossier) :
                     </span>
                     <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
                       <button
@@ -3365,10 +3498,11 @@ function TenantPortalContent() {
                         }`}
                       >
                         <Layers className="w-3.5 h-3.5" />
-                        <span>Tous les contrats ({myLeases.length})</span>
+                        <span>Tous les contrats ({allTenantLeases.length})</span>
                       </button>
-                      {myLeases.map((l) => {
+                      {allTenantLeases.map((l) => {
                         const isSel = selectedEdlLeaseId === l.id;
+                        const isRes = l.status === 'resilie' || l.status === 'expire';
                         const usage = getUsageInfo(l.propertyUsage);
                         const UsageIcon = usage.icon;
                         const lPhotos = InspectionService.getInspectionByLeaseId(l.id).photos.length;
@@ -3379,14 +3513,26 @@ function TenantPortalContent() {
                             onClick={() => setSelectedEdlLeaseId(l.id)}
                             className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
                               isSel
-                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
+                                ? isRes
+                                  ? 'bg-rose-950 text-white border-rose-950 shadow-md font-black'
+                                  : 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
+                                : isRes
+                                ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
                                 : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
                             }`}
                           >
-                            <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
+                            {isRes ? (
+                              <Ban className={`w-3.5 h-3.5 ${isSel ? 'text-rose-400' : 'text-rose-600'}`} />
+                            ) : (
+                              <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
+                            )}
                             <span>{l.unit}</span>
-                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                              {l.id}
+                            <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                              isRes
+                                ? isSel ? 'bg-rose-800 text-rose-100' : 'bg-rose-100 text-rose-800 font-bold'
+                                : isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                            }`}>
+                              {isRes ? 'Résilié' : l.id}
                             </span>
                             {lPhotos > 0 && (
                               <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isSel ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -3402,13 +3548,13 @@ function TenantPortalContent() {
               </div>
 
               {/* Liste des Cartes d'États des Lieux */}
-              {myLeases.length > 0 ? (
+              {allTenantLeases.length > 0 ? (
                 <div className="space-y-6">
                   {selectedEdlLeaseId === 'all'
-                    ? myLeases.map((l) => renderLeaseInspectionCard(l, myLeases.length > 1))
+                    ? allTenantLeases.map((l) => renderLeaseInspectionCard(l, allTenantLeases.length > 1))
                     : (() => {
-                        const targetL = myLeases.find((l) => l.id === selectedEdlLeaseId) || myLeases[0];
-                        return renderLeaseInspectionCard(targetL, myLeases.length > 1);
+                        const targetL = allTenantLeases.find((l) => l.id === selectedEdlLeaseId) || allTenantLeases[0];
+                        return renderLeaseInspectionCard(targetL, allTenantLeases.length > 1);
                       })()}
                 </div>
               ) : (

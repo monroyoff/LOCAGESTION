@@ -10,6 +10,7 @@ export type LeaseStatus =
   | 'actif'
   | 'en_attente_signature'
   | 'resilie'
+  | 'expire'
   | 'brouillon';
 
 export interface Lease {
