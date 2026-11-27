@@ -24,6 +24,29 @@ import { SkeletonCertificate } from '@/components/ui/SkeletonLoader';
 import { matchPaymentByCode } from '@/lib/services/receipt-matcher';
 import LocagestionOfficialStamp from '@/components/common/LocagestionOfficialStamp';
 
+// Quittance fictive de démonstration pour les tests publics (ZÉRO fuite de données réelles)
+const DEMO_FICTITIOUS_PAYMENT: PaymentTransaction = {
+  id: 'demo-receipt-2026',
+  receiptNumber: 'LOCA-QUITT-BJ-DEMO-2026',
+  tenantId: 'demo-tenant-0',
+  tenantName: 'AMADOU DIALLO',
+  tenantAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160',
+  tenantPhone: '+229 97 00 00 00',
+  tenantMatricule: 'LOCA-MAT-BJ-00000',
+  propertyName: 'RÉSIDENCE LES PALMIERS',
+  unitNumber: 'Appartement B3',
+  amount: 125000,
+  expectedAmount: 125000,
+  period: 'Novembre 2026',
+  paymentDate: '05/11/2026',
+  method: 'WAVE' as any,
+  status: 'valide' as any,
+  isVerified: true,
+  landlordName: 'KOFFI MENSAH GÉRANCE',
+  landlordIfu: '1201800492810',
+  transactionRef: 'TX-WAVE-DEMO-94812',
+};
+
 interface VerifyPageProps {
   params: {
     code: string;
@@ -40,6 +63,13 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
   const performSearch = (codeToSearch: string) => {
     setIsLoading(true);
     const cleaned = codeToSearch.trim();
+
+    // Cas quittance fictive de démonstration
+    if (cleaned.toUpperCase().includes('DEMO')) {
+      setMatchedPayment(DEMO_FICTITIOUS_PAYMENT);
+      setIsLoading(false);
+      return;
+    }
 
     // 1. Recherche locale immédiate (mémoire et cache)
     const localPayments = [
@@ -91,10 +121,11 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
     router.push(`/verify/${encodeURIComponent(inputCode.trim())}`);
   };
 
-  const landlordName = matchedPayment?.landlordName || 'VOGLOSSOU JOHANE';
-  const landlordIfu = matchedPayment?.landlordIfu || '3201984210987';
-  const tenantName = matchedPayment?.tenantName || 'Jojo VOG';
-  const tenantMatricule = matchedPayment?.tenantMatricule || 'LOCA-MAT-BJ-17635';
+  const isDemo = matchedPayment?.id === 'demo-receipt-2026' || rawCode.toUpperCase().includes('DEMO');
+  const landlordName = matchedPayment?.landlordName || 'Bailleur Enregistré';
+  const landlordIfu = matchedPayment?.landlordIfu || (isDemo ? '1201800492810' : 'N/A');
+  const tenantName = matchedPayment?.tenantName || 'Locataire Titulaire';
+  const tenantMatricule = matchedPayment?.tenantMatricule || (isDemo ? 'LOCA-MAT-BJ-00000' : 'N/A');
   const propertyDesc = matchedPayment
     ? `${matchedPayment.propertyName} (${matchedPayment.unitNumber})`
     : 'Lot sous contrat de bail certifié';
@@ -108,7 +139,7 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
       ? 'Wave Mobile Money'
       : matchedPayment?.method?.toUpperCase() || 'MOBILE MONEY / VIREMENT';
   const amount = matchedPayment?.amount || 0;
-  const paymentDate = matchedPayment?.paymentDate || '26/11/2026';
+  const paymentDate = matchedPayment?.paymentDate || '05/11/2026';
   const receiptNum = matchedPayment?.receiptNumber || rawCode;
   const transactionRef = matchedPayment?.transactionRef;
 
@@ -147,13 +178,15 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
               </div>
               <div>
                 <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest block">
-                  Document Officiel Certifié Conforme
+                  {isDemo ? 'Document Spécimen de Démonstration' : 'Document Officiel Certifié Conforme'}
                 </span>
                 <h2 className="text-base font-black text-emerald-950">
-                  Quittance de Loyer Authentique &amp; Scellée
+                  {isDemo ? 'Quittance Fictive de Démonstration' : 'Quittance de Loyer Authentique & Scellée'}
                 </h2>
                 <p className="text-[11px] text-emerald-700">
-                  Intégrité cryptographique vérifiée dans le registre public officiel LOCAGESTION.
+                  {isDemo
+                    ? 'Exemple fictif officiel à titre d’illustration des quittances numériques certifiées.'
+                    : 'Intégrité cryptographique vérifiée dans le registre public officiel LOCAGESTION.'}
                 </p>
               </div>
             </div>
@@ -270,7 +303,7 @@ export default function VerifyReceiptPage({ params }: VerifyPageProps) {
               className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Retour à l’accueil du site</span>
+              <span>{isDemo ? 'Retour à l’accueil du site' : 'Masquer & Effacer de cet écran'}</span>
             </Link>
             <Link
               href="/portal?tab=quittances"
