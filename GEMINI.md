@@ -155,9 +155,9 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
   4. Préavis légal de résiliation de bail pour défaut de paiement.
 
 ### 🛠️ 7. Maintenance & Incidents Locatifs (`/incidents`)
-- Suivi des déclarations des locataires (fuites d'eau, pannes électriques, climatisation, fissures).
-- Qualification de la responsabilité légale : Charge Bailleur (gros œuvre, vétusté) vs Charge Locataire (entretien courant).
-- Assignation d'artisans locaux, devis et clôture contradictoire.
+- **Accès partagé et adapté Bailleur & Locataire :** La route `/incidents` est accessible à la fois aux Bailleurs et aux Locataires (elle est strictement inaccessible aux Démarcheurs).
+  - **Vue Bailleur :** Suivi des déclarations des locataires (fuites d'eau, pannes électriques, climatisation, fissures), assignation d'artisans certifiés locaux, devis, suivi des dépenses engagées et clôture contradictoire.
+  - **Vue Locataire (Assistance Technique Résident) :** Signalement de nouvelles pannes avec photos justificatives, degré d'urgence, suivi en temps réel du traitement (En attente, Pris en charge, Résolu) et mise en relation directe par WhatsApp/appel avec l'artisan mandaté par le bailleur.
 
 ### 🌐 8. Portail Annonces & Visites (`/listings`)
 - Moteur de recherche multi-critères : Référence d'annonce (`A-BJ-17635`), Pays, Ville, Quartier, Repère local, Type de bien, Budget max en FCFA, Nombre de chambres.

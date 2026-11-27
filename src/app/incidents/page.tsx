@@ -41,6 +41,7 @@ import {
   INITIAL_INCIDENTS,
 } from '@/lib/services/incident-service';
 import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
+import { LeaseService } from '@/lib/services/lease-service';
 import { LandlordIncidentModal } from '@/components/dashboard/LandlordIncidentModal';
 import { notifySave, notifyUpdate } from '@/lib/notifications/action-notifier';
 import { formatFCFA } from '@/lib/money/format';
@@ -160,20 +161,49 @@ function IncidentsPageContent() {
   const handleSubmitIssue = (e: React.FormEvent) => {
     e.preventDefault();
     const photoCount = issuePhotos.length;
+    const allLeases = LeaseService.getLeases();
+    const userEmail = (user?.email || '').trim().toLowerCase();
+    const userPhone = (user?.phone || '').trim();
+    const userName = (user?.name || '').trim().toLowerCase();
+
+    const tenantLease = allLeases.find((l) => {
+      if (userEmail && l.tenantEmail && l.tenantEmail.trim().toLowerCase() === userEmail) return true;
+      if (userPhone && l.tenantPhone && l.tenantPhone.trim() === userPhone) return true;
+      if (userName && l.tenant && userName === l.tenant.trim().toLowerCase()) return true;
+      return false;
+    });
+    const propertyName = tenantLease?.property || 'Logement principal';
+    const unitName = tenantLease?.unit || 'Lot';
 
     IncidentService.addIncident({
       category: issueCategory,
       urgency: issueUrgency,
       description: issueDesc,
       photos: issuePhotos,
-      tenantName: user?.name || 'Locataire',
-      tenantPhone: user?.phone || '',
-      tenantEmail: user?.email || '',
-      property: 'Logement principal',
-      unit: 'Lot',
+      tenantName: user?.name || tenantLease?.tenant || 'Locataire',
+      tenantPhone: user?.phone || tenantLease?.tenantPhone || '',
+      tenantEmail: user?.email || tenantLease?.tenantEmail || '',
+      property: propertyName,
+      unit: unitName,
       status: 'en_attente',
     });
 
+    // Notification instantanée délivrée au bailleur
+    LeaseService.addLandlordNotification({
+      id: `notif-inc-${Date.now()}`,
+      title: `Nouvelle panne signalée par ${user?.name || 'Locataire'}`,
+      message: `Incident (${issueCategory}) déclaré pour le lot ${unitName} (${propertyName}). Urgence: ${issueUrgency}.`,
+      type: 'incident_reported',
+      read: false,
+      createdAt: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
+      time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+      tenantName: user?.name || 'Locataire',
+      unit: unitName,
+      property: propertyName,
+    });
+
+    loadIncidents();
     setReportModalOpen(false);
     setIssueDesc('');
     setIssueCategory('Plomberie / Fuite d’eau');
@@ -240,7 +270,12 @@ function IncidentsPageContent() {
   return (
     <div className="min-h-screen bg-[#F4F6F9] flex text-slate-800">
       {/* Barre latérale partagée */}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        activeSpace={activeSpace}
+        onSpaceChange={switchSpace}
+      />
 
       {/* Contenu principal */}
       <div className="flex-1 lg:pl-72 flex flex-col min-w-0">

@@ -39,7 +39,6 @@ const LANDLORD_ONLY_PREFIXES = [
   '/tenants',
   '/payments',
   '/reminders',
-  '/incidents',
 ];
 
 export function SpaceProvider({ children }: { children: React.ReactNode }) {
@@ -122,6 +121,12 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
     if (pathname.startsWith('/portal')) {
       if (current.role !== 'locataire') {
         router.replace(current.role === 'demarcheur' ? '/listings' : '/dashboard');
+        return;
+      }
+    } else if (pathname.startsWith('/incidents')) {
+      // Accessible à la fois aux Bailleurs et aux Locataires (assistance technique résident). Inaccessible au Démarcheur.
+      if (current.role === 'demarcheur') {
+        router.replace('/listings');
         return;
       }
     } else if (
