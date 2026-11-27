@@ -137,9 +137,9 @@ export function FedaPayReturnHandler() {
 
         // 5. Validation de la réponse officielle FedaPay
         if (verifyData.success && verifyData.status === 'approved') {
-          // Contrôle financier supplémentaire : le montant payé doit couvrir les 15 000 FCFA
+          // Contrôle financier supplémentaire : le montant payé doit couvrir les 5 000 FCFA
           const paidAmount = Number(verifyData.amount || verifyData.transaction?.amount || 0);
-          if (paidAmount < 15000) {
+          if (paidAmount < 5000) {
             console.error('[FedaPay Security] Montant insuffisant détecté:', paidAmount);
             notifySave(
               'Erreur financière : le montant de la transaction est insuffisant pour la Formule Pro.',
@@ -162,7 +162,7 @@ export function FedaPayReturnHandler() {
           // Activation officielle de la formule Pro pour 30 jours
           PlanService.activateProPlan(user?.id, 30);
           notifySave(
-            '🎉 Félicitations ! Votre paiement de 15 000 FCFA a été vérifié et validé. Votre Formule Entreprise & Pro (30 jours) est active.',
+            '🎉 Félicitations ! Votre paiement de 5 000 FCFA a été vérifié et validé. Votre Formule Entreprise & Pro (30 jours) est active.',
             'Abonnement Pro Validé'
           );
           window.dispatchEvent(new Event('locagestion:plan_changed'));

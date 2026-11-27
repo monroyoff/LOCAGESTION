@@ -2488,7 +2488,7 @@ export default function AdminDashboardPage() {
 
                                 <a
                                   href={`https://wa.me/${landlordPhoneClean}?text=${encodeURIComponent(
-                                    `Bonjour ${p.landlordName}, la plateforme LOCAGESTION vous informe que le loyer de ${p.tenantName} pour ${p.unitNumber} (${p.period}) a été encaissé avec succès. Votre reversement net de ${formatFCFA(p.netPayoutAmount)} (98 %) est en cours d'exécution vers votre compte.`
+                                    `Bonjour ${p.landlordName}, la plateforme LOCAGESTION vous informe que le loyer de ${p.tenantName} pour ${p.unitNumber} (${p.period}) a été encaissé avec succès. Votre reversement programmé dès le 7 du mois de ${formatFCFA(p.netPayoutAmount)} (98 %) est en cours d'exécution vers votre compte.`
                                   )}`}
                                   target="_blank"
                                   rel="noopener noreferrer"

@@ -176,7 +176,7 @@ export const FedaPayService = {
           title: '💳 Loyer perçu par Mobile Money (Split 98% net)',
           message: `Paiement de ${formatFCFA(split.rentAmount)} reçu de ${
             params.tenantName
-          } pour ${params.period}. Reversement instantané de 98% net (${formatFCFA(
+          } pour ${params.period}. Reversement programmé dès le 7 du mois de 98% net (${formatFCFA(
             split.landlordPayout
           )}) sur votre compte. Commission LOCAGESTION 2% (${formatFCFA(
             split.platformCommission

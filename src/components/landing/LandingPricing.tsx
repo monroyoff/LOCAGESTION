@@ -24,7 +24,7 @@ export function LandingPricing() {
     },
     {
       q: 'Comment fonctionne le reversement sur mon compte bailleur ?',
-      a: 'Dès que le locataire valide son paiement (Wave, MTN Mobile Money, Moov Money, Orange Money ou Celtiis Cash), la transaction est divisée : 98% sont automatiquement crédités sur votre compte Mobile Money ou bancaire, et la commission de 2% est prélevée pour la plateforme.',
+      a: 'Dès que le locataire valide son paiement (Wave, MTN Mobile Money, Moov Money, Orange Money ou Celtiis Cash), la transaction est divisée : 98% nets font l\'objet d\'un reversement programmé dès le 7 du mois sur votre compte Mobile Money ou bancaire, et la commission de 2% est prélevée pour la plateforme.',
     },
     {
       q: 'Puis-je continuer à encaisser des loyers en espèces ou par virement ?',
@@ -111,7 +111,7 @@ export function LandingPricing() {
                 Reversement &amp; Quittance Scellée
               </h4>
               <p className="text-xs text-on-surface-variant leading-relaxed">
-                Les fonds nets arrivent immédiatement sur le compte du propriétaire. La quittance officielle PDF avec QR code certifié est scellée automatiquement.
+                Les fonds nets de 98% font l'objet d'un reversement programmé dès le 7 du mois sur le compte du propriétaire. La quittance officielle PDF avec QR code certifié est scellée automatiquement.
               </p>
             </div>
           </div>
@@ -193,7 +193,7 @@ export function LandingPricing() {
 
               <h3 className="text-xl font-bold text-on-surface">Formule Sérénité</h3>
               <p className="text-xs text-on-surface-variant mt-1 mb-space-md">
-                Encaissement 100% automatisé par Mobile Money avec reversement instantané sur votre compte.
+                Encaissement 100% automatisé par Mobile Money avec reversement programmé dès le 7 du mois sur votre compte.
               </p>
 
               <div className="flex items-baseline gap-1 my-space-md pb-space-md border-b border-surface-container-high/60">
@@ -220,7 +220,7 @@ export function LandingPricing() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
-                  <span>Reversement instantané de <strong>98% net</strong> sur votre compte</span>
+                  <span>Reversement programmé dès le 7 du mois de <strong>98% net</strong> sur votre compte</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
@@ -272,7 +272,7 @@ export function LandingPricing() {
               </p>
 
               <div className="flex items-baseline gap-1 my-space-md pb-space-md border-b border-surface-container-high/60">
-                <span className="text-3xl sm:text-4xl font-extrabold text-on-surface">15 000 FCFA</span>
+                <span className="text-3xl sm:text-4xl font-extrabold text-on-surface">5 000 FCFA</span>
                 <span className="text-xs text-on-surface-variant font-medium">/ mois (validité 30 jours)</span>
               </div>
 

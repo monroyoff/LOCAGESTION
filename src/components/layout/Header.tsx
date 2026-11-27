@@ -690,7 +690,7 @@ export function Header({
                       ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300'
                       : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100'
                   }`}
-                  title="Formule Entreprise & Pro active (15 000 FCFA / 30 jours). Cliquez pour gérer ou renouveler."
+                  title="Formule Entreprise & Pro active (5 000 FCFA / 30 jours). Cliquez pour gérer ou renouveler."
                 >
                   <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                   <span className="hidden sm:inline">

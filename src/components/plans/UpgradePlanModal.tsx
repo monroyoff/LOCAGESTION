@@ -122,7 +122,7 @@ export function UpgradePlanModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'create',
-          amount: 15000,
+          amount: 5000,
           description: isPro && !isExpired
             ? 'Renouvellement Formule Entreprise & Pro (30 jours) - LOCAGESTION'
             : 'Abonnement Formule Entreprise & Pro (30 jours) - LOCAGESTION',
@@ -237,7 +237,7 @@ export function UpgradePlanModal({
               </div>
               <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white mt-1">
                 {isExpired
-                  ? 'Réactivez votre Formule Pro (15 000 FCFA / 30 jours)'
+                  ? 'Réactivez votre Formule Pro (5 000 FCFA / 30 jours)'
                   : isPro && daysLeft <= 2
                   ? `Renouvelez votre Formule Pro avant expiration (${daysLeft === 0 ? 'Aujourd’hui' : `dans ${daysLeft}j`})`
                   : isPro
@@ -292,7 +292,7 @@ export function UpgradePlanModal({
                     </strong>
                     <p className="mt-0.5">
                       {isExpired
-                        ? `Votre période de 30 jours s’est achevée le ${formattedExpiresAt}. Renouvelez maintenant pour 15 000 FCFA pour débloquer à nouveau toutes les fonctionnalités professionnelles.`
+                        ? `Votre période de 30 jours s’est achevée le ${formattedExpiresAt}. Renouvelez maintenant pour 5 000 FCFA pour débloquer à nouveau toutes les fonctionnalités professionnelles.`
                         : `Date d'échéance prévue : ${formattedExpiresAt}. En renouvelant dès maintenant, 30 jours supplémentaires sont immédiatement cumulés sans aucune coupure.`}
                     </p>
                   </div>
@@ -383,7 +383,7 @@ export function UpgradePlanModal({
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        <span>Split Payment Mobile Money automatique (98% net)</span>
+                        <span>Split Payment Mobile Money (reversement programmé dès le 7 du mois, 98% net)</span>
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -414,7 +414,7 @@ export function UpgradePlanModal({
                   </button>
                 </div>
 
-                {/* Formule 2 : Entreprise & Pro (15 000 FCFA / 30 jours) */}
+                {/* Formule 2 : Entreprise & Pro (5 000 FCFA / 30 jours) */}
                 <div
                   onClick={() => setSelectedPlanTab('pro')}
                   className={`p-4 sm:p-5 rounded-2xl transition-all relative flex flex-col justify-between cursor-pointer ${
@@ -435,7 +435,7 @@ export function UpgradePlanModal({
                       <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
                     </h4>
                     <div className="text-xl font-black text-indigo-600 dark:text-indigo-400 my-1.5">
-                      15 000 FCFA <span className="text-xs font-normal text-slate-500">/ 30 jours</span>
+                      5 000 FCFA <span className="text-xs font-normal text-slate-500">/ 30 jours</span>
                     </div>
                     <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mb-3">
                       Accès complet garanti 30 jours • Alertes d'échéance à J-2, J-1 et J
@@ -490,8 +490,8 @@ export function UpgradePlanModal({
                       {isActivating
                         ? 'Redirection en cours...'
                         : isPro && !isExpired
-                        ? 'Renouveler pour 30 jours (15 000 F)'
-                        : 'Payer 15 000 F & Activer 30 jours'}
+                        ? 'Renouveler pour 30 jours (5 000 F)'
+                        : 'Payer 5 000 F & Activer 30 jours'}
                     </span>
                   </button>
                 </div>
@@ -616,8 +616,8 @@ export function UpgradePlanModal({
                   {isActivating
                     ? 'Connexion au paiement...'
                     : isPro && !isExpired
-                    ? 'Prolonger 30 jours (15 000 F)'
-                    : 'Activer 30 jours (15 000 F)'}
+                    ? 'Prolonger 30 jours (5 000 F)'
+                    : 'Activer 30 jours (5 000 F)'}
                 </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>

@@ -43,7 +43,7 @@ export const PLANS_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       'Baux & Contrats signés ILLIMITÉS (aucun plafond)',
       'Encaissements 100% Mobile Money automatisés (Wave, MoMo, Moov, Orange, Celtiis)',
       '⚠️ Règlements en espèces & manuels non autorisés (réservés à la Formule Pro)',
-      'Split Payment automatique (reversement instantané de 98% net sur votre compte)',
+      'Split Payment automatique (reversement programmé dès le 7 du mois de 98% net sur votre compte)',
       'Quittances officielles scellées avec QR Code de certification pour chaque loyer Mobile Money',
       'Gestion complète des pannes & interventions d’urgence (photos, artisans)',
       'Gestion des préavis de départ & restitution caution sous 30 jours',
@@ -55,7 +55,7 @@ export const PLANS_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
     id: 'pro',
     name: 'Formule Entreprise & Pro',
     tagline: 'Pour agences, cabinets & parcs locatifs',
-    price: '15 000 FCFA',
+    price: '5 000 FCFA',
     priceDetail: '/ mois (validité 30 jours)',
     maxActiveLeases: Infinity,
     features: [
@@ -141,7 +141,7 @@ export const PlanService = {
           expiresAt: expiresAt.toISOString(),
           isExpired: false,
           daysRemaining: 30,
-          pricePaid: 15000,
+          pricePaid: 5000,
           currency: 'FCFA',
           cycleCount: 1,
         };
@@ -294,7 +294,7 @@ export const PlanService = {
         allowed: false,
         isSereniteRestricted: true,
         reason:
-          'La Formule Sérénité (0 FCFA fixe) est strictement réservée aux encaissements automatisés par Mobile Money (Wave, MoMo, Moov, Orange, Celtiis). Pour enregistrer manuellement des règlements en espèces ou virements bancaires hors-plateforme sur vos baux illimités, activez la Formule Entreprise & Pro (15 000 FCFA / 30 jours) à 0% de commission.',
+          'La Formule Sérénité (0 FCFA fixe) est strictement réservée aux encaissements automatisés par Mobile Money (Wave, MoMo, Moov, Orange, Celtiis). Pour enregistrer manuellement des règlements en espèces ou virements bancaires hors-plateforme sur vos baux illimités, activez la Formule Entreprise & Pro (5 000 FCFA / 30 jours) à 0% de commission.',
       };
     }
 
@@ -316,7 +316,7 @@ export const PlanService = {
       return {
         allowed: false,
         reason:
-          'La Formule Sérénité (0 FCFA fixe) repose exclusivement sur l’encaissement automatisé par Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis). L’encaissement manuel de loyers est strictement réservé à la Formule Entreprise & Pro (15 000 FCFA / 30 jours, 0% de commission).',
+          'La Formule Sérénité (0 FCFA fixe) repose exclusivement sur l’encaissement automatisé par Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis). L’encaissement manuel de loyers est strictement réservé à la Formule Entreprise & Pro (5 000 FCFA / 30 jours, 0% de commission).',
       };
     }
     return { allowed: true };
@@ -425,7 +425,7 @@ export const PlanService = {
   },
 
   /**
-   * Active la Formule Entreprise & Pro pour une durée de 30 jours (15 000 FCFA)
+   * Active la Formule Entreprise & Pro pour une durée de 30 jours (5 000 FCFA)
    */
   activateProPlan(userId?: string, durationDays = 30): {
     success: boolean;
@@ -443,7 +443,7 @@ export const PlanService = {
       expiresAt: expiresAtIso,
       isExpired: false,
       daysRemaining: durationDays,
-      pricePaid: 15000,
+      pricePaid: 5000,
       currency: 'FCFA',
       lastRenewalAt: now.toISOString(),
       cycleCount: 1,
@@ -467,7 +467,7 @@ export const PlanService = {
         LeaseService.addLandlordNotification({
           id: `notif-pro-welcome-${Date.now()}`,
           title: '👑 Formule Entreprise & Pro activée (30 jours)',
-          message: `Félicitations ! Votre forfait Pro (15 000 FCFA) est actif pendant 30 jours, jusqu'au ${expiresDateStr}. Vous bénéficiez des baux illimités, de la console démarcheur et du support prioritaire.`,
+          message: `Félicitations ! Votre forfait Pro (5 000 FCFA) est actif pendant 30 jours, jusqu'au ${expiresDateStr}. Vous bénéficiez des baux illimités, de la console démarcheur et du support prioritaire.`,
           type: 'subscription_activated',
           read: false,
           createdAt: now.toISOString(),
@@ -521,7 +521,7 @@ export const PlanService = {
       daysRemaining: Math.ceil((newExpiresDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
       lastRenewalAt: now.toISOString(),
       cycleCount,
-      pricePaid: 15000,
+      pricePaid: 5000,
       currency: 'FCFA',
     };
 
@@ -582,7 +582,7 @@ export const PlanService = {
       expiresAt: expiresAtIso,
       isExpired: daysRemaining < 0,
       daysRemaining,
-      pricePaid: 15000,
+      pricePaid: 5000,
       currency: 'FCFA',
       cycleCount: 1,
     };
@@ -643,7 +643,7 @@ export const PlanService = {
         LeaseService.addLandlordNotification({
           id: `notif-pro-j1-${cycleDateStr}`,
           title: '⚠️ Formule Pro : Expire demain (J-1) !',
-          message: `Votre abonnement Formule Entreprise & Pro expire demain (le ${formattedExpiresDate}). Renouvelez dès maintenant pour 30 jours (15 000 FCFA) afin d'éviter la suspension de vos fonctionnalités professionnelles.`,
+          message: `Votre abonnement Formule Entreprise & Pro expire demain (le ${formattedExpiresDate}). Renouvelez dès maintenant pour 30 jours (5 000 FCFA) afin d'éviter la suspension de vos fonctionnalités professionnelles.`,
           type: 'subscription_alert',
           read: false,
           createdAt: new Date().toISOString(),
@@ -659,7 +659,7 @@ export const PlanService = {
         LeaseService.addLandlordNotification({
           id: `notif-pro-j0-${cycleDateStr}`,
           title: '🚨 Formule Pro : Expire aujourd’hui (Jour J) !',
-          message: `Dernier jour : votre abonnement Formule Pro expire aujourd'hui le ${formattedExpiresDate} à 23h59. Réactivez immédiatement votre formule pour 30 jours (15 000 FCFA) afin de prolonger vos accès agence & démarcheur.`,
+          message: `Dernier jour : votre abonnement Formule Pro expire aujourd'hui le ${formattedExpiresDate} à 23h59. Réactivez immédiatement votre formule pour 30 jours (5 000 FCFA) afin de prolonger vos accès agence & démarcheur.`,
           type: 'subscription_alert',
           read: false,
           createdAt: new Date().toISOString(),
@@ -675,7 +675,7 @@ export const PlanService = {
         LeaseService.addLandlordNotification({
           id: `notif-pro-expired-${cycleDateStr}`,
           title: '🔴 Formule Pro : Abonnement Expiré',
-          message: `Votre abonnement Formule Entreprise & Pro a expiré le ${formattedExpiresDate}. Réactivez votre forfait (15 000 FCFA) pour débloquer immédiatement vos fonctionnalités professionnelles.`,
+          message: `Votre abonnement Formule Entreprise & Pro a expiré le ${formattedExpiresDate}. Réactivez votre forfait (5 000 FCFA) pour débloquer immédiatement vos fonctionnalités professionnelles.`,
           type: 'subscription_expired',
           read: false,
           createdAt: new Date().toISOString(),
@@ -706,7 +706,7 @@ export const PlanService = {
         message: `Votre abonnement Formule Pro a expiré le ${formattedExpiresDate}. Vos fonctionnalités agence et multi-utilisateurs sont suspendues.`,
         daysRemaining,
         expiresAtFormatted: formattedExpiresDate,
-        actionText: 'Réactiver 30 jours (15 000 F)',
+        actionText: 'Réactiver 30 jours (5 000 F)',
       };
     }
 
@@ -717,7 +717,7 @@ export const PlanService = {
         message: `Votre Formule Pro expire ce soir à 23h59. Réactivez dès maintenant pour 30 jours supplémentaires sans interruption.`,
         daysRemaining: 0,
         expiresAtFormatted: formattedExpiresDate,
-        actionText: 'Renouveler immédiatement (15 000 F)',
+        actionText: 'Renouveler immédiatement (5 000 F)',
       };
     }
 
@@ -728,7 +728,7 @@ export const PlanService = {
         message: `Il vous reste 1 jour d'accès pro (échéance le ${formattedExpiresDate}). Anticipez votre renouvellement pour rester couvert.`,
         daysRemaining: 1,
         expiresAtFormatted: formattedExpiresDate,
-        actionText: 'Renouveler 30 jours (15 000 F)',
+        actionText: 'Renouveler 30 jours (5 000 F)',
       };
     }
 
@@ -739,7 +739,7 @@ export const PlanService = {
         message: `Votre abonnement arrive à échéance le ${formattedExpiresDate}. Pensez à réactiver votre forfait pour 30 jours supplémentaires.`,
         daysRemaining: 2,
         expiresAtFormatted: formattedExpiresDate,
-        actionText: 'Renouveler 30 jours (15 000 F)',
+        actionText: 'Renouveler 30 jours (5 000 F)',
       };
     }
 

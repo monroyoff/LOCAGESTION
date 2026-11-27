@@ -628,7 +628,7 @@ export function UserProfileModal({
                   <h4 className="text-sm sm:text-base font-black tracking-tight mt-0.5 flex items-center gap-1.5 truncate">
                     <span>
                       {userSub?.plan === 'pro'
-                        ? 'Formule Entreprise & Pro (15 000 FCFA)'
+                        ? 'Formule Entreprise & Pro (5 000 FCFA)'
                         : userSub?.plan === 'serenite'
                         ? 'Formule Sérénité (Baux Illimités)'
                         : 'Formule Découverte (0 FCFA)'}

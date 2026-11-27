@@ -359,7 +359,7 @@ export interface UserSubscriptionDetails {
   expiresAt?: string;        // Date ISO d'échéance à J+30 (ex: '2026-12-26T00:00:00.000Z')
   isExpired?: boolean;       // Forfait expiré au-delà des 30 jours
   daysRemaining?: number;    // Nombre de jours restants avant échéance
-  pricePaid?: number;        // Montant acquitté (15 000 FCFA pour la formule Pro)
+  pricePaid?: number;        // Montant acquitté (5 000 FCFA pour la formule Pro)
   currency?: string;         // 'FCFA'
   lastRenewalAt?: string;    // Date ISO du dernier renouvellement
   cycleCount?: number;       // Nombre de cycles de 30 jours renouvelés

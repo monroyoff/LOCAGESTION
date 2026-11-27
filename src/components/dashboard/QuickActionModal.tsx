@@ -187,7 +187,7 @@ export function QuickActionModal({
                 La <strong>Formule Sérénité (0 FCFA fixe)</strong> repose exclusivement sur l’encaissement automatisé par Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis Cash) avec 2% de commission.
               </p>
               <p className="text-xs text-slate-600 leading-relaxed mt-1.5 max-w-sm mx-auto">
-                Pour enregistrer manuellement des encaissements en espèces ou virements bancaires hors-plateforme sur vos baux illimités, activez la <strong>Formule Entreprise &amp; Pro (15 000 FCFA / 30 jours)</strong> à 0% de commission.
+                Pour enregistrer manuellement des encaissements en espèces ou virements bancaires hors-plateforme sur vos baux illimités, activez la <strong>Formule Entreprise &amp; Pro (5 000 FCFA / 30 jours)</strong> à 0% de commission.
               </p>
             </div>
             <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
@@ -206,7 +206,7 @@ export function QuickActionModal({
                 className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Flame className="w-4 h-4 text-orange-400" />
-                <span>Passer à la Formule Pro (15 000 FCFA)</span>
+                <span>Passer à la Formule Pro (5 000 FCFA)</span>
               </button>
             </div>
           </div>
@@ -286,7 +286,7 @@ export function QuickActionModal({
                         Formule Sérénité : Règlements par Mobile Money uniquement
                       </strong>
                       <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-300">
-                        La Formule Sérénité (0 FCFA fixe) repose sur l&apos;encaissement automatisé par Mobile Money (Wave, MoMo, Moov, Orange, Celtiis) avec prélèvement de la commission de 2%. L&apos;enregistrement manuel de règlements en espèces ou virements hors-plateforme sur vos baux illimités est réservé à la <strong>Formule Entreprise &amp; Pro (15 000 FCFA / 30 jours, 0% commission)</strong>.
+                        La Formule Sérénité (0 FCFA fixe) repose sur l&apos;encaissement automatisé par Mobile Money (Wave, MoMo, Moov, Orange, Celtiis) avec prélèvement de la commission de 2%. L&apos;enregistrement manuel de règlements en espèces ou virements hors-plateforme sur vos baux illimités est réservé à la <strong>Formule Entreprise &amp; Pro (5 000 FCFA / 30 jours, 0% commission)</strong>.
                       </p>
                     </div>
                   </div>
@@ -297,7 +297,7 @@ export function QuickActionModal({
                       className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] shadow-sm flex items-center gap-1.5 cursor-pointer"
                     >
                       <Flame className="w-3.5 h-3.5 text-orange-400" />
-                      <span>Passer à la Formule Pro (15 000 FCFA)</span>
+                      <span>Passer à la Formule Pro (5 000 FCFA)</span>
                     </button>
                     <button
                       type="button"

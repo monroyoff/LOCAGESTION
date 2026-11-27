@@ -631,23 +631,23 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
 - **Principe de cloisonnement strict :**
   - **Formule Découverte (0 FCFA / 1 à 2 baux max) :** Tous les modes de paiement (Espèces, Virement et Mobile Money) sont tolérés sans commission pour permettre au bailleur de tester la plateforme.
   - **Formule Sérénité (0 FCFA fixe / Baux Illimités) :** STRICTEMENT RÉSERVÉE aux encaissements automatisés par Mobile Money via la passerelle intégrée. L'enregistrement manuel de paiements en espèces (`especes`) ou virements bancaires hors-plateforme (`virement`) est **rigoureusement verrouillé et désactivé** (`PlanService.canRecordPaymentMethod`). Les quittances scellées avec QR code de vérification sont émises exclusivement pour les loyers acquittés via la plateforme.
-  - **Formule Entreprise & Pro (15 000 FCFA / 30 jours) :** Encaissements en **Espèces, Chèques, Virements et tous canaux 100% LIBRES & ILLIMITÉS à 0% de commission plateforme**. Quittances certifiées scellées illimitées pour l'ensemble des modes de paiement.
+  - **Formule Entreprise & Pro (5 000 FCFA / 30 jours) :** Encaissements en **Espèces, Chèques, Virements et tous canaux 100% LIBRES & ILLIMITÉS à 0% de commission plateforme**. Quittances certifiées scellées illimitées pour l'ensemble des modes de paiement.
 
 ### ⚡ 2. Implémentation & Garde-Fous Techniques
 1. **Verrouillage Intégral du Bouton « Encaisser Loyer » (`PlanService.canLandlordRecordManualPayment`) :**
    - Dès lors qu'un bailleur est en Formule Sérénité, tout clic sur le bouton **« Encaisser loyer »** (dans le Header, dans `/payments` ou dans `/tenants`) est **immédiatement refusé et bloqué à la source**.
    - Le système affiche la notification de blocage officielle :
-     > *« La Formule Sérénité (0 FCFA fixe) repose exclusivement sur l’encaissement automatisé par Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis). L’encaissement manuel de loyers est strictement réservé à la Formule Entreprise & Pro (15 000 FCFA / 30 jours, 0% de commission). »*
+     > *« La Formule Sérénité (0 FCFA fixe) repose exclusivement sur l’encaissement automatisé par Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis). L’encaissement manuel de loyers est strictement réservé à la Formule Entreprise & Pro (5 000 FCFA / 30 jours, 0% de commission). »*
    - La modal d'activation de la Formule Pro (`UpgradePlanModal` avec onglet Pro pré-sélectionné) s'ouvre automatiquement pour permettre un surclassement instantané.
 2. **Modal d'Action Rapide (`QuickActionModal.tsx`) :**
    - Si la modal est invoquée avec l'action `new_payment` sous Formule Sérénité, elle affiche directement un écran de blocage hermétique avec bouclier d'alerte, explication détaillée et bouton de bascule vers le Pack Pro.
 3. **Tableau de Bord des Paiements (`/payments`) :**
    - Un bandeau pédagogique rappelle au bailleur en Sérénité que ses encaissements et quittances sont automatisés à 100% via Mobile Money, avec un raccourci pour débloquer les encaissements manuels en passant en Pro.
 4. **Landing Page & Grille Tarifaire (`LandingPricing.tsx` & `UpgradePlanModal.tsx`) :**
-   - Affichage transparent dans les cartes de prix et la FAQ de la règle : Sérénité = 100% Mobile Money automatisé (encaissements manuels bloqués), Pro = tous canaux libres à 0% de commission.
+   - Affichage transparent dans les cartes de prix et la FAQ de la règle : Sérénité = 100% Mobile Money automatisé (reversement programmé dès le 7 du mois de 98% net, encaissements manuels bloqués), Pro = 5 000 FCFA / 30 jours, tous canaux libres à 0% de commission.
 5. **Console de Déboursement & Reversements Bailleurs Super-Admin (`/admin` & `PayoutService`) :**
    - Suivi comptable en temps réel des encaissements Mobile Money FedaPay (100 %) conservés sur le compte marchand `acc_3137475447` (MONROY AG).
-   - Décomposition mathématique scellée : 2 % conservés par LOCAGESTION (commission plateforme Sérénité) et 98 % nets à reverser aux bailleurs partenaires.
+   - Décomposition mathématique scellée : 2 % conservés par LOCAGESTION (commission plateforme Sérénité) et 98 % nets à reverser aux bailleurs partenaires (reversement programmé dès le 7 du mois).
    - Gestion des déboursements classiques (retraits et virements vers les comptes Wave, MTN, Moov ou bancaires des bailleurs) pendant la suspension temporaire de l'API Payouts automatisée de FedaPay.
    - Scellement des preuves de virement (référence de transaction, opérateur, date/heure, administrateur) et notification officielle automatique délivrée au bailleur dans sa cloche.
 
