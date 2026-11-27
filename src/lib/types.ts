@@ -255,6 +255,14 @@ export interface RentalListing {
   referenceCode?: string; // Référence unique plateforme (ex: A-BJ-84291)
   viewsCount?: number;
   inquiriesCount?: number;
+  featured?: boolean;
+  boostPlan?: 'flash_weekend' | 'boost_7d' | 'boost_14d';
+  boostPlanName?: string;
+  boostBadge?: string;
+  boostPrice?: number;
+  boostDays?: number;
+  boostActivatedAt?: string;
+  boostExpiresAt?: string;
 }
 
 export interface UserProfile {

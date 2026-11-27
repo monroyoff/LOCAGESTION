@@ -164,7 +164,14 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 - Référence unique certifiée par annonce : format distinctif, court et pro `A-<PAYS>-<NUMERO>` (ex: `A-BJ-17635`), intégrant les initiales officielles du pays du bien.
 - Calcul de proximité GPS en kilomètres entre le visiteur et le logement.
 - Prise de rendez-vous de visite en direct.
-- Espace **"Mes publications"** avec gestion de cycle de vie (Modifier, Mettre en pause, Supprimer).
+- Espace **"Mes publications"** avec gestion de cycle de vie (Modifier, Mettre en pause, Supprimer, Booster).
+- **Moteur de Promotion & Mise en Avant Immédiate (3 Packs de Boost Mobile Money) :**
+  Tout utilisateur publiant un bien (Bailleur, Démarcheur ou Locataire) peut mettre en avant son annonce via FedaPay Live (Wave, MTN Mobile Money, Moov Flooz, Orange Money, Carte Bancaire) :
+  1. **⚡ Flash Week-End (3 jours) — 1 000 FCFA :** Badge `⭐ En Vedette`, épinglé en tête des résultats le vendredi, samedi et dimanche pour les démarches et visites groupées du samedi.
+  2. **🔥 Boost Flash (7 jours) — 2 500 FCFA :** Badge `🔥 Sponsorisé`, épinglage permanent en haut de page pendant 7 jours, cadre lumineux doré et x3 demandes directes WhatsApp.
+  3. **👑 Boost Élite (14 jours) — 4 500 FCFA (« Le plus populaire ») :** Badge `👑 Coup de Cœur`, top position absolue garantie sur `/listings` et `/accueil`, notification prioritaire aux locataires solvables 100/100 de la zone.
+  - Déclenchement instantané : redirection directe sans attendre vers le guichet sécurisé Mobile Money FedaPay Live.
+  - Scellement automatique : dépublication et fin de mise en avant immédiate dès conclusion et signature du bail.
 
 ### 💬 9. Messagerie Directe & Notifications (`/messages`, Cloche Header)
 - Chat bidirectionnel temps réel entre Bailleur, Locataire et Démarcheur.

@@ -1118,4 +1118,155 @@ export const ListingsService = {
       }
     }
   },
+
+  /**
+   * Vérifie si une annonce bénéficie d'une mise en avant active
+   */
+  isListingBoosted(listing?: RentalListing | null): boolean {
+    if (!listing) return false;
+    if (listing.featured) {
+      if (!listing.boostExpiresAt) return true;
+      try {
+        return new Date(listing.boostExpiresAt).getTime() > Date.now();
+      } catch {
+        return true;
+      }
+    }
+    return false;
+  },
+
+  /**
+   * Calcule le nombre de jours restants sur la mise en avant
+   */
+  getBoostDaysRemaining(listing?: RentalListing | null): number {
+    if (!listing || !this.isListingBoosted(listing) || !listing.boostExpiresAt) return 0;
+    try {
+      const diff = new Date(listing.boostExpiresAt).getTime() - Date.now();
+      return Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    } catch {
+      return 1;
+    }
+  },
+
+  /**
+   * Active la mise en avant payée sur une annonce
+   */
+  applyBoost(
+    listingId: string,
+    packId: 'flash_weekend' | 'boost_7d' | 'boost_14d',
+    _transactionRef?: string
+  ): RentalListing | null {
+    const pack = BOOST_PACKS.find((p) => p.id === packId) || BOOST_PACKS[1];
+    const activatedAt = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + pack.days * 24 * 60 * 60 * 1000).toISOString();
+
+    const updated = this.updateListing(listingId, {
+      featured: true,
+      boostPlan: pack.id,
+      boostPlanName: pack.name,
+      boostBadge: pack.badge,
+      boostPrice: pack.price,
+      boostDays: pack.days,
+      boostActivatedAt: activatedAt,
+      boostExpiresAt: expiresAt,
+    });
+
+    if (updated) {
+      notifyListingsChange();
+      try {
+        LeaseService.addLandlordNotification({
+          id: `notif-boost-${listingId}-${Date.now()}`,
+          title: `🚀 Annonce mise en avant (${pack.name})`,
+          message: `Votre annonce « ${updated.title} » (Réf: ${updated.referenceCode || updated.id}) bénéficie désormais du pack ${pack.name} pendant ${pack.days} jours avec le badge ${pack.badge}.`,
+          type: 'listing_approved',
+          read: false,
+          createdAt: new Date().toISOString(),
+          timestamp: new Date().toISOString(),
+          time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+        });
+      } catch (e) {}
+    }
+
+    return updated;
+  },
+
+  /**
+   * Résilie ou annule le boost d'une annonce
+   */
+  cancelBoost(listingId: string): RentalListing | null {
+    const updated = this.updateListing(listingId, {
+      featured: false,
+      boostPlan: undefined,
+      boostPlanName: undefined,
+      boostBadge: undefined,
+      boostPrice: undefined,
+      boostDays: undefined,
+      boostActivatedAt: undefined,
+      boostExpiresAt: undefined,
+    });
+    if (updated) notifyListingsChange();
+    return updated;
+  },
 };
+
+export interface BoostPack {
+  id: 'flash_weekend' | 'boost_7d' | 'boost_14d';
+  name: string;
+  days: number;
+  price: number;
+  badge: string;
+  tag?: string;
+  targetRole?: string;
+  description: string;
+  features: string[];
+}
+
+export const BOOST_PACKS: BoostPack[] = [
+  {
+    id: 'flash_weekend',
+    name: '⚡ Flash Week-End',
+    days: 3,
+    price: 1000,
+    badge: '⭐ En Vedette',
+    targetRole: 'Démarcheurs organisant des visites groupées le samedi',
+    description: 'En tête des résultats le vendredi, samedi et dimanche (pics de recherche). Démarcheurs organisant des visites groupées le samedi.',
+    features: [
+      'Badge ⭐ En Vedette visible par tous les visiteurs',
+      'En tête des résultats le vendredi, samedi et dimanche (pics de recherche)',
+      'Idéal pour les démarches et visites groupées du samedi',
+      'Paiement instantané Mobile Money sans engagement',
+      'Retrait automatique garanti dès signature du contrat',
+    ],
+  },
+  {
+    id: 'boost_7d',
+    name: '🔥 Boost Flash',
+    days: 7,
+    price: 2500,
+    badge: '🔥 Sponsorisé',
+    description: 'Épinglage permanent en haut de page pendant 7 jours, liseré lumineux distinctif et x3 demandes de contact WhatsApp.',
+    features: [
+      'Épinglage permanent en tête de liste pendant 7 jours',
+      'Badge doré 🔥 Sponsorisé',
+      'Cadre lumineux distinctif attirant immédiatement l’œil',
+      'Multiplie par 3 les clics et demandes de visites WhatsApp',
+      'Retrait automatique garanti dès signature du contrat',
+    ],
+  },
+  {
+    id: 'boost_14d',
+    name: '👑 Boost Élite',
+    days: 14,
+    price: 4500,
+    badge: '👑 Coup de Cœur',
+    tag: 'Le plus populaire',
+    description: 'Top position garantie sur /listings et /accueil, badge Coup de Cœur et notification prioritaire aux locataires solvables 100/100.',
+    features: [
+      'Top position garantie sur /listings et en page d’accueil',
+      'Badge officiel 👑 Coup de Cœur',
+      'Priorité absolue sur le calcul de proximité GPS',
+      'Notification directe aux locataires solvables (100/100) en recherche active',
+      'Retrait automatique garanti dès signature du contrat',
+    ],
+  },
+];

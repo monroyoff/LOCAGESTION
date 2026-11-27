@@ -11,6 +11,7 @@ import { RentalListing } from '@/lib/types';
 import { COUNTRIES_CITIES } from '@/lib/data/mock-data';
 import { PublishListingModal } from '@/components/listings/PublishListingModal';
 import { EditListingModal } from '@/components/listings/EditListingModal';
+import { BoostListingModal } from '@/components/listings/BoostListingModal';
 import { SkeletonListingGrid } from '@/components/ui/SkeletonLoader';
 import {
   ListingsService,
@@ -108,6 +109,13 @@ export default function ListingsPage() {
   const [myListingsFilter, setMyListingsFilter] = useState<'all' | 'disponible' | 'en_pause' | 'reserve_loue'>('all');
   const [myListingsSearch, setMyListingsSearch] = useState('');
   const [myListings7DaysOnly, setMyListings7DaysOnly] = useState(false);
+  const [boostModalOpen, setBoostModalOpen] = useState(false);
+  const [selectedListingForBoost, setSelectedListingForBoost] = useState<RentalListing | null>(null);
+
+  const handleOpenBoost = (listing: RentalListing) => {
+    setSelectedListingForBoost(listing);
+    setBoostModalOpen(true);
+  };
 
   // Search & Filter States
   const [searchQuery, setSearchQuery] = useState('');
@@ -413,6 +421,15 @@ export default function ListingsPage() {
     return ListingsService.getUserListings(user, activeSpace);
   }, [listings, user, activeSpace]);
 
+  const isMyListing = (l?: RentalListing | null): boolean => {
+    if (!l || !user) return false;
+    if (l.authorId && l.authorId === user.id) return true;
+    if (user.email && l.authorEmail && l.authorEmail.toLowerCase().trim() === user.email.toLowerCase().trim()) return true;
+    if (user.phone && l.authorPhone && l.authorPhone.replace(/\s+/g, '') === user.phone.replace(/\s+/g, '')) return true;
+    if (user.name && l.authorName && l.authorName.trim().toLowerCase() === user.name.trim().toLowerCase()) return true;
+    return false;
+  };
+
   const filteredMyListings = useMemo(() => {
     let list = myListings;
     if (myListingsFilter === 'disponible') {
@@ -691,7 +708,23 @@ export default function ListingsPage() {
     });
 
     return list.sort((a, b) => {
-      // 0. Tri par récence ("Plus récents" en priorité si sélectionné)
+      const aBoosted = ListingsService.isListingBoosted(a);
+      const bBoosted = ListingsService.isListingBoosted(b);
+
+      // 0. Priorité absolue aux annonces en vedette (Boosted) sauf tri strict par montant
+      if (sortBy !== 'price_asc' && sortBy !== 'price_desc') {
+        if (aBoosted && !bBoosted) return -1;
+        if (!aBoosted && bBoosted) return 1;
+      }
+
+      // Tri explicite "⭐ En vedette"
+      if (sortBy === 'featured') {
+        if (aBoosted && !bBoosted) return -1;
+        if (!aBoosted && bBoosted) return 1;
+        return getListingTimestamp(b) - getListingTimestamp(a);
+      }
+
+      // 1. Tri par récence ("Plus récents" en priorité si sélectionné)
       if (sortBy === 'recent') {
         const timeA = getListingTimestamp(a);
         const timeB = getListingTimestamp(b);
@@ -1506,6 +1539,37 @@ export default function ListingsPage() {
                             </span>
                           </div>
 
+                          {/* BOUTON MISE EN AVANT & BOOST PRIORITAIRE */}
+                          <div>
+                            {ListingsService.isListingBoosted(listing) ? (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenBoost(listing);
+                                }}
+                                className="w-full py-2.5 px-3 rounded-2xl text-xs font-black bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white shadow-sm hover:shadow-md flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                                title="Gérer ou prolonger la mise en avant"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 text-yellow-200 fill-yellow-200" />
+                                <span>{listing.boostBadge || '⭐ En Vedette'} • Reste {ListingsService.getBoostDaysRemaining(listing)}j</span>
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenBoost(listing);
+                                }}
+                                className="w-full py-2.5 px-3 rounded-2xl text-xs font-black bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                                title="Booster cette annonce pour la placer en tête des résultats"
+                              >
+                                <Zap className="w-3.5 h-3.5 text-yellow-200 fill-yellow-200 animate-pulse" />
+                                <span>⚡ Booster l’annonce (Dès 1 000 F)</span>
+                              </button>
+                            )}
+                          </div>
+
                           {/* BARRE D'ACTIONS : MODIFIER / METTRE EN PAUSE / SUPPRIMER */}
                           <div className="pt-2 border-t border-slate-100 grid grid-cols-3 gap-2">
                             {/* Bouton Mettre en pause / Réactiver */}
@@ -1939,10 +2003,17 @@ export default function ListingsPage() {
               ) : filteredListings.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredListings.map((listing) => {
+                    const isBoosted = ListingsService.isListingBoosted(listing);
+                    const isOwn = isMyListing(listing);
+
                     return (
                       <div
                         key={listing.id}
-                        className="bg-white rounded-3xl border border-slate-200/80 shadow-soft overflow-hidden flex flex-col justify-between group hover:shadow-card-hover transition-all"
+                        className={`rounded-3xl border overflow-hidden flex flex-col justify-between group hover:shadow-card-hover transition-all ${
+                          isBoosted
+                            ? 'bg-amber-50/10 border-amber-400 ring-2 ring-amber-400/40 shadow-xl shadow-amber-500/10'
+                            : 'bg-white border-slate-200/80 shadow-soft'
+                        }`}
                       >
                         <div>
                           {/* Image Header with Price Tag & Badges (Click to inspect all photos & details) */}
@@ -1962,7 +2033,14 @@ export default function ListingsPage() {
                             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent" />
 
                             {/* Top Badges (Left) */}
-                            <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[70%]">
+                            <div className="absolute top-3 left-3 flex items-center gap-1.5 flex-wrap max-w-[75%]">
+                              {isBoosted && (
+                                <span className="px-2.5 py-1 rounded-full bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 text-white text-[10px] font-black shadow-md flex items-center gap-1 border border-yellow-200/50 animate-pulse">
+                                  <Zap className="w-3 h-3 fill-yellow-200 text-yellow-200" />
+                                  <span>{listing.boostBadge || '⭐ En Vedette'}</span>
+                                </span>
+                              )}
+
                               <span className="px-2.5 py-1 rounded-full bg-brand-500 text-white text-[10px] font-black shadow-md flex items-center gap-1">
                                 <span>{listing.flag}</span>
                                 <span>{listing.country}</span>
@@ -2020,6 +2098,12 @@ export default function ListingsPage() {
                               </div>
 
                               <div className="flex items-center gap-1.5 shrink-0 flex-nowrap">
+                                {isBoosted && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black border border-amber-300 shadow-2xs shrink-0 whitespace-nowrap">
+                                    <Sparkles className="w-3 h-3 text-amber-600 fill-amber-500" />
+                                    <span>{listing.boostBadge || '⭐ En Vedette'}</span>
+                                  </span>
+                                )}
                                 {isListingFromLast7Days(listing) && (
                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-600 text-[10px] font-black border border-rose-200 shadow-2xs shrink-0 whitespace-nowrap">
                                     ✨ Récent (-7j)
@@ -2030,6 +2114,20 @@ export default function ListingsPage() {
                                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                                     <span className="whitespace-nowrap">Bailleur Vérifié</span>
                                   </span>
+                                )}
+                                {isOwn && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenBoost(listing);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white text-[10px] font-black transition-all cursor-pointer shadow-xs whitespace-nowrap"
+                                    title="Booster cette annonce"
+                                  >
+                                    <Zap className="w-2.5 h-2.5 fill-yellow-200 text-yellow-200" />
+                                    <span>{isBoosted ? 'Boost actif' : 'Booster'}</span>
+                                  </button>
                                 )}
                               </div>
                             </div>
@@ -2587,6 +2685,22 @@ export default function ListingsPage() {
                 Fermer
               </button>
 
+              {/* Si l'utilisateur connecté est l'auteur de l'annonce : bouton Booster en direct */}
+              {isMyListing(selectedListingForDetail) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const target = selectedListingForDetail;
+                    handleCloseDetailModal();
+                    if (target) handleOpenBoost(target);
+                  }}
+                  className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white font-black text-xs shadow-md shadow-amber-500/25 flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Zap className="w-4 h-4 fill-yellow-200 text-yellow-200 animate-pulse" />
+                  <span>⚡ Booster cette annonce</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={() => {
@@ -2635,6 +2749,21 @@ export default function ListingsPage() {
           handleDeleteListing(id);
           setEditModalOpen(false);
           setSelectedListingForEdit(null);
+        }}
+        onOpenBoost={handleOpenBoost}
+      />
+
+      {/* Modale de Mise en Avant & Boost Prioritaire */}
+      <BoostListingModal
+        isOpen={boostModalOpen}
+        onClose={() => {
+          setBoostModalOpen(false);
+          setSelectedListingForBoost(null);
+        }}
+        listing={selectedListingForBoost}
+        onBoostActivated={(updated) => {
+          setListings(ListingsService.getAllListings());
+          showToast(`Annonce « ${updated.title} » boostée avec succès !`);
         }}
       />
 

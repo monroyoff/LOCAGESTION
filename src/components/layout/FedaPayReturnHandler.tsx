@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { useSpace } from '@/lib/context/space-context';
 import { PlanService } from '@/lib/services/plan-service';
+import { ListingsService, BOOST_PACKS } from '@/lib/services/listings-service';
 import { notifySave } from '@/lib/notifications/action-notifier';
 
 const REDEEMED_TX_KEY_PREFIX = 'locagestion:redeemed_tx:';
@@ -18,7 +19,54 @@ export function FedaPayReturnHandler() {
       try {
         const urlParams = new URLSearchParams(window.location.search);
 
-        // Détection des retours de souscription FedaPay
+        // 1. Détection des retours de boost d'annonce
+        const isBoostCheck =
+          urlParams.has('boost_listing_id') ||
+          urlParams.get('type') === 'boost' ||
+          (urlParams.get('fedapay_ref') === 'success' && urlParams.has('pack_id'));
+
+        if (isBoostCheck) {
+          const boostListingId = urlParams.get('boost_listing_id') || urlParams.get('listing_id');
+          const packId = (urlParams.get('pack_id') || 'boost_7d') as 'flash_weekend' | 'boost_7d' | 'boost_14d';
+          const rawStatus = (urlParams.get('status') || urlParams.get('payment_status') || '').toLowerCase();
+          const txId = urlParams.get('id') || urlParams.get('tx_id') || urlParams.get('transaction_id') || `tx-boost-${Date.now()}`;
+
+          // Nettoyage de l'URL
+          urlParams.delete('boost_listing_id');
+          urlParams.delete('pack_id');
+          urlParams.delete('days');
+          urlParams.delete('fedapay_ref');
+          urlParams.delete('status');
+          urlParams.delete('payment_status');
+          urlParams.delete('id');
+          urlParams.delete('tx_id');
+          urlParams.delete('transaction_id');
+          urlParams.delete('amount');
+          urlParams.delete('type');
+          const cleanQuery = urlParams.toString();
+          const cleanUrl = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '') + window.location.hash;
+          window.history.replaceState({}, '', cleanUrl);
+
+          if (rawStatus === 'canceled' || rawStatus === 'declined') {
+            notifySave('⚠️ Paiement de la mise en avant annulé.', 'Paiement Annulé');
+            return;
+          }
+
+          if (boostListingId) {
+            const pack = BOOST_PACKS.find((p) => p.id === packId) || BOOST_PACKS[1];
+            const updated = ListingsService.applyBoost(boostListingId, packId, txId);
+            if (updated) {
+              notifySave(
+                `🎉 Félicitations ! Votre annonce « ${updated.title} » est désormais en vedette (${pack.name}) avec le badge ${pack.badge} !`,
+                'Boost Activé ⭐'
+              );
+              window.dispatchEvent(new CustomEvent('locagestion:listings_changed'));
+            }
+          }
+          return;
+        }
+
+        // 2. Détection des retours de souscription FedaPay Pro
         const isPlanCheck =
           urlParams.get('fedapay_sub_check') === 'pro' ||
           urlParams.get('fedapay_plan') === 'pro' ||

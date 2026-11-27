@@ -29,7 +29,7 @@ import { ModerationService } from '@/lib/services/moderation-service';
 import { AuthService } from '@/lib/services/auth-service';
 import { notifyUpdate, notifyAction } from '@/lib/notifications/action-notifier';
 import { LeaseService } from '@/lib/services/lease-service';
-import { resolveListingAuthorCompany } from '@/lib/services/listings-service';
+import { resolveListingAuthorCompany, ListingsService } from '@/lib/services/listings-service';
 
 interface EditListingModalProps {
   isOpen: boolean;
@@ -37,6 +37,7 @@ interface EditListingModalProps {
   listing: RentalListing | null;
   onSave: (id: string, updates: Partial<RentalListing>) => void;
   onDelete?: (id: string) => void;
+  onOpenBoost?: (listing: RentalListing) => void;
 }
 
 const PROPERTY_TYPES: RentalPropertyType[] = [
@@ -57,6 +58,7 @@ export function EditListingModal({
   listing,
   onSave,
   onDelete,
+  onOpenBoost,
 }: EditListingModalProps) {
   const [authorCompany, setAuthorCompany] = useState('');
   const [title, setTitle] = useState('');
@@ -486,6 +488,39 @@ export function EditListingModal({
                 ? '🟢 En ligne : annonce visible et ouverte aux visites et prises de contact.'
                 : 'Indique aux visiteurs que le bien n’est plus disponible.'}
             </p>
+          </div>
+
+          {/* 1.1 Mise en avant & Boost Prioritaire */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-amber-500/10 border border-amber-300 flex items-center justify-between gap-3 flex-wrap">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <Zap className="w-4 h-4 text-amber-600 fill-amber-500 animate-pulse" />
+                <span className="text-xs font-black text-amber-900">
+                  Mise en avant & Boost Prioritaire
+                </span>
+                {ListingsService.isListingBoosted(listing) && (
+                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black">
+                    {listing.boostBadge || '⭐ En Vedette'} • Reste {ListingsService.getBoostDaysRemaining(listing)}j
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-amber-800">
+                Multipliez vos visites et placez cette annonce en tête des résultats dès 1 000 FCFA.
+              </p>
+            </div>
+            {onOpenBoost && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenBoost(listing);
+                }}
+                className="py-2 px-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-white font-black text-xs shadow-sm flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>{ListingsService.isListingBoosted(listing) ? 'Gérer le boost' : 'Booster l’annonce'}</span>
+              </button>
+            )}
           </div>
 
           {/* Identité Entreprise / Agence sous « Publié par » */}
