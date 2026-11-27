@@ -524,6 +524,7 @@ export const LeaseService = {
       }
       localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(updated));
       notifyStorageChange();
+      window.dispatchEvent(new CustomEvent('locagestion:leases_updated'));
 
       // Synchronisation temps réel immédiate Web <-> Mobile
       fetch('/api/sync', {
@@ -541,6 +542,7 @@ export const LeaseService = {
     try {
       localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(leases));
       notifyStorageChange();
+      window.dispatchEvent(new CustomEvent('locagestion:leases_updated'));
 
       // Synchronisation temps réel immédiate Web <-> Mobile
       fetch('/api/sync', {
@@ -790,6 +792,7 @@ export const LeaseService = {
     const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
     // Créer la notification pour informer le bailleur dans l'app et par mail
+    const targetLandlordEmail = updatedLease.landlordEmail || 'jobovog@gmail.com';
     const notification: LandlordNotification = {
       id: `notif-${Date.now()}`,
       title: 'Bail contresigné par le locataire !',
@@ -800,12 +803,16 @@ export const LeaseService = {
       type: 'lease_signed',
       read: false,
       leaseId: leaseId,
+      landlordId: updatedLease.landlordId || (areEmailsEqual(targetLandlordEmail, 'jobovog@gmail.com') ? 'usr-bailleur-voglossou' : undefined),
+      landlordEmail: targetLandlordEmail,
+      landlordPhone: updatedLease.landlordPhone,
+      landlordName: updatedLease.landlordName || 'Bailleur',
       tenantName: tenantName,
       unit: updatedLease.unit,
       property: updatedLease.property,
-      emailSentTo: updatedLease.landlordEmail || 'jobovog@gmail.com',
+      emailSentTo: targetLandlordEmail,
       emailDelivered: {
-        to: updatedLease.landlordEmail || 'jobovog@gmail.com',
+        to: targetLandlordEmail,
         from: 'baux@locagestion.site',
         subject: `[Bail Contresigné] ${leaseId} — ${tenantName} (${updatedLease.unit})`,
         date: nowFormatted,
@@ -814,6 +821,21 @@ export const LeaseService = {
     };
 
     this.addLandlordNotification(notification);
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('locagestion:leases_updated', { detail: { leaseId } }));
+      window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      window.dispatchEvent(new Event('storage'));
+
+      try {
+        if ('BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('locagestion_realtime');
+          bc.postMessage({ type: 'locagestion:lease_signed', leaseId, notification });
+          bc.postMessage({ type: 'locagestion:leases_updated', leaseId });
+          bc.close();
+        }
+      } catch {}
+    }
 
     return { lease: updatedLease, notification };
   },
@@ -1093,6 +1115,22 @@ export const LeaseService = {
           return false;
         }
 
+        // BAUX CONTRESIGNÉS, TRANSMIS, RÉSILIÉS OU RÉACTIVÉS (Alerte et visibilité immédiate pour le bailleur)
+        if (n.type === 'lease_signed' || n.type === 'lease_transmitted' || n.type === 'lease_terminated' || n.type === 'lease_reactivated') {
+          if (user.role === 'admin' || areEmailsEqual(user.email, 'admin@locagestion.site')) return true;
+          if (n.landlordEmail && user.email && areEmailsEqual(n.landlordEmail, user.email)) return true;
+          if (n.landlordId && user.id && n.landlordId.toLowerCase() === user.id.toLowerCase()) return true;
+          if (n.landlordPhone && user.phone && arePhoneNumbersEqual(n.landlordPhone, user.phone)) return true;
+          if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
+          if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
+          if (n.tenantName && landlordTenants.has(n.tenantName.toLowerCase().trim())) return true;
+          if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
+          if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+          // Si le bailleur n'a aucun bail explicite et que la notif n'est pas restreinte à un tiers
+          if (landlordLeases.length === 0 && (!n.landlordEmail || areEmailsEqual(n.landlordEmail, 'jobovog@gmail.com') || areEmailsEqual(n.landlordEmail, user.email))) return true;
+          return false;
+        }
+
         // Gestion des baux, préavis, paiements et propriétés
         if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
         if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
@@ -1164,6 +1202,7 @@ export const LeaseService = {
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
       notifyStorageChange();
       window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      window.dispatchEvent(new CustomEvent('locagestion:leases_updated', { detail: { leaseId: enriched.leaseId } }));
       window.dispatchEvent(new CustomEvent('locagestion:incidents_updated'));
       window.dispatchEvent(new Event('storage'));
 
@@ -1172,6 +1211,7 @@ export const LeaseService = {
         if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
           const bc = new BroadcastChannel('locagestion_realtime');
           bc.postMessage({ type: 'locagestion:notifications_updated', notification: enriched });
+          bc.postMessage({ type: 'locagestion:leases_updated', leaseId: enriched.leaseId });
           bc.close();
         }
       } catch {}

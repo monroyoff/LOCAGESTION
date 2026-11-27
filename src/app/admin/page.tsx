@@ -191,6 +191,10 @@ export default function AdminDashboardPage() {
   };
 
   const handleAdminActivateSerenite = (targetUser: AuthUser) => {
+    if (targetUser.role !== 'bailleur') {
+      alert('Action impossible : les formules d’abonnement sont réservées exclusivement aux bailleurs. Les comptes locataires et démarcheurs sont 100% gratuits à vie.');
+      return;
+    }
     PlanService.adminActivateSerenite(targetUser.id, effectiveUser?.name || 'Super-Administrateur');
     loadUserDetailsData(targetUser);
     setActionSuccessMsg(`Formule Sérénité activée avec succès pour ${targetUser.name}.`);
@@ -199,6 +203,10 @@ export default function AdminDashboardPage() {
   };
 
   const handleAdminActivatePro = (targetUser: AuthUser, days: number) => {
+    if (targetUser.role !== 'bailleur') {
+      alert('Action impossible : les formules d’abonnement sont réservées exclusivement aux bailleurs. Les comptes locataires et démarcheurs sont 100% gratuits à vie.');
+      return;
+    }
     PlanService.adminActivatePro(targetUser.id, days, effectiveUser?.name || 'Super-Administrateur');
     loadUserDetailsData(targetUser);
     setActionSuccessMsg(`Formule Entreprise & Pro activée (${days} jours) pour ${targetUser.name}.`);
@@ -207,6 +215,10 @@ export default function AdminDashboardPage() {
   };
 
   const handleAdminCancelPlan = (targetUser: AuthUser) => {
+    if (targetUser.role !== 'bailleur') {
+      alert('Action impossible : les formules d’abonnement sont réservées exclusivement aux bailleurs. Les comptes locataires et démarcheurs sont 100% gratuits à vie.');
+      return;
+    }
     PlanService.adminCancelPlan(targetUser.id, effectiveUser?.name || 'Super-Administrateur');
     loadUserDetailsData(targetUser);
     setActionSuccessMsg(`Abonnement résilié. ${targetUser.name} est désormais sur la Formule Découverte (0 FCFA).`);

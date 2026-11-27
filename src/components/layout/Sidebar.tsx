@@ -201,7 +201,10 @@ export function Sidebar({
         const list = isTenant
           ? LeaseService.getLeases()
           : LeaseService.getLeasesForLandlord(context.user);
-        return list.map((l) => `${l.id}:${l.status}:${Boolean(l.signedByTenant)}:${l.transmittedAt || ''}`);
+        return list.flatMap((l) => [
+          `${l.id}:${l.status}:${Boolean(l.signedByTenant)}:${l.transmittedAt || ''}`,
+          `${l.id}:signed:${l.tenantSignedAt || (l.signedByTenant ? 'signed' : '')}`,
+        ]);
       }
       if (section === 'payments') {
         const list = isTenant
@@ -472,10 +475,15 @@ export function Sidebar({
           const seenLeases = getSeenSetForSection('leases');
           if (isLandlord || context.user?.role === 'admin') {
             const landlordLeases = LeaseService.getLeasesForLandlord(context.user);
-            const pendingL = landlordLeases.filter(
+            const waitingForTenant = landlordLeases.filter(
               (l) =>
                 (l.status === 'en_attente_signature' || (!l.signedByTenant && !l.tenantSignature?.date)) &&
                 !seenLeases.has(`${l.id}:${l.status}:${Boolean(l.signedByTenant)}:${l.transmittedAt || ''}`)
+            ).length;
+            const newlySigned = landlordLeases.filter(
+              (l) =>
+                Boolean(l.signedByTenant) &&
+                !seenLeases.has(`${l.id}:signed:${l.tenantSignedAt || 'signed'}`)
             ).length;
             const leaseNotifs = unreadLandlordNotifs.filter(
               (n) =>
@@ -484,7 +492,7 @@ export function Sidebar({
                 n.type === 'lease_terminated' ||
                 n.type === 'lease_reactivated'
             ).length;
-            setPendingLeasesCount(Math.max(pendingL, leaseNotifs));
+            setPendingLeasesCount(Math.max(waitingForTenant + newlySigned, leaseNotifs, newlySigned));
           } else if (isTenant) {
             const allLeases = LeaseService.getLeases();
             const toSign = allLeases.filter(

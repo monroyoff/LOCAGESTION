@@ -27,6 +27,7 @@
 19. [Règle d'Or Anti-Contournement de la Formule Sérénité & Cloisonnement Espèces / Mobile Money](#19-règle-dor-anti-contournement-de-la-formule-sérénité--cloisonnement-espèces--mobile-money)
 20. [Règle d'Or de Gratuité Intégrale pour Locataires & Démarcheurs et Exclusivité des Formules aux Bailleurs](#20-règle-dor-de-gratuité-intégrale-pour-locataires--démarcheurs-et-exclusivité-des-formules-aux-bailleurs)
 21. [Règle d'Or de Transmission Instantanée & Zéro Perte des Signalements de Pannes & Incidents Locatifs](#21-règle-dor-de-transmission-instantanée--zéro-perte-des-signalements-de-pannes--incidents-locatifs)
+22. [Règle d'Or de Notification & Badge Instantanés lors de la Contresignature des Baux](#22-règle-dor-de-notification--badge-instantanés-lors-de-la-contresignature-des-baux)
 
 ---
 
@@ -719,6 +720,48 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
 - Chaque signalement de panne est poussé immédiatement vers le point de synchronisation central `/api/sync` (`POST`) pour persister dans `incidents.json` et `landlord_notifications.json`.
 - Toute session mobile (PWA, TWA Android, navigateur smartphone) synchronise les incidents entrants en temps réel dès la prise de focus ou via l'intervalle actif.
 - Un incident ne peut quitter le compteur d'alerte (`pendingIncidents`) QUE lorsque le bailleur l'a consulté ou que son statut est passé à `'resolu'`.
+
+---
+
+## 22. Règle d'Or de Notification & Badge Instantanés lors de la Contresignature des Baux
+
+> **RÈGLE CRITIQUE D'INTÉGRITÉ CONTRACTUELLE & DE FLUIDITÉ MULTI-CANAUX**  
+> **Dès qu'un locataire contresigne électroniquement le bail qui lui a été transmis par le bailleur (depuis son portail résidentiel `/portal`), l'événement DOIT être notifié instantanément au bailleur sur tous ses appareils (Web, Mobile PWA, TWA Android). La Cloche de notification (Header) doit afficher immédiatement l'alerte « Bail contresigné par le locataire ! » et le Menu Principal (Sidebar) doit obligatoirement marquer « 1 » (ou le nombre de baux signés non vus) sur l'élément « Baux & Contrats » (`/leases`).**
+
+### 1. Scellement Complet & Enrichissement Métier de la Notification (`LeaseService.signLeaseByTenant`)
+- Lors de la signature par le locataire :
+  - Le bail passe immédiatement au statut `status: 'actif'`, `signedByTenant: true` avec horodatage certifié `tenantSignedAt`.
+  - La notification `LandlordNotification` de type `'lease_signed'` est impérativement enrichie avec les identifiants complets du bailleur :
+    - `landlordId` : ID unique du bailleur ou profil canonique.
+    - `landlordEmail` : adresse email officielle du bailleur (`emailSentTo`).
+    - `landlordPhone` : téléphone direct du bailleur.
+    - `landlordName` : nom officiel du bailleur.
+    - `leaseId`, `tenantName`, `unit`, `property`.
+  - La notification est enregistrée via `LeaseService.addLandlordNotification` et sauvegardée localement ainsi que sur le serveur `/api/sync`.
+  - Si le bail est lié à une annonce (`listingReference` ou `listingId`), celle-ci est automatiquement dépubliée et retirée du catalogue en ligne.
+
+### 2. Visibilité Absolue dans la Cloche & Élimination des Pertes de Filtrage
+- Dans `LeaseService.getLandlordNotifications(user)` :
+  - La condition de filtrage pour les notifications de type `'lease_signed'`, `'lease_transmitted'`, `'lease_terminated'` et `'lease_reactivated'` est traitée de façon prioritaire et exhaustive.
+  - La notification est validée si elle correspond à l'email, au téléphone, à l'identifiant du bailleur, au bail concerné, à la désignation du bien ou du locataire, ou au compte Super-Admin.
+  - Interdiction absolue de perdre une notification de signature de bail suite à des délais de ré-indexation des baux.
+- Dans la cloche de notification (`Header.tsx`) :
+  - L'alerte `'lease_signed'` bénéficie d'un habillage vert émeraude distinctif avec un indicateur animé (`animate-pulse ring-2 ring-emerald-200`).
+  - Le clic sur la notification oriente directement le bailleur vers `/leases` pour consulter le contrat scellé.
+
+### 3. Badge Numérique « 1 » Immédiat sur « Baux & Contrats » (`Sidebar.tsx`)
+- Le compteur `pendingLeasesCount` surveille à la fois :
+  - Les baux en attente d'action.
+  - Les baux nouvellement contresignés par le locataire (`l.signedByTenant === true`) n'ayant pas encore été consultés par le bailleur depuis la signature (`!seenLeases.has(`${l.id}:signed:...`)`).
+  - Les notifications non lues de type `'lease_signed'`.
+- Dès qu'un locataire signe, le badge « 1 » s'affiche immédiatement sur *Baux & Contrats*.
+- Dès que le bailleur visite la page `/leases`, la section est marquée comme consultée, les notifications de signature sont validées comme lues et le badge est réinitialisé proprement à 0.
+
+### 4. Diffusion Temps Réel Multi-Onglets & Multi-Appareils
+- L'événement déclenche simultanément :
+  - Un événement CustomEvent local `locagestion:leases_updated` et `locagestion:notifications_updated`.
+  - Un message `BroadcastChannel('locagestion_realtime')` avec `{ type: 'locagestion:lease_signed', leaseId }` pour mettre à jour instantanément tous les onglets ouverts du navigateur sans rechargement.
+  - Une synchronisation `/api/sync` vers le serveur pour persister les états entre le Web et le Mobile.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

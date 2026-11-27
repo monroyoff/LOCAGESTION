@@ -459,7 +459,7 @@ export function Header({
                           key={n.id}
                           onClick={() => handleLandlordNotifClick(n)}
                           className={`p-3.5 rounded-2xl transition-all space-y-1.5 cursor-pointer group ${!n.read
-                            ? n.type === 'subscription_activated'
+                            ? n.type === 'lease_signed' || n.type === 'subscription_activated'
                               ? 'bg-emerald-50/90 border border-emerald-300 hover:bg-emerald-100/70 shadow-xs'
                               : n.type === 'subscription_expired'
                               ? 'bg-rose-50 border border-rose-300 hover:bg-rose-100/70 shadow-xs'
@@ -478,7 +478,7 @@ export function Header({
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 truncate">
                               <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${n.type === 'subscription_activated'
+                                className={`w-2 h-2 rounded-full shrink-0 ${n.type === 'lease_signed' || n.type === 'subscription_activated'
                                   ? 'bg-emerald-500 animate-pulse ring-2 ring-emerald-200'
                                   : n.type === 'subscription_expired'
                                   ? 'bg-rose-600 animate-ping'

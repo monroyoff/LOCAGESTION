@@ -108,11 +108,24 @@ export default function LeasesPage() {
     };
 
     window.addEventListener('locagestion:leases_updated', handleStorageUpdate);
+    window.addEventListener('locagestion:notifications_updated', handleStorageUpdate);
     window.addEventListener('storage', handleStorageUpdate);
+
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('locagestion_realtime');
+        bc.onmessage = () => refreshLeases();
+      }
+    } catch {}
 
     return () => {
       window.removeEventListener('locagestion:leases_updated', handleStorageUpdate);
+      window.removeEventListener('locagestion:notifications_updated', handleStorageUpdate);
       window.removeEventListener('storage', handleStorageUpdate);
+      try {
+        bc?.close();
+      } catch {}
     };
   }, [spaceCtx.user]);
 
