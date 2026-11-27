@@ -723,6 +723,18 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
 - Toute session mobile (PWA, TWA Android, navigateur smartphone) synchronise les incidents entrants en temps réel dès la prise de focus ou via l'intervalle actif.
 - Un incident ne peut quitter le compteur d'alerte (`pendingIncidents`) QUE lorsque le bailleur l'a consulté ou que son statut est passé à `'resolu'`.
 
+### 4. Attribution Artisan & Réactivité Côté Locataire (Zéro Rupture & Navigation Déterministe)
+- **Notification Complète et Ciblée (`TenantNotificationService.notifyIncidentUpdated`) :**
+  - Dès qu'un artisan est mandaté par le bailleur, la notification transmise au locataire intègre obligatoirement l'identité de l'artisan (`artisanName`), son corps d'état (`artisanTrade`), son contact direct (`artisanPhone`), l'identifiant du signalement (`incidentId`), ainsi que les coordonnées du locataire (`tenantEmail`, `tenantPhone`).
+  - Le titre de la notification affiche explicitement : *« 🛠️ Artisan Mandaté par votre Bailleur »*.
+  - L'action associée et le lien dirigent directement vers la fiche technique `/incidents`.
+- **Affichage Immédiat en Tête de Portail (`/portal`) :**
+  - Tout artisan mandaté pour une panne en cours s'affiche en tête absolue de l'Espace Résidentiel (`activeTab === 'accueil'`), dans un bandeau officiel présentant les coordonnées directes de l'artisan, ses notes d'intervention et deux boutons d'action instantanés : **« Appeler »** et **« WhatsApp »**.
+- **Clic Intégral sur les Cartes de Notifications (`Header.tsx`) :**
+  - Dans la cloche de notification, toute la carte de notification locataire est interactive (`cursor-pointer`). Un clic n'importe où sur l'élément ouvre directement le dossier concerné sans obliger l'utilisateur à chercher un sous-bouton miniature.
+- **Élimination des Boucles d'Ouverture et Redirections Fantômes :**
+  - L'accès aux tickets d'intervention s'effectue via `/incidents`. Les paramètres d'URL temporaires (`action=...`) sont purgés proprement pour empêcher toute réouverture intempestive de formulaires au rechargement de page.
+
 ---
 
 ## 22. Règle d'Or de Notification & Badge Instantanés lors de la Contresignature des Baux

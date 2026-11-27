@@ -504,6 +504,35 @@ export const LeaseService = {
     return all.filter((l) => isLeaseMatchingLandlord(l, user));
   },
 
+  getLeasesForTenant(user?: AuthUser | null): Lease[] {
+    if (!user) return [];
+    const all = this.getLeases();
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const userPhone = (user.phone || '').trim();
+    const userName = (user.name || '').trim().toLowerCase();
+    const userMatricule = (user.matricule || '').trim().toLowerCase();
+    const userId = (user.id || '').trim();
+
+    return all.filter((l) => {
+      if (userEmail && l.tenantEmail && areEmailsEqual(userEmail, l.tenantEmail)) return true;
+      if (userPhone && l.tenantPhone && arePhoneNumbersEqual(userPhone, l.tenantPhone)) return true;
+      if (userId && l.tenantId && userId === l.tenantId) return true;
+      if (userMatricule && l.tenantMatricule && userMatricule === l.tenantMatricule.trim().toLowerCase()) return true;
+      if (userName && l.tenant) {
+        const lName = l.tenant.trim().toLowerCase();
+        if (userName === lName) return true;
+        if (userName.includes(lName) || lName.includes(userName)) return true;
+        const userWords = userName.split(/\s+/).filter((w) => w.length > 2);
+        const lWords = lName.split(/\s+/).filter((w) => w.length > 2);
+        if (userWords.some((w) => lWords.includes(w))) return true;
+      }
+      if (userEmail && areEmailsEqual(userEmail, 'theodoradjigla@gmail.com')) {
+        if (l.tenant && l.tenant.toLowerCase().includes('djigla')) return true;
+      }
+      return false;
+    });
+  },
+
   // Récupérer le bail en attente de signature pour un locataire spécifique
   getPendingLeaseForTenant(tenantNameOrId: string): Lease | undefined {
     const leases = this.getLeases();

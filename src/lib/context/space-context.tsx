@@ -45,7 +45,16 @@ export function SpaceProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        return AuthService.getCurrentUser();
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
   const [mounted, setMounted] = useState(false);
 
   // Routes publiques strictement accessibles sans authentification (Vitrine Landing Page, Google Play, légal, vérifications)

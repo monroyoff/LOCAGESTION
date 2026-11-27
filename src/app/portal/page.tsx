@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Header } from '@/components/layout/Header';
 import { useSpace } from '@/lib/context/space-context';
@@ -112,6 +112,7 @@ const ISSUE_SAMPLE_PHOTOS = [
 ];
 
 function TenantPortalContent() {
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, switchSpace } = useSpace();
 
@@ -263,8 +264,10 @@ function TenantPortalContent() {
 
       if (action === 'declare_payment' || action === 'declare') {
         setDeclarationModalOpen(true);
-      } else if (action === 'report_issue' || action === 'incident') {
+      } else if (action === 'report_issue' || action === 'new_incident') {
         setReportIssueModalOpen(true);
+      } else if (action === 'incident' || action === 'artisan' || queryTab === 'incidents') {
+        router.push('/incidents');
       }
     }
   }, [searchParams]);
@@ -290,8 +293,10 @@ function TenantPortalContent() {
         }
         if (action === 'declare_payment' || action === 'declare') {
           setDeclarationModalOpen(true);
-        } else if (action === 'report_issue' || action === 'incident') {
+        } else if (action === 'report_issue' || action === 'new_incident') {
           setReportIssueModalOpen(true);
+        } else if (action === 'incident' || action === 'artisan' || queryTab === 'incidents') {
+          router.push('/incidents');
         }
       };
       updateFromUrl();
@@ -1738,6 +1743,80 @@ function TenantPortalContent() {
                     <PenTool className="w-4 h-4 text-amber-600" />
                     <span>Examiner & Contresigner</span>
                   </button>
+                </div>
+              )}
+
+              {/* Bannière Artisans Mandatés Actifs (Affichée en tête dès l'ouverture du portail) */}
+              {reportedIncidents.filter((i) => i.status !== 'resolu' && i.assignedTechnician).length > 0 && (
+                <div className="space-y-3 animate-in slide-in-from-top-3 duration-200">
+                  {reportedIncidents
+                    .filter((i) => i.status !== 'resolu' && i.assignedTechnician)
+                    .map((inc) => (
+                      <div
+                        key={`hero-artisan-${inc.id}`}
+                        className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-blue-400/80 ring-4 ring-blue-500/20"
+                      >
+                        <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                          <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center justify-center shrink-0 shadow-inner">
+                            <Wrench className="w-6 h-6 animate-pulse text-amber-400" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-blue-500 text-white shadow-xs">
+                                Artisan Mandaté par votre bailleur
+                              </span>
+                              <span className="text-xs font-bold text-blue-200">
+                                {inc.assignedTechnician?.trade || 'Artisan Qualifié'}
+                              </span>
+                            </div>
+                            <h4 className="font-black text-white text-base sm:text-lg mt-1 truncate">
+                              {inc.assignedTechnician?.name}
+                            </h4>
+                            <p className="text-xs font-bold text-blue-200 flex items-center gap-1.5 mt-0.5">
+                              <Phone className="w-3.5 h-3.5 text-blue-300" />
+                              <span>{inc.assignedTechnician?.phone}</span>
+                              <span className="text-slate-400 font-normal">
+                                • Ticket #{inc.id} ({inc.category})
+                              </span>
+                            </p>
+                            {inc.resolutionNotes && (
+                              <p className="text-[11px] text-blue-100 font-medium mt-1 bg-white/10 px-2.5 py-1 rounded-lg border border-white/20 inline-block">
+                                💬 Note du bailleur : {inc.resolutionNotes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0 w-full sm:w-auto">
+                          <a
+                            href={`tel:${inc.assignedTechnician?.phone.replace(/[^0-9+]/g, '')}`}
+                            className="flex-1 sm:flex-none py-2.5 px-4 rounded-xl bg-white hover:bg-blue-50 text-blue-900 text-xs font-black flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+                          >
+                            <Phone className="w-3.5 h-3.5 text-blue-600" />
+                            <span>Appeler</span>
+                          </a>
+                          <a
+                            href={`https://wa.me/${inc.assignedTechnician?.phone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                              `Bonjour ${inc.assignedTechnician?.name},\n\nJe suis le locataire pour l'intervention #${inc.id} (${inc.category}) concernant le logement ${inc.unit}.\nQuand seriez-vous disponible pour intervenir ?\n\nMerci.`
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex-1 sm:flex-none py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black flex items-center justify-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+                          >
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            <span>WhatsApp</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => router.push('/incidents')}
+                            className="py-2.5 px-3 rounded-xl bg-blue-800/60 hover:bg-blue-800 text-white text-xs font-bold border border-white/20 transition-all cursor-pointer"
+                            title="Voir la fiche d'intervention complète"
+                          >
+                            <span>Détails</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                 </div>
               )}
 

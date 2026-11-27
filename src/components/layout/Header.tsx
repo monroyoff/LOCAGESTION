@@ -224,6 +224,30 @@ export function Header({
     }
   };
 
+  const handleTenantNotifClick = (n: TenantNotification) => {
+    setIsNotifOpen(false);
+    TenantNotificationService.markAsRead(n.id);
+    setTenantNotifs(TenantNotificationService.getNotifications(user));
+
+    if (n.link?.includes('tab=preavis') && onPortalTabChange) {
+      onPortalTabChange('preavis');
+    } else if (n.link?.includes('tab=quittances') && onPortalTabChange) {
+      onPortalTabChange('quittances');
+    } else if (n.link?.includes('tab=bail') && onPortalTabChange) {
+      onPortalTabChange('bail');
+    } else if (n.link?.includes('tab=solvabilite') && onPortalTabChange) {
+      onPortalTabChange('solvabilite');
+    } else if (n.link?.includes('tab=edl') && onPortalTabChange) {
+      onPortalTabChange('edl');
+    } else if (n.link?.includes('tab=historique') && onPortalTabChange) {
+      onPortalTabChange('historique');
+    } else if (n.type === 'incident_update' || n.link?.includes('/incidents') || n.link?.includes('incident')) {
+      router.push('/incidents');
+    } else if (n.link) {
+      router.push(n.link);
+    }
+  };
+
   // Redirection immédiate vers la section Annonces & Visites (/listings)
   const handleOpenSearch = () => {
     if (pathname === '/listings') {
@@ -626,7 +650,8 @@ export function Header({
                         return (
                           <div
                             key={n.id}
-                            className={`p-3.5 rounded-2xl transition-colors space-y-1.5 ${cardBg}`}
+                            onClick={() => handleTenantNotifClick(n)}
+                            className={`p-3.5 rounded-2xl transition-all space-y-1.5 cursor-pointer group hover:shadow-xs active:scale-[0.99] ${cardBg}`}
                           >
                             <div className="flex items-center justify-between gap-2">
                               <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 truncate">
@@ -657,21 +682,9 @@ export function Header({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => {
-                                    setIsNotifOpen(false);
-                                    TenantNotificationService.markAsRead(n.id);
-                                    setTenantNotifs(TenantNotificationService.getNotifications(user));
-                                    if (n.link?.includes('tab=preavis') && onPortalTabChange) {
-                                      onPortalTabChange('preavis');
-                                    } else if (n.link?.includes('tab=quittances') && onPortalTabChange) {
-                                      onPortalTabChange('quittances');
-                                    } else if (n.link?.includes('tab=bail') && onPortalTabChange) {
-                                      onPortalTabChange('bail');
-                                    } else if (n.link?.includes('tab=solvabilite') && onPortalTabChange) {
-                                      onPortalTabChange('solvabilite');
-                                    } else if (n.link) {
-                                      router.push(n.link);
-                                    }
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleTenantNotifClick(n);
                                   }}
                                   className={`text-xs font-bold flex items-center gap-1 cursor-pointer ${linkColor}`}
                                 >
