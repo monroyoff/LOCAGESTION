@@ -1501,6 +1501,126 @@ export const AuthService = {
     };
   },
 
+  /**
+   * Recherche un utilisateur de façon souple par son matricule officiel ou identifiant
+   * (supporte le matricule complet ex: LOCA-MAT-BJ-17635, les chiffres seuls ex: 17635,
+   * l'email, le téléphone ou le nom).
+   */
+  findUserByMatriculeOrQuery(query: string): AuthUser | null {
+    if (!query) return null;
+    const clean = query.trim().toLowerCase();
+    const cleanNumOnly = clean.replace(/[^0-9]/g, '');
+    const allUsers = this.getAllKnownUsers();
+
+    // 1. Match matricule exact
+    const matchMat = allUsers.find(
+      (u) => (u.matricule || '').trim().toLowerCase() === clean
+    );
+    if (matchMat) return matchMat;
+
+    // 2. Match numéro de matricule partiel (ex: 17635 pour LOCA-MAT-BJ-17635)
+    if (cleanNumOnly.length >= 4) {
+      const matchNum = allUsers.find((u) => {
+        const uNum = (u.matricule || '').replace(/[^0-9]/g, '');
+        return uNum.includes(cleanNumOnly);
+      });
+      if (matchNum) return matchNum;
+    }
+
+    // 3. Match email exact
+    const matchEmail = allUsers.find((u) => areEmailsEqual(u.email, clean));
+    if (matchEmail) return matchEmail;
+
+    // 4. Match téléphone
+    if (cleanNumOnly.length >= 6) {
+      const matchPhone = allUsers.find((u) => {
+        const uPhone = (u.phone || '').replace(/[^0-9]/g, '');
+        return uPhone.includes(cleanNumOnly);
+      });
+      if (matchPhone) return matchPhone;
+    }
+
+    // 5. Match nom
+    const matchName = allUsers.find((u) => (u.name || '').toLowerCase().includes(clean));
+    if (matchName) return matchName;
+
+    return null;
+  },
+
+  /**
+   * Démarre une session d'inspection Super-Admin sur le compte cible
+   */
+  impersonateUser(targetUser: AuthUser, adminUser?: AuthUser): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const originalAdmin = adminUser || SYSTEM_ADMIN_USER;
+      sessionStorage.setItem('locagestion:impersonated_admin_backup', JSON.stringify(originalAdmin));
+      sessionStorage.setItem('locagestion:impersonated_user_target', JSON.stringify(targetUser));
+      sessionStorage.setItem('locagestion:is_impersonating', 'true');
+      this.setCurrentUser(targetUser);
+      window.dispatchEvent(
+        new CustomEvent('locagestion:impersonation_changed', {
+          detail: { isImpersonating: true, targetUser },
+        })
+      );
+    } catch (e) {
+      console.error('Erreur impersonation:', e);
+    }
+  },
+
+  /**
+   * Restaure la session du Super-Administrateur
+   */
+  restoreAdminSession(): AuthUser {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem('locagestion:is_impersonating');
+        sessionStorage.removeItem('locagestion:impersonated_user_target');
+        const backupRaw = sessionStorage.getItem('locagestion:impersonated_admin_backup');
+        sessionStorage.removeItem('locagestion:impersonated_admin_backup');
+        const adminToRestore = backupRaw ? JSON.parse(backupRaw) : SYSTEM_ADMIN_USER;
+        this.setCurrentUser(adminToRestore);
+        window.dispatchEvent(
+          new CustomEvent('locagestion:impersonation_changed', {
+            detail: { isImpersonating: false },
+          })
+        );
+        return adminToRestore;
+      } catch (e) {
+        console.error('Erreur restauration session admin:', e);
+      }
+    }
+    this.setCurrentUser(SYSTEM_ADMIN_USER);
+    return SYSTEM_ADMIN_USER;
+  },
+
+  /**
+   * Vérifie si le navigateur est actuellement en session d'inspection Super-Admin
+   */
+  isImpersonating(): boolean {
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem('locagestion:is_impersonating') === 'true';
+  },
+
+  /**
+   * Détails de la session d'inspection en cours
+   */
+  getImpersonationDetails(): { originalAdmin: AuthUser; impersonatedUser: AuthUser } | null {
+    if (typeof window === 'undefined') return null;
+    if (!this.isImpersonating()) return null;
+    try {
+      const backupRaw = sessionStorage.getItem('locagestion:impersonated_admin_backup');
+      const targetRaw = sessionStorage.getItem('locagestion:impersonated_user_target');
+      if (backupRaw && targetRaw) {
+        return {
+          originalAdmin: JSON.parse(backupRaw),
+          impersonatedUser: JSON.parse(targetRaw),
+        };
+      }
+    } catch {}
+    return null;
+  },
+
   logout(): void {
     if (typeof window === 'undefined') return;
     try {

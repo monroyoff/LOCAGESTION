@@ -46,6 +46,10 @@ import {
   RotateCcw,
   ArchiveRestore,
   ShieldX,
+  Zap,
+  History,
+  LogIn,
+  CreditCard,
 } from 'lucide-react';
 import { useSpace } from '@/lib/context/space-context';
 import { ModerationService } from '@/lib/services/moderation-service';
@@ -54,6 +58,11 @@ import { AuthService, SYSTEM_ADMIN_USER, getRoleLabel, areEmailsEqual } from '@/
 import { SecurityAlert, RentalListing, AuthUser, UserSpace, TrashListing } from '@/lib/types';
 import { formatFCFA } from '@/lib/money/format';
 import { SkeletonAdminDashboard } from '@/components/ui/SkeletonLoader';
+import { PlanService, PLANS_CONFIG, SubscriptionHistoryItem } from '@/lib/services/plan-service';
+import { LeaseService, Lease } from '@/lib/services/lease-service';
+import { PaymentService } from '@/lib/services/payment-service';
+import { UserSubscriptionDetails, PaymentTransaction } from '@/lib/types';
+import { notifySave } from '@/lib/notifications/action-notifier';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
@@ -92,6 +101,93 @@ export default function AdminDashboardPage() {
   const [searchUserName, setSearchUserName] = useState<string>('');
   const [filterUserRole, setFilterUserRole] = useState<string>('all');
   const [selectedUserForDetail, setSelectedUserForDetail] = useState<AuthUser | null>(null);
+
+  // État Gestion Formules & Historique Super-Admin
+  const [matriculeSearchInput, setMatriculeSearchInput] = useState<string>('');
+  const [matriculeSearchError, setMatriculeSearchError] = useState<string | null>(null);
+  const [userSubDetails, setUserSubDetails] = useState<UserSubscriptionDetails | null>(null);
+  const [userSubHistory, setUserSubHistory] = useState<SubscriptionHistoryItem[]>([]);
+  const [userLeases, setUserLeases] = useState<Lease[]>([]);
+  const [userPayments, setUserPayments] = useState<PaymentTransaction[]>([]);
+  const [customProDuration, setCustomProDuration] = useState<number>(30);
+  const [userModalTab, setUserModalTab] = useState<'formule' | 'history' | 'identity'>('formule');
+
+  const loadUserDetailsData = (u: AuthUser) => {
+    setUserSubDetails(PlanService.getUserSubscription(u.id));
+    setUserSubHistory(PlanService.getSubscriptionHistory(u.id));
+    const allLeases = LeaseService.getLeases();
+    const matchingLeases = allLeases.filter(
+      (l) =>
+        l.landlordId === u.id ||
+        areEmailsEqual(l.landlordEmail, u.email) ||
+        l.tenantId === u.id ||
+        areEmailsEqual(l.tenantEmail, u.email) ||
+        (u.name && l.tenant && l.tenant.toLowerCase().includes(u.name.toLowerCase()))
+    );
+    setUserLeases(matchingLeases);
+    const allPayments = PaymentService.getPaymentsForLandlord(u);
+    setUserPayments(allPayments);
+  };
+
+  useEffect(() => {
+    if (selectedUserForDetail) {
+      loadUserDetailsData(selectedUserForDetail);
+      setUserModalTab('formule');
+    }
+  }, [selectedUserForDetail]);
+
+  const handleSearchByMatricule = (e: React.FormEvent) => {
+    e.preventDefault();
+    setMatriculeSearchError(null);
+    if (!matriculeSearchInput.trim()) {
+      setMatriculeSearchError('Veuillez saisir un matricule officiel (ex: LOCA-MAT-BJ-17635 ou 17635).');
+      return;
+    }
+    const found = AuthService.findUserByMatriculeOrQuery(matriculeSearchInput.trim());
+    if (found) {
+      setSelectedUserForDetail(found);
+      setMatriculeSearchError(null);
+      setActionSuccessMsg(`Compte trouvé : ${found.name} (${found.matricule || 'Sans matricule'}).`);
+      setTimeout(() => setActionSuccessMsg(null), 3500);
+    } else {
+      setMatriculeSearchError(`Aucun compte utilisateur trouvé pour « ${matriculeSearchInput} »`);
+    }
+  };
+
+  const handleAdminActivateSerenite = (targetUser: AuthUser) => {
+    PlanService.adminActivateSerenite(targetUser.id, effectiveUser?.name || 'Super-Administrateur');
+    loadUserDetailsData(targetUser);
+    setActionSuccessMsg(`Formule Sérénité activée avec succès pour ${targetUser.name}.`);
+    notifySave(`Formule Sérénité accordée à ${targetUser.name}`, 'Super-Admin • Formule mise à jour');
+    setTimeout(() => setActionSuccessMsg(null), 3500);
+  };
+
+  const handleAdminActivatePro = (targetUser: AuthUser, days: number) => {
+    PlanService.adminActivatePro(targetUser.id, days, effectiveUser?.name || 'Super-Administrateur');
+    loadUserDetailsData(targetUser);
+    setActionSuccessMsg(`Formule Entreprise & Pro activée (${days} jours) pour ${targetUser.name}.`);
+    notifySave(`Formule Pro (${days}j) accordée à ${targetUser.name}`, 'Super-Admin • Formule mise à jour');
+    setTimeout(() => setActionSuccessMsg(null), 3500);
+  };
+
+  const handleAdminCancelPlan = (targetUser: AuthUser) => {
+    PlanService.adminCancelPlan(targetUser.id, effectiveUser?.name || 'Super-Administrateur');
+    loadUserDetailsData(targetUser);
+    setActionSuccessMsg(`Abonnement résilié. ${targetUser.name} est désormais sur la Formule Découverte (0 FCFA).`);
+    notifySave(`Formule rétrogradée en Découverte pour ${targetUser.name}`, 'Super-Admin • Formule annulée');
+    setTimeout(() => setActionSuccessMsg(null), 3500);
+  };
+
+  const handleImpersonateUser = (targetUser: AuthUser) => {
+    AuthService.impersonateUser(targetUser, effectiveUser || SYSTEM_ADMIN_USER);
+    const destination =
+      targetUser.role === 'locataire'
+        ? '/portal'
+        : targetUser.role === 'demarcheur'
+        ? '/listings'
+        : '/';
+    router.push(destination);
+  };
 
   // Charger les données de sécurité, annonces et utilisateurs
   const refreshData = () => {
@@ -1380,6 +1476,67 @@ export default function AdminDashboardPage() {
         {/* TAB 3: GESTION & MODÉRATION DES COMPTES UTILISATEURS */}
         {activeTab === 'users' && (
           <div className="space-y-4">
+            {/* Widget Dédié : Accès Immédiat par Matricule Officiel */}
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-indigo-950/80 via-slate-900 to-slate-900 border-2 border-indigo-500/40 shadow-xl space-y-3.5">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0 shadow-inner">
+                    <Fingerprint className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white flex items-center gap-2">
+                      <span>Accès Direct par Matricule Officiel</span>
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-500/25 text-indigo-300 border border-indigo-500/40">
+                        Super-Admin
+                      </span>
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Entrez le matricule officiel pour inspecter la formule, l&apos;historique complet et activer ou annuler des abonnements.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <form onSubmit={handleSearchByMatricule} className="flex items-center gap-2 flex-wrap sm:flex-nowrap pt-1">
+                <div className="relative flex-1 min-w-[260px]">
+                  <Fingerprint className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-indigo-400" />
+                  <input
+                    type="text"
+                    value={matriculeSearchInput}
+                    onChange={(e) => {
+                      setMatriculeSearchInput(e.target.value);
+                      if (matriculeSearchError) setMatriculeSearchError(null);
+                    }}
+                    placeholder="Saisir un matricule (ex: LOCA-MAT-BJ-17635 ou 17635)..."
+                    className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-950 border border-indigo-500/30 text-xs font-mono font-bold text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner"
+                  />
+                  {matriculeSearchInput && (
+                    <button
+                      type="button"
+                      onClick={() => setMatriculeSearchInput('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md shadow-indigo-600/30 transition-all flex items-center gap-2 shrink-0 cursor-pointer active:scale-95"
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Accéder au Compte</span>
+                </button>
+              </form>
+
+              {matriculeSearchError && (
+                <div className="p-3 rounded-2xl bg-rose-950/50 border border-rose-800 text-xs text-rose-300 font-bold flex items-center gap-2 animate-in fade-in">
+                  <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                  <span>{matriculeSearchError}</span>
+                </div>
+              )}
+            </div>
+
             {/* Outils de recherche et de gestion des comptes */}
             <div className="p-4 sm:p-5 rounded-3xl bg-slate-900 border border-slate-800 space-y-3.5">
               <div>
@@ -1526,6 +1683,34 @@ export default function AdminDashboardPage() {
                               {u.role}
                             </span>
 
+                            {/* Badge Formule */}
+                            {(() => {
+                              const plan = PlanService.getUserPlan(u.id);
+                              if (plan === 'pro') {
+                                const sub = PlanService.getUserSubscription(u.id);
+                                return (
+                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 flex items-center gap-1 shadow-xs">
+                                    <Flame className="w-2.5 h-2.5 text-orange-400 fill-orange-400" />
+                                    <span>Formule Pro ({sub.daysRemaining ?? 30}j)</span>
+                                  </span>
+                                );
+                              }
+                              if (plan === 'serenite') {
+                                return (
+                                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1 shadow-xs">
+                                    <Sparkles className="w-2.5 h-2.5 text-emerald-400" />
+                                    <span>Formule Sérénité</span>
+                                  </span>
+                                );
+                              }
+                              return (
+                                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700 flex items-center gap-1">
+                                  <Zap className="w-2.5 h-2.5 text-amber-500" />
+                                  <span>Formule Découverte</span>
+                                </span>
+                              );
+                            })()}
+
                             {/* Badge Statut du Compte (Actif / Suspendu / Bloqué) */}
                             {u.accountStatus === 'blocked_temporary' ? (
                               <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-500/25 text-amber-300 border border-amber-500/40 flex items-center gap-1 shadow-xs">
@@ -1605,6 +1790,20 @@ export default function AdminDashboardPage() {
 
                       {/* Actions Admin sur l'utilisateur */}
                       <div className="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
+                        {/* Bouton Formule & Compte Super-Admin */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedUserForDetail(u);
+                            setUserModalTab('formule');
+                          }}
+                          className="px-3 py-1.5 rounded-xl bg-indigo-600/25 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+                          title="Gérer la formule, l'historique et inspecter ce compte"
+                        >
+                          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                          <span>Formule &amp; Compte</span>
+                        </button>
+
                         {/* Bouton fiche complète */}
                         <button
                           type="button"
@@ -1936,7 +2135,7 @@ export default function AdminDashboardPage() {
       {/* --- MODAL 2 : INSPECTION COMPLÈTE D'UN COMPTE UTILISATEUR PAR L'ADMIN --- */}
       {selectedUserForDetail && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 space-y-5">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl p-6 space-y-5">
             <div className="flex items-start justify-between gap-4 border-b border-slate-800 pb-4">
               <div className="flex items-center gap-3.5">
                 <img
@@ -1950,20 +2149,38 @@ export default function AdminDashboardPage() {
                     <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                       {selectedUserForDetail.role}
                     </span>
+                    {selectedUserForDetail.matricule && (
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-950/60 text-indigo-300 border border-indigo-700/50">
+                        {selectedUserForDetail.matricule}
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
-                    {selectedUserForDetail.companyName || 'Compte Particulier'}
+                    {selectedUserForDetail.companyName || 'Compte Particulier'} • {selectedUserForDetail.email}
                   </p>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => setSelectedUserForDetail(null)}
-                className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {selectedUserForDetail.id !== SYSTEM_ADMIN_USER.id && !areEmailsEqual(selectedUserForDetail.email, SYSTEM_ADMIN_USER.email) && (
+                  <button
+                    type="button"
+                    onClick={() => handleImpersonateUser(selectedUserForDetail)}
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 cursor-pointer transition-all active:scale-95"
+                    title="Se connecter directement sous ce compte utilisateur et accéder à son espace"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Prendre la main</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserForDetail(null)}
+                  className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Statut de Modération du Compte */}
@@ -2048,143 +2265,511 @@ export default function AdminDashboardPage() {
               )}
             </div>
 
-            {/* Fiche d'identité complète */}
-            <div className="space-y-3">
-              <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
-                Données d'Identité & État Civil :
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {/* Matricule Officiel */}
-                <div className="col-span-1 sm:col-span-2 p-3.5 rounded-2xl bg-slate-950 border border-indigo-500/40 flex items-center justify-between gap-3 shadow-sm">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
-                      <Fingerprint className="w-5 h-5" />
+            {/* Navigation par Onglets */}
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+              <button
+                type="button"
+                onClick={() => setUserModalTab('formule')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  userModalTab === 'formule'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Formule & Droits</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserModalTab('history')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  userModalTab === 'history'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <History className="w-3.5 h-3.5" />
+                <span>Historique ({userSubHistory.length + userLeases.length + userPayments.length})</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserModalTab('identity')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  userModalTab === 'identity'
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                }`}
+              >
+                <Fingerprint className="w-3.5 h-3.5" />
+                <span>Identité & Publications</span>
+              </button>
+            </div>
+
+            {/* ONGLET 1 : GESTION FORMULE & DROITS */}
+            {userModalTab === 'formule' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                {/* Carte Statut Actuel */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <span className="text-[10px] font-black uppercase text-indigo-400 tracking-wider block">
+                        Formule Active sur le Compte
+                      </span>
+                      <h4 className="text-base font-black text-white flex items-center gap-2 mt-0.5">
+                        {userSubDetails?.plan === 'pro' && (
+                          <>
+                            <Flame className="w-4 h-4 text-orange-400 fill-orange-400" />
+                            <span>Formule Entreprise & Pro</span>
+                          </>
+                        )}
+                        {userSubDetails?.plan === 'serenite' && (
+                          <>
+                            <Sparkles className="w-4 h-4 text-emerald-400" />
+                            <span>Formule Sérénité</span>
+                          </>
+                        )}
+                        {(!userSubDetails || userSubDetails.plan === 'decouverte') && (
+                          <>
+                            <Zap className="w-4 h-4 text-amber-400" />
+                            <span>Formule Découverte (0 FCFA)</span>
+                          </>
+                        )}
+                      </h4>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase block">Statut Validité</span>
+                      {(() => {
+                        const isExpired = userSubDetails?.plan === 'pro' && userSubDetails?.isExpired;
+                        const isExpiringSoon =
+                          userSubDetails?.plan === 'pro' &&
+                          userSubDetails?.daysRemaining !== undefined &&
+                          userSubDetails.daysRemaining <= 3 &&
+                          !isExpired;
+                        return (
+                          <span
+                            className={`text-xs font-black px-2.5 py-1 rounded-full inline-block mt-0.5 ${
+                              isExpired
+                                ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                : isExpiringSoon
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                            }`}
+                          >
+                            {isExpired
+                              ? 'Expiré (À renouveler)'
+                              : isExpiringSoon
+                              ? `Expire bientôt (${userSubDetails?.daysRemaining}j)`
+                              : 'En cours de validité'}
+                          </span>
+                        );
+                      })()}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80 text-xs">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Baux Actifs / Quota</span>
+                      <span className="font-bold text-slate-200">
+                        {userLeases.filter((l) => l.status === 'actif').length} /{' '}
+                        {userSubDetails?.plan === 'decouverte' || !userSubDetails
+                          ? `${PLANS_CONFIG.decouverte.maxActiveLeases} baux max`
+                          : 'Illimité'}
+                      </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider block">
-                        Matricule Officiel Unique Plateforme
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Date Activation</span>
+                      <span className="font-bold text-slate-200">
+                        {userSubDetails?.activatedAt
+                          ? new Date(userSubDetails.activatedAt).toLocaleDateString('fr-FR')
+                          : 'Compte initial'}
                       </span>
-                      <span className="font-mono font-black text-white text-sm block mt-0.5">
-                        {selectedUserForDetail.matricule || 'Non attribué'}
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase block">Date Expiration</span>
+                      <span className="font-bold text-slate-200">
+                        {userSubDetails?.plan === 'pro' && userSubDetails.expiresAt
+                          ? `${new Date(userSubDetails.expiresAt).toLocaleDateString('fr-FR')} (${userSubDetails.daysRemaining ?? 30}j restants)`
+                          : userSubDetails?.plan === 'serenite'
+                          ? 'Permanent (100% Mobile Money)'
+                          : 'Permanent (Sans expiration)'}
                       </span>
                     </div>
                   </div>
-                  {selectedUserForDetail.matricule && (
+                </div>
+
+                {/* Actions Super-Admin sur la Formule */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-indigo-500/30 space-y-3.5">
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-4 h-4 text-indigo-400" />
+                    <h5 className="text-xs font-black uppercase tracking-wider text-indigo-300">
+                      Actions Super-Administrateur sur la Formule
+                    </h5>
+                  </div>
+
+                  {/* 1. Formule Sérénité */}
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-emerald-400">Formule Sérénité</span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          (0 FCFA fixe • Baux illimités • 100% Mobile Money automatisé)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Idéal pour les bailleurs déléguant la collecte des loyers via Mobile Money.
+                      </p>
+                    </div>
+
+                    {userSubDetails?.plan === 'serenite' ? (
+                      <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-black">
+                        Active actuellement
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleAdminActivateSerenite(selectedUserForDetail)}
+                        className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black shadow-md transition-all cursor-pointer active:scale-95"
+                      >
+                        Activer Sérénité
+                      </button>
+                    )}
+                  </div>
+
+                  {/* 2. Formule Entreprise & Pro */}
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-indigo-400">Formule Entreprise &amp; Pro</span>
+                        <span className="text-[10px] text-slate-400 font-bold">
+                          (Baux illimités • Espèces, chèques &amp; virements 100% libres • 0% commission)
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Sélectionnez la durée accordée à ce compte (30 jours par défaut ou pack personnalisé) :
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={customProDuration}
+                        onChange={(e) => setCustomProDuration(Number(e.target.value))}
+                        className="px-2.5 py-1.5 rounded-xl bg-slate-950 border border-slate-700 text-xs font-bold text-slate-200 focus:outline-none"
+                      >
+                        <option value={30}>30 jours (1 mois)</option>
+                        <option value={60}>60 jours (2 mois)</option>
+                        <option value={90}>90 jours (3 mois)</option>
+                        <option value={180}>180 jours (6 mois)</option>
+                        <option value={365}>365 jours (1 an)</option>
+                      </select>
+                      <button
+                        type="button"
+                        onClick={() => handleAdminActivatePro(selectedUserForDetail, customProDuration)}
+                        className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black shadow-md transition-all cursor-pointer active:scale-95"
+                      >
+                        {userSubDetails?.plan === 'pro' ? `Prolonger (${customProDuration}j)` : `Activer Pro (${customProDuration}j)`}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 3. Rétrogradation en Découverte */}
+                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-3 flex-wrap">
+                    <div>
+                      <span className="text-xs font-black text-slate-300">Formule Découverte (Base)</span>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        Résilie la formule active et remet le compte au palier gratuit de base (2 baux max).
+                      </p>
+                    </div>
+
                     <button
                       type="button"
-                      onClick={() => {
-                        navigator.clipboard?.writeText(selectedUserForDetail.matricule!);
-                        setCopiedItem(selectedUserForDetail.matricule!);
-                        setTimeout(() => setCopiedItem(null), 1500);
-                      }}
-                      className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 text-xs font-bold transition-all flex items-center gap-1.5 border border-indigo-500/30 cursor-pointer shrink-0"
+                      disabled={userSubDetails?.plan === 'decouverte' || !userSubDetails}
+                      onClick={() => handleAdminCancelPlan(selectedUserForDetail)}
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        userSubDetails?.plan === 'decouverte' || !userSubDetails
+                          ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700'
+                          : 'bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800 cursor-pointer active:scale-95'
+                      }`}
                     >
-                      {copiedItem === selectedUserForDetail.matricule ? (
-                        <>
-                          <Check className="w-3.5 h-3.5 text-emerald-400" />
-                          <span className="text-emerald-400">Copié</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3.5 h-3.5" />
-                          <span>Copier</span>
-                        </>
-                      )}
+                      Rétrograder en Découverte
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ONGLET 2 : HISTORIQUE & AUDIT COMPLET */}
+            {userModalTab === 'history' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                {/* 1. Journal des formules & souscriptions */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
+                      1. Journal d'Audit des Formules &amp; Souscriptions :
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400">
+                      {userSubHistory.length} événement{userSubHistory.length > 1 ? 's' : ''}
+                    </span>
+                  </div>
+
+                  {userSubHistory.length === 0 ? (
+                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic">
+                      Aucun historique d'abonnement archivé pour cet utilisateur.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {userSubHistory.map((item) => (
+                        <div
+                          key={item.id}
+                          className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between gap-3"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-white capitalize">{item.plan}</span>
+                              <span
+                                className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                  item.action === 'activated' || item.action === 'renewed' || item.action === 'admin_override'
+                                    ? 'bg-emerald-500/20 text-emerald-300'
+                                    : 'bg-slate-800 text-slate-400'
+                                }`}
+                              >
+                                {item.action}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              {item.notes || 'Opération enregistrée dans le journal.'} • Par : {item.actorName || 'Système'}
+                            </p>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                            {new Date(item.performedAt).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Nom complet</span>
-                  <span className="font-bold text-white">{selectedUserForDetail.name}</span>
+                {/* 2. Baux rattachés */}
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
+                      2. Contrats de Baux Rattachés ({userLeases.length}) :
+                    </span>
+                  </div>
+
+                  {userLeases.length === 0 ? (
+                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic">
+                      Aucun contrat de bail enregistré pour ce compte.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {userLeases.map((l) => (
+                        <div
+                          key={l.id}
+                          className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between gap-3"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-brand-400">{l.id}</span>
+                              <span className="font-bold text-white">{l.property || 'Bien immobilier'}</span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              Locataire : {l.tenant} • Loyer : {formatFCFA(l.rent)}/mois
+                            </p>
+                          </div>
+                          <span
+                            className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full shrink-0 ${
+                              l.status === 'actif'
+                                ? 'bg-emerald-500/20 text-emerald-300'
+                                : 'bg-rose-500/20 text-rose-300'
+                            }`}
+                          >
+                            {l.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Entreprise / Agence</span>
-                  <span className="font-bold text-white">{selectedUserForDetail.companyName || 'Non renseignée'}</span>
-                </div>
+                {/* 3. Paiements & Quittances */}
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
+                      3. Paiements &amp; Quittances Rattachés ({userPayments.length}) :
+                    </span>
+                  </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Adresse Email</span>
-                  <span className="font-bold text-slate-200">{selectedUserForDetail.email}</span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Numéro de Téléphone</span>
-                  <span className="font-bold text-slate-200 font-mono">{selectedUserForDetail.phone}</span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Date & Lieu de Naissance</span>
-                  <span className="text-slate-300">
-                    {selectedUserForDetail.birthDate || 'N/A'} à {selectedUserForDetail.birthPlace || 'N/A'}
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Résidence & Projet</span>
-                  <span className="text-slate-300">
-                    {selectedUserForDetail.residenceCity || 'Cotonou'} ({selectedUserForDetail.residenceCountry || 'Bénin'})
-                    {selectedUserForDetail.projectCountry ? ` • Projet : ${selectedUserForDetail.projectCountry}` : ''}
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Numéro IFU (Fiscal)</span>
-                  <span className="font-mono text-slate-200 font-bold">
-                    {selectedUserForDetail.ifuNumber || 'Non requis / non renseigné'}
-                  </span>
-                </div>
-
-                <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
-                  <span className="text-[10px] font-bold text-slate-500 uppercase block">Date d'inscription</span>
-                  <span className="text-slate-300">{selectedUserForDetail.registeredAt || '01/01/2026'}</span>
+                  {userPayments.length === 0 ? (
+                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic">
+                      Aucun paiement de loyer enregistré pour ce compte.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {userPayments.slice(0, 15).map((p) => (
+                        <div
+                          key={p.id}
+                          className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between gap-3"
+                        >
+                          <div>
+                            <span className="font-bold text-white">{formatFCFA(p.amount)}</span>
+                            <span className="text-[11px] text-slate-400 ml-2">
+                              Canal : {p.method} • Quittance : {p.receiptNumber || 'N/A'}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                            {p.paymentDate}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
 
-            {/* Annonces publiées par cet utilisateur */}
-            <div className="space-y-2">
-              <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
-                Publications rattachées :
-              </span>
-              {listings.filter((l) => l.authorId === selectedUserForDetail.id || areEmailsEqual(l.authorEmail, selectedUserForDetail.email)).length === 0 ? (
-                <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic">
-                  Cet utilisateur n'a pas encore publié d'annonce.
-                </div>
-              ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {listings
-                    .filter((l) => l.authorId === selectedUserForDetail.id || areEmailsEqual(l.authorEmail, selectedUserForDetail.email))
-                    .map((l) => (
-                      <div
-                        key={l.id}
-                        className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs"
-                      >
-                        <div>
-                          <span className="font-mono font-bold text-brand-400 mr-2">
-                            {l.referenceCode || l.id}
-                          </span>
-                          <span className="text-white font-bold">{l.title}</span>
-                          <div className="text-[11px] text-slate-400">
-                            {l.city} • {formatFCFA(l.monthlyRent)}/mois
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedUserForDetail(null);
-                            setSelectedListingForDetail(l);
-                          }}
-                          className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold"
-                        >
-                          Voir annonce
-                        </button>
+            {/* ONGLET 3 : IDENTITÉ & PUBLICATIONS */}
+            {userModalTab === 'identity' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  {/* Matricule Officiel */}
+                  <div className="col-span-1 sm:col-span-2 p-3.5 rounded-2xl bg-slate-950 border border-indigo-500/40 flex items-center justify-between gap-3 shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center justify-center shrink-0">
+                        <Fingerprint className="w-5 h-5" />
                       </div>
-                    ))}
+                      <div>
+                        <span className="text-[10px] font-black text-indigo-400 uppercase tracking-wider block">
+                          Matricule Officiel Unique Plateforme
+                        </span>
+                        <span className="font-mono font-black text-white text-sm block mt-0.5">
+                          {selectedUserForDetail.matricule || 'Non attribué'}
+                        </span>
+                      </div>
+                    </div>
+                    {selectedUserForDetail.matricule && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(selectedUserForDetail.matricule!);
+                          setCopiedItem(selectedUserForDetail.matricule!);
+                          setTimeout(() => setCopiedItem(null), 1500);
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-200 text-xs font-bold transition-all flex items-center gap-1.5 border border-indigo-500/30 cursor-pointer shrink-0"
+                      >
+                        {copiedItem === selectedUserForDetail.matricule ? (
+                          <>
+                            <Check className="w-3.5 h-3.5 text-emerald-400" />
+                            <span className="text-emerald-400">Copié</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3.5 h-3.5" />
+                            <span>Copier</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Nom complet</span>
+                    <span className="font-bold text-white">{selectedUserForDetail.name}</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Entreprise / Agence</span>
+                    <span className="font-bold text-white">{selectedUserForDetail.companyName || 'Non renseignée'}</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Adresse Email</span>
+                    <span className="font-bold text-slate-200">{selectedUserForDetail.email}</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Numéro de Téléphone</span>
+                    <span className="font-bold text-slate-200 font-mono">{selectedUserForDetail.phone}</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Date & Lieu de Naissance</span>
+                    <span className="text-slate-300">
+                      {selectedUserForDetail.birthDate || 'N/A'} à {selectedUserForDetail.birthPlace || 'N/A'}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Résidence & Projet</span>
+                    <span className="text-slate-300">
+                      {selectedUserForDetail.residenceCity || 'Cotonou'} ({selectedUserForDetail.residenceCountry || 'Bénin'})
+                      {selectedUserForDetail.projectCountry ? ` • Projet : ${selectedUserForDetail.projectCountry}` : ''}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Numéro IFU (Fiscal)</span>
+                    <span className="font-mono text-slate-200 font-bold">
+                      {selectedUserForDetail.ifuNumber || 'Non requis / non renseigné'}
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 space-y-1">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase block">Date d'inscription</span>
+                    <span className="text-slate-300">{selectedUserForDetail.registeredAt || '01/01/2026'}</span>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Publications rattachées */}
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
+                    Publications rattachées :
+                  </span>
+                  {listings.filter((l) => l.authorId === selectedUserForDetail.id || areEmailsEqual(l.authorEmail, selectedUserForDetail.email)).length === 0 ? (
+                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic">
+                      Cet utilisateur n'a pas encore publié d'annonce.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {listings
+                        .filter((l) => l.authorId === selectedUserForDetail.id || areEmailsEqual(l.authorEmail, selectedUserForDetail.email))
+                        .map((l) => (
+                          <div
+                            key={l.id}
+                            className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs"
+                          >
+                            <div>
+                              <span className="font-mono font-bold text-brand-400 mr-2">
+                                {l.referenceCode || l.id}
+                              </span>
+                              <span className="text-white font-bold">{l.title}</span>
+                              <div className="text-[11px] text-slate-400">
+                                {l.city} • {formatFCFA(l.monthlyRent)}/mois
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedUserForDetail(null);
+                                setSelectedListingForDetail(l);
+                              }}
+                              className="px-2.5 py-1 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-[11px] font-bold"
+                            >
+                              Voir annonce
+                            </button>
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Actions du modal */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-800 flex-wrap gap-2">

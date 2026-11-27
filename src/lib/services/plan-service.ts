@@ -87,6 +87,18 @@ export interface SubscriptionAlertInfo {
   actionText: string;
 }
 
+export interface SubscriptionHistoryItem {
+  id: string;
+  userId: string;
+  plan: SubscriptionPlan;
+  action: 'activated' | 'renewed' | 'canceled' | 'downgraded' | 'admin_override';
+  actorName: string;
+  performedAt: string;
+  durationDays?: number;
+  expiresAt?: string;
+  notes?: string;
+}
+
 export const PlanService = {
   /**
    * Récupère les détails complets de souscription et validité (30 jours)
@@ -751,5 +763,104 @@ export const PlanService = {
       }
       keysToRemove.forEach((k) => localStorage.removeItem(k));
     } catch { }
+  },
+
+  /**
+   * Récupère l'historique complet des souscriptions et formules d'un compte
+   */
+  getSubscriptionHistory(userId?: string): SubscriptionHistoryItem[] {
+    const targetId = userId || DEFAULT_FALLBACK_USER_ID;
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(`locagestion:sub_history:${targetId}`);
+      if (raw) {
+        return JSON.parse(raw);
+      }
+    } catch {}
+
+    const currentSub = this.getUserSubscription(targetId);
+    return [
+      {
+        id: `sub-init-${targetId}`,
+        userId: targetId,
+        plan: currentSub.plan,
+        action: currentSub.plan === 'pro' ? 'activated' : currentSub.plan === 'serenite' ? 'activated' : 'downgraded',
+        actorName: 'Système / Utilisateur',
+        performedAt: currentSub.activatedAt || '2026-01-01T00:00:00.000Z',
+        durationDays: currentSub.plan === 'pro' ? 30 : undefined,
+        expiresAt: currentSub.expiresAt,
+        notes: `Formule ${PLANS_CONFIG[currentSub.plan]?.name || 'Découverte'} initiale`,
+      },
+    ];
+  },
+
+  /**
+   * Enregistre un événement dans l'historique de souscription du compte
+   */
+  recordSubscriptionHistory(entry: Omit<SubscriptionHistoryItem, 'id' | 'performedAt'>): void {
+    if (typeof window === 'undefined') return;
+    try {
+      const history = this.getSubscriptionHistory(entry.userId);
+      const newEntry: SubscriptionHistoryItem = {
+        ...entry,
+        id: `sub-hist-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+        performedAt: new Date().toISOString(),
+      };
+      const updated = [newEntry, ...history.filter((h) => h.id !== newEntry.id)];
+      localStorage.setItem(`locagestion:sub_history:${entry.userId}`, JSON.stringify(updated));
+    } catch (e) {
+      console.warn('Erreur enregistrement historique formule:', e);
+    }
+  },
+
+  /**
+   * Activation Super-Admin : Formule Sérénité accordée manuellement
+   */
+  adminActivateSerenite(userId: string, adminName = 'Super-Administrateur Sécurité'): { success: boolean; message: string } {
+    const res = this.activateSerenitePlan(userId);
+    this.recordSubscriptionHistory({
+      userId,
+      plan: 'serenite',
+      action: 'admin_override',
+      actorName: adminName,
+      notes: 'Activation manuelle par le Super-Administrateur (0 F fixe, baux illimités, 100% Mobile Money)',
+    });
+    return res;
+  },
+
+  /**
+   * Activation Super-Admin : Formule Entreprise & Pro accordée manuellement pour X jours
+   */
+  adminActivatePro(userId: string, durationDays = 30, adminName = 'Super-Administrateur Sécurité'): {
+    success: boolean;
+    message: string;
+    expiresAt: string;
+  } {
+    const res = this.activateProPlan(userId, durationDays);
+    this.recordSubscriptionHistory({
+      userId,
+      plan: 'pro',
+      action: 'admin_override',
+      actorName: adminName,
+      durationDays,
+      expiresAt: res.expiresAt,
+      notes: `Activation / Prolongation Formule Pro (${durationDays} jours) accordée par le Super-Administrateur`,
+    });
+    return res;
+  },
+
+  /**
+   * Rétrogradation / Annulation Super-Admin : Retour à la Formule Découverte
+   */
+  adminCancelPlan(userId: string, adminName = 'Super-Administrateur Sécurité'): { success: boolean; message: string } {
+    const res = this.activateDecouvertePlan(userId);
+    this.recordSubscriptionHistory({
+      userId,
+      plan: 'decouverte',
+      action: 'canceled',
+      actorName: adminName,
+      notes: 'Rétrogradation / Annulation de formule par le Super-Administrateur (retour en Découverte)',
+    });
+    return res;
   },
 };

@@ -6,6 +6,7 @@ import { GlobalDownloadToast } from '@/components/ui/GlobalDownloadToast';
 import { GlobalCenterToast } from '@/components/ui/GlobalCenterToast';
 import { GlobalSyncProvider } from '@/components/layout/GlobalSyncProvider';
 import { FedaPayReturnHandler } from '@/components/layout/FedaPayReturnHandler';
+import { SuperAdminImpersonationBanner } from '@/components/layout/SuperAdminImpersonationBanner';
 
 import { SITE_CONFIG } from '@/lib/config/site';
 
@@ -111,6 +112,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <SpaceProvider>
+          <SuperAdminImpersonationBanner />
           <GlobalSyncProvider>
             {children}
             <GlobalDownloadToast />
