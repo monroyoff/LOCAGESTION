@@ -151,6 +151,23 @@ export function formatNotificationTime(notif?: {
 }
 
 /**
+ * Comparateur chronologique inverse universel (plus récent en haut / index 0)
+ * Garantit que la notification la plus fraîche ("À l'instant", aujourd'hui)
+ * s'affiche toujours en premier dans la cloche et les listes sur Web et Mobile.
+ */
+export function compareNotificationsDesc(
+  a?: { createdAt?: string | number; timestamp?: string; time?: string; id?: string } | null,
+  b?: { createdAt?: string | number; timestamp?: string; time?: string; id?: string } | null
+): number {
+  const dateA = resolveNotificationDate(a).getTime();
+  const dateB = resolveNotificationDate(b).getTime();
+  if (dateB !== dateA) {
+    return dateB - dateA;
+  }
+  return String(b?.id || '').localeCompare(String(a?.id || ''));
+}
+
+/**
  * Libellé lisible pour les méthodes de paiement
  */
 export function getPaymentMethodLabel(method: string): string {

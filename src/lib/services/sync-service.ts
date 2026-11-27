@@ -9,6 +9,7 @@ import { isFakeConversation, INITIAL_CONVERSATIONS } from './conversation-servic
 import { isFakeProperty } from './property-service';
 import { isFakePayment } from './payment-service';
 import { isFakeNotice } from './notice-service';
+import { compareNotificationsDesc } from '@/lib/money/format';
 
 const LEASES_STORAGE_KEY = 'locagestion:leases:v1';
 const TENANT_NOTIFS_KEY = 'locagestion:tenant_notifications:v1';
@@ -210,7 +211,7 @@ export const SyncService = {
         });
 
         const serverNotifIds = new Set(data.notifications.map((sn: any) => sn?.id));
-        const mergedNotifs = Array.from(notifMap.values());
+        const mergedNotifs = Array.from(notifMap.values()).sort(compareNotificationsDesc);
         if (mergedNotifs.some((mn) => !serverNotifIds.has(mn.id)) || notifsNeedPush) {
           pushPayload.notifications = mergedNotifs;
           needsServerPush = true;
@@ -631,7 +632,7 @@ export const SyncService = {
           }
         });
 
-        const mergedLNotifs = Array.from(lnMap.values());
+        const mergedLNotifs = Array.from(lnMap.values()).sort(compareNotificationsDesc);
         const prevLnStr = localStorage.getItem(LANDLORD_NOTIFS_KEY);
         const nextLnStr = JSON.stringify(mergedLNotifs);
         if (prevLnStr !== nextLnStr) {

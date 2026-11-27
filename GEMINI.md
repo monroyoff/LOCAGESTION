@@ -177,6 +177,7 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
   - Hier : `Hier à HH:mm`
   - Antérieur : `JJ/MM à HH:mm`
   Une migration automatique rétrocompatible rétablit l'heure exacte des anciennes notifications stockées localement à partir de leur ID ou horodatage d'origine.
+- **Tri Chronologique Décroissant Universel (Plus récent au sommet) :** Dans tous les espaces (Locataire `/portal`, Bailleur `/`, Démarcheur `/listings`, Admin `/admin`) et sur tous les formats (Web, Mobile, PWA, TWA Android), les notifications de la cloche et des tableaux de bord sont strictement triées par `compareNotificationsDesc`. La notification la plus récente (« À l’instant ») s'affiche impérativement tout en haut (index 0), tandis que les notifications antérieures descendent progressivement en dessous. Aucune notification ne doit s'afficher à l'envers.
 
 ### 🔍 10. Guichet Public de Vérification (`/verify/[code]`)
 - Page publique autonome permettant à toute autorité de vérifier la validité d'une quittance scellée par son numéro unique ou via scan du QR Code.

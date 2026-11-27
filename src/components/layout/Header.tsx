@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -26,7 +26,7 @@ import {
   ArrowLeft,
   Globe,
 } from 'lucide-react';
-import { formatDateFR, formatNotificationTime } from '@/lib/money/format';
+import { formatDateFR, formatNotificationTime, compareNotificationsDesc } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
 import { ModerationService } from '@/lib/services/moderation-service';
@@ -132,6 +132,14 @@ export function Header({
   const unreadCount = (isLandlord || isDemarcheur)
     ? notifications.filter((n) => !n.read).length
     : tenantNotifs.filter((n) => !n.read).length;
+
+  const sortedNotifications = useMemo(() => {
+    return [...notifications].sort(compareNotificationsDesc);
+  }, [notifications]);
+
+  const sortedTenantNotifs = useMemo(() => {
+    return [...tenantNotifs].sort(compareNotificationsDesc);
+  }, [tenantNotifs]);
 
   const handleMarkAllRead = () => {
     if (isLandlord || isDemarcheur) {
@@ -416,13 +424,13 @@ export function Header({
 
                 <div className="max-h-[30rem] overflow-y-auto divide-y divide-slate-100 p-1">
                   {(isLandlord || isDemarcheur) ? (
-                    notifications.length === 0 ? (
+                    sortedNotifications.length === 0 ? (
                       <div className="p-6 text-center text-slate-400 text-xs">
                         <CheckCircle2 className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-50" />
                         <span>Aucune notification récente</span>
                       </div>
                     ) : (
-                      notifications.map((n) => (
+                      sortedNotifications.map((n) => (
                         <div
                           key={n.id}
                           onClick={() => handleLandlordNotifClick(n)}
@@ -533,13 +541,13 @@ export function Header({
                       ))
                     )
                   ) : (
-                    tenantNotifs.length === 0 ? (
+                    sortedTenantNotifs.length === 0 ? (
                       <div className="p-6 text-center text-slate-400 text-xs">
                         <CheckCircle2 className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-50" />
                         <span>Aucune notification pour le moment</span>
                       </div>
                     ) : (
-                      tenantNotifs.map((n) => {
+                      sortedTenantNotifs.map((n) => {
                         const isNotice = n.type === 'notice_issued';
                         const isReminder = n.type === 'reminder_received';
                         const cardBg = !n.read

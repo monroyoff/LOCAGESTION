@@ -3,7 +3,7 @@
 import { TenantNotificationService } from './tenant-notification-service';
 import { AuthUser } from '../types';
 import { areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
-import { resolveNotificationDate } from '../money/format';
+import { resolveNotificationDate, compareNotificationsDesc } from '../money/format';
 import { isUserConversationAuthor } from './conversation-service';
 
 export type LeaseStatus =
@@ -1006,7 +1006,7 @@ export const LeaseService = {
       } catch { }
 
       if (!user || user.role === 'admin' || user.email === 'admin@locagestion.site') {
-        return parsed;
+        return parsed.sort(compareNotificationsDesc);
       }
       const landlordLeases = this.getLeasesForLandlord(user);
       const landlordProps = new Set(landlordLeases.map((l) => (l.property || '').toLowerCase().trim()));
@@ -1041,7 +1041,7 @@ export const LeaseService = {
         if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
         if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
         return false;
-      });
+      }).sort(compareNotificationsDesc);
     } catch (e) {
       console.error('Erreur lecture notifications:', e);
     }
@@ -1101,7 +1101,7 @@ export const LeaseService = {
         timestamp: (notif.timestamp && !notif.timestamp.toLowerCase().includes('instant')) ? notif.timestamp : nowIso,
       };
 
-      const updated = [enriched, ...current.filter((n) => n.id !== notif.id)];
+      const updated = [enriched, ...current.filter((n) => n.id !== notif.id)].sort(compareNotificationsDesc);
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
       notifyStorageChange();
       window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));

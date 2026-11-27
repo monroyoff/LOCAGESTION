@@ -2,7 +2,7 @@
 
 import { AuthUser } from '../types';
 import { AuthService, areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
-import { resolveNotificationDate } from '../money/format';
+import { resolveNotificationDate, compareNotificationsDesc } from '../money/format';
 
 export type TenantNotificationType =
   | 'receipt_issued'
@@ -194,6 +194,8 @@ export const TenantNotificationService = {
             };
           });
 
+          mapped.sort(compareNotificationsDesc);
+
           if (needsSave && typeof window !== 'undefined') {
             try {
               localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(mapped));
@@ -209,7 +211,8 @@ export const TenantNotificationService = {
   },
 
   /**
-   * Récupère les notifications filtrées de façon strictement étanche pour le locataire
+   * Récupère les notifications filtrées de façon strictement étanche pour le locataire,
+   * triées chronologiquement en ordre décroissant (la plus récente "À l'instant" tout en haut).
    */
   getNotifications(userOrFilter?: AuthUser | string | null): TenantNotification[] {
     if (typeof window === 'undefined') return [];
@@ -226,16 +229,14 @@ export const TenantNotificationService = {
       targetUser = AuthService.getCurrentUser();
     }
 
+    let results: TenantNotification[] = [];
     if (filterText) {
-      return all.filter((n) => isNotificationForUser(n, null, filterText));
+      results = all.filter((n) => isNotificationForUser(n, null, filterText));
+    } else if (targetUser) {
+      results = all.filter((n) => isNotificationForUser(n, targetUser, null));
     }
 
-    if (targetUser) {
-      return all.filter((n) => isNotificationForUser(n, targetUser, null));
-    }
-
-    // Aucun utilisateur ciblé ni connecté : liste vide sécurisée
-    return [];
+    return results.sort(compareNotificationsDesc);
   },
 
   /**
@@ -391,7 +392,7 @@ export const TenantNotificationService = {
       isGlobal: (data as any).isGlobal ?? false,
     };
 
-    const updated = [newNotif, ...all.filter((n) => n.id !== newNotif.id)];
+    const updated = [newNotif, ...all.filter((n) => n.id !== newNotif.id)].sort(compareNotificationsDesc);
 
     if (typeof window !== 'undefined') {
       try {
