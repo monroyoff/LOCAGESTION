@@ -84,9 +84,17 @@ export function parseIncidentTimestamp(inc: ReportedIncident): number {
 }
 
 /**
- * Compare deux pannes du plus récent au plus vieux (tri chronologique décroissant)
+ * Compare deux pannes :
+ * 1. Les pannes non résolues (en_attente, pris_en_charge, en_cours_reparation) passent EN HAUT
+ * 2. Les pannes résolues (resolu) passent EN BAS pour laisser la priorité aux pannes actives
+ * 3. Au sein de chaque groupe, tri du plus récent au plus vieux (chronologique décroissant)
  */
 export function compareIncidentsDesc(a: ReportedIncident, b: ReportedIncident): number {
+  const isAResolved = a.status === 'resolu';
+  const isBResolved = b.status === 'resolu';
+  if (isAResolved !== isBResolved) {
+    return isAResolved ? 1 : -1;
+  }
   const timeA = parseIncidentTimestamp(a);
   const timeB = parseIncidentTimestamp(b);
   if (timeA !== timeB) return timeB - timeA;

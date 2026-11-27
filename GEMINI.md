@@ -741,13 +741,15 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
 - **Bouton WhatsApp Express Dédié :** Le bouton vert *« Envoyer le dossier sur WhatsApp à l'artisan »* ouvre directement la messagerie WhatsApp pré-remplie et persiste l'artisan en arrière-plan, sans introduire de bouton concurrent.
 - **Clôture Directe Sécurisée :** Le bouton vert *« Clôturer l'incident (Résolu) »* enregistre l'intégralité des champs saisis tout en basculant le statut à `resolu`.
 
-### 6. Règle d'Or de Tri Chronologique Décroissant Universel des Pannes (« Du plus récent au plus vieux »)
-- **Ordre Strict & Déterministe :** Partout sur la plateforme (Espace Bailleur `/` et `/incidents`, Espace Locataire `/portal`, Espace Super-Admin `/admin`, sur Web, Mobile PWA et application TWA Android), les pannes et constats techniques déclarés sont impérativement restitués **du plus récent au plus vieux**.
-- **Comparateur Universel `compareIncidentsDesc` :**
+### 6. Règle d'Or de Priorité aux Pannes Non Résolues & Relégation des Pannes Résolues en Bas
+- **Priorité Absolue aux Pannes Actives (En Haut) :** Partout sur la plateforme (Espace Bailleur `/` et `/incidents`, Espace Locataire `/portal`, Espace Super-Admin `/admin`, sur Web, Mobile PWA et application TWA Android), les pannes non résolues (`status !== 'resolu'`, i.e. `en_attente`, `pris_en_charge`, `en_cours_reparation`) sont prioritairement positionnées **tout en haut de la liste**.
+- **Relégation Immédiate des Pannes Clôturées (En Bas) :** Dès qu'une panne est marquée comme clôturée ou résolue (`status === 'resolu'`), elle bascule automatiquement **tout en bas** pour laisser place nette aux pannes en cours nécessitant une action ou un suivi d'artisan.
+- **Tri Chronologique Décroissant Interne (« Du plus récent au plus vieux ») :**
+  - Au sein de la section des pannes actives comme au sein de la section des pannes résolues, les tickets sont strictement ordonnés du plus récent au plus vieux via `compareIncidentsDesc`.
   - Prise en charge des horodatages précis `timestamp` (ms) et `createdAtIso`.
   - Résolution des formats de date `DD/MM/YYYY` et `DD/MM/YYYY à HH:mm`.
   - En cas d'égalité sur la même journée, départage automatique par le numéro d'incident numérique séquentiel (`INC-2026-727` vs `INC-2026-042`).
-  - Toutes les fonctions d'accès (`IncidentService.getIncidents`, `getIncidentsForTenant`, `getIncidentsForLandlord`, `saveAllIncidents`) ainsi que les listes filtrées dans les composants UI appliquent systématiquement `compareIncidentsDesc`. La dernière panne déclarée s'affiche impérativement tout en haut.
+  - Toutes les fonctions d'accès (`IncidentService.getIncidents`, `getIncidentsForTenant`, `getIncidentsForLandlord`, `saveAllIncidents`) ainsi que les listes filtrées dans les composants UI appliquent systématiquement `compareIncidentsDesc`.
 
 ---
 
