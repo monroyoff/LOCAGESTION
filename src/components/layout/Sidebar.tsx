@@ -181,7 +181,7 @@ export function Sidebar({
         parsed[key] = Array.from(existing);
         localStorage.setItem(SEEN_MENU_STORAGE_KEY, JSON.stringify(parsed));
       }
-    } catch {}
+    } catch { }
   };
 
   const getSectionSignatures = (section: 'messages' | 'notices' | 'leases' | 'payments' | 'incidents' | 'visits'): string[] => {
@@ -215,7 +215,7 @@ export function Sidebar({
           : IncidentService.getIncidentsForLandlord(context.user);
         return list.map((i) => `${i.id}:${i.status}:${i.resolvedAt || ''}`);
       }
-    } catch {}
+    } catch { }
     return [];
   };
 
@@ -335,7 +335,7 @@ export function Sidebar({
           setPendingVisitsCount(0);
         }
       }
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -589,11 +589,24 @@ export function Sidebar({
     ];
 
     events.forEach((ev) => window.addEventListener(ev, updateAllBadges));
-    const interval = setInterval(updateAllBadges, 10000);
+
+    // Écoute instantanée multi-onglets via BroadcastChannel
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('locagestion_realtime');
+        bc.onmessage = () => updateAllBadges();
+      }
+    } catch { }
+
+    const interval = setInterval(updateAllBadges, 5000);
 
     return () => {
       events.forEach((ev) => window.removeEventListener(ev, updateAllBadges));
       clearInterval(interval);
+      try {
+        bc?.close();
+      } catch { }
     };
   }, [activeSpace, context.user, isLandlord, isTenant, isDemarcheur, pathname, activePortalTab, currentPortalTab]);
 
@@ -859,8 +872,8 @@ export function Sidebar({
   const currentNavItems = isTenant
     ? tenantItems
     : isDemarcheur
-    ? demarcheurItems
-    : landlordItems;
+      ? demarcheurItems
+      : landlordItems;
 
   return (
     <>
@@ -874,9 +887,8 @@ export function Sidebar({
 
       {/* Sidebar Container */}
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-[#0e1117] text-white flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 bg-[#0e1117] text-white flex flex-col justify-between transition-transform duration-300 ease-in-out lg:translate-x-0 ${isOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         {/* Top: Logo & Space Switcher */}
         <div className="px-4 pt-5 pb-2">
@@ -981,8 +993,8 @@ export function Sidebar({
             {isTenant
               ? 'Menu Résident'
               : isDemarcheur
-              ? 'Espace Démarcheur'
-              : 'Pilotage Bailleur'}
+                ? 'Espace Démarcheur'
+                : 'Pilotage Bailleur'}
           </div>
 
           {currentNavItems.map((item) => {
@@ -1016,29 +1028,26 @@ export function Sidebar({
                   }
                   onClose();
                 }}
-                className={`${
-                  item.mobileOnly ? 'lg:hidden ' : ''
-                }flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all group min-w-0 ${
-                  item.active
+                className={`${item.mobileOnly ? 'lg:hidden ' : ''
+                  }flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all group min-w-0 ${item.active
                     ? isDemarcheur
                       ? 'bg-amber-500/15 text-amber-200 font-bold border border-amber-500/30 shadow-sm'
                       : isLandlord
-                      ? 'bg-white/[0.08] text-white shadow-sm font-bold'
-                      : 'bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30'
+                        ? 'bg-white/[0.08] text-white shadow-sm font-bold'
+                        : 'bg-emerald-500/15 text-emerald-300 font-bold border border-emerald-500/30'
                     : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div
-                    className={`p-1.5 rounded-xl transition-colors shrink-0 ${
-                      item.active
-                        ? isDemarcheur
-                          ? 'text-amber-400 bg-amber-500/20'
-                          : isLandlord
+                    className={`p-1.5 rounded-xl transition-colors shrink-0 ${item.active
+                      ? isDemarcheur
+                        ? 'text-amber-400 bg-amber-500/20'
+                        : isLandlord
                           ? 'text-brand-400 bg-brand-500/10'
                           : 'text-emerald-400 bg-emerald-500/20'
-                        : 'text-slate-400 group-hover:text-white'
-                    }`}
+                      : 'text-slate-400 group-hover:text-white'
+                      }`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
                   </div>
@@ -1049,31 +1058,28 @@ export function Sidebar({
                 <div className="flex items-center gap-1.5 shrink-0 ml-2">
                   {item.count && (
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
-                        isTenant
-                          ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/25'
-                          : 'text-slate-400 bg-white/5'
-                      }`}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${isTenant
+                        ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/25'
+                        : 'text-slate-400 bg-white/5'
+                        }`}
                     >
                       {item.count}
                     </span>
                   )}
                   {item.badge && (
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${
-                        isTenant
-                          ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/25'
-                          : 'text-tealAccent-400 bg-tealAccent-500/10 border border-tealAccent-500/20'
-                      }`}
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap shrink-0 ${isTenant
+                        ? 'text-emerald-300 bg-emerald-500/15 border border-emerald-500/25'
+                        : 'text-tealAccent-400 bg-tealAccent-500/10 border border-tealAccent-500/20'
+                        }`}
                     >
                       {item.badge}
                     </span>
                   )}
                   {item.badgeCount !== undefined && (!item.sectionKey || !item.active) && (
                     <span
-                      className={`w-5 h-5 rounded-full ${
-                        item.badgeColor || (isTenant ? 'bg-emerald-500' : 'bg-brand-500')
-                      } text-white font-black text-[10px] flex items-center justify-center shadow-md whitespace-nowrap shrink-0`}
+                      className={`w-5 h-5 rounded-full ${item.badgeColor || (isTenant ? 'bg-emerald-500' : 'bg-brand-500')
+                        } text-white font-black text-[10px] flex items-center justify-center shadow-md whitespace-nowrap shrink-0`}
                     >
                       {item.badgeCount}
                     </span>
@@ -1101,8 +1107,8 @@ export function Sidebar({
                     (isDemarcheur
                       ? 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=160&auto=format&fit=crop&q=80'
                       : isLandlord
-                      ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
-                      : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')
+                        ? 'https://images.unsplash.com/photo-1531384441138-2736e62e0919?w=160&auto=format&fit=crop&q=80'
+                        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=160&auto=format&fit=crop&q=80')
                   }
                   alt={context?.user?.name || userProfile.name}
                   className="w-10 h-10 rounded-xl object-cover ring-2 ring-white/10 group-hover:ring-brand-400 group-hover:scale-105 transition-all"
@@ -1115,8 +1121,8 @@ export function Sidebar({
                     {context?.user?.firstName
                       ? `${context.user.firstName} ${context.user.lastName || ''}`.trim()
                       : (userProfile.firstName
-                          ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
-                          : userProfile.name)}
+                        ? `${userProfile.firstName} ${userProfile.lastName || ''}`.trim()
+                        : userProfile.name)}
                   </h4>
                   <ShieldCheck className="w-3.5 h-3.5 text-tealAccent-400 shrink-0" />
                 </div>
@@ -1140,15 +1146,14 @@ export function Sidebar({
                       e.stopPropagation();
                       setIsUpgradeModalOpen(true);
                     }}
-                    className={`mt-2 flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition-all cursor-pointer ${
-                      userSub?.plan === 'pro'
-                        ? userSub.isExpired
-                          ? 'bg-rose-950/60 border-rose-500/40 text-rose-300 hover:bg-rose-900/60'
-                          : 'bg-indigo-950/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-900/80'
-                        : userSub?.plan === 'serenite'
+                    className={`mt-2 flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition-all cursor-pointer ${userSub?.plan === 'pro'
+                      ? userSub.isExpired
+                        ? 'bg-rose-950/60 border-rose-500/40 text-rose-300 hover:bg-rose-900/60'
+                        : 'bg-indigo-950/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-900/80'
+                      : userSub?.plan === 'serenite'
                         ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-200 hover:bg-emerald-900/80'
                         : 'bg-amber-950/80 border-amber-500/40 text-amber-200 hover:bg-amber-900/80'
-                    }`}
+                      }`}
                     title="Formule actuelle de votre compte bailleur. Cliquez pour surclasser ou gérer."
                   >
                     <div className="flex items-center gap-1.5 truncate">

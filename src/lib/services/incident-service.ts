@@ -21,6 +21,11 @@ export interface ReportedIncident {
   tenantEmail: string;
   property: string;
   unit: string;
+  leaseId?: string;
+  landlordId?: string;
+  landlordEmail?: string;
+  landlordPhone?: string;
+  landlordName?: string;
   assignedTechnician?: {
     name: string;
     phone: string;
@@ -39,8 +44,17 @@ const INCIDENTS_STORAGE_KEY = 'locagestion:incidents:v1';
 
 function notifyIncidentsChange() {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('locagestion:incidents_updated'));
-    window.dispatchEvent(new Event('locagestion:leases_updated'));
+    window.dispatchEvent(new CustomEvent('locagestion:incidents_updated'));
+    window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+    window.dispatchEvent(new CustomEvent('locagestion:leases_updated'));
+    window.dispatchEvent(new Event('storage'));
+    try {
+      if ('BroadcastChannel' in window) {
+        const bc = new BroadcastChannel('locagestion_realtime');
+        bc.postMessage({ type: 'locagestion:incidents_updated' });
+        bc.close();
+      }
+    } catch {}
   }
 }
 
@@ -92,18 +106,27 @@ export const IncidentService = {
     if (user.role === 'admin' || user.email === 'admin@locagestion.site') return this.getIncidents();
     const all = this.getIncidents();
     const landlordLeases = LeaseService.getLeasesForLandlord(user);
-    if (landlordLeases.length === 0) {
-      if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return all;
-      return [];
-    }
     const propNames = new Set(landlordLeases.map((l) => (l.property || '').toLowerCase().trim()));
     const tenantNames = new Set(landlordLeases.map((l) => (l.tenant || '').toLowerCase().trim()));
     const tenantEmails = new Set(landlordLeases.map((l) => (l.tenantEmail || '').toLowerCase().trim()));
+    const leaseIds = new Set(landlordLeases.map((l) => l.id));
+
     return all.filter((inc) => {
-      if (propNames.has((inc.property || '').toLowerCase().trim())) return true;
-      if (tenantNames.has((inc.tenantName || '').toLowerCase().trim())) return true;
+      // 1. Rapprochement direct par identifiants bailleur
+      if (inc.landlordEmail && user.email && areEmailsEqual(inc.landlordEmail, user.email)) return true;
+      if (inc.landlordId && user.id && inc.landlordId.toLowerCase() === user.id.toLowerCase()) return true;
+      if (inc.landlordPhone && user.phone && arePhoneNumbersEqual(inc.landlordPhone, user.phone)) return true;
+      // 2. Rapprochement par bail rattaché
+      if (inc.leaseId && leaseIds.has(inc.leaseId)) return true;
+      // 3. Rapprochement par bien immobilier du bailleur
+      if (inc.property && propNames.has(inc.property.toLowerCase().trim())) return true;
+      // 4. Rapprochement par locataire du bailleur
+      if (inc.tenantName && tenantNames.has(inc.tenantName.toLowerCase().trim())) return true;
       if (inc.tenantEmail && tenantEmails.has(inc.tenantEmail.toLowerCase().trim())) return true;
-      if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+      // 5. Administrateur ou bailleur principal canonique
+      if (user.email && (areEmailsEqual(user.email, 'jobovog@gmail.com') || areEmailsEqual(user.email, 'admin@locagestion.site'))) return true;
+      // 6. Si le bailleur n'a aucun bail explicite et que l'incident n'a pas de bailleur tiers exclusif
+      if (landlordLeases.length === 0 && (!inc.landlordEmail || areEmailsEqual(inc.landlordEmail, 'jobovog@gmail.com') || areEmailsEqual(inc.landlordEmail, user.email))) return true;
       return false;
     });
   },
@@ -114,6 +137,16 @@ export const IncidentService = {
       localStorage.setItem(INCIDENTS_STORAGE_KEY, JSON.stringify(incidents));
       notifyIncidentsChange();
       window.dispatchEvent(new Event('storage'));
+
+      // Diffusion multi-onglets / multi-fenêtres immédiate via BroadcastChannel
+      try {
+        if ('BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('locagestion_realtime');
+          bc.postMessage({ type: 'locagestion:incidents_updated', count: incidents.length });
+          bc.close();
+        }
+      } catch {}
+
       fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -130,6 +163,11 @@ export const IncidentService = {
       id?: string;
       createdAt?: string;
       status?: IncidentStatus;
+      leaseId?: string;
+      landlordId?: string;
+      landlordEmail?: string;
+      landlordPhone?: string;
+      landlordName?: string;
     }
   ): ReportedIncident {
     const nowFormatted = new Date().toLocaleDateString('fr-FR', {
@@ -139,6 +177,39 @@ export const IncidentService = {
     });
 
     const newId = data.id || `INC-2026-${Math.floor(100 + Math.random() * 900)}`;
+
+    // Résolution intelligente et automatique du bailleur et du contrat si non fournis
+    let leaseId = data.leaseId;
+    let landlordId = data.landlordId;
+    let landlordEmail = data.landlordEmail;
+    let landlordPhone = data.landlordPhone;
+    let landlordName = data.landlordName;
+    let property = data.property;
+    let unit = data.unit;
+
+    if (!landlordEmail || !leaseId) {
+      const allLeases = LeaseService.getLeases();
+      const tEmail = (data.tenantEmail || '').trim().toLowerCase();
+      const tPhone = (data.tenantPhone || '').trim();
+      const tName = (data.tenantName || '').trim().toLowerCase();
+      const matched = allLeases.find((l) => {
+        if (tEmail && l.tenantEmail && areEmailsEqual(tEmail, l.tenantEmail)) return true;
+        if (tPhone && l.tenantPhone && arePhoneNumbersEqual(tPhone, l.tenantPhone)) return true;
+        if (tName && l.tenant && tName === l.tenant.trim().toLowerCase()) return true;
+        if (property && property !== 'Logement principal' && l.property && l.property.trim().toLowerCase() === property.trim().toLowerCase()) return true;
+        return false;
+      });
+
+      if (matched) {
+        leaseId = leaseId || matched.id;
+        landlordId = landlordId || matched.landlordId;
+        landlordEmail = landlordEmail || matched.landlordEmail;
+        landlordPhone = landlordPhone || matched.landlordPhone;
+        landlordName = landlordName || matched.landlordName;
+        if (!property || property === 'Logement principal') property = matched.property;
+        if (!unit || unit === 'Lot') unit = matched.unit;
+      }
+    }
 
     const newIncident: ReportedIncident = {
       id: newId,
@@ -151,8 +222,13 @@ export const IncidentService = {
       tenantName: data.tenantName || 'Locataire',
       tenantPhone: data.tenantPhone || '',
       tenantEmail: data.tenantEmail || '',
-      property: data.property || 'Bien immobilier',
-      unit: data.unit || 'Lot',
+      property: property || 'Bien immobilier',
+      unit: unit || 'Lot',
+      leaseId,
+      landlordId,
+      landlordEmail,
+      landlordPhone,
+      landlordName,
       assignedTechnician: data.assignedTechnician,
       resolutionNotes: data.resolutionNotes,
     };
@@ -161,30 +237,35 @@ export const IncidentService = {
     const updated = [newIncident, ...current.filter((i) => i.id !== newId)];
     this.saveAllIncidents(updated);
 
-    // Déclencher une notification officielle pour le Bailleur
+    // Déclencher une notification officielle et enrichie pour le Bailleur
     const notification: LandlordNotification = {
       id: `notif-inc-${Date.now()}`,
       title: `⚠️ Panne signalée : ${newIncident.category}`,
-      message: `${newIncident.tenantName} (${newIncident.unit}) a signalé une panne [Urgence ${newIncident.urgency.toUpperCase()}] : "${newIncident.description}". ${newIncident.photos.length} photo(s) jointe(s).`,
+      message: `${newIncident.tenantName} (${newIncident.unit} • ${newIncident.property}) a signalé une panne [Urgence ${newIncident.urgency.toUpperCase()}] : "${newIncident.description}". ${newIncident.photos.length} photo(s) jointe(s).`,
       time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       createdAt: new Date().toISOString(),
       timestamp: nowFormatted,
       type: 'incident_reported',
       read: false,
       incidentId: newIncident.id,
+      leaseId: newIncident.leaseId,
       tenantName: newIncident.tenantName,
       unit: newIncident.unit,
       property: newIncident.property,
       urgency: newIncident.urgency,
       category: newIncident.category,
       photos: newIncident.photos,
-      emailSentTo: 'jobovog@gmail.com',
+      landlordId: newIncident.landlordId,
+      landlordEmail: newIncident.landlordEmail,
+      landlordPhone: newIncident.landlordPhone,
+      landlordName: newIncident.landlordName,
+      emailSentTo: newIncident.landlordEmail || 'jobovog@gmail.com',
       emailDelivered: {
-        to: 'jobovog@gmail.com',
+        to: newIncident.landlordEmail || 'jobovog@gmail.com',
         from: 'alertes@locagestion.site',
         subject: `[ALERTE TECHNIQUE ${newIncident.urgency.toUpperCase()}] ${newIncident.category} — ${newIncident.unit} (${newIncident.tenantName})`,
         date: nowFormatted,
-        preview: `Nouveau constat technique transmis par le locataire ${newIncident.tenantName} avec ${newIncident.photos.length} photo(s) justificative(s).`,
+        preview: `Nouveau constat technique transmis par le locataire ${newIncident.tenantName} pour le lot ${newIncident.unit} (${newIncident.property}) avec ${newIncident.photos.length} photo(s) justificative(s).`,
       },
     };
 

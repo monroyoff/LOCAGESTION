@@ -100,22 +100,41 @@ export function Header({
     window.addEventListener('locagestion:tenant_notifs_updated', handleStorage);
     window.addEventListener('locagestion:tenant_notifications_updated', handleStorage);
     window.addEventListener('locagestion:notifications_updated', handleStorage);
+    window.addEventListener('locagestion:incidents_updated', handleStorage);
     window.addEventListener('locagestion:conversations_updated', handleStorage);
     window.addEventListener('locagestion:security_alerts_updated', handleStorage);
     window.addEventListener('locagestion:plan_changed', handleStorage);
     window.addEventListener('locagestion:auth_changed', handleStorage);
     window.addEventListener('storage', handleStorage);
+
+    // Écoute temps réel multi-onglets via BroadcastChannel
+    let bc: BroadcastChannel | null = null;
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        bc = new BroadcastChannel('locagestion_realtime');
+        bc.onmessage = () => updateNotifications();
+      }
+    } catch {}
+
+    // Polling de sécurité haute réactivité (5s) pour synchroniser la cloche sans délai
+    const interval = setInterval(updateNotifications, 5000);
+
     return () => {
       window.removeEventListener('locagestion:leases_updated', handleStorage);
       window.removeEventListener('locagestion:notices_updated', handleStorage);
       window.removeEventListener('locagestion:tenant_notifs_updated', handleStorage);
       window.removeEventListener('locagestion:tenant_notifications_updated', handleStorage);
       window.removeEventListener('locagestion:notifications_updated', handleStorage);
+      window.removeEventListener('locagestion:incidents_updated', handleStorage);
       window.removeEventListener('locagestion:conversations_updated', handleStorage);
       window.removeEventListener('locagestion:security_alerts_updated', handleStorage);
       window.removeEventListener('locagestion:plan_changed', handleStorage);
       window.removeEventListener('locagestion:auth_changed', handleStorage);
       window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+      try {
+        bc?.close();
+      } catch {}
     };
   }, [user]);
 

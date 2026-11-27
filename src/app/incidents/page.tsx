@@ -42,6 +42,7 @@ import {
 } from '@/lib/services/incident-service';
 import { TenantNotificationService } from '@/lib/services/tenant-notification-service';
 import { LeaseService } from '@/lib/services/lease-service';
+import { areEmailsEqual, arePhoneNumbersEqual } from '@/lib/services/auth-service';
 import { LandlordIncidentModal } from '@/components/dashboard/LandlordIncidentModal';
 import { notifySave, notifyUpdate } from '@/lib/notifications/action-notifier';
 import { formatFCFA } from '@/lib/money/format';
@@ -165,13 +166,20 @@ function IncidentsPageContent() {
     const userEmail = (user?.email || '').trim().toLowerCase();
     const userPhone = (user?.phone || '').trim();
     const userName = (user?.name || '').trim().toLowerCase();
+    const userMatricule = (user?.matricule || '').trim().toLowerCase();
+    const userId = (user?.id || '').trim();
 
-    const tenantLease = allLeases.find((l) => {
-      if (userEmail && l.tenantEmail && l.tenantEmail.trim().toLowerCase() === userEmail) return true;
-      if (userPhone && l.tenantPhone && l.tenantPhone.trim() === userPhone) return true;
-      if (userName && l.tenant && userName === l.tenant.trim().toLowerCase()) return true;
+    // Rapprochement intelligent du bail (priorité aux baux actifs)
+    const matchingLeases = allLeases.filter((l) => {
+      if (userEmail && l.tenantEmail && areEmailsEqual(userEmail, l.tenantEmail)) return true;
+      if (userPhone && l.tenantPhone && arePhoneNumbersEqual(userPhone, l.tenantPhone)) return true;
+      if (userId && l.tenantId && userId === l.tenantId) return true;
+      if (userMatricule && l.tenantMatricule && userMatricule === l.tenantMatricule.trim().toLowerCase()) return true;
+      if (userName && l.tenant && (userName === l.tenant.trim().toLowerCase() || userName.split(/\s+/).sort().join(' ') === l.tenant.trim().toLowerCase().split(/\s+/).sort().join(' '))) return true;
       return false;
     });
+
+    const tenantLease = matchingLeases.find((l) => l.status === 'actif' || l.status !== 'resilie') || matchingLeases[0];
     const propertyName = tenantLease?.property || 'Logement principal';
     const unitName = tenantLease?.unit || 'Lot';
 
@@ -185,22 +193,12 @@ function IncidentsPageContent() {
       tenantEmail: user?.email || tenantLease?.tenantEmail || '',
       property: propertyName,
       unit: unitName,
+      leaseId: tenantLease?.id,
+      landlordId: tenantLease?.landlordId,
+      landlordEmail: tenantLease?.landlordEmail,
+      landlordPhone: tenantLease?.landlordPhone,
+      landlordName: tenantLease?.landlordName,
       status: 'en_attente',
-    });
-
-    // Notification instantanée délivrée au bailleur
-    LeaseService.addLandlordNotification({
-      id: `notif-inc-${Date.now()}`,
-      title: `Nouvelle panne signalée par ${user?.name || 'Locataire'}`,
-      message: `Incident (${issueCategory}) déclaré pour le lot ${unitName} (${propertyName}). Urgence: ${issueUrgency}.`,
-      type: 'incident_reported',
-      read: false,
-      createdAt: new Date().toISOString(),
-      timestamp: new Date().toISOString(),
-      time: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
-      tenantName: user?.name || 'Locataire',
-      unit: unitName,
-      property: propertyName,
     });
 
     loadIncidents();
@@ -210,7 +208,7 @@ function IncidentsPageContent() {
     setIssueUrgency('normale');
     setIssuePhotos([]);
 
-    const successMsg = `Panne signalée avec succès (${photoCount} photo${photoCount > 1 ? 's' : ''}) ! Votre bailleur et le gestionnaire ont été alertés.`;
+    const successMsg = `Panne signalée avec succès (${photoCount} photo${photoCount > 1 ? 's' : ''}) ! Votre bailleur et le gestionnaire ont été alertés instantanément.`;
     setToastMessage(`✅ ${successMsg}`);
     notifySave(successMsg, 'Panne signalée avec succès !');
   };

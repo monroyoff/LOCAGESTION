@@ -26,6 +26,7 @@
 18. [Règle d'Or d'Élimination à 100 % des Fuites de Bande Passante & Protection du Quota Vercel](#18-règle-dor-délimination-à-100--des-fuites-de-bande-passante--protection-du-quota-vercel)
 19. [Règle d'Or Anti-Contournement de la Formule Sérénité & Cloisonnement Espèces / Mobile Money](#19-règle-dor-anti-contournement-de-la-formule-sérénité--cloisonnement-espèces--mobile-money)
 20. [Règle d'Or de Gratuité Intégrale pour Locataires & Démarcheurs et Exclusivité des Formules aux Bailleurs](#20-règle-dor-de-gratuité-intégrale-pour-locataires--démarcheurs-et-exclusivité-des-formules-aux-bailleurs)
+21. [Règle d'Or de Transmission Instantanée & Zéro Perte des Signalements de Pannes & Incidents Locatifs](#21-règle-dor-de-transmission-instantanée--zéro-perte-des-signalements-de-pannes--incidents-locatifs)
 
 ---
 
@@ -158,6 +159,11 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
 - **Accès partagé et adapté Bailleur & Locataire :** La route `/incidents` est accessible à la fois aux Bailleurs et aux Locataires (elle est strictement inaccessible aux Démarcheurs).
   - **Vue Bailleur :** Suivi des déclarations des locataires (fuites d'eau, pannes électriques, climatisation, fissures), assignation d'artisans certifiés locaux, devis, suivi des dépenses engagées et clôture contradictoire.
   - **Vue Locataire (Assistance Technique Résident) :** Signalement de nouvelles pannes avec photos justificatives, degré d'urgence, suivi en temps réel du traitement (En attente, Pris en charge, Résolu) et mise en relation directe par WhatsApp/appel avec l'artisan mandaté par le bailleur.
+- **Règle d'Or de Notification & Transmission Instantanée au Bailleur :** Dès soumission d'une panne par un locataire (depuis `/portal` ou `/incidents`), le système résout automatiquement le bail actif, lie formellement le bailleur (`landlordId`, `landlordEmail`, `landlordPhone`, `leaseId`) et délivre instantanément :
+  1. Une notification push locale & serveur dans la **Cloche de notifications du bailleur** (`LeaseService.addLandlordNotification`).
+  2. Un badge d'alerte numérique dynamique dans le **Menu Principal (Sidebar)** sur l'onglet *Pannes & Interventions* (`badgeCount: pendingIncidents`).
+  3. Une diffusion temps réel multi-onglets et multi-appareils via `BroadcastChannel('locagestion_realtime')`, `localStorage` storage events et `/api/sync`.
+  4. L'interdiction formelle de perdre ou filtrer une notification de panne tant qu'elle n'est pas traitée ou résolue par le bailleur.
 
 ### 🌐 8. Portail Annonces & Visites (`/listings`)
 - Moteur de recherche multi-critères : Référence d'annonce (`A-BJ-17635`), Pays, Ville, Quartier, Repère local, Type de bien, Budget max en FCFA, Nombre de chambres.
@@ -681,6 +687,38 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
 ### 3. Exclusivité Stricte des Formules aux Bailleurs (`role: 'bailleur'`)
 - Les formules d'abonnement (Formule Découverte 0 FCFA pour 2 baux, Formule Sérénité 2 % / loyer perçu, Formule Entreprise & Pro 5 000 FCFA / 30 jours) s'adressent **exclusivement aux propriétaires et gestionnaires bailleurs** pour la gestion de leurs baux, l'émission des quittances propriétaires et le recouvrement.
 - Dans l'interface utilisateur, la Sidebar, le Header, les profils et la console Super-Admin (`/admin`), aucun bouton ni statut de surclassement de formule de bailleur ne doit être présenté aux profils Locataires ou Démarcheurs.
+
+---
+
+## 21. Règle d'Or de Transmission Instantanée & Zéro Perte des Signalements de Pannes & Incidents Locatifs
+
+> **RÈGLE CRITIQUE D'EXPÉRIENCE UTILISATEUR & DE SÉCURITÉ TECHNIQUE LOCATIVE**  
+> **Dès qu'un locataire signale une panne ou un incident locatif (fuite d'eau, panne électrique, serrurerie, fissures, climatisation) depuis son espace (`/portal` ou `/incidents`), l'alerte DOIT parvenir IMMÉDIATEMENT et SANS AUCUN DÉLAI au bailleur concerné : à la fois dans sa Cloche de notifications (Header) et sur le badge compteur du Menu Principal (Sidebar).**
+
+### 1. Résolution Automatique & Liaison Déterministe au Bailleur
+- Tout incident créé par `IncidentService.addIncident` effectue une résolution automatique du contrat de bail (`LeaseService.getLeases()`) correspondant au locataire par email, téléphone, matricule ou nom.
+- L'incident (`ReportedIncident`) et la notification (`LandlordNotification`) sont impérativement scellés avec :
+  - `leaseId` : référence du contrat de bail.
+  - `landlordId` : identifiant unique du bailleur.
+  - `landlordEmail` : adresse email officielle du bailleur.
+  - `landlordPhone` : téléphone direct du bailleur.
+  - `landlordName` : identité du bailleur.
+  - `property` & `unit` : désignation exacte du bien et du lot.
+- **Interdiction formelle du filtrage intempestif :** Le moteur de filtrage `LeaseService.getLandlordNotifications` et `IncidentService.getIncidentsForLandlord` doit garantir que le bailleur destinataire, ainsi que l'administrateur de la plateforme, reçoivent la notification dès sa création sans risque d'exclusion.
+
+### 2. Réactivité Instantanée Multi-Canaux (Cloche & Menu Principal)
+- **Cloche de Notification (`Header.tsx`) :**
+  - Écoute active en temps réel des événements `locagestion:incidents_updated` et `locagestion:notifications_updated`.
+  - Canal inter-onglets `BroadcastChannel('locagestion_realtime')` pour une actualisation instantanée sans rechargement de page.
+  - Polling de sécurité réactif toutes les 5 secondes pour rafraîchir le compteur sans jamais laisser de notification en attente.
+- **Menu Principal (`Sidebar.tsx`) :**
+  - Actualisation immédiate du badge ambre `badgeCount: pendingIncidents` sur l'élément *« Pannes & Interventions »* (`/incidents`).
+  - Synchronisation temps réel via `BroadcastChannel`, `storage` events et intervalle régulier de 5 secondes.
+
+### 3. Synchronisation Universelle Web, Mobile & Centralisée (`/api/sync`)
+- Chaque signalement de panne est poussé immédiatement vers le point de synchronisation central `/api/sync` (`POST`) pour persister dans `incidents.json` et `landlord_notifications.json`.
+- Toute session mobile (PWA, TWA Android, navigateur smartphone) synchronise les incidents entrants en temps réel dès la prise de focus ou via l'intervalle actif.
+- Un incident ne peut quitter le compteur d'alerte (`pendingIncidents`) QUE lorsque le bailleur l'a consulté ou que son statut est passé à `'resolu'`.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

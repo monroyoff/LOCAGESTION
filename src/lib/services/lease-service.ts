@@ -167,6 +167,10 @@ export interface LandlordNotification {
   authorPhone?: string;
   authorRole?: string;
   emailSentTo?: string;
+  landlordId?: string;
+  landlordEmail?: string;
+  landlordPhone?: string;
+  landlordName?: string;
   emailDelivered?: {
     to: string;
     from: string;
@@ -1073,7 +1077,23 @@ export const LeaseService = {
           return false;
         }
 
-        // Gestion des baux, préavis, paiements, incidents et propriétés
+        // PANNES & INCIDENTS SIGNALÉS (Priorité et exhaustivité absolue pour le bailleur)
+        if (n.type === 'incident_reported') {
+          if (user.role === 'admin' || areEmailsEqual(user.email, 'admin@locagestion.site')) return true;
+          if (n.landlordEmail && user.email && areEmailsEqual(n.landlordEmail, user.email)) return true;
+          if (n.landlordId && user.id && n.landlordId.toLowerCase() === user.id.toLowerCase()) return true;
+          if (n.landlordPhone && user.phone && arePhoneNumbersEqual(n.landlordPhone, user.phone)) return true;
+          if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
+          if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
+          if (n.tenantName && landlordTenants.has(n.tenantName.toLowerCase().trim())) return true;
+          if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
+          if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+          // Si le bailleur n'a aucun bail explicite et que l'incident n'est pas restreint à un tiers
+          if (landlordLeases.length === 0 && (!n.landlordEmail || areEmailsEqual(n.landlordEmail, 'jobovog@gmail.com') || areEmailsEqual(n.landlordEmail, user.email))) return true;
+          return false;
+        }
+
+        // Gestion des baux, préavis, paiements et propriétés
         if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
         if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
         if (n.tenantName && landlordTenants.has(n.tenantName.toLowerCase().trim())) return true;
@@ -1144,6 +1164,18 @@ export const LeaseService = {
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
       notifyStorageChange();
       window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
+      window.dispatchEvent(new CustomEvent('locagestion:incidents_updated'));
+      window.dispatchEvent(new Event('storage'));
+
+      // Diffusion multi-onglets / multi-fenêtres immédiate via BroadcastChannel
+      try {
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+          const bc = new BroadcastChannel('locagestion_realtime');
+          bc.postMessage({ type: 'locagestion:notifications_updated', notification: enriched });
+          bc.close();
+        }
+      } catch {}
+
       fetch('/api/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
