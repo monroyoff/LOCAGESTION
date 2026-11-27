@@ -30,6 +30,10 @@ import {
   Home,
   Camera,
   MapPin,
+  History,
+  ArrowLeft,
+  Trash2,
+  Archive,
 } from 'lucide-react';
 import { InspectionModal, InspectionData } from '@/components/leases/InspectionModal';
 import { InspectionService } from '@/lib/services/inspection-service';
@@ -80,7 +84,23 @@ export default function LeasesPage() {
 
   // État des baux réactifs gérés par le LeaseService
   const [leases, setLeases] = useState<Lease[]>([]);
-  const [filterTab, setFilterTab] = useState<'all' | 'pending' | 'active' | 'resiliated'>('all');
+  const [filterTab, setFilterTab] = useState<'current' | 'pending' | 'active' | 'historique'>('current');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'historique' || tabParam === 'history' || tabParam === 'resiliated') {
+        setFilterTab('historique');
+      } else if (tabParam === 'pending') {
+        setFilterTab('pending');
+      } else if (tabParam === 'active') {
+        setFilterTab('active');
+      } else if (tabParam === 'current' || tabParam === 'all') {
+        setFilterTab('current');
+      }
+    }
+  }, []);
 
   const refreshLeases = () => {
     setLeases(LeaseService.getLeasesForLandlord(spaceCtx.user));
@@ -134,22 +154,32 @@ export default function LeasesPage() {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Action Bailleur : Résilier définitivement le bail avec motif
+  // Action Bailleur : Résilier définitivement le bail avec motif (déplacé dans l'Historique de bail)
   const handleTerminateLease = (lease: Lease, reason?: string) => {
     LeaseService.terminateLease(lease.id, reason);
     setLastResiliatedId(lease.id);
     refreshLeases();
-    const msg = `Bail ${lease.id} (${lease.tenant}) résilié. Le logement est dissocié.`;
-    showToast(`⚠️ ${msg}`);
-    notifyDelete(msg, 'Bail résilié !');
+    const msg = `Bail ${lease.id} (${lease.tenant}) résilié et déplacé dans l’Historique de bail.`;
+    showToast(`⛔ ${msg}`);
+    notifyDelete(msg, 'Bail déplacé dans l’historique');
   };
 
-  // Action Bailleur : Réactiver le bail sans autres démarches
+  // Action Bailleur : Supprimer / Archiver le bail dans l'historique
+  const handleDeleteLease = (lease: Lease, reason?: string) => {
+    LeaseService.deleteLease(lease.id, reason);
+    setLastResiliatedId(lease.id);
+    refreshLeases();
+    const msg = `Bail ${lease.id} (${lease.tenant}) supprimé des baux en cours et conservé dans l’Historique de bail.`;
+    showToast(`🗑️ ${msg}`);
+    notifyDelete(msg, 'Bail archivé dans l’historique');
+  };
+
+  // Action Bailleur : Réactiver le bail sans autres démarches (replacé dans les baux en cours)
   const handleReactivateLease = (lease: Lease) => {
     LeaseService.reactivateLease(lease.id);
     setLastResiliatedId(null);
     refreshLeases();
-    const msg = `Bail ${lease.id} (${lease.tenant}) réactivé avec succès ! Liaison rétablie sans autres démarches.`;
+    const msg = `Bail ${lease.id} (${lease.tenant}) réactivé avec succès ! Contrat replacé dans les baux en cours.`;
     showToast(`✅ ${msg}`);
     notifySave(msg, 'Bail réactivé avec succès !');
   };
@@ -180,10 +210,15 @@ export default function LeasesPage() {
     showToast(`Contrat ${lease.id} (${lease.tenant}) téléchargé en PDF officiel !`);
   };
 
-  // Filtrage des baux
-  const pendingLeases = leases.filter((l) => l.status === 'en_attente_signature');
-  const activeLeases = leases.filter((l) => l.status === 'actif');
-  const resiliatedLeases = leases.filter((l) => l.status === 'resilie');
+  // Filtrage des baux étanche : séparation stricte entre Baux en cours et Historique de bail
+  const pendingLeases = leases.filter((l) => l.status === 'en_attente_signature' && !l.isArchived);
+  const activeLeases = leases.filter((l) => l.status === 'actif' && !l.isArchived);
+  const resiliatedLeases = leases.filter(
+    (l) => l.status === 'resilie' || l.status === 'supprime' || l.status === 'expire' || Boolean(l.isArchived)
+  );
+  const currentLeases = leases.filter(
+    (l) => (l.status === 'actif' || l.status === 'en_attente_signature') && !l.isArchived
+  );
 
   // Filtres de date & tri pour Baux & Contrats
   const [leaseSearchTerm, setLeaseSearchTerm] = useState<string>('');
@@ -238,10 +273,23 @@ export default function LeasesPage() {
 
   const filteredLeases = leases
     .filter((l) => {
-      // 1. Onglet statut
-      if (filterTab === 'pending' && l.status !== 'en_attente_signature') return false;
-      if (filterTab === 'active' && l.status !== 'actif') return false;
-      if (filterTab === 'resiliated' && l.status !== 'resilie') return false;
+      // 1. Onglet statut avec séparation étanche vers l'Historique de bail
+      if (filterTab === 'current') {
+        // Vue Baux en cours : seuls les baux actifs ou en attente sont affichés.
+        // Les baux résiliés ou supprimés sont déplacés dans l'historique !
+        if (l.status === 'resilie' || l.status === 'supprime' || l.status === 'expire' || Boolean(l.isArchived)) {
+          return false;
+        }
+      } else if (filterTab === 'pending') {
+        if (l.status !== 'en_attente_signature' || Boolean(l.isArchived)) return false;
+      } else if (filterTab === 'active') {
+        if (l.status !== 'actif' || Boolean(l.isArchived)) return false;
+      } else if (filterTab === 'historique') {
+        // Vue Historique de bail : Tous les contrats résiliés, supprimés, expirés ou archivés (anciens comme nouveaux)
+        if (l.status !== 'resilie' && l.status !== 'supprime' && l.status !== 'expire' && !l.isArchived) {
+          return false;
+        }
+      }
 
       // 2. Recherche textuelle
       if (leaseSearchTerm.trim()) {
@@ -330,28 +378,36 @@ export default function LeasesPage() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-                  Baux & Contrats de Location
+                  Baux &amp; Contrats de Location
                 </h1>
                 <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-brand-50 text-brand-600 border border-brand-200">
-                  {leases.length} Baux Répertoriés
+                  {currentLeases.length} Baux en cours
                 </span>
                 {pendingLeases.length > 0 && (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-50 text-amber-700 border border-amber-300 flex items-center gap-1 animate-pulse">
                     <Clock className="w-3 h-3" />
-                    <span>{pendingLeases.length} En attente de signature</span>
+                    <span>{pendingLeases.length} En attente</span>
                   </span>
                 )}
                 {resiliatedLeases.length > 0 && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center gap-1">
-                    <Ban className="w-3 h-3 text-rose-500" />
-                    <span>{resiliatedLeases.length} Résilié{resiliatedLeases.length > 1 ? 's' : ''}</span>
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterTab('historique');
+                      if (typeof window !== 'undefined') window.history.replaceState(null, '', '/leases?tab=historique');
+                    }}
+                    className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 flex items-center gap-1 transition-all cursor-pointer"
+                    title="Voir l'historique des contrats résiliés et supprimés"
+                  >
+                    <History className="w-3 h-3 text-slate-600" />
+                    <span>{resiliatedLeases.length} dans l'Historique</span>
+                  </button>
                 )}
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Génération conforme OHADA / UEMOA & CEMAC, transmission directe aux comptes locataires et
+                Génération conforme OHADA / UEMOA &amp; CEMAC, transmission directe aux comptes locataires et
                 contresignature électronique tactile.
               </p>
 
@@ -412,24 +468,89 @@ export default function LeasesPage() {
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                const planCheck = PlanService.canLandlordSignNewLease(spaceCtx.user);
-                if (!planCheck.allowed) {
-                  setIsUpgradeModalOpen(true);
-                  return;
-                }
-                router.push('/leases/new');
-              }}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all self-start sm:self-auto cursor-pointer"
-            >
-              <Plus className="w-4 h-4 stroke-[3]" />
-              <span>+ Rédiger un nouveau bail</span>
-            </button>
+            <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-auto">
+              {/* Bouton Historique de bail */}
+              <button
+                type="button"
+                onClick={() => {
+                  const nextTab = filterTab === 'historique' ? 'current' : 'historique';
+                  setFilterTab(nextTab);
+                  if (typeof window !== 'undefined') {
+                    window.history.replaceState(null, '', nextTab === 'historique' ? '/leases?tab=historique' : '/leases');
+                  }
+                }}
+                className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer border active:scale-95 ${
+                  filterTab === 'historique'
+                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-xs'
+                }`}
+                title="Consulter l'historique des contrats résiliés et supprimés"
+              >
+                <History className={`w-4 h-4 ${filterTab === 'historique' ? 'text-amber-400' : 'text-slate-500'}`} />
+                <span>Historique de bail</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                  filterTab === 'historique'
+                    ? 'bg-white/20 text-white'
+                    : 'bg-slate-100 text-slate-700 border border-slate-200'
+                }`}>
+                  {resiliatedLeases.length}
+                </span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const planCheck = PlanService.canLandlordSignNewLease(spaceCtx.user);
+                  if (!planCheck.allowed) {
+                    setIsUpgradeModalOpen(true);
+                    return;
+                  }
+                  router.push('/leases/new');
+                }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white text-xs font-extrabold shadow-pink-glow active:scale-95 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>+ Rédiger un nouveau bail</span>
+              </button>
+            </div>
           </div>
 
-          {/* Bannière de notification si baux en attente */}
-          {pendingLeases.length > 0 && (
+          {/* Bannière Registre Historique de bail si onglet historique actif */}
+          {filterTab === 'historique' && (
+            <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-950 text-white border border-slate-700/80 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in duration-200">
+              <div className="flex items-start gap-3.5">
+                <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 text-indigo-300 flex items-center justify-center shrink-0 border border-indigo-500/30">
+                  <History className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-black text-white">
+                      Registre d'Archives &amp; Historique de bail ({resiliatedLeases.length})
+                    </h3>
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-300 border border-indigo-500/40">
+                      Déplacement Automatique &amp; Valeur Légale
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                    Tous les contrats résiliés ou supprimés (anciens comme nouveaux à venir) sont déplacés et conservés ici en valeur probante et opposable avec leurs empreintes légales SHA-256, quittances et états des lieux. Vous pouvez également réactiver un bail en 1 clic pour le replacer instantanément dans vos baux en cours.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setFilterTab('current');
+                  if (typeof window !== 'undefined') window.history.replaceState(null, '', '/leases');
+                }}
+                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 flex items-center gap-1.5 self-start sm:self-auto cursor-pointer transition-all shrink-0"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>← Voir les baux en cours</span>
+              </button>
+            </div>
+          )}
+
+          {/* Bannière de notification si baux en attente (uniquement si dans la vue en cours) */}
+          {filterTab !== 'historique' && pendingLeases.length > 0 && (
             <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-amber-50 via-amber-50/80 to-amber-100/60 border border-amber-200/90 shadow-soft flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3.5">
                 <div className="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0 border border-amber-500/30">
@@ -456,52 +577,61 @@ export default function LeasesPage() {
             </div>
           )}
 
-          {/* Assistant 5 Étapes Info Banner */}
-          <div className="p-5 sm:p-6 bg-white rounded-3xl border border-slate-200/80 shadow-soft">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider block">
-                Workflow Sécurisé de Rédaction & Signature UEMOA & CEMAC
-              </span>
-              <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
-                Valeur légale certifiée conforme droit OHADA
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-              {[
-                { step: '1', title: 'Sélection du Lot', desc: 'Résidence, type, loyer' },
-                { step: '2', title: 'Compte Locataire', desc: 'Compte existant ou nouveau' },
-                { step: '3', title: 'Conditions FCFA', desc: 'Caution, avance, charges' },
-                { step: '4', title: 'Clauses UEMOA & CEMAC', desc: 'Clauses d’habitation' },
-                { step: '5', title: 'Transmission & Sceau', desc: 'Signature bailleur & locataire' },
-              ].map((s) => (
-                <div key={s.step} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/60">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="w-5 h-5 rounded-full bg-slate-900 text-white font-black text-[10px] flex items-center justify-center">
-                      {s.step}
-                    </span>
-                    <span className="font-extrabold text-xs text-slate-900">{s.title}</span>
+          {/* Assistant 5 Étapes Info Banner (uniquement si baux en cours) */}
+          {filterTab !== 'historique' && (
+            <div className="p-5 sm:p-6 bg-white rounded-3xl border border-slate-200/80 shadow-soft">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-[10px] font-bold text-brand-600 uppercase tracking-wider block">
+                  Workflow Sécurisé de Rédaction &amp; Signature UEMOA &amp; CEMAC
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                  Valeur légale certifiée conforme droit OHADA
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {[
+                  { step: '1', title: 'Sélection du Lot', desc: 'Résidence, type, loyer' },
+                  { step: '2', title: 'Compte Locataire', desc: 'Compte existant ou nouveau' },
+                  { step: '3', title: 'Conditions FCFA', desc: 'Caution, avance, charges' },
+                  { step: '4', title: 'Clauses UEMOA & CEMAC', desc: 'Clauses d’habitation' },
+                  { step: '5', title: 'Transmission & Sceau', desc: 'Signature bailleur & locataire' },
+                ].map((s) => (
+                  <div key={s.step} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/60">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="w-5 h-5 rounded-full bg-slate-900 text-white font-black text-[10px] flex items-center justify-center">
+                        {s.step}
+                      </span>
+                      <span className="font-extrabold text-xs text-slate-900">{s.title}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 block">{s.desc}</span>
                   </div>
-                  <span className="text-[10px] text-slate-400 block">{s.desc}</span>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Onglets de filtrage */}
           <div className="flex items-center gap-2 border-b border-slate-200 pb-2 overflow-x-auto">
             <button
               type="button"
-              onClick={() => setFilterTab('all')}
-              className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${filterTab === 'all'
+              onClick={() => {
+                setFilterTab('current');
+                if (typeof window !== 'undefined') window.history.replaceState(null, '', '/leases');
+              }}
+              className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${filterTab === 'current'
                 ? 'bg-slate-900 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
                 }`}
             >
-              Tous les baux ({leases.length})
+              <FileText className="w-3.5 h-3.5" />
+              <span>Baux en cours ({currentLeases.length})</span>
             </button>
             <button
               type="button"
-              onClick={() => setFilterTab('pending')}
+              onClick={() => {
+                setFilterTab('pending');
+                if (typeof window !== 'undefined') window.history.replaceState(null, '', '/leases?tab=pending');
+              }}
               className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${filterTab === 'pending'
                 ? 'bg-amber-600 text-white shadow-sm'
                 : 'text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200'
@@ -512,25 +642,31 @@ export default function LeasesPage() {
             </button>
             <button
               type="button"
-              onClick={() => setFilterTab('active')}
+              onClick={() => {
+                setFilterTab('active');
+                if (typeof window !== 'undefined') window.history.replaceState(null, '', '/leases?tab=active');
+              }}
               className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${filterTab === 'active'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
                 }`}
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
-              <span>Baux contresignés & actifs ({activeLeases.length})</span>
+              <span>Baux contresignés &amp; actifs ({activeLeases.length})</span>
             </button>
             <button
               type="button"
-              onClick={() => setFilterTab('resiliated')}
-              className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${filterTab === 'resiliated'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200'
+              onClick={() => {
+                setFilterTab('historique');
+                if (typeof window !== 'undefined') window.history.replaceState(null, '', '/leases?tab=historique');
+              }}
+              className={`py-2 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${filterTab === 'historique'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-indigo-800 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200'
                 }`}
             >
-              <Ban className="w-3.5 h-3.5" />
-              <span>Baux résiliés ({resiliatedLeases.length})</span>
+              <History className="w-3.5 h-3.5" />
+              <span>📜 Historique de bail ({resiliatedLeases.length})</span>
             </button>
           </div>
 
@@ -654,40 +790,51 @@ export default function LeasesPage() {
             ) : filteredLeases.length === 0 ? (
               <div className="p-12 text-center bg-white rounded-3xl border border-slate-200/80 shadow-soft space-y-3">
                 <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
-                  <FileText className="w-7 h-7" />
+                  {filterTab === 'historique' ? (
+                    <History className="w-7 h-7 text-indigo-500" />
+                  ) : (
+                    <FileText className="w-7 h-7 text-slate-400" />
+                  )}
                 </div>
                 <h3 className="text-base font-black text-slate-900">
-                  Aucun contrat de bail trouvé
+                  {filterTab === 'historique'
+                    ? "Aucun contrat dans l'Historique de bail"
+                    : "Aucun contrat de bail trouvé"}
                 </h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  Aucun bail ne correspond aux critères de date ou de recherche sélectionnés. Modifiez vos filtres ou réinitialisez la sélection.
+                  {filterTab === 'historique'
+                    ? "Tous vos contrats résiliés, clôturés ou supprimés apparaîtront ici. Vos baux actifs et en attente s'affichent dans la vue Baux en cours."
+                    : "Aucun bail ne correspond aux critères de date ou de recherche sélectionnés. Modifiez vos filtres ou réinitialisez la sélection."}
                 </p>
                 <button
                   type="button"
                   onClick={() => {
-                    setFilterTab('all');
+                    setFilterTab('current');
                     setLeaseDateFilter('all');
                     setLeaseSelectedYear('all');
                     setLeaseSearchTerm('');
+                    if (typeof window !== 'undefined') window.history.replaceState(null, '', '/leases');
                   }}
                   className="mt-2 px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  Voir tous les baux
+                  Voir les baux en cours
                 </button>
               </div>
             ) : (
               filteredLeases.map((lease) => {
                 const isPending = lease.status === 'en_attente_signature';
                 const isResiliated = lease.status === 'resilie';
-                const isActive = lease.status === 'actif';
+                const isDeleted = lease.status === 'supprime' || Boolean(lease.isArchived && !isResiliated);
+                const isHistorical = isResiliated || isDeleted;
+                const isActive = lease.status === 'actif' && !isHistorical;
 
                 return (
                   <div
                     key={lease.id}
                     className={`p-5 rounded-3xl border transition-all ${isPending
                       ? 'bg-gradient-to-r from-amber-50/70 via-white to-amber-50/40 border-amber-300 shadow-md ring-1 ring-amber-300/60'
-                      : isResiliated
-                        ? 'bg-gradient-to-r from-rose-50/40 via-white to-slate-50 border-rose-300/80 shadow-soft'
+                      : isHistorical
+                        ? 'bg-gradient-to-r from-slate-50/60 via-white to-slate-100/40 border-slate-300/80 shadow-soft'
                         : 'bg-white border-slate-200/80 shadow-soft hover:border-slate-300'
                       }`}
                   >
@@ -697,13 +844,17 @@ export default function LeasesPage() {
                         <div
                           className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${isPending
                             ? 'bg-amber-100 text-amber-700 border border-amber-200'
-                            : isResiliated
-                              ? 'bg-rose-100 text-rose-700 border border-rose-200'
+                            : isHistorical
+                              ? 'bg-slate-200 text-slate-700 border border-slate-300'
                               : 'bg-brand-50 text-brand-600 border border-brand-100'
                             }`}
                         >
-                          {isResiliated ? (
-                            <Ban className="w-6 h-6 text-rose-600" />
+                          {isHistorical ? (
+                            isDeleted ? (
+                              <Trash2 className="w-6 h-6 text-slate-600" />
+                            ) : (
+                              <Ban className="w-6 h-6 text-rose-600" />
+                            )
                           ) : (
                             <FileText className="w-6 h-6" />
                           )}
@@ -733,15 +884,20 @@ export default function LeasesPage() {
                                 <Clock className="w-3 h-3" />
                                 <span>En attente de signature</span>
                               </span>
+                            ) : isDeleted ? (
+                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 border border-slate-700 flex items-center gap-1">
+                                <Trash2 className="w-3 h-3 text-slate-400" />
+                                <span>Bail Supprimé • Archivé</span>
+                              </span>
                             ) : isResiliated ? (
                               <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
                                 <Ban className="w-3 h-3 text-rose-600" />
-                                <span>Bail Résilié • Logement dissocié</span>
+                                <span>Bail Résilié • Archivé</span>
                               </span>
                             ) : (
                               <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                <span>Contresigné & Actif</span>
+                                <span>Contresigné &amp; Actif</span>
                               </span>
                             )}
 
@@ -787,6 +943,14 @@ export default function LeasesPage() {
                                 </span>
                               </>
                             )}
+                            {isDeleted && lease.deletedAt && (
+                              <>
+                                <span>•</span>
+                                <span className="text-slate-600 font-bold">
+                                  Supprimé le {lease.deletedAt}
+                                </span>
+                              </>
+                            )}
                             {lease.reactivatedAt && (
                               <>
                                 <span>•</span>
@@ -797,6 +961,16 @@ export default function LeasesPage() {
                             )}
                           </div>
 
+                          {/* Motif d'archivage ou résiliation */}
+                          {(lease.resiliationReason || lease.deleteReason) && (
+                            <div className="p-2 rounded-xl bg-rose-50/80 border border-rose-200/80 text-[11px] text-rose-900 flex items-center gap-2 mt-1">
+                              <Ban className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                              <span>
+                                <strong>Motif d'archivage :</strong> {lease.deleteReason || lease.resiliationReason}
+                              </span>
+                            </div>
+                          )}
+
                           {/* Signatures status */}
                           <div className="pt-2 flex flex-wrap items-center gap-2">
                             <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 flex items-center gap-1">
@@ -804,10 +978,10 @@ export default function LeasesPage() {
                               <span>Signé par le bailleur ({lease.landlordSignature?.signedBy || spaceCtx.user?.name || 'Bailleur'})</span>
                             </span>
 
-                            {isResiliated ? (
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-50 text-rose-800 border border-rose-200 flex items-center gap-1">
-                                <Ban className="w-3 h-3 text-rose-600" />
-                                <span>Contrat résilié — Clôturé juridiquement</span>
+                            {isHistorical ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 border border-slate-300 flex items-center gap-1">
+                                <Archive className="w-3 h-3 text-slate-600" />
+                                <span>Contrat archivé — Conservé à valeur probante</span>
                               </span>
                             ) : isPending ? (
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1">
@@ -868,26 +1042,26 @@ export default function LeasesPage() {
                             </>
                           ) : null}
 
-                          {/* Bouton RÉACTIVER LE BAIL si résilié (1 clic sans autres démarches) */}
-                          {isResiliated && (
+                          {/* Bouton RÉACTIVER LE BAIL si dans l'historique (résilié ou supprimé) : 1 clic sans autres démarches */}
+                          {isHistorical && (
                             <button
                               type="button"
                               onClick={() => handleReactivateLease(lease)}
                               className="py-2 px-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                              title="Réactiver le bail sans autres démarches"
+                              title="Replacer ce contrat dans vos baux en cours sans autres démarches"
                             >
                               <RotateCcw className="w-3.5 h-3.5" />
                               <span>Réactiver le bail</span>
                             </button>
                           )}
 
-                          {/* Bouton RÉSILIER LE BAIL si actif */}
+                          {/* Bouton RÉSILIER LE BAIL si actif (déplace vers l'historique) */}
                           {isActive && (
                             <button
                               type="button"
                               onClick={() => setLeaseToTerminate(lease)}
                               className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                              title="Résilier ce contrat de bail et dissocier le logement"
+                              title="Résilier ce contrat de bail et le déplacer dans l'Historique de bail"
                             >
                               <Ban className="w-3.5 h-3.5 text-rose-600" />
                               <span>Résilier le bail</span>
@@ -900,7 +1074,7 @@ export default function LeasesPage() {
                               type="button"
                               onClick={() => setLeaseToTerminate(lease)}
                               className="py-2 px-3 rounded-xl bg-slate-100 hover:bg-rose-50 text-slate-600 hover:text-rose-700 text-xs font-bold border border-slate-200 hover:border-rose-200 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
-                              title="Annuler / Résilier ce bail en attente"
+                              title="Annuler et déplacer dans l'Historique de bail"
                             >
                               <Ban className="w-3.5 h-3.5" />
                               <span>Résilier</span>
@@ -918,7 +1092,7 @@ export default function LeasesPage() {
                             title="Gérer l'état des lieux & photos pour ce bail"
                           >
                             <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>État des lieux & photos</span>
+                            <span>État des lieux &amp; photos</span>
                           </button>
 
                           <button

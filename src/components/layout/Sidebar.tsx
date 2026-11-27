@@ -33,6 +33,7 @@ import {
   Globe,
   Zap,
   CheckCircle2,
+  History,
 } from 'lucide-react';
 import { UserSpace, UserSubscriptionDetails } from '@/lib/types';
 import { PlanService } from '@/lib/services/plan-service';
@@ -136,12 +137,14 @@ export function Sidebar({
 
   // Détection des onglets et états actifs
   const [currentPortalTab, setCurrentPortalTab] = useState<string | null>(null);
+  const [currentLeaseTab, setCurrentLeaseTab] = useState<string | null>(null);
 
   // Synchronisation dynamique et réactive de tous les compteurs de badges universels
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
   const [pendingIncidents, setPendingIncidents] = useState(0);
   const [pendingNoticesCount, setPendingNoticesCount] = useState(0);
   const [pendingLeasesCount, setPendingLeasesCount] = useState(0);
+  const [resiliatedLeasesCount, setResiliatedLeasesCount] = useState(0);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
   const [pendingVisitsCount, setPendingVisitsCount] = useState(0);
   const [myListingsCount, setMyListingsCount] = useState(0);
@@ -348,6 +351,8 @@ export function Sidebar({
       const params = new URLSearchParams(window.location.search);
       const hash = window.location.hash.replace('#', '');
       const livePortalTab = activePortalTab || params.get('tab') || hash || 'accueil';
+      const liveLeaseTab = params.get('tab');
+      setCurrentLeaseTab(liveLeaseTab);
 
       const isOnMessages = pathname.startsWith('/messages');
       const isOnIncidents = pathname.startsWith('/incidents');
@@ -475,6 +480,11 @@ export function Sidebar({
           const seenLeases = getSeenSetForSection('leases');
           if (isLandlord || context.user?.role === 'admin') {
             const landlordLeases = LeaseService.getLeasesForLandlord(context.user);
+            const resCount = landlordLeases.filter(
+              (l) => l.status === 'resilie' || l.status === 'supprime' || l.status === 'expire' || Boolean(l.isArchived)
+            ).length;
+            setResiliatedLeasesCount(resCount);
+
             const waitingForTenant = landlordLeases.filter(
               (l) =>
                 (l.status === 'en_attente_signature' || (!l.signedByTenant && !l.tenantSignature?.date)) &&
@@ -625,6 +635,7 @@ export function Sidebar({
         const hash = window.location.hash.replace('#', '');
         const tab = params.get('tab') || hash || 'accueil';
         setCurrentPortalTab(tab);
+        setCurrentLeaseTab(params.get('tab'));
       };
       readTab();
       window.addEventListener('popstate', readTab);
@@ -666,6 +677,9 @@ export function Sidebar({
   // ============================================================================
   // NAVIGATION BAILLEUR (Gestion du patrimoine, encaissements, locataires, baux)
   // ============================================================================
+  const isLeasesHistoryActive =
+    pathname.startsWith('/leases') && (currentLeaseTab === 'historique' || currentLeaseTab === 'history');
+
   const landlordItems: NavItem[] = [
     {
       name: 'Tableau de bord',
@@ -683,10 +697,18 @@ export function Sidebar({
       name: 'Baux & Contrats',
       href: '/leases',
       icon: FileText,
-      active: pathname.startsWith('/leases'),
+      active: pathname.startsWith('/leases') && !isLeasesHistoryActive,
       badgeCount: pendingLeasesCount > 0 ? pendingLeasesCount : undefined,
       badgeColor: 'bg-blue-600',
       sectionKey: 'leases',
+    },
+    {
+      name: 'Historique de bail',
+      href: '/leases?tab=historique',
+      icon: History,
+      active: isLeasesHistoryActive,
+      badge: resiliatedLeasesCount > 0 ? `${resiliatedLeasesCount}` : undefined,
+      badgeColor: 'bg-slate-700',
     },
     {
       name: 'Locataires',

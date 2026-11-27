@@ -11,6 +11,7 @@ export type LeaseStatus =
   | 'en_attente_signature'
   | 'resilie'
   | 'expire'
+  | 'supprime'
   | 'brouillon';
 
 export interface Lease {
@@ -92,6 +93,9 @@ export interface Lease {
   resiliatedAt?: string;
   reactivatedAt?: string;
   resiliationReason?: string;
+  deletedAt?: string;
+  deleteReason?: string;
+  isArchived?: boolean;
 }
 
 export interface RegisteredTenant {
@@ -840,7 +844,7 @@ export const LeaseService = {
     return { lease: updatedLease, notification };
   },
 
-  // Action : Résilier définitivement le bail
+  // Action : Résilier définitivement le bail (déplacé dans l'Historique de bail)
   terminateLease(leaseId: string, reason?: string): Lease | undefined {
     const leases = this.getLeases();
     const leaseIndex = leases.findIndex((l) => l.id === leaseId);
@@ -858,6 +862,7 @@ export const LeaseService = {
     const updatedLease: Lease = {
       ...targetLease,
       status: 'resilie',
+      isArchived: true,
       resiliatedAt: nowFormatted,
       resiliationReason: reason || 'Résiliation à la demande du bailleur',
     };
@@ -871,8 +876,8 @@ export const LeaseService = {
     // Notification de résiliation pour le bailleur
     this.addLandlordNotification({
       id: `notif-${Date.now()}`,
-      title: 'Bail résilié',
-      message: `Le contrat ${leaseId} (${updatedLease.unit} - ${updatedLease.tenant}) a été résilié. Le logement est désormais dissocié.`,
+      title: 'Bail résilié et archivé',
+      message: `Le contrat ${leaseId} (${updatedLease.unit} - ${updatedLease.tenant}) a été résilié et déplacé dans votre Historique de bail. Le logement est désormais dissocié.`,
       createdAt: nowIso,
       time: timeStr,
       timestamp: nowFormatted,
@@ -896,7 +901,54 @@ export const LeaseService = {
     return updatedLease;
   },
 
-  // Action : Réactiver le bail sans autres démarches
+  // Action : Supprimer / Déplacer un bail dans l'historique d'archives
+  deleteLease(leaseId: string, reason?: string): Lease | undefined {
+    const leases = this.getLeases();
+    const leaseIndex = leases.findIndex((l) => l.id === leaseId);
+    if (leaseIndex < 0) return undefined;
+
+    const nowFormatted = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const targetLease = leases[leaseIndex];
+    const updatedLease: Lease = {
+      ...targetLease,
+      status: 'supprime',
+      isArchived: true,
+      deletedAt: nowFormatted,
+      deleteReason: reason || 'Supprimé par le bailleur et conservé dans l’historique',
+    };
+
+    leases[leaseIndex] = updatedLease;
+    this.saveAllLeases(leases);
+
+    const nowIso = new Date().toISOString();
+    const timeStr = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+    this.addLandlordNotification({
+      id: `notif-${Date.now()}`,
+      title: 'Bail déplacé dans l’historique',
+      message: `Le contrat ${leaseId} (${updatedLease.unit} - ${updatedLease.tenant}) a été supprimé des baux en cours et conservé dans votre Historique de bail.`,
+      createdAt: nowIso,
+      time: timeStr,
+      timestamp: nowFormatted,
+      type: 'lease_terminated',
+      read: false,
+      leaseId: leaseId,
+      tenantName: updatedLease.tenant,
+      unit: updatedLease.unit,
+      property: updatedLease.property,
+    });
+
+    return updatedLease;
+  },
+
+  // Action : Réactiver le bail sans autres démarches (replacer dans les baux en cours)
   reactivateLease(leaseId: string): Lease | undefined {
     const leases = this.getLeases();
     const leaseIndex = leases.findIndex((l) => l.id === leaseId);
@@ -914,8 +966,11 @@ export const LeaseService = {
     const updatedLease: Lease = {
       ...targetLease,
       status: 'actif',
+      isArchived: false,
       reactivatedAt: nowFormatted,
       resiliationReason: undefined,
+      deleteReason: undefined,
+      deletedAt: undefined,
     };
 
     leases[leaseIndex] = updatedLease;

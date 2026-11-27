@@ -28,6 +28,7 @@
 20. [Règle d'Or de Gratuité Intégrale pour Locataires & Démarcheurs et Exclusivité des Formules aux Bailleurs](#20-règle-dor-de-gratuité-intégrale-pour-locataires--démarcheurs-et-exclusivité-des-formules-aux-bailleurs)
 21. [Règle d'Or de Transmission Instantanée & Zéro Perte des Signalements de Pannes & Incidents Locatifs](#21-règle-dor-de-transmission-instantanée--zéro-perte-des-signalements-de-pannes--incidents-locatifs)
 22. [Règle d'Or de Notification & Badge Instantanés lors de la Contresignature des Baux](#22-règle-dor-de-notification--badge-instantanés-lors-de-la-contresignature-des-baux)
+23. [Règle d'Or de Gestion de l'Historique des Baux & Déplacement Automatique des Contrats Résiliés ou Supprimés](#23-règle-dor-de-gestion-de-lhistorique-des-baux--déplacement-automatique-des-contrats-résiliés-ou-supprimés)
 
 ---
 
@@ -762,6 +763,38 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
   - Un événement CustomEvent local `locagestion:leases_updated` et `locagestion:notifications_updated`.
   - Un message `BroadcastChannel('locagestion_realtime')` avec `{ type: 'locagestion:lease_signed', leaseId }` pour mettre à jour instantanément tous les onglets ouverts du navigateur sans rechargement.
   - Une synchronisation `/api/sync` vers le serveur pour persister les états entre le Web et le Mobile.
+
+---
+
+## 23. Règle d'Or de Gestion de l'Historique des Baux & Déplacement Automatique des Contrats Résiliés ou Supprimés
+
+> **RÈGLE CRITIQUE D'ORGANISATION JURIDIQUE & D'ARCHIVAGE DU PATRIMOINE**  
+> **Dans l'Espace Bailleur, tous les contrats de bail résiliés (`status: 'resilie'`), supprimés (`status: 'supprime'`), expirés (`status: 'expire'`) ou archivés (`isArchived: true`) — qu'il s'agisse des contrats antérieurs déjà existants (ex: `BAIL-2026-422`) ou de tous les contrats futurs résiliés/supprimés — DOIVENT ÊTRE AUTOMATIQUEMENT ET DÉFINITIVEMENT DÉPLACÉS DANS L'ESPACE DÉDIÉ « HISTORIQUE DE BAIL ».**  
+> **La vue principale par défaut des « Baux & Contrats » (`/leases`) est strictement réservée aux baux vivants (en attente de signature ou contresignés et actifs), éliminant tout encombrement visuel des anciens dossiers clos.**
+
+### 1. Séparation Étanche des Vues dans `/leases`
+- **Vue par défaut (`filterTab = 'current'`) — « Baux en cours » :**
+  - Affiche exclusivement les contrats en cours de cycle de vie : `status === 'en_attente_signature'` et `status === 'actif'`.
+  - Exclut formellement tout bail dont le statut est `'resilie'`, `'supprime'`, `'expire'` ou ayant `isArchived: true`.
+- **Vue dédiée (`filterTab = 'historique'` ou `/leases?tab=historique`) — « 📜 Historique de bail » :**
+  - Regroupe l'intégralité des contrats résiliés, supprimés ou expirés.
+  - Affiche un bandeau d'en-tête officiel certifiant l'archivage juridique permanent, la force probante et l'intégrité cryptographique SHA-256 des baux scellés.
+  - Conserve l'accès intégral à toutes les pièces : Quittances de loyer émises, États des lieux contradictoires, Clichés horodatés et Contrats PDF signés.
+
+### 2. Points d'Entrée Ergonomiques & Clairs
+- **Bouton Direct Header :** Un bouton distinctif **« 📜 Historique de bail »** (avec badge numérique dynamique indiquant le nombre de baux archivés) est présent en haut de page dans `/leases`.
+- **Onglet dédié dans la barre de filtre :** L'onglet *📜 Historique de bail* est accessible aux côtés des filtres *Baux en cours*, *En attente de signature* et *Baux contresignés & actifs*.
+- **Menu Principal (Sidebar) :** Un lien de navigation dédié **« Historique de bail »** (`/leases?tab=historique`) est intégré directement dans la section Bailleur avec icône d'historique et badge numérique synchronisé en temps réel.
+
+### 3. Cycle de Vie, Déplacement Instantané & Réactivation en 1 Clic
+- **Déplacement automatique à la résiliation :**
+  - Lors de la résiliation par le bailleur (ou suite à un congé/préavis locataire), le bail est marqué `status: 'resilie'`, `isArchived: true` avec horodatage `resiliatedAt` et motif.
+  - Il disparaît immédiatement de la liste des baux en cours et se positionne instantanément dans *Historique de bail*.
+- **Déplacement automatique à la suppression :**
+  - La suppression d'un contrat n'entraîne aucune perte de données juridiques : le bail est marqué `status: 'supprime'`, `isArchived: true` avec horodatage `deletedAt` et motif de clôture.
+- **Réactivation en 1 Clic :**
+  - Tout contrat présent dans l'historique dispose d'un bouton d'action **« Réactiver le bail »**.
+  - En un seul clic, le bail est restauré au statut `'actif'` (ou `'en_attente_signature'` si le locataire n'avait pas encore signé), `isArchived` est réinitialisé à `false`, et le bail réintègre instantanément la liste des baux vivants sans perte d'historique.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

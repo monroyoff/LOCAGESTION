@@ -74,7 +74,7 @@ export function ConfirmTerminateLeaseModal({
                 Êtes-vous sûr de vouloir résilier ce bail ?
               </h3>
               <p className="text-xs text-rose-700 font-bold mt-0.5">
-                Clôture officielle et dissociation du logement
+                Clôture officielle et déplacement dans l'Historique de bail
               </p>
             </div>
           </div>
@@ -150,15 +150,15 @@ export function ConfirmTerminateLeaseModal({
             </select>
           </div>
 
-          {/* Note de rassurance anti-fausse manœuvre */}
+          {/* Note de rassurance anti-fausse manœuvre et archivage */}
           <div className="p-3.5 rounded-2xl bg-amber-50/70 border border-amber-200/80 flex items-start gap-2.5 text-xs text-amber-900">
             <RotateCcw className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <div className="space-y-0.5">
               <span className="font-black block">
-                Droit à l'erreur garanti :
+                Déplacement dans l'Historique de bail & réactivation en 1 clic :
               </span>
               <p className="text-[11px] text-amber-800 leading-relaxed">
-                Si vous confirmez par mégarde, vous pourrez réactiver ce contrat à tout moment en <strong>1 seul clic</strong> sans avoir à recommencer de démarches ni faire re-signer le locataire.
+                Ce contrat sera déplacé vers votre onglet <strong>📜 Historique de bail</strong> où il restera conservé avec ses quittances, photos et signatures certifiées. Vous pourrez le réactiver à tout moment en <strong>1 seul clic</strong> pour le restaurer parmi vos baux en cours.
               </p>
             </div>
           </div>
