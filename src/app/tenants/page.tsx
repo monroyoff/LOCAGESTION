@@ -422,25 +422,33 @@ export default function TenantsPage() {
         (listing) =>
           (l.listingId && listing.id === l.listingId) ||
           (l.listingReference && (listing.referenceCode === l.listingReference || listing.id === l.listingReference)) ||
-          (l.property && listing.title.toLowerCase().includes(l.property.toLowerCase()))
+          (l.property &&
+            listing.title.toLowerCase().trim() === l.property.toLowerCase().trim() &&
+            (!l.propertyCity || listing.city.toLowerCase() === l.propertyCity.toLowerCase()) &&
+            (!l.propertyDistrict || listing.district.toLowerCase() === l.propertyDistrict.toLowerCase()))
       );
 
       const resolvedDistrict =
         l.propertyDistrict ||
-        matchedListing?.district ||
+        (matchedListing && (!l.propertyCity || matchedListing.city.toLowerCase() === (l.propertyCity || '').toLowerCase()) ? matchedListing.district : '') ||
         (isJojo ? 'Haie Vive' : (l.tenantAddress && l.tenantAddress.includes('Haie Vive') ? 'Haie Vive' : ''));
 
       const resolvedCity =
         l.propertyCity ||
-        matchedListing?.city ||
+        (matchedListing && (!l.propertyDistrict || matchedListing.district.toLowerCase() === resolvedDistrict.toLowerCase()) ? matchedListing.city : '') ||
         (l.tenantAddress && l.tenantAddress.includes('Cotonou') ? 'Cotonou' : 'Cotonou');
 
       const resolvedCountry = l.country || matchedListing?.country || 'Bénin';
 
+      // Le repère local ne doit impérativement provenir de l'annonce que si celle-ci est dans la même ville
+      const isListingInSameArea =
+        matchedListing &&
+        (!resolvedCity || !matchedListing.city || matchedListing.city.toLowerCase() === resolvedCity.toLowerCase());
+
       const resolvedLandmark =
         l.propertyLandmark ||
-        matchedListing?.landmark ||
-        (isJojo ? 'Proche Pavé Haie Vive' : undefined);
+        (isListingInSameArea ? matchedListing?.landmark : undefined) ||
+        (resolvedDistrict === 'Haie Vive' ? 'Proche Pavé Haie Vive' : undefined);
 
       const resolvedAddress =
         l.propertyAddress ||
