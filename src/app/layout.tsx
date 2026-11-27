@@ -5,6 +5,7 @@ import { SpaceProvider } from '@/lib/context/space-context';
 import { GlobalDownloadToast } from '@/components/ui/GlobalDownloadToast';
 import { GlobalCenterToast } from '@/components/ui/GlobalCenterToast';
 import { GlobalSyncProvider } from '@/components/layout/GlobalSyncProvider';
+import { FedaPayReturnHandler } from '@/components/layout/FedaPayReturnHandler';
 
 import { SITE_CONFIG } from '@/lib/config/site';
 
@@ -114,6 +115,7 @@ export default function RootLayout({
             {children}
             <GlobalDownloadToast />
             <GlobalCenterToast />
+            <FedaPayReturnHandler />
           </GlobalSyncProvider>
         </SpaceProvider>
       </body>

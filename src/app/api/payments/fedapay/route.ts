@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         status: tx.status, // 'approved' | 'pending' | 'declined' | 'canceled'
+        amount: tx.amount,
+        description: tx.description,
         transaction: tx,
       });
     }
