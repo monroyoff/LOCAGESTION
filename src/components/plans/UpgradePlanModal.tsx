@@ -27,6 +27,7 @@ interface UpgradePlanModalProps {
   onClose: () => void;
   onSuccess?: () => void;
   actionContext?: 'new_lease' | 'sign_lease' | 'manage' | 'renew';
+  initialPlanTab?: 'serenite' | 'pro';
 }
 
 export function UpgradePlanModal({
@@ -34,6 +35,7 @@ export function UpgradePlanModal({
   onClose,
   onSuccess,
   actionContext = 'new_lease',
+  initialPlanTab,
 }: UpgradePlanModalProps) {
   const { user } = useAuth();
   const [isActivating, setIsActivating] = useState(false);
@@ -42,7 +44,7 @@ export function UpgradePlanModal({
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showSimulateTools, setShowSimulateTools] = useState(false);
-  const [selectedPlanTab, setSelectedPlanTab] = useState<'serenite' | 'pro'>('serenite');
+  const [selectedPlanTab, setSelectedPlanTab] = useState<'serenite' | 'pro'>(initialPlanTab || 'serenite');
   const [currentSub, setCurrentSub] = useState<UserSubscriptionDetails>(() =>
     PlanService.getUserSubscription(user?.id)
   );
@@ -53,13 +55,15 @@ export function UpgradePlanModal({
       setActivatingText('');
       const sub = PlanService.getUserSubscription(user?.id);
       setCurrentSub(sub);
-      if (sub.plan === 'pro') {
+      if (initialPlanTab) {
+        setSelectedPlanTab(initialPlanTab);
+      } else if (sub.plan === 'pro') {
         setSelectedPlanTab('pro');
       } else {
         setSelectedPlanTab('serenite');
       }
     }
-  }, [isOpen, user?.id]);
+  }, [isOpen, user?.id, initialPlanTab]);
 
   if (!isOpen) return null;
 
@@ -111,7 +115,7 @@ export function UpgradePlanModal({
 
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://locagestion.site';
       const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
-      const callbackUrl = `${origin}${pathname}?fedapay_ref=success&plan=pro&amount=15000`;
+      const callbackUrl = `${origin}${pathname}?fedapay_sub_check=pro`;
 
       const response = await fetch('/api/payments/fedapay', {
         method: 'POST',
@@ -543,6 +547,17 @@ export function UpgradePlanModal({
                         className="px-2.5 py-1 rounded-lg bg-emerald-200 text-emerald-900 font-bold text-[10px] hover:bg-emerald-300 transition-colors cursor-pointer"
                       >
                         Rétablir 30 jours
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          PlanService.activateDecouvertePlan(user?.id);
+                          setCurrentSub(PlanService.getUserSubscription(user?.id));
+                          notifySave('Compte configuré en Formule Découverte (2 baux inclus).', 'Formule Découverte');
+                        }}
+                        className="px-2.5 py-1 rounded-lg bg-slate-200 text-slate-800 font-bold text-[10px] hover:bg-slate-300 transition-colors cursor-pointer"
+                      >
+                        🌱 Réinitialiser Découverte (0 F)
                       </button>
                     </div>
                   </div>

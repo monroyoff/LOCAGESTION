@@ -2,9 +2,16 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useSpace } from '@/lib/context/space-context';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 
 export function LandingPricing() {
+  const { user } = useSpace();
+  const router = useRouter();
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [selectedPlanTab, setSelectedPlanTab] = useState<'serenite' | 'pro'>('serenite');
 
   const toggleFaq = (index: number) => {
     setActiveFaq(activeFaq === index ? null : index);
@@ -230,13 +237,21 @@ export function LandingPricing() {
               </ul>
             </div>
 
-            <Link
-              href="/auth/register"
-              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm shadow-md hover:brightness-105 active:scale-95 transition-all text-center"
+            <button
+              type="button"
+              onClick={() => {
+                if (user) {
+                  setSelectedPlanTab('serenite');
+                  setIsUpgradeModalOpen(true);
+                } else {
+                  router.push('/auth/login?redirect=/leases/new&plan=serenite');
+                }
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs sm:text-sm shadow-md hover:brightness-105 active:scale-95 transition-all text-center cursor-pointer"
             >
-              <span>Activer l'Encaissement Automatique</span>
+              <span>Activer la Formule Sérénité</span>
               <span className="material-symbols-outlined text-[18px]">bolt</span>
-            </Link>
+            </button>
           </div>
 
           {/* Formule 3 : Agences & Syndics */}
@@ -297,13 +312,21 @@ export function LandingPricing() {
               </ul>
             </div>
 
-            <Link
-              href="/auth/register"
-              className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-surface-container hover:bg-surface-container-high text-on-surface font-bold text-xs border border-surface-container-high/80 hover:border-outline-variant/40 transition-all text-center"
+            <button
+              type="button"
+              onClick={() => {
+                if (user) {
+                  setSelectedPlanTab('pro');
+                  setIsUpgradeModalOpen(true);
+                } else {
+                  router.push('/auth/login?redirect=/leases/new&plan=pro');
+                }
+              }}
+              className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs border border-indigo-500/80 shadow-md transition-all text-center cursor-pointer active:scale-95"
             >
-              <span>Activer la Formule Pro</span>
+              <span>Activer la Formule Pro (30j)</span>
               <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -346,6 +369,12 @@ export function LandingPricing() {
           </div>
         </div>
       </div>
+      {/* Upgrade Plan Modal */}
+      <UpgradePlanModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        initialPlanTab={selectedPlanTab}
+      />
     </section>
   );
 }

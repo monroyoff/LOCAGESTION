@@ -118,35 +118,75 @@ export function Header({
     };
   }, [user]);
 
-  // Détection automatique du retour après paiement direct FedaPay pour la Formule Pro
+  // Détection et vérification sécurisée du retour de paiement direct FedaPay pour la Formule Pro
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const fedapayRef = urlParams.get('fedapay_ref') || urlParams.get('payment_status');
-      const planParam = urlParams.get('plan');
+    const verifyFedaPaySubscription = async () => {
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const isSubCheck =
+          urlParams.get('fedapay_sub_check') === 'pro' ||
+          urlParams.get('fedapay_plan') === 'pro' ||
+          (urlParams.get('plan') === 'pro' && (urlParams.has('fedapay_ref') || urlParams.has('status') || urlParams.has('id')));
 
-      if (fedapayRef === 'success' && planParam === 'pro') {
-        PlanService.activateProPlan(user?.id, 30);
-        notifySave(
-          '🎉 Félicitations ! Votre abonnement Formule Entreprise & Pro (30 jours) est validé et actif avec baux illimités.',
-          'Paiement Pro Validé'
-        );
-        setUserSub(PlanService.getUserSubscription(user?.id));
-        window.dispatchEvent(new Event('locagestion:plan_changed'));
+        if (!isSubCheck) return;
 
-        // Nettoyage propre des query parameters de l'URL sans rechargement de page
+        const rawStatus = (urlParams.get('status') || '').toLowerCase();
+        const txId = urlParams.get('id') || urlParams.get('tx_id') || urlParams.get('transaction_id');
+
+        // Nettoyage immédiat et propre de l'URL pour éviter les rejeux
+        urlParams.delete('fedapay_sub_check');
+        urlParams.delete('fedapay_plan');
         urlParams.delete('fedapay_ref');
         urlParams.delete('payment_status');
+        urlParams.delete('status');
         urlParams.delete('plan');
         urlParams.delete('amount');
+        urlParams.delete('id');
+        urlParams.delete('tx_id');
+        urlParams.delete('transaction_id');
         const newQuery = urlParams.toString();
         const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '') + window.location.hash;
         window.history.replaceState({}, '', newUrl);
+
+        // 1. Si le statut retourné par FedaPay est une annulation explicite
+        if (rawStatus === 'canceled' || rawStatus === 'declined') {
+          notifySave('⚠️ Paiement annulé. Votre compte reste sur sa formule actuelle sans aucun débit.', 'Paiement Annulé');
+          return;
+        }
+
+        // 2. Si un ID de transaction existe, vérifier OBLIGATOIREMENT auprès du serveur FedaPay
+        if (txId) {
+          const verifyRes = await fetch('/api/payments/fedapay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify', transactionId: txId }),
+          });
+          const verifyData = await verifyRes.json();
+
+          if (verifyData.success && verifyData.status === 'approved') {
+            // Transaction réellement validée et encaissée sur FedaPay
+            PlanService.activateProPlan(user?.id, 30);
+            notifySave(
+              '🎉 Félicitations ! Votre paiement a été confirmé. Votre abonnement Formule Entreprise & Pro (30 jours) est activé avec baux illimités.',
+              'Paiement Pro Validé'
+            );
+            setUserSub(PlanService.getUserSubscription(user?.id));
+            window.dispatchEvent(new Event('locagestion:plan_changed'));
+          } else if (verifyData.status === 'canceled' || verifyData.status === 'declined') {
+            notifySave('⚠️ Paiement annulé. Aucun débit n’a été effectué sur votre compte.', 'Paiement Annulé');
+          } else {
+            notifySave('Paiement non finalisé ou en attente. Aucun changement de formule appliqué.', 'Paiement Non Validé');
+          }
+        } else {
+          notifySave('Opération annulée. Votre abonnement n’a pas été modifié.', 'Paiement Annulé');
+        }
+      } catch (e) {
+        console.error('Erreur traitement retour FedaPay:', e);
       }
-    } catch (e) {
-      console.error('Erreur traitement retour FedaPay:', e);
-    }
+    };
+
+    verifyFedaPaySubscription();
   }, [user?.id]);
 
   // Fermeture du menu de notifications au clic extérieur
@@ -189,7 +229,7 @@ export function Header({
     LeaseService.markNotificationAsRead(n.id);
     updateNotifications();
 
-    if (n.type === 'subscription_alert' || n.type === 'subscription_expired') {
+    if (n.type === 'subscription_alert' || n.type === 'subscription_expired' || n.type === 'subscription_activated') {
       setIsUpgradeModalOpen(true);
     } else if (n.type === 'visit_requested' || n.type === 'message_received') {
       const url = n.convId
@@ -468,7 +508,9 @@ export function Header({
                           key={n.id}
                           onClick={() => handleLandlordNotifClick(n)}
                           className={`p-3.5 rounded-2xl transition-all space-y-1.5 cursor-pointer group ${!n.read
-                            ? n.type === 'subscription_expired'
+                            ? n.type === 'subscription_activated'
+                              ? 'bg-emerald-50/90 border border-emerald-300 hover:bg-emerald-100/70 shadow-xs'
+                              : n.type === 'subscription_expired'
                               ? 'bg-rose-50 border border-rose-300 hover:bg-rose-100/70 shadow-xs'
                               : n.type === 'subscription_alert'
                                 ? 'bg-amber-50/90 border border-amber-300 hover:bg-amber-100/70 shadow-xs'
@@ -485,7 +527,9 @@ export function Header({
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-black text-slate-900 flex items-center gap-1.5 truncate">
                               <span
-                                className={`w-2 h-2 rounded-full shrink-0 ${n.type === 'subscription_expired'
+                                className={`w-2 h-2 rounded-full shrink-0 ${n.type === 'subscription_activated'
+                                  ? 'bg-emerald-500 animate-pulse ring-2 ring-emerald-200'
+                                  : n.type === 'subscription_expired'
                                   ? 'bg-rose-600 animate-ping'
                                   : n.type === 'subscription_alert'
                                     ? 'bg-amber-500 animate-pulse'
@@ -553,19 +597,23 @@ export function Header({
                             </span>
                             <span className="text-xs font-black text-brand-600 group-hover:text-brand-700 flex items-center gap-1 cursor-pointer">
                               <span>
-                                {n.type === 'visit_requested'
-                                  ? 'Voir la demande & Répondre'
-                                  : n.type === 'message_received'
-                                    ? 'Lire le message & Répondre'
-                                    : n.type === 'incident_reported'
-                                      ? 'Traiter la panne'
-                                      : (n.type === 'listing_approved' || n.type === 'listing_rejected')
-                                        ? 'Gérer mon annonce'
-                                        : n.type === 'payment_declared'
-                                          ? 'Vérifier le paiement'
-                                          : n.type === 'notice_received'
-                                            ? 'Voir le préavis'
-                                            : 'Voir le bail'}
+                                {n.type === 'subscription_activated'
+                                  ? 'Gérer mon abonnement'
+                                  : n.type === 'subscription_alert' || n.type === 'subscription_expired'
+                                    ? 'Surclasser / Renouveler'
+                                    : n.type === 'visit_requested'
+                                      ? 'Voir la demande & Répondre'
+                                      : n.type === 'message_received'
+                                        ? 'Lire le message & Répondre'
+                                        : n.type === 'incident_reported'
+                                          ? 'Traiter la panne'
+                                          : (n.type === 'listing_approved' || n.type === 'listing_rejected')
+                                            ? 'Gérer mon annonce'
+                                            : n.type === 'payment_declared'
+                                              ? 'Vérifier le paiement'
+                                              : n.type === 'notice_received'
+                                                ? 'Voir le préavis'
+                                                : 'Voir le bail'}
                               </span>
                               <ExternalLink className="w-3 h-3" />
                             </span>

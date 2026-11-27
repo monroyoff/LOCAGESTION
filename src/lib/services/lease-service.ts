@@ -138,7 +138,8 @@ export interface LandlordNotification {
   | 'visit_requested'
   | 'message_received'
   | 'subscription_alert'
-  | 'subscription_expired';
+  | 'subscription_expired'
+  | 'subscription_activated';
   read: boolean;
   leaseId?: string;
   incidentId?: string;
@@ -1014,6 +1015,11 @@ export const LeaseService = {
       const landlordLeaseIds = new Set(landlordLeases.map((l) => l.id));
 
       return parsed.filter((n) => {
+        // Notifications de souscription, activation et alertes de formules
+        if (n.type === 'subscription_activated' || n.type === 'subscription_alert' || n.type === 'subscription_expired') {
+          return true;
+        }
+
         // Demandes de visite d'annonces et messages reçus
         if (n.type === 'visit_requested' || n.type === 'message_received') {
           if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;

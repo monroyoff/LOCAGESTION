@@ -289,7 +289,7 @@ export const PlanService = {
           id: `notif-serenite-welcome-${Date.now()}`,
           title: '⚡ Formule Sérénité activée avec succès',
           message: 'Félicitations ! Votre Formule Sérénité (0 FCFA fixe) est active. Vous bénéficiez désormais de la création et signature électronique de baux illimités.',
-          type: 'subscription_alert',
+          type: 'subscription_activated',
           read: false,
           createdAt: new Date().toISOString(),
         });
@@ -308,6 +308,56 @@ export const PlanService = {
     return {
       success: true,
       message: 'Félicitations ! La Formule Sérénité a été activée avec succès. Vous bénéficiez désormais de baux illimités.',
+    };
+  },
+
+  /**
+   * Rétablit la Formule Découverte pour le bailleur (0 FCFA, 2 baux)
+   */
+  activateDecouvertePlan(userId?: string): { success: boolean; message: string } {
+    const targetId = userId || DEFAULT_FALLBACK_USER_ID;
+    this.setUserPlan(userId, 'decouverte');
+
+    if (typeof window !== 'undefined') {
+      try {
+        const sub: UserSubscriptionDetails = {
+          plan: 'decouverte',
+          activatedAt: new Date().toISOString(),
+          isExpired: false,
+          pricePaid: 0,
+          currency: 'FCFA',
+        };
+        const subStr = JSON.stringify(sub);
+        localStorage.setItem(`${SUB_STORAGE_KEY_PREFIX}${targetId}`, subStr);
+        localStorage.setItem(`${PLAN_STORAGE_KEY_PREFIX}${targetId}`, 'decouverte');
+
+        if (targetId !== DEFAULT_FALLBACK_USER_ID) {
+          localStorage.setItem(`${SUB_STORAGE_KEY_PREFIX}${DEFAULT_FALLBACK_USER_ID}`, subStr);
+          localStorage.setItem(`${PLAN_STORAGE_KEY_PREFIX}${DEFAULT_FALLBACK_USER_ID}`, 'decouverte');
+        }
+
+        LeaseService.addLandlordNotification({
+          id: `notif-decouverte-${Date.now()}`,
+          title: '🌱 Formule Découverte active',
+          message: 'Votre compte est configuré sur la Formule Découverte (jusqu’à 2 baux signés inclus sans frais).',
+          type: 'subscription_activated',
+          read: false,
+          createdAt: new Date().toISOString(),
+        });
+
+        window.dispatchEvent(
+          new CustomEvent('locagestion:plan_changed', {
+            detail: { userId: targetId, plan: 'decouverte', subscription: sub },
+          })
+        );
+      } catch (e) {
+        console.error('Erreur activation Découverte:', e);
+      }
+    }
+
+    return {
+      success: true,
+      message: 'Votre compte a été basculé sur la Formule Découverte.',
     };
   },
 
@@ -355,7 +405,7 @@ export const PlanService = {
           id: `notif-pro-welcome-${Date.now()}`,
           title: '👑 Formule Entreprise & Pro activée (30 jours)',
           message: `Félicitations ! Votre forfait Pro (15 000 FCFA) est actif pendant 30 jours, jusqu'au ${expiresDateStr}. Vous bénéficiez des baux illimités, de la console démarcheur et du support prioritaire.`,
-          type: 'subscription_alert',
+          type: 'subscription_activated',
           read: false,
           createdAt: now.toISOString(),
         });
