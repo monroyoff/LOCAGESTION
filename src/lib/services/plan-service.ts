@@ -187,16 +187,22 @@ export const PlanService = {
   },
 
   /**
-   * Compte les baux signés actifs à l'actif du bailleur
+   * Compte les baux signés actifs à l'actif du bailleur.
+   * Règle d'or : Tout bail résilié, terminé ou supprimé libère immédiatement le quota.
    */
   getActiveSignedLeases(user?: AuthUser | null): Lease[] {
     const all = LeaseService.getLeasesForLandlord(user);
-    return all.filter(
-      (l) =>
+    return all.filter((l) => {
+      // Un bail résilié ou brouillon n'est JAMAIS un bail actif
+      if (!l || l.status === 'resilie' || l.status === 'brouillon') {
+        return false;
+      }
+      return (
         l.status === 'actif' ||
         (Boolean(l.signedByLandlord) && Boolean(l.signedByTenant)) ||
         Boolean(l.tenantSignedAt)
-    );
+      );
+    });
   },
 
   /**
