@@ -1573,28 +1573,6 @@ function TenantPortalContent() {
 
             <button
               type="button"
-              onClick={() => handleTabChange('edl')}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'edl'
-                  ? 'bg-black text-white shadow-sm font-black'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <Camera className="w-4 h-4" />
-              <span>États des Lieux</span>
-              {allTenantLeases.length > 0 && (
-                <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
-                    activeTab === 'edl' ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
-                  }`}
-                >
-                  {allTenantLeases.length}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
               onClick={() => handleTabChange('solvabilite')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'solvabilite'
@@ -1643,6 +1621,24 @@ function TenantPortalContent() {
                 ) : null;
               })()}
             </button>
+
+            {resiliatedLeases.length > 0 && (
+              <button
+                type="button"
+                onClick={() => handleTabChange('historique')}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                  activeTab === 'historique'
+                    ? 'bg-rose-950 text-white shadow-sm font-black'
+                    : 'text-rose-700 bg-rose-50/70 hover:bg-rose-100 hover:text-rose-900 border border-rose-200/80'
+                }`}
+              >
+                <Archive className="w-4 h-4 text-rose-600" />
+                <span>Historique des Baux</span>
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white">
+                  {resiliatedLeases.length}
+                </span>
+              </button>
+            )}
           </div>
 
           {/* ==================================================================== */}
@@ -2312,24 +2308,27 @@ function TenantPortalContent() {
               </div>
 
               {/* ==================================================================== */}
-              {/* SECTION : ÉTATS DES LIEUX & CONSTATS PHOTOS (Multi-Baux Compatible)  */}
+              {/* SECTION : ÉTATS DES LIEUX & CONSTATS PHOTOS (Multi-Baux Actifs)      */}
               {/* ==================================================================== */}
-              {allTenantLeases.length > 0 && (
+              {myLeases.length > 0 && (
                 <div className="space-y-4">
-                  {/* Sélecteur de contrats si pluralité de baux signés */}
-                  {allTenantLeases.length > 1 && (
+                  {/* Sélecteur de contrats si pluralité de baux actifs signés */}
+                  {myLeases.length > 1 && (
                     <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-soft space-y-3">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
                         <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                           <Camera className="w-4 h-4 text-emerald-600" />
-                          <span>États des lieux par contrat ({allTenantLeases.length} baux au dossier) :</span>
+                          <span>États des lieux par contrat ({myLeases.length} baux actifs) :</span>
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleTabChange('edl')}
+                          onClick={() => {
+                            setBailSubTab('edl');
+                            handleTabChange('bail');
+                          }}
                           className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer self-start sm:self-auto"
                         >
-                          <span>Ouvrir l'Espace États des Lieux complet →</span>
+                          <span>Ouvrir l'Espace États des Lieux →</span>
                         </button>
                       </div>
 
@@ -2344,11 +2343,10 @@ function TenantPortalContent() {
                           }`}
                         >
                           <Layers className="w-3.5 h-3.5" />
-                          <span>Tous les états des lieux ({allTenantLeases.length})</span>
+                          <span>Tous les états des lieux ({myLeases.length})</span>
                         </button>
-                        {allTenantLeases.map((l) => {
+                        {myLeases.map((l) => {
                           const isSel = selectedEdlLeaseId === l.id;
-                          const isRes = l.status === 'resilie' || l.status === 'expire';
                           const usage = getUsageInfo(l.propertyUsage);
                           const UsageIcon = usage.icon;
                           const lPhotos = InspectionService.getInspectionByLeaseId(l.id).photos.length;
@@ -2359,26 +2357,16 @@ function TenantPortalContent() {
                               onClick={() => setSelectedEdlLeaseId(l.id)}
                               className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
                                 isSel
-                                  ? isRes
-                                    ? 'bg-rose-950 text-white border-rose-950 shadow-md font-black'
-                                    : 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
-                                  : isRes
-                                  ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
+                                  ? 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
                                   : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
                               }`}
                             >
-                              {isRes ? (
-                                <Ban className={`w-3.5 h-3.5 ${isSel ? 'text-rose-400' : 'text-rose-600'}`} />
-                              ) : (
-                                <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
-                              )}
+                              <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
                               <span>{l.unit}</span>
                               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
-                                isRes
-                                  ? isSel ? 'bg-rose-800 text-rose-100' : 'bg-rose-100 text-rose-800 font-bold'
-                                  : isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                                isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                               }`}>
-                                {isRes ? 'Résilié' : l.id}
+                                {l.id}
                               </span>
                               {lPhotos > 0 && (
                                 <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isSel ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -2392,12 +2380,12 @@ function TenantPortalContent() {
                     </div>
                   )}
 
-                  {/* Cartes d'États des Lieux */}
+                  {/* Cartes d'États des Lieux Actifs */}
                   {selectedEdlLeaseId === 'all'
-                    ? allTenantLeases.map((l) => renderLeaseInspectionCard(l, allTenantLeases.length > 1))
+                    ? myLeases.map((l) => renderLeaseInspectionCard(l, myLeases.length > 1))
                     : (() => {
-                        const targetL = allTenantLeases.find((l) => l.id === selectedEdlLeaseId) || allTenantLeases[0];
-                        return renderLeaseInspectionCard(targetL, allTenantLeases.length > 1);
+                        const targetL = myLeases.find((l) => l.id === selectedEdlLeaseId) || myLeases[0];
+                        return renderLeaseInspectionCard(targetL, myLeases.length > 1);
                       })()}
                 </div>
               )}
@@ -2866,7 +2854,7 @@ function TenantPortalContent() {
                           : 'text-slate-500 hover:text-slate-900'
                       }`}
                     >
-                      État des Lieux ({allTenantLeases.length})
+                      État des Lieux ({myLeases.length})
                     </button>
                     <button
                       type="button"
@@ -2883,24 +2871,23 @@ function TenantPortalContent() {
                 </div>
               </div>
 
-              {/* SÉLECTEUR DE CONTRATS (Locataire Multi-Contrats : Baux Actifs & Baux Résiliés) */}
-              {allTenantLeases.length > 1 && (
+              {/* SÉLECTEUR DE CONTRATS ACTIFS (Locataire Multi-Contrats Actifs) */}
+              {myLeases.length > 1 && (
                 <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-soft space-y-2.5">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                       <FileText className="w-3.5 h-3.5 text-brand-500" />
-                      <span>Sélectionnez le contrat à consulter ({allTenantLeases.length} contrats au dossier) :</span>
+                      <span>Sélectionnez le contrat à consulter ({myLeases.length} baux en cours) :</span>
                     </span>
                     <span className="text-[10px] text-slate-400">
                       Bail affiché : <strong className="text-slate-800">{currentLease?.id || 'N/A'}</strong>
                     </span>
                   </div>
                   <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-                    {allTenantLeases.map((l) => {
+                    {myLeases.map((l) => {
                       const usage = getUsageInfo(l.propertyUsage);
                       const UsageIcon = usage.icon;
                       const isSel = currentLease?.id === l.id;
-                      const isResiliated = l.status === 'resilie' || l.status === 'expire';
                       const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
                       return (
                         <button
@@ -2912,26 +2899,16 @@ function TenantPortalContent() {
                           }}
                           className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
                             isSel
-                              ? isResiliated
-                                ? 'bg-rose-950 text-white border-rose-950 shadow-md font-black'
-                                : 'bg-slate-900 text-white border-slate-900 shadow-md font-black'
-                              : isResiliated
-                              ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200 shadow-2xs'
+                              ? 'bg-slate-900 text-white border-slate-900 shadow-md font-black'
                               : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
                           }`}
                         >
-                          {isResiliated ? (
-                            <Ban className={`w-3.5 h-3.5 ${isSel ? 'text-rose-400' : 'text-rose-600'}`} />
-                          ) : (
-                            <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-brand-400' : 'text-slate-500'}`} />
-                          )}
+                          <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-brand-400' : 'text-slate-500'}`} />
                           <span>{l.unit} ({usage.label})</span>
                           <span className={`text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-full ${
-                            isResiliated
-                              ? isSel ? 'bg-rose-800 text-rose-100' : 'bg-rose-200 text-rose-900'
-                              : isSel ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
+                            isSel ? 'bg-white/20 text-white' : 'bg-emerald-100 text-emerald-800'
                           }`}>
-                            {isResiliated ? 'Résilié' : formatFCFA(l.rent)}
+                            {formatFCFA(l.rent)}
                           </span>
                           <span className={`text-[10px] hidden sm:inline ${isSel ? 'text-white/70' : 'text-slate-400'}`}>
                             • {landlord}
@@ -3454,10 +3431,10 @@ function TenantPortalContent() {
                 </div>
 
                 {/* Sélecteur de contrats si pluralité */}
-                {allTenantLeases.length > 1 && (
+                {myLeases.length > 1 && (
                   <div className="pt-3 border-t border-slate-100 space-y-2">
                     <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 block">
-                      Filtrer par contrat de location ({allTenantLeases.length} baux au dossier) :
+                      Filtrer par contrat de location ({myLeases.length} baux actifs) :
                     </span>
                     <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
                       <button
@@ -3470,11 +3447,10 @@ function TenantPortalContent() {
                         }`}
                       >
                         <Layers className="w-3.5 h-3.5" />
-                        <span>Tous les contrats ({allTenantLeases.length})</span>
+                        <span>Tous les contrats ({myLeases.length})</span>
                       </button>
-                      {allTenantLeases.map((l) => {
+                      {myLeases.map((l) => {
                         const isSel = selectedEdlLeaseId === l.id;
-                        const isRes = l.status === 'resilie' || l.status === 'expire';
                         const usage = getUsageInfo(l.propertyUsage);
                         const UsageIcon = usage.icon;
                         const lPhotos = InspectionService.getInspectionByLeaseId(l.id).photos.length;
@@ -3485,26 +3461,16 @@ function TenantPortalContent() {
                             onClick={() => setSelectedEdlLeaseId(l.id)}
                             className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 shrink-0 cursor-pointer border ${
                               isSel
-                                ? isRes
-                                  ? 'bg-rose-950 text-white border-rose-950 shadow-md font-black'
-                                  : 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
-                                : isRes
-                                ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
+                                ? 'bg-emerald-600 text-white border-emerald-600 shadow-md font-black'
                                 : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-200 shadow-2xs'
                             }`}
                           >
-                            {isRes ? (
-                              <Ban className={`w-3.5 h-3.5 ${isSel ? 'text-rose-400' : 'text-rose-600'}`} />
-                            ) : (
-                              <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
-                            )}
+                            <UsageIcon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-500'}`} />
                             <span>{l.unit}</span>
                             <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
-                              isRes
-                                ? isSel ? 'bg-rose-800 text-rose-100' : 'bg-rose-100 text-rose-800 font-bold'
-                                : isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                              isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                             }`}>
-                              {isRes ? 'Résilié' : l.id}
+                              {l.id}
                             </span>
                             {lPhotos > 0 && (
                               <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${isSel ? 'bg-emerald-800 text-white' : 'bg-emerald-100 text-emerald-800'}`}>
@@ -3520,13 +3486,13 @@ function TenantPortalContent() {
               </div>
 
               {/* Liste des Cartes d'États des Lieux */}
-              {allTenantLeases.length > 0 ? (
+              {myLeases.length > 0 ? (
                 <div className="space-y-6">
                   {selectedEdlLeaseId === 'all'
-                    ? allTenantLeases.map((l) => renderLeaseInspectionCard(l, allTenantLeases.length > 1))
+                    ? myLeases.map((l) => renderLeaseInspectionCard(l, myLeases.length > 1))
                     : (() => {
-                        const targetL = allTenantLeases.find((l) => l.id === selectedEdlLeaseId) || allTenantLeases[0];
-                        return renderLeaseInspectionCard(targetL, allTenantLeases.length > 1);
+                        const targetL = myLeases.find((l) => l.id === selectedEdlLeaseId) || myLeases[0];
+                        return renderLeaseInspectionCard(targetL, myLeases.length > 1);
                       })()}
                 </div>
               ) : (
