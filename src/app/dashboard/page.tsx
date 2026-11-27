@@ -264,12 +264,6 @@ export default function DashboardPage() {
 
             <div className="relative z-10 flex items-center gap-3 self-start sm:self-auto">
               <button
-                onClick={() => setQuickAction('new_payment')}
-                className="py-2.5 px-4 rounded-2xl bg-white text-slate-900 hover:bg-slate-100 text-xs font-black shadow-md transition-all active:scale-95 cursor-pointer"
-              >
-                + Encaisser
-              </button>
-              <button
                 onClick={() => {
                   const check = PlanService.canLandlordSignNewLease(user);
                   if (!check.allowed) {
