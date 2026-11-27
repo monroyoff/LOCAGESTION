@@ -37,6 +37,8 @@ export function UpgradePlanModal({
 }: UpgradePlanModalProps) {
   const { user } = useAuth();
   const [isActivating, setIsActivating] = useState(false);
+  const [activatingText, setActivatingText] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showSimulateTools, setShowSimulateTools] = useState(false);
@@ -47,6 +49,8 @@ export function UpgradePlanModal({
 
   useEffect(() => {
     if (isOpen) {
+      setErrorMessage(null);
+      setActivatingText('');
       const sub = PlanService.getUserSubscription(user?.id);
       setCurrentSub(sub);
       if (sub.plan === 'pro') {
@@ -72,6 +76,7 @@ export function UpgradePlanModal({
 
   const handleActivateSerenite = () => {
     setIsActivating(true);
+    setActivatingText('Activation de la Formule Sérénité...');
     setTimeout(() => {
       const res = PlanService.activateSerenitePlan(user?.id);
       setCurrentSub(PlanService.getUserSubscription(user?.id));
@@ -88,27 +93,65 @@ export function UpgradePlanModal({
     }, 400);
   };
 
-  const handleActivateOrRenewPro = () => {
+  const handleActivateOrRenewPro = async () => {
     setIsActivating(true);
-    setTimeout(() => {
-      let res;
-      if (isPro && !isExpired) {
-        res = PlanService.renewProPlan(user?.id, 30);
-      } else {
-        res = PlanService.activateProPlan(user?.id, 30);
-      }
-      setCurrentSub(PlanService.getUserSubscription(user?.id));
-      setIsActivating(false);
-      setSuccessMessage(res.message);
-      setIsSuccess(true);
-      notifySave(res.message, 'Formule Pro confirmée');
+    setErrorMessage(null);
+    setActivatingText('Connexion au guichet sécurisé FedaPay Live (Wave, MoMo, OM, CB)...');
 
-      setTimeout(() => {
-        setIsSuccess(false);
-        onClose();
-        if (onSuccess) onSuccess();
-      }, 1600);
-    }, 600);
+    try {
+      const cleanPhone = (user?.phone || '+229 97 00 00 00').replace(/\D/g, '');
+      const rawCountry = user?.residenceCountry?.toLowerCase() || 'bj';
+      const cleanCountry = rawCountry.includes('ivoire') || rawCountry.includes('ci')
+        ? 'ci'
+        : rawCountry.includes('sénégal') || rawCountry.includes('senegal') || rawCountry.includes('sn')
+        ? 'sn'
+        : rawCountry.includes('togo') || rawCountry.includes('tg')
+        ? 'tg'
+        : 'bj';
+
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://locagestion.site';
+      const pathname = typeof window !== 'undefined' ? window.location.pathname : '/';
+      const callbackUrl = `${origin}${pathname}?fedapay_ref=success&plan=pro&amount=15000`;
+
+      const response = await fetch('/api/payments/fedapay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create',
+          amount: 15000,
+          description: isPro && !isExpired
+            ? 'Renouvellement Formule Entreprise & Pro (30 jours) - LOCAGESTION'
+            : 'Abonnement Formule Entreprise & Pro (30 jours) - LOCAGESTION',
+          callback_url: callbackUrl,
+          customer: {
+            firstname: user?.firstName || user?.name?.split(' ')[0] || 'Bailleur',
+            lastname: user?.lastName || user?.name?.split(' ').slice(1).join(' ') || 'LOCAGESTION',
+            email: user?.email || 'contact@locagestion.site',
+            phone: cleanPhone || '97000000',
+            country: cleanCountry,
+          },
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.paymentUrl) {
+        setActivatingText('Redirection vers le guichet de paiement FedaPay...');
+        notifySave('Redirection vers le guichet Wave / Mobile Money / Carte Bancaire...', 'Paiement Formule Pro');
+        // Redirection directe vers le guichet FedaPay
+        if (typeof window !== 'undefined') {
+          window.location.href = data.paymentUrl;
+        }
+      } else {
+        setIsActivating(false);
+        const err = data.error || 'Impossible d’initialiser le paiement en ligne. Veuillez réessayer.';
+        setErrorMessage(err);
+      }
+    } catch (err: any) {
+      console.error('Erreur redirection paiement Pro:', err);
+      setIsActivating(false);
+      setErrorMessage(err.message || 'Erreur réseau lors de la connexion au guichet de paiement.');
+    }
   };
 
   const handleSimulateDays = (days: number) => {
@@ -123,7 +166,7 @@ export function UpgradePlanModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[150] flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md animate-in fade-in duration-200">
       <div className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col max-h-[92vh]">
         {/* Top Header */}
         <div
@@ -267,6 +310,30 @@ export function UpgradePlanModal({
                 </div>
               )}
 
+              {/* Feedback chargement ou erreur de redirection vers FedaPay */}
+              {isActivating && (
+                <div className="p-4 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800 text-indigo-900 dark:text-indigo-200 flex items-center gap-3 animate-pulse">
+                  <RefreshCw className="w-5 h-5 text-indigo-600 animate-spin shrink-0" />
+                  <span className="text-xs font-bold">{activatingText || 'Traitement en cours...'}</span>
+                </div>
+              )}
+
+              {errorMessage && (
+                <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-200 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0" />
+                    <span className="text-xs font-bold">{errorMessage}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleActivateOrRenewPro()}
+                    className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold hover:bg-rose-700 cursor-pointer"
+                  >
+                    Réessayer
+                  </button>
+                </div>
+              )}
+
               {/* Plans Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
                 {/* Formule 1 : Sérénité (0 FCFA fixe, 2% split payment) */}
@@ -400,7 +467,9 @@ export function UpgradePlanModal({
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isActivating ? 'animate-spin' : ''}`} />
                     <span>
-                      {isPro && !isExpired
+                      {isActivating
+                        ? 'Redirection en cours...'
+                        : isPro && !isExpired
                         ? 'Renouveler pour 30 jours (15 000 F)'
                         : 'Payer 15 000 F & Activer 30 jours'}
                     </span>
@@ -513,7 +582,9 @@ export function UpgradePlanModal({
               >
                 <Zap className="w-4 h-4 fill-white" />
                 <span>
-                  {isPro && !isExpired
+                  {isActivating
+                    ? 'Connexion au paiement...'
+                    : isPro && !isExpired
                     ? 'Prolonger 30 jours (15 000 F)'
                     : 'Activer 30 jours (15 000 F)'}
                 </span>

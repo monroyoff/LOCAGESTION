@@ -25,7 +25,9 @@ import {
   Phone,
   ArrowLeft,
   Globe,
+  Zap,
 } from 'lucide-react';
+import { notifySave } from '@/lib/notifications/action-notifier';
 import { formatDateFR, formatNotificationTime, compareNotificationsDesc } from '@/lib/money/format';
 import { useSpace } from '@/lib/context/space-context';
 import { GlobalSearchModal } from '@/components/search/GlobalSearchModal';
@@ -115,6 +117,37 @@ export function Header({
       window.removeEventListener('storage', handleStorage);
     };
   }, [user]);
+
+  // Détection automatique du retour après paiement direct FedaPay pour la Formule Pro
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const fedapayRef = urlParams.get('fedapay_ref') || urlParams.get('payment_status');
+      const planParam = urlParams.get('plan');
+
+      if (fedapayRef === 'success' && planParam === 'pro') {
+        PlanService.activateProPlan(user?.id, 30);
+        notifySave(
+          '🎉 Félicitations ! Votre abonnement Formule Entreprise & Pro (30 jours) est validé et actif avec baux illimités.',
+          'Paiement Pro Validé'
+        );
+        setUserSub(PlanService.getUserSubscription(user?.id));
+        window.dispatchEvent(new Event('locagestion:plan_changed'));
+
+        // Nettoyage propre des query parameters de l'URL sans rechargement de page
+        urlParams.delete('fedapay_ref');
+        urlParams.delete('payment_status');
+        urlParams.delete('plan');
+        urlParams.delete('amount');
+        const newQuery = urlParams.toString();
+        const newUrl = window.location.pathname + (newQuery ? `?${newQuery}` : '') + window.location.hash;
+        window.history.replaceState({}, '', newUrl);
+      }
+    } catch (e) {
+      console.error('Erreur traitement retour FedaPay:', e);
+    }
+  }, [user?.id]);
 
   // Fermeture du menu de notifications au clic extérieur
   useEffect(() => {
@@ -523,16 +556,16 @@ export function Header({
                                 {n.type === 'visit_requested'
                                   ? 'Voir la demande & Répondre'
                                   : n.type === 'message_received'
-                                  ? 'Lire le message & Répondre'
-                                  : n.type === 'incident_reported'
-                                  ? 'Traiter la panne'
-                                  : (n.type === 'listing_approved' || n.type === 'listing_rejected')
-                                  ? 'Gérer mon annonce'
-                                  : n.type === 'payment_declared'
-                                  ? 'Vérifier le paiement'
-                                  : n.type === 'notice_received'
-                                  ? 'Voir le préavis'
-                                  : 'Voir le bail'}
+                                    ? 'Lire le message & Répondre'
+                                    : n.type === 'incident_reported'
+                                      ? 'Traiter la panne'
+                                      : (n.type === 'listing_approved' || n.type === 'listing_rejected')
+                                        ? 'Gérer mon annonce'
+                                        : n.type === 'payment_declared'
+                                          ? 'Vérifier le paiement'
+                                          : n.type === 'notice_received'
+                                            ? 'Voir le préavis'
+                                            : 'Voir le bail'}
                               </span>
                               <ExternalLink className="w-3 h-3" />
                             </span>
@@ -661,26 +694,26 @@ export function Header({
           {/* ============================================================== */}
           {isLandlord && (
             <>
-              {/* Badge Forfait Pro & Compte à Rebours 30 jours */}
-              {userSub?.plan === 'pro' && (
+              {/* Badge Formule Actuelle & Accès Surclassement 1-Clic à tout moment */}
+              {userSub?.plan === 'pro' ? (
                 <button
                   type="button"
                   onClick={() => setIsUpgradeModalOpen(true)}
-                  className={`hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-bold border transition-all cursor-pointer active:scale-95 shrink-0 ${
+                  className={`inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl text-xs font-bold border transition-all cursor-pointer active:scale-95 shrink-0 shadow-xs ${
                     userSub.isExpired
-                      ? 'bg-rose-50 text-rose-700 border-rose-300 shadow-sm animate-pulse'
+                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 shadow-sm animate-pulse'
                       : userSub.daysRemaining === 0
-                      ? 'bg-rose-50 text-rose-700 border-rose-300 animate-pulse'
+                      ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 animate-pulse'
                       : userSub.daysRemaining === 1
-                      ? 'bg-orange-50 text-orange-700 border-orange-300'
+                      ? 'bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-300'
                       : userSub.daysRemaining === 2
-                      ? 'bg-amber-50 text-amber-700 border-amber-300'
-                      : 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100'
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300'
+                      : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100'
                   }`}
-                  title="Gérer ou renouveler votre forfait Formule Pro (15 000 FCFA / 30 jours)"
+                  title="Formule Entreprise & Pro active (15 000 FCFA / 30 jours). Cliquez pour gérer ou renouveler."
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>
+                  <Sparkles className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                  <span className="hidden sm:inline">
                     {userSub.isExpired
                       ? '🔴 Pro Expiré (Réactiver)'
                       : userSub.daysRemaining === 0
@@ -690,6 +723,37 @@ export function Header({
                       : userSub.daysRemaining === 2
                       ? '⏳ Pro : 2j restants (J-2)'
                       : `👑 Formule Pro (${userSub.daysRemaining}j)`}
+                  </span>
+                  <span className="sm:hidden font-black">
+                    {userSub.isExpired ? '🔴 Pro Expiré' : `👑 Pro (${userSub.daysRemaining ?? 30}j)`}
+                  </span>
+                </button>
+              ) : userSub?.plan === 'serenite' ? (
+                <button
+                  type="button"
+                  onClick={() => setIsUpgradeModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl text-xs font-bold border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 transition-all cursor-pointer active:scale-95 shrink-0 shadow-xs"
+                  title="Formule Sérénité active : Baux illimités (2% / loyer perçu). Cliquez pour surclasser en Formule Pro."
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 fill-emerald-500 shrink-0" />
+                  <span className="hidden sm:inline">⚡ Sérénité (Illimité)</span>
+                  <span className="sm:hidden font-black">⚡ Sérénité</span>
+                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-extrabold underline ml-0.5">
+                    Surclasser
+                  </span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setIsUpgradeModalOpen(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-2xl text-xs font-bold border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 hover:bg-amber-100 transition-all cursor-pointer active:scale-95 shrink-0 shadow-xs"
+                  title="Formule Découverte active : 2 baux inclus. Cliquez pour activer Sérénité ou Pro (illimité)."
+                >
+                  <Zap className="w-3.5 h-3.5 text-amber-600 fill-amber-500 shrink-0" />
+                  <span className="hidden sm:inline">🌱 Formule Découverte</span>
+                  <span className="sm:hidden font-black">🌱 Découverte</span>
+                  <span className="text-[10px] text-amber-700 dark:text-amber-400 font-extrabold underline ml-0.5">
+                    Surclasser
                   </span>
                 </button>
               )}

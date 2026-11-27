@@ -26,8 +26,13 @@ import {
   Key,
   Eye,
   EyeOff,
+  Zap,
+  Flame,
+  ArrowRight,
 } from 'lucide-react';
-import { UserProfile, UserSpace } from '@/lib/types';
+import { UserProfile, UserSpace, UserSubscriptionDetails } from '@/lib/types';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import {
   getUserProfile,
   saveUserProfile,
@@ -61,6 +66,10 @@ export function UserProfileModal({
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [copiedMatricule, setCopiedMatricule] = useState(false);
   const [gpsFeedback, setGpsFeedback] = useState<string | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [userSub, setUserSub] = useState<UserSubscriptionDetails | null>(() =>
+    PlanService.getUserSubscription(user?.id)
+  );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Modification du mot de passe
@@ -135,6 +144,7 @@ export function UserProfileModal({
         if (user.projectCountry) p.projectCountry = user.projectCountry;
       }
       setProfile(p);
+      setUserSub(PlanService.getUserSubscription(user?.id));
       setSavedSuccess(false);
       setGpsFeedback(null);
       detectUserGeoLocation()
@@ -142,6 +152,14 @@ export function UserProfileModal({
         .catch(() => {});
     }
   }, [isOpen, currentRole, user]);
+
+  useEffect(() => {
+    const handlePlanChanged = () => {
+      setUserSub(PlanService.getUserSubscription(user?.id));
+    };
+    window.addEventListener('locagestion:plan_changed', handlePlanChanged);
+    return () => window.removeEventListener('locagestion:plan_changed', handlePlanChanged);
+  }, [user?.id]);
 
   // Fermeture par la touche Échap (Hook inconditionnel)
   useEffect(() => {
@@ -357,8 +375,9 @@ export function UserProfileModal({
   };
 
   return (
-    <div
-      onClick={onClose}
+    <>
+      <div
+        onClick={onClose}
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm animate-in fade-in duration-150"
     >
       <div
@@ -555,6 +574,99 @@ export function UserProfileModal({
               )}
             </button>
           </div>
+
+          {/* Formule d’Abonnement & Avantages du Compte (Accès Surclassement 1-Clic) */}
+          {(profile.role === 'bailleur' || profile.role === 'demarcheur') && (
+            <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md transition-all ${
+              userSub?.plan === 'pro'
+                ? userSub.isExpired
+                  ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-300 dark:border-rose-800 text-rose-950 dark:text-rose-200'
+                  : 'bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-950 text-white border-indigo-500/40 shadow-indigo-500/10'
+                : userSub?.plan === 'serenite'
+                ? 'bg-gradient-to-r from-emerald-950 via-slate-900 to-emerald-950 text-white border-emerald-500/40 shadow-emerald-500/10'
+                : 'bg-gradient-to-r from-amber-500/10 via-slate-50 to-amber-500/5 dark:from-slate-900 dark:to-slate-900 border-amber-300 dark:border-amber-800 text-slate-900 dark:text-white'
+            }`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-inner ${
+                  userSub?.plan === 'pro'
+                    ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-400/30'
+                    : userSub?.plan === 'serenite'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                    : 'bg-amber-500/20 text-amber-600 border border-amber-400/30'
+                }`}>
+                  {userSub?.plan === 'pro' ? (
+                    <Flame className="w-5 h-5 text-orange-400 fill-orange-400" />
+                  ) : userSub?.plan === 'serenite' ? (
+                    <Sparkles className="w-5 h-5 text-emerald-400 fill-emerald-400" />
+                  ) : (
+                    <Zap className="w-5 h-5 text-amber-500 fill-amber-500" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
+                      Formule Active du Compte
+                    </span>
+                    <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                      userSub?.plan === 'pro'
+                        ? userSub.isExpired
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-400/40'
+                          : 'bg-indigo-500/30 text-indigo-200 border border-indigo-400/40'
+                        : userSub?.plan === 'serenite'
+                        ? 'bg-emerald-500/30 text-emerald-200 border border-emerald-400/40'
+                        : 'bg-amber-500/30 text-amber-700 dark:text-amber-300 border border-amber-400/40'
+                    }`}>
+                      {userSub?.plan === 'pro'
+                        ? userSub.isExpired
+                          ? '🔴 Expiré'
+                          : `Pack 30 Jours (${userSub.daysRemaining ?? 30}j restants)`
+                        : userSub?.plan === 'serenite'
+                        ? 'Sans Abonnement Fixe (2%)'
+                        : 'Gratuit (2 baux max)'}
+                    </span>
+                  </div>
+                  <h4 className="text-sm sm:text-base font-black tracking-tight mt-0.5 flex items-center gap-1.5 truncate">
+                    <span>
+                      {userSub?.plan === 'pro'
+                        ? 'Formule Entreprise & Pro (15 000 FCFA)'
+                        : userSub?.plan === 'serenite'
+                        ? 'Formule Sérénité (Baux Illimités)'
+                        : 'Formule Découverte (0 FCFA)'}
+                    </span>
+                  </h4>
+                  <p className="text-[11px] opacity-75 mt-0.5 line-clamp-1">
+                    {userSub?.plan === 'pro'
+                      ? userSub.isExpired
+                        ? 'Votre période Pro de 30 jours est expirée. Réactivez pour débloquer les baux illimités.'
+                        : `Baux illimités, maintenance multi-lots & pack huissier. Échéance : ${userSub.expiresAt ? new Date(userSub.expiresAt).toLocaleDateString('fr-FR') : '30 jours'}.`
+                      : userSub?.plan === 'serenite'
+                      ? 'Baux illimités sans frais fixes • Split Payment 98% net • Suivi pannes & artisans.'
+                      : 'Limité à 2 baux signés. Surclassez pour créer et sceller des baux illimités.'}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsUpgradeModalOpen(true)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 shadow-md active:scale-95 ${
+                  userSub?.plan === 'pro'
+                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-600/30'
+                    : userSub?.plan === 'serenite'
+                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30'
+                    : 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-600/30'
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>
+                  {userSub?.plan === 'pro' && !userSub.isExpired
+                    ? 'Gérer / Prolonger'
+                    : 'Surclasser la formule'}
+                </span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
 
           {/* Identité Personnelle (Nom, Prénom, Téléphone, Email strictement scellés) */}
@@ -925,5 +1037,15 @@ export function UserProfileModal({
         </form>
       </div>
     </div>
+
+    {/* Upgrade Plan Modal */}
+    <UpgradePlanModal
+      isOpen={isUpgradeModalOpen}
+      onClose={() => {
+        setIsUpgradeModalOpen(false);
+        setUserSub(PlanService.getUserSubscription(user?.id));
+      }}
+    />
+  </>
   );
 }

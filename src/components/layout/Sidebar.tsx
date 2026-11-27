@@ -32,8 +32,11 @@ import {
   Camera,
   ArrowLeft,
   Globe,
+  Zap,
 } from 'lucide-react';
-import { UserSpace } from '@/lib/types';
+import { UserSpace, UserSubscriptionDetails } from '@/lib/types';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import { useSpace } from '@/lib/context/space-context';
 import { IncidentService } from '@/lib/services/incident-service';
 import { UserProfileModal } from '@/components/profile/UserProfileModal';
@@ -102,26 +105,34 @@ export function Sidebar({
   };
 
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [userSub, setUserSub] = useState<UserSubscriptionDetails | null>(() =>
+    PlanService.getUserSubscription(context?.user?.id)
+  );
   // Initialisation déterministe sans cache pour une concordance SSR/Client rigoureuse
   const [userProfile, setUserProfile] = useState(() => getUserProfile(activeSpace, false));
 
   useEffect(() => {
     setUserProfile(getUserProfile(activeSpace, true));
-  }, [activeSpace]);
+    setUserSub(PlanService.getUserSubscription(context?.user?.id));
+  }, [activeSpace, context?.user?.id]);
 
   useEffect(() => {
     const handleProfileUpdate = () => {
       setUserProfile(getUserProfile(activeSpace, true));
+      setUserSub(PlanService.getUserSubscription(context?.user?.id));
     };
     window.addEventListener('locagestion:profile_updated', handleProfileUpdate);
     window.addEventListener('locagestion:auth_changed', handleProfileUpdate);
     window.addEventListener('locagestion:residence_updated', handleProfileUpdate);
+    window.addEventListener('locagestion:plan_changed', handleProfileUpdate);
     return () => {
       window.removeEventListener('locagestion:profile_updated', handleProfileUpdate);
       window.removeEventListener('locagestion:auth_changed', handleProfileUpdate);
       window.removeEventListener('locagestion:residence_updated', handleProfileUpdate);
+      window.removeEventListener('locagestion:plan_changed', handleProfileUpdate);
     };
-  }, [activeSpace]);
+  }, [activeSpace, context?.user?.id]);
 
   // Détection des onglets et états actifs
   const [currentPortalTab, setCurrentPortalTab] = useState<string | null>(null);
@@ -1129,6 +1140,52 @@ export function Sidebar({
                   <span className="text-slate-500">•</span>
                   <span className="text-brand-400 font-bold group-hover:underline">Modifier</span>
                 </p>
+
+                {/* Formule Active & Accès Surclassement à tout moment */}
+                {(isLandlord || isDemarcheur) && (
+                  <div
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsUpgradeModalOpen(true);
+                    }}
+                    className={`mt-2 flex items-center justify-between px-2.5 py-1.5 rounded-xl border text-[10px] font-bold transition-all cursor-pointer ${
+                      userSub?.plan === 'pro'
+                        ? userSub.isExpired
+                          ? 'bg-rose-950/60 border-rose-500/40 text-rose-300 hover:bg-rose-900/60'
+                          : 'bg-indigo-950/80 border-indigo-500/40 text-indigo-200 hover:bg-indigo-900/80'
+                        : userSub?.plan === 'serenite'
+                        ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-200 hover:bg-emerald-900/80'
+                        : 'bg-amber-950/80 border-amber-500/40 text-amber-200 hover:bg-amber-900/80'
+                    }`}
+                    title="Formule actuelle de votre compte. Cliquez pour surclasser ou gérer."
+                  >
+                    <div className="flex items-center gap-1.5 truncate">
+                      {userSub?.plan === 'pro' ? (
+                        <>
+                          <Sparkles className="w-3 h-3 text-indigo-400 shrink-0" />
+                          <span className="truncate">
+                            {userSub.isExpired
+                              ? '🔴 Pro Expiré'
+                              : `👑 Formule Pro (${userSub.daysRemaining ?? 30}j)`}
+                          </span>
+                        </>
+                      ) : userSub?.plan === 'serenite' ? (
+                        <>
+                          <Sparkles className="w-3 h-3 text-emerald-400 shrink-0" />
+                          <span className="truncate">⚡ Sérénité (Illimité)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-3 h-3 text-amber-400 shrink-0" />
+                          <span className="truncate">🌱 Formule Découverte</span>
+                        </>
+                      )}
+                    </div>
+                    <span className="text-[9px] font-black underline shrink-0 ml-1">
+                      {userSub?.plan === 'pro' && !userSub.isExpired ? 'Gérer' : 'Surclasser'}
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1160,6 +1217,12 @@ export function Sidebar({
         isOpen={isProfileModalOpen}
         onClose={() => setIsProfileModalOpen(false)}
         activeSpace={activeSpace}
+      />
+
+      {/* Upgrade Plan Modal */}
+      <UpgradePlanModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
       />
     </>
   );
