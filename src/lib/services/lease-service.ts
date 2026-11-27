@@ -258,7 +258,9 @@ export const INITIAL_LEASES: Lease[] = [
     startDate: '15/11/2026',
     endDate: '14/11/2027',
     durationMonths: 12,
-    status: 'actif',
+    status: 'resilie',
+    resiliatedAt: '27/11/2026 10:36',
+    resiliationReason: 'Résiliation à la demande du bailleur',
     signedByLandlord: true,
     signedByTenant: true,
     landlordId: 'usr-bailleur-voglossou',
@@ -377,24 +379,44 @@ export const LeaseService = {
         if (Array.isArray(parsed)) {
           // Élimination absolue et définitive de tout bail fictif / démo
           const sanitized = parsed.filter((l: Lease) => !isFakeLease(l));
-          const hadFake = sanitized.length !== parsed.length;
           parsed = sanitized;
 
-          // Si le vrai bail actif de Jojo VOG (BAIL-2026-421) n'est pas encore présent, le fusionner
-          const hasRealLease = parsed.some((l: Lease) => l.id === 'BAIL-2026-421');
-          if (!hasRealLease && INITIAL_LEASES.length > 0) {
-            const merged = [...INITIAL_LEASES, ...parsed];
-            try {
-              localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(merged));
-            } catch (e) { }
-            return merged;
-          }
+          // Dédoublonnage strict par ID : un ID de bail ne peut exister qu'une seule fois !
+          // Si une version résiliée existe pour cet ID, la résiliation est scellée
+          const leaseMap = new Map<string, Lease>();
+          parsed.forEach((l: Lease) => {
+            if (!l || !l.id) return;
+            const existing = leaseMap.get(l.id);
+            if (!existing) {
+              leaseMap.set(l.id, l);
+            } else {
+              const isRes = l.status === 'resilie' || existing.status === 'resilie';
+              const isReac = Boolean(
+                (l.reactivatedAt || existing.reactivatedAt) &&
+                (l.status === 'actif' || existing.status === 'actif') &&
+                (!l.resiliatedAt && !existing.resiliatedAt ||
+                  (l.reactivatedAt || '') >= (l.resiliatedAt || '') ||
+                  (existing.reactivatedAt || '') >= (existing.resiliatedAt || ''))
+              );
+              const status: LeaseStatus = isRes ? (isReac ? 'actif' : 'resilie') : (existing.status || l.status);
+              leaseMap.set(l.id, {
+                ...existing,
+                ...l,
+                status,
+                resiliatedAt: l.resiliatedAt || existing.resiliatedAt,
+                resiliationReason: l.resiliationReason || existing.resiliationReason,
+              });
+            }
+          });
 
-          if (hadFake) {
-            try {
-              localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
-            } catch (e) { }
-          }
+          // Si des baux initiaux (ex: BAIL-2026-421) sont absents du cache local, les intégrer sans écraser ni dupliquer
+          INITIAL_LEASES.forEach((initL) => {
+            if (!leaseMap.has(initL.id)) {
+              leaseMap.set(initL.id, initL);
+            }
+          });
+
+          parsed = Array.from(leaseMap.values());
 
           // Si le bail canonique est présent mais sans les coordonnées complètes du bailleur, les enrichir
           const jojoLease = parsed.find((l: Lease) => l.id === 'BAIL-2026-421');
@@ -431,21 +453,12 @@ export const LeaseService = {
             if (jojoLease.landlordSignature) {
               jojoLease.landlordSignature.signedBy = 'VOGLOSSOU JOHANE';
             }
-            try {
-              localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
-            } catch (e) { }
           }
 
-          // Si d'autres baux initiaux (ex: Magasin ou Boutique de Jojo VOG) sont absents du cache local, les intégrer
-          const missingInitialLeases = INITIAL_LEASES.filter(
-            (initL) => !parsed.some((p: Lease) => p.id === initL.id)
-          );
-          if (missingInitialLeases.length > 0) {
-            parsed = [...parsed, ...missingInitialLeases];
-            try {
-              localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
-            } catch (e) { }
-          }
+          try {
+            localStorage.setItem(LEASES_STORAGE_KEY, JSON.stringify(parsed));
+          } catch (e) { }
+
           if (parsed.length > 0) return parsed;
         }
       }

@@ -539,13 +539,23 @@ function TenantPortalContent() {
       return timeB - timeA;
     });
 
+    // Dédoublonnage strict des baux par ID : aucun bail ne peut apparaître en double
+    const seenLeaseIds = new Set<string>();
+    const uniqueMatchingLeases: Lease[] = [];
+    matchingLeases.forEach((l) => {
+      if (!seenLeaseIds.has(l.id)) {
+        seenLeaseIds.add(l.id);
+        uniqueMatchingLeases.push(l);
+      }
+    });
+
     // Séparation stricte et étanche : les baux actifs pour les paiements / calculs vs les baux résiliés pour l'historique
-    const activeLeases = matchingLeases.filter((l) => l.status !== 'resilie' && l.status !== 'expire' && l.status !== 'brouillon');
-    const terminatedLeases = matchingLeases.filter((l) => l.status === 'resilie' || l.status === 'expire');
+    const activeLeases = uniqueMatchingLeases.filter((l) => l.status !== 'resilie' && l.status !== 'expire' && l.status !== 'brouillon');
+    const terminatedLeases = uniqueMatchingLeases.filter((l) => l.status === 'resilie' || l.status === 'expire');
 
     setMyLeases(activeLeases);
     setResiliatedLeases(terminatedLeases);
-    setAllTenantLeases(matchingLeases);
+    setAllTenantLeases(uniqueMatchingLeases);
 
     if (activeLeases.length > 0) {
       setDeclarationLeaseId((prev) => activeLeases.some((l) => l.id === prev) ? prev : activeLeases[0].id);
@@ -557,9 +567,10 @@ function TenantPortalContent() {
 
     let targetLease: Lease | null = null;
     if (selectedLeaseId && selectedLeaseId !== 'all') {
-      targetLease = activeLeases.find((l) => l.id === selectedLeaseId) || terminatedLeases.find((l) => l.id === selectedLeaseId) || null;
+      targetLease = activeLeases.find((l) => l.id === selectedLeaseId) || null;
     }
     if (!targetLease) {
+      // Priorité absolue et exclusive au premier bail actif pour l'accueil
       targetLease = activeLeases[0] || terminatedLeases[0] || (queryLeaseId ? allLeases.find((l) => l.id === queryLeaseId) : null);
     }
     setCurrentLease(targetLease || null);
@@ -1120,6 +1131,12 @@ function TenantPortalContent() {
                     <span>{usage.label}</span>
                   </span>
                 )}
+                {targetLease.status === 'resilie' && (
+                  <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 shrink-0">
+                    <Ban className="w-3 h-3 text-rose-600" />
+                    <span>Bail Résilié • PV Conservé</span>
+                  </span>
+                )}
                 {hasPhotos ? (
                   <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1 shrink-0">
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
@@ -1625,8 +1642,8 @@ function TenantPortalContent() {
           {/* ==================================================================== */}
           {activeTab === 'accueil' && (
             <div className="space-y-6 animate-in fade-in duration-200">
-              {/* Bannière Bail Résilié / Logement dissocié */}
-              {currentLease?.status === 'resilie' && (
+              {/* Bannière Bail Résilié / Logement dissocié (affichée uniquement si le locataire n'a aucun bail actif) */}
+              {myLeases.length === 0 && currentLease?.status === 'resilie' && (
                 <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-600 via-rose-700 to-rose-800 text-white shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-5 border border-rose-400 ring-4 ring-rose-500/20 animate-in slide-in-from-top-4">
                   <div className="flex items-start gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-white/20 text-white flex items-center justify-center shrink-0 border border-white/30 shadow-inner">
@@ -1779,7 +1796,7 @@ function TenantPortalContent() {
                 </div>
               </div>
 
-              {/* SÉLECTEUR MULTI-BAUX & MULTI-BAILLEURS (Compte Locataire Unique) */}
+              {/* SÉLECTEUR MULTI-BAUX & MULTI-BAILLEURS (Compte Locataire Unique : Strictement baux actifs) */}
               {myLeases.length > 1 && (
                 <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200/90 shadow-soft space-y-3 animate-in fade-in duration-200">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
@@ -1820,7 +1837,7 @@ function TenantPortalContent() {
                       </span>
                     </button>
 
-                    {/* Un bouton par bail */}
+                    {/* Un bouton par bail actif */}
                     {myLeases.map((l) => {
                       const usage = getUsageInfo(l.propertyUsage);
                       const UsageIcon = usage.icon;
@@ -1856,7 +1873,7 @@ function TenantPortalContent() {
                 </div>
               )}
 
-              {/* GRILLE VOS BAUX & BAILLEURS RATTACHÉS (Affichée en vue d'ensemble multi-baux) */}
+              {/* GRILLE VOS BAUX ACTIFS & BAILLEURS (Uniquement les baux strictement actifs) */}
               {selectedLeaseId === 'all' && myLeases.length > 1 && (
                 <div className="space-y-3 pt-1">
                   <div className="flex items-center justify-between">
@@ -1865,10 +1882,11 @@ function TenantPortalContent() {
                       <span>Vos Baux Actifs & Bailleurs ({myLeases.length})</span>
                     </h3>
                     <span className="text-xs text-slate-500 font-medium hidden sm:inline">
-                      Gestion indépendante bailleur par bailleur
+                      {myLeases.length} actif{myLeases.length > 1 ? 's' : ''}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Baux strictement actifs avec boutons de paiement */}
                     {myLeases.map((l) => {
                       const usage = getUsageInfo(l.propertyUsage);
                       const UsageIcon = usage.icon;
@@ -1947,87 +1965,6 @@ function TenantPortalContent() {
                               </a>
                             </div>
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* SECTION BAUX RÉCILIÉS & CLÔTURÉS (Historique juridique sans aucun paiement exigible) */}
-              {resiliatedLeases.length > 0 && (
-                <div className="bg-rose-50/50 rounded-3xl p-5 border border-rose-200/90 shadow-2xs space-y-3 animate-in fade-in duration-200">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-rose-200/60">
-                    <div className="flex items-center gap-2">
-                      <span className="p-1.5 rounded-xl bg-rose-100 text-rose-700">
-                        <Ban className="w-4 h-4" />
-                      </span>
-                      <div>
-                        <h3 className="text-xs sm:text-sm font-black text-rose-950 uppercase tracking-wider">
-                          Bail Résilié & Clôturé ({resiliatedLeases.length})
-                        </h3>
-                        <p className="text-[11px] text-rose-700/90 font-medium">
-                          Ce contrat a été résilié par votre bailleur. Aucun loyer ni paiement n'est exigible pour ce logement.
-                        </p>
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-200/80 text-rose-900 border border-rose-300 self-start sm:self-auto shrink-0">
-                      Dissocié & Archivé
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-1">
-                    {resiliatedLeases.map((l) => {
-                      const usage = getUsageInfo(l.propertyUsage);
-                      const UsageIcon = usage.icon;
-                      const landlordName = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
-                      return (
-                        <div
-                          key={`resil-${l.id}`}
-                          className="bg-white rounded-2xl p-4 border border-rose-200/90 shadow-2xs space-y-3"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-200 flex items-center gap-1">
-                              <Ban className="w-3 h-3 text-rose-600" />
-                              <span>Bail Résilié</span>
-                            </span>
-                            <span className="text-[10px] font-mono font-bold text-slate-400">{l.id}</span>
-                          </div>
-
-                          <div>
-                            <h4 className="font-black text-sm text-slate-900">{l.unit}</h4>
-                            <p className="text-xs text-slate-500 mt-0.5">{l.property} • {l.propertyLocation || 'Cotonou'}</p>
-                          </div>
-
-                          <div className="p-2.5 rounded-xl bg-rose-50/50 border border-rose-100 text-xs space-y-1">
-                            <div className="flex items-center justify-between text-slate-600">
-                              <span>Bailleur :</span>
-                              <strong className="text-slate-800">{landlordName}</strong>
-                            </div>
-                            <div className="flex items-center justify-between text-slate-600">
-                              <span>Date résiliation :</span>
-                              <strong className="text-rose-800 font-bold">{l.resiliatedAt || 'Résilié récemment'}</strong>
-                            </div>
-                            {l.resiliationReason && (
-                              <div className="flex items-center justify-between text-slate-600">
-                                <span>Motif :</span>
-                                <span className="text-slate-700 italic truncate max-w-[180px]">{l.resiliationReason}</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setCurrentLease(l);
-                              setSelectedLeaseId(l.id);
-                              handleTabChange('bail');
-                            }}
-                            className="w-full py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                          >
-                            <FileText className="w-3.5 h-3.5 text-slate-500" />
-                            <span>Consulter le contrat archivé & PDF</span>
-                          </button>
                         </div>
                       );
                     })}
@@ -3436,6 +3373,122 @@ function TenantPortalContent() {
                   </p>
                 </div>
               ))}
+
+              {/* SECTION HISTORIQUE DES BAUX RÉSILIÉS & CLÔTURÉS (Classés avec contrat PDF et EDL) */}
+              {(bailSubTab === 'tout' || bailSubTab === 'bail_etat') && resiliatedLeases.length > 0 && (
+                <div className="bg-rose-50/20 rounded-3xl p-6 sm:p-7 border border-rose-200/90 shadow-soft space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-rose-100">
+                    <div className="space-y-0.5">
+                      <h3 className="font-black text-sm sm:text-base text-rose-950 flex items-center gap-2">
+                        <Ban className="w-4 h-4 text-rose-600" />
+                        <span>Historique des Baux Résiliés & Clôturés ({resiliatedLeases.length})</span>
+                      </h3>
+                      <p className="text-xs text-rose-700">
+                        Ces contrats ont été résiliés et sont archivés dans votre dossier. Aucun loyer ni paiement n'est exigible pour ces logements.
+                      </p>
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 self-start sm:self-auto">
+                      DISSOCIÉ & ARCHIVÉ
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {resiliatedLeases.map((l) => {
+                      const landlordName = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
+                      const landlordPhone = l.landlordPhone || '+229 01 95 44 44 30';
+                      return (
+                        <div
+                          key={`history-resil-card-${l.id}`}
+                          className="bg-white rounded-2xl p-5 border border-rose-200 shadow-2xs flex flex-col justify-between space-y-4 hover:border-rose-300 transition-all"
+                        >
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1">
+                                <Ban className="w-3 h-3 text-rose-600" />
+                                <span>Bail Résilié • Clôturé</span>
+                              </span>
+                              <span className="text-[10px] font-mono font-bold text-slate-400">{l.id}</span>
+                            </div>
+
+                            <div>
+                              <h4 className="font-black text-sm text-slate-900 leading-tight">{l.unit}</h4>
+                              <p className="text-xs text-slate-500 mt-0.5">{l.property} • {l.propertyLocation || 'Cotonou'}</p>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-rose-50/50 border border-rose-100 space-y-1.5 text-xs">
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-500">Bailleur :</span>
+                                <strong className="text-slate-900 truncate max-w-[130px]">{landlordName}</strong>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-slate-500">Date résiliation :</span>
+                                <strong className="text-rose-800 font-bold">{l.resiliatedAt || 'Ce mois-ci'}</strong>
+                              </div>
+                              {l.resiliationReason && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-slate-500">Motif :</span>
+                                  <span className="text-slate-700 italic truncate max-w-[130px]">{l.resiliationReason}</span>
+                                </div>
+                              )}
+                              <div className="pt-1 border-t border-rose-100 text-[10px] text-rose-700 font-bold">
+                                Contrat clôturé • Aucun paiement n'est exigible
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2 pt-2 border-t border-rose-100">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                generateLeasePDF({
+                                  id: l.id,
+                                  tenantName: tenant.name,
+                                  tenantPhone: tenant.phone,
+                                  tenantEmail: tenant.email,
+                                  propertyName: l.property,
+                                  unit: l.unit,
+                                  rent: l.rent,
+                                  deposit: l.deposit,
+                                  startDate: l.startDate,
+                                });
+                                showToast(`Contrat archivé ${l.id} téléchargé en PDF.`);
+                              }}
+                              className="w-full py-2.5 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 text-slate-600" />
+                              <span>Consulter le contrat archivé & PDF</span>
+                            </button>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedEdlLeaseId(l.id);
+                                  handleTabChange('edl');
+                                }}
+                                className="py-2 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-[11px] font-bold text-center border border-emerald-200 flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <Camera className="w-3 h-3 text-emerald-600" />
+                                <span>État des lieux</span>
+                              </button>
+                              <a
+                                href={`https://wa.me/${landlordPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                                  `Bonjour ${landlordName}, je suis ${tenant.name} concernant la résiliation du contrat ${l.id} (${l.unit}).`
+                                )}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="py-2 px-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold text-center flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                              >
+                                <MessageCircle className="w-3 h-3 text-slate-500" />
+                                <span>WhatsApp</span>
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

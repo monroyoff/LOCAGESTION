@@ -434,18 +434,26 @@ export async function POST(req: NextRequest) {
           if (existing) {
             const signedByTenant = Boolean(existing.signedByTenant || l.signedByTenant);
             const signedByLandlord = Boolean(existing.signedByLandlord || l.signedByLandlord);
-            const status =
-              l.status === 'resilie' || existing.status === 'resilie'
-                ? l.reactivatedAt && (!existing.resiliatedAt || l.reactivatedAt >= existing.resiliatedAt)
-                  ? 'actif'
-                  : 'resilie'
-                : signedByTenant || l.status === 'actif' || existing.status === 'actif'
-                ? 'actif'
-                : l.status || existing.status;
+            const isRes = l.status === 'resilie' || existing.status === 'resilie';
+            const isReac = Boolean(
+              (l.reactivatedAt || existing.reactivatedAt) &&
+              (l.status === 'actif' || existing.status === 'actif') &&
+              (!l.resiliatedAt && !existing.resiliatedAt ||
+                (l.reactivatedAt || '') >= (l.resiliatedAt || '') ||
+                (existing.reactivatedAt || '') >= (existing.resiliatedAt || ''))
+            );
+            const status = isRes
+              ? (isReac ? 'actif' : 'resilie')
+              : signedByTenant || l.status === 'actif' || existing.status === 'actif'
+              ? 'actif'
+              : l.status || existing.status;
             mergedMap.set(l.id, {
               ...existing,
               ...l,
               status,
+              resiliatedAt: l.resiliatedAt || existing.resiliatedAt,
+              resiliationReason: l.resiliationReason || existing.resiliationReason,
+              reactivatedAt: l.reactivatedAt || existing.reactivatedAt,
               signedByTenant,
               signedByLandlord,
               tenantSignedAt: l.tenantSignedAt || existing.tenantSignedAt,

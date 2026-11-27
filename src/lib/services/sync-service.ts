@@ -125,20 +125,27 @@ export const SyncService = {
           } else {
             const signedByTenant = Boolean(local.signedByTenant || serverLease.signedByTenant);
             const signedByLandlord = Boolean(local.signedByLandlord || serverLease.signedByLandlord);
-            const status =
-              serverLease.status === 'resilie' || local.status === 'resilie'
-                ? (serverLease.reactivatedAt || local.reactivatedAt) &&
-                  (serverLease.status === 'actif' || local.status === 'actif')
-                  ? 'actif'
-                  : 'resilie'
-                : signedByTenant || serverLease.status === 'actif' || local.status === 'actif'
-                ? 'actif'
-                : serverLease.status || local.status;
+            const isRes = serverLease.status === 'resilie' || local.status === 'resilie';
+            const isReac = Boolean(
+              (serverLease.reactivatedAt || local.reactivatedAt) &&
+              (serverLease.status === 'actif' || local.status === 'actif') &&
+              (!serverLease.resiliatedAt && !local.resiliatedAt ||
+                (serverLease.reactivatedAt || '') >= (serverLease.resiliatedAt || '') ||
+                (local.reactivatedAt || '') >= (local.resiliatedAt || ''))
+            );
+            const status = isRes
+              ? (isReac ? 'actif' : 'resilie')
+              : signedByTenant || serverLease.status === 'actif' || local.status === 'actif'
+              ? 'actif'
+              : serverLease.status || local.status;
 
             const mergedLease: Lease = {
               ...local,
               ...serverLease,
               status,
+              resiliatedAt: serverLease.resiliatedAt || local.resiliatedAt,
+              resiliationReason: serverLease.resiliationReason || local.resiliationReason,
+              reactivatedAt: serverLease.reactivatedAt || local.reactivatedAt,
               signedByTenant,
               signedByLandlord,
               tenantSignedAt: serverLease.tenantSignedAt || local.tenantSignedAt,
