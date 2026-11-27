@@ -68,6 +68,7 @@ import { PlanService, PLANS_CONFIG, SubscriptionHistoryItem } from '@/lib/servic
 import { LeaseService, Lease } from '@/lib/services/lease-service';
 import { PaymentService } from '@/lib/services/payment-service';
 import { PayoutService, LandlordPayoutRecord, PayoutStats } from '@/lib/services/payout-service';
+import { TenantScoringService } from '@/lib/services/tenant-scoring-service';
 import { UserSubscriptionDetails, PaymentTransaction } from '@/lib/types';
 import { notifySave } from '@/lib/notifications/action-notifier';
 
@@ -134,7 +135,7 @@ export default function AdminDashboardPage() {
   const [userLeases, setUserLeases] = useState<Lease[]>([]);
   const [userPayments, setUserPayments] = useState<PaymentTransaction[]>([]);
   const [customProDuration, setCustomProDuration] = useState<number>(30);
-  const [userModalTab, setUserModalTab] = useState<'formule' | 'history' | 'identity'>('formule');
+  const [userModalTab, setUserModalTab] = useState<'formule' | 'history' | 'identity' | 'locataire_dossier' | 'demarcheur_dossier'>('formule');
 
   const loadUserDetailsData = (u: AuthUser) => {
     setUserSubDetails(PlanService.getUserSubscription(u.id));
@@ -149,14 +150,25 @@ export default function AdminDashboardPage() {
         (u.name && l.tenant && l.tenant.toLowerCase().includes(u.name.toLowerCase()))
     );
     setUserLeases(matchingLeases);
-    const allPayments = PaymentService.getPaymentsForLandlord(u);
+    const allPayments =
+      u.role === 'locataire'
+        ? PaymentService.getPaymentsForTenant(u, matchingLeases[0] || null)
+        : PaymentService.getPaymentsForLandlord(u);
     setUserPayments(allPayments);
   };
 
   useEffect(() => {
     if (selectedUserForDetail) {
       loadUserDetailsData(selectedUserForDetail);
-      setUserModalTab('formule');
+      if (selectedUserForDetail.role === 'bailleur') {
+        setUserModalTab('formule');
+      } else if (selectedUserForDetail.role === 'locataire') {
+        setUserModalTab('locataire_dossier');
+      } else if (selectedUserForDetail.role === 'demarcheur') {
+        setUserModalTab('demarcheur_dossier');
+      } else {
+        setUserModalTab('identity');
+      }
     }
   }, [selectedUserForDetail]);
 
@@ -2813,20 +2825,57 @@ export default function AdminDashboardPage() {
               )}
             </div>
 
-            {/* Navigation par Onglets */}
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-              <button
-                type="button"
-                onClick={() => setUserModalTab('formule')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
-                  userModalTab === 'formule'
-                    ? 'bg-indigo-600 text-white shadow-md'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                }`}
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Formule & Droits</span>
-              </button>
+            {/* Navigation par Onglets Contextuelle selon le Rôle */}
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2 flex-wrap">
+              {/* Si BAILLEUR : Onglet Formule & Droits */}
+              {selectedUserForDetail.role === 'bailleur' && (
+                <button
+                  type="button"
+                  onClick={() => setUserModalTab('formule')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    userModalTab === 'formule'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Formule &amp; Droits</span>
+                </button>
+              )}
+
+              {/* Si LOCATAIRE : Onglet Dossier Résident & Baux */}
+              {selectedUserForDetail.role === 'locataire' && (
+                <button
+                  type="button"
+                  onClick={() => setUserModalTab('locataire_dossier')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    userModalTab === 'locataire_dossier'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <Home className="w-3.5 h-3.5" />
+                  <span>Dossier Résident &amp; Baux ({userLeases.length})</span>
+                </button>
+              )}
+
+              {/* Si DÉMARCHEUR : Onglet Mandataire & Mandats */}
+              {selectedUserForDetail.role === 'demarcheur' && (
+                <button
+                  type="button"
+                  onClick={() => setUserModalTab('demarcheur_dossier')}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                    userModalTab === 'demarcheur_dossier'
+                      ? 'bg-amber-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>Mandats &amp; Publications</span>
+                </button>
+              )}
+
+              {/* Onglet Historique partagé et adapté au rôle */}
               <button
                 type="button"
                 onClick={() => setUserModalTab('history')}
@@ -2837,8 +2886,16 @@ export default function AdminDashboardPage() {
                 }`}
               >
                 <History className="w-3.5 h-3.5" />
-                <span>Historique ({userSubHistory.length + userLeases.length + userPayments.length})</span>
+                <span>
+                  {selectedUserForDetail.role === 'locataire'
+                    ? `Quittances & Règlements (${userPayments.length})`
+                    : selectedUserForDetail.role === 'demarcheur'
+                    ? `Historique des Publications`
+                    : `Historique & Audit (${userSubHistory.length + userLeases.length + userPayments.length})`}
+                </span>
               </button>
+
+              {/* Onglet Identité & Coordonnées */}
               <button
                 type="button"
                 onClick={() => setUserModalTab('identity')}
@@ -2849,12 +2906,217 @@ export default function AdminDashboardPage() {
                 }`}
               >
                 <Fingerprint className="w-3.5 h-3.5" />
-                <span>Identité & Publications</span>
+                <span>Identité &amp; Coordonnées</span>
               </button>
             </div>
 
-            {/* ONGLET 1 : GESTION FORMULE & DROITS */}
-            {userModalTab === 'formule' && (
+            {/* ONGLET SPÉCIFIQUE LOCATAIRE : DOSSIER RÉSIDENT & SOLVABILITÉ (PAS DE FORMULE) */}
+            {selectedUserForDetail.role === 'locataire' && userModalTab === 'locataire_dossier' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                {/* Carte Statut Compte Résidentiel */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-950 to-slate-950 border border-emerald-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold">
+                        <Home className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider block">
+                          Statut Espace Résidentiel
+                        </span>
+                        <h4 className="text-base font-black text-white">
+                          Compte Locataire Gratuit &amp; Illimité
+                        </h4>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                      0 FCFA • Gratuit à Vie
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Les locataires ne souscrivent <strong>aucune formule ni abonnement payant</strong>. L'accès à leur portail résidentiel (paiements par Mobile Money, téléchargement des quittances certifiées avec QR Code scellé, états des lieux contradictoires et passeport de solvabilité) est <strong>100 % gratuit et sans limitation de durée</strong>.
+                  </p>
+                </div>
+
+                {/* Score Passeport Solvabilité */}
+                {(() => {
+                  const scoring = TenantScoringService.calculateScore(selectedUserForDetail.email, selectedUserForDetail.phone);
+                  return (
+                    <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-black text-lg font-mono">
+                          {scoring.currentScore}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h5 className="text-sm font-black text-white">Passeport Solvabilité Certifié</h5>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+                              {scoring.tier.badge}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            Évaluation déterministe basée sur la ponctualité des règlements à l'échéance du 5 de chaque mois.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="text-right text-xs shrink-0">
+                        <span className="text-slate-400 block text-[10px]">Taux de ponctualité :</span>
+                        <strong className="text-emerald-400 text-sm font-mono font-black">
+                          {scoring.isNewTenant ? '100 %' : `${Math.round(100 * (scoring.onTimePaymentsCount / Math.max(1, scoring.onTimePaymentsCount + scoring.delayedPaymentsCount)))} %`}
+                        </strong>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Contrats de Location Rattachés */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
+                      Baux de Location Actifs &amp; Historiques ({userLeases.length}) :
+                    </span>
+                  </div>
+
+                  {userLeases.length === 0 ? (
+                    <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic text-center">
+                      Aucun contrat de bail enregistré pour ce locataire.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {userLeases.map((l) => (
+                        <div
+                          key={l.id}
+                          className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-indigo-300">{l.id}</span>
+                              <strong className="text-white">{l.unit}</strong>
+                              <span
+                                className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                  l.status === 'actif'
+                                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                    : l.status === 'resilie'
+                                    ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                                    : 'bg-slate-800 text-slate-400'
+                                }`}
+                              >
+                                {l.status === 'actif' ? 'Actif' : l.status === 'resilie' ? 'Résilié' : l.status}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-400 mt-0.5">
+                              {l.property} • Bailleur : <strong className="text-slate-300">{l.landlordName}</strong> ({l.landlordPhone})
+                            </p>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-mono font-black text-emerald-400 text-xs block">
+                              {formatFCFA(l.rent)}
+                            </span>
+                            <span className="text-[10px] text-slate-500">par mois</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* ONGLET SPÉCIFIQUE DÉMARCHEUR : MANDATAIRE & CONFORMITÉ IFU (PAS DE FORMULE) */}
+            {selectedUserForDetail.role === 'demarcheur' && userModalTab === 'demarcheur_dossier' && (
+              <div className="space-y-4 animate-in fade-in duration-200">
+                {/* Carte Statut Démarcheur */}
+                <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/70 via-slate-950 to-slate-950 border border-amber-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-bold">
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-black uppercase text-amber-400 tracking-wider block">
+                          Statut Agent &amp; Mandataire
+                        </span>
+                        <h4 className="text-base font-black text-white">
+                          Démarcheur Immobilier Agréé
+                        </h4>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                      Régime Mandataire
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 leading-relaxed">
+                    Les démarcheurs et agents immobiliers opèrent via des mandats de publication et d'intermédiation. <strong>Aucune formule de bailleur ne leur est applicable ni facturée.</strong>
+                  </p>
+                </div>
+
+                {/* Traçabilité Fiscale IFU */}
+                <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs">
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                      Numéro d'Identifiant Fiscal Unique (IFU)
+                    </span>
+                    <strong className="text-white text-sm font-mono mt-0.5 block">
+                      {selectedUserForDetail.ifu || 'Non renseigné'}
+                    </strong>
+                  </div>
+                  <span
+                    className={`text-[10px] font-black uppercase px-2.5 py-1 rounded-full border ${
+                      selectedUserForDetail.ifu
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
+                        : 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                    }`}
+                  >
+                    {selectedUserForDetail.ifu ? 'IFU Enregistré ✓' : 'IFU Requis'}
+                  </span>
+                </div>
+
+                {/* Mandats & Publications */}
+                {(() => {
+                  const authorListings = listings.filter(
+                    (l) => l.authorId === selectedUserForDetail.id || areEmailsEqual(l.authorEmail, selectedUserForDetail.email)
+                  );
+                  return (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black uppercase text-amber-400 tracking-wider block">
+                          Mandats &amp; Annonces en Ligne ({authorListings.length}) :
+                        </span>
+                      </div>
+
+                      {authorListings.length === 0 ? (
+                        <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic text-center">
+                          Aucune annonce active publiée par ce démarcheur.
+                        </div>
+                      ) : (
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {authorListings.map((lst) => (
+                            <div
+                              key={lst.id}
+                              className="p-3 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3 text-xs"
+                            >
+                              <div>
+                                <span className="font-bold text-white block">{lst.title}</span>
+                                <span className="text-[10px] text-slate-400">
+                                  {lst.propertyType} • {lst.city} ({lst.country})
+                                </span>
+                              </div>
+                              <span className="font-mono font-bold text-amber-400">
+                                {formatFCFA(lst.monthlyRent)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* ONGLET 1 : GESTION FORMULE & DROITS (STRICTEMENT POUR LES BAILLEURS) */}
+            {selectedUserForDetail.role === 'bailleur' && userModalTab === 'formule' && (
               <div className="space-y-4 animate-in fade-in duration-200">
                 {/* Carte Statut Actuel */}
                 <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
@@ -3049,65 +3311,71 @@ export default function AdminDashboardPage() {
             {/* ONGLET 2 : HISTORIQUE & AUDIT COMPLET */}
             {userModalTab === 'history' && (
               <div className="space-y-4 animate-in fade-in duration-200">
-                {/* 1. Journal des formules & souscriptions */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
-                      1. Journal d'Audit des Formules &amp; Souscriptions :
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400">
-                      {userSubHistory.length} événement{userSubHistory.length > 1 ? 's' : ''}
-                    </span>
-                  </div>
-
-                  {userSubHistory.length === 0 ? (
-                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic">
-                      Aucun historique d'abonnement archivé pour cet utilisateur.
+                {/* 1. Journal des formules & souscriptions (STRICTEMENT POUR LES BAILLEURS) */}
+                {selectedUserForDetail.role === 'bailleur' && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
+                        1. Journal d'Audit des Formules &amp; Souscriptions :
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {userSubHistory.length} événement{userSubHistory.length > 1 ? 's' : ''}
+                      </span>
                     </div>
-                  ) : (
-                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                      {userSubHistory.map((item) => (
-                        <div
-                          key={item.id}
-                          className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between gap-3"
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white capitalize">{item.plan}</span>
-                              <span
-                                className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
-                                  item.action === 'activated' || item.action === 'renewed' || item.action === 'admin_override'
-                                    ? 'bg-emerald-500/20 text-emerald-300'
-                                    : 'bg-slate-800 text-slate-400'
-                                }`}
-                              >
-                                {item.action}
-                              </span>
+
+                    {userSubHistory.length === 0 ? (
+                      <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-500 italic">
+                        Aucun historique d'abonnement archivé pour ce bailleur.
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                        {userSubHistory.map((item) => (
+                          <div
+                            key={item.id}
+                            className="p-3 rounded-2xl bg-slate-950 border border-slate-800 text-xs flex items-center justify-between gap-3"
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-white capitalize">{item.plan}</span>
+                                <span
+                                  className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${
+                                    item.action === 'activated' || item.action === 'renewed' || item.action === 'admin_override'
+                                      ? 'bg-emerald-500/20 text-emerald-300'
+                                      : 'bg-slate-800 text-slate-400'
+                                  }`}
+                                >
+                                  {item.action}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-slate-400 mt-0.5">
+                                {item.notes || 'Opération enregistrée dans le journal.'} • Par : {item.actorName || 'Système'}
+                              </p>
                             </div>
-                            <p className="text-[11px] text-slate-400 mt-0.5">
-                              {item.notes || 'Opération enregistrée dans le journal.'} • Par : {item.actorName || 'Système'}
-                            </p>
+                            <span className="text-[10px] font-mono text-slate-400 shrink-0">
+                              {new Date(item.performedAt).toLocaleString('fr-FR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-mono text-slate-400 shrink-0">
-                            {new Date(item.performedAt).toLocaleString('fr-FR', {
-                              day: '2-digit',
-                              month: '2-digit',
-                              year: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-                {/* 2. Baux rattachés */}
-                <div className="space-y-2 pt-2 border-t border-slate-800">
+                {/* Contrats de baux rattachés */}
+                <div className={`space-y-2 ${selectedUserForDetail.role === 'bailleur' ? 'pt-2 border-t border-slate-800' : ''}`}>
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
-                      2. Contrats de Baux Rattachés ({userLeases.length}) :
+                      {selectedUserForDetail.role === 'locataire'
+                        ? `1. Contrats de Baux Souscrits (${userLeases.length}) :`
+                        : selectedUserForDetail.role === 'demarcheur'
+                        ? `1. Baux & Biens Liés (${userLeases.length}) :`
+                        : `2. Contrats de Baux Rattachés (${userLeases.length}) :`}
                     </span>
                   </div>
 
@@ -3128,7 +3396,9 @@ export default function AdminDashboardPage() {
                               <span className="font-bold text-white">{l.property || 'Bien immobilier'}</span>
                             </div>
                             <p className="text-[11px] text-slate-400 mt-0.5">
-                              Locataire : {l.tenant} • Loyer : {formatFCFA(l.rent)}/mois
+                              {selectedUserForDetail.role === 'locataire'
+                                ? `Bailleur : ${l.landlordName} (${l.landlordPhone})`
+                                : `Locataire : ${l.tenant}`} • Loyer : {formatFCFA(l.rent)}/mois
                             </p>
                           </div>
                           <span
@@ -3146,11 +3416,13 @@ export default function AdminDashboardPage() {
                   )}
                 </div>
 
-                {/* 3. Paiements & Quittances */}
+                {/* Paiements & Quittances rattachés */}
                 <div className="space-y-2 pt-2 border-t border-slate-800">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black uppercase text-indigo-400 tracking-wider block">
-                      3. Paiements &amp; Quittances Rattachés ({userPayments.length}) :
+                      {selectedUserForDetail.role === 'locataire'
+                        ? `2. Quittances & Règlements de Loyer (${userPayments.length}) :`
+                        : `3. Paiements & Quittances Rattachés (${userPayments.length}) :`}
                     </span>
                   </div>
 
