@@ -41,6 +41,7 @@ interface FedaPayCheckoutModalProps {
   expectedAmount?: number;
   initialPeriod?: string;
   onPaymentSuccess?: (paymentId: string) => void;
+  onSwitchToManualDeclaration?: () => void;
 }
 
 export function FedaPayCheckoutModal({
@@ -51,6 +52,7 @@ export function FedaPayCheckoutModal({
   expectedAmount,
   initialPeriod = 'Novembre 2026',
   onPaymentSuccess,
+  onSwitchToManualDeclaration,
 }: FedaPayCheckoutModalProps) {
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('mtn');
   const [countryCode, setCountryCode] = useState('+229');
@@ -693,20 +695,35 @@ export function FedaPayCheckoutModal({
 
         {/* Modal Footer Actions */}
         {step === 'checkout' && (
-          <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
-            >
-              Annuler
-            </button>
+          <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-semibold text-xs hover:bg-slate-100 transition-colors cursor-pointer"
+              >
+                Annuler
+              </button>
+
+              {onSwitchToManualDeclaration && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onSwitchToManualDeclaration();
+                  }}
+                  className="text-[11px] text-slate-500 hover:text-brand-600 underline font-semibold transition-colors cursor-pointer"
+                >
+                  Régler en espèces / virement
+                </button>
+              )}
+            </div>
 
             <button
               type="button"
               onClick={handlePay}
               disabled={isSubmitting || !payerPhone.trim()}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-extrabold text-xs shadow-pink-glow active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-extrabold text-xs shadow-pink-glow active:scale-95 transition-all cursor-pointer disabled:opacity-50"
             >
               <span>Valider &amp; Payer {formatFCFA(split.totalTenantCharged)}</span>
               <ArrowRight className="w-4 h-4" />

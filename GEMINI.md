@@ -903,6 +903,11 @@ Le son et la notification de cloche sont impérativement déclenchés lors de :
 - Le numéro de téléphone Mobile Money (`payerPhone`) et l'indicatif pays (`countryCode`) sont automatiquement extraits et pré-remplis à partir du compte authentifié du locataire (`tenantUser.phone` ou `lease.tenantPhone`).
 - Les données clients transmises à l'API FedaPay (`customer.firstname`, `customer.lastname`, `customer.email`, `customer.phone`) reflètent fidèlement l'identité du locataire signataire du bail.
 
+### 5. Bouton d'Action Primaire Accueil Locataire : « Payer le loyer »
+- Sur le tableau de bord d'accueil du locataire (`/portal`), le bouton d'action principal du bandeau de bienvenue est impérativement **« Payer le loyer »** (icône `CreditCard`).
+- Un simple clic sur ce bouton déclenche et ouvre directement le guichet officiel de règlement Mobile Money (`openFedaPayModalForLease`) pour le bail actif du locataire avec prise en compte instantanée du montant exact du loyer contractuel.
+- L'option de déclaration de règlement manuel (espèces ou virement bancaire) reste disponible via un lien dédié dans le modal de paiement ainsi que dans l'onglet des quittances et le détail des baux.
+
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
 
