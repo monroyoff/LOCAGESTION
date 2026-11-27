@@ -373,17 +373,25 @@ export function UpgradePlanModal({
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 stroke-[2.5]" />
                         <span>Baux &amp; Contrats signés ILLIMITÉS</span>
                       </li>
+                      <li className="flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>Encaissements 100% Mobile Money automatisés</span>
+                      </li>
+                      <li className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded-md">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                        <span>Espèces non autorisées (réservées au Pack Pro)</span>
+                      </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Split Payment Mobile Money automatique (98% net)</span>
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        <span>Gestion des pannes &amp; suivi artisans (photos)</span>
+                        <span>Quittance certifiée QR Code pour tout loyer Mobile Money</span>
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                        <span>Gestion des préavis &amp; restitution caution sous 30j</span>
+                        <span>Gestion des pannes &amp; préavis sous 30 jours</span>
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
@@ -436,6 +444,14 @@ export function UpgradePlanModal({
                       <li className="flex items-center gap-1.5 font-bold">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         <span>Baux, lots &amp; résidences illimités</span>
+                      </li>
+                      <li className="flex items-center gap-1.5 font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40 px-1.5 py-0.5 rounded-md">
+                        <Flame className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                        <span>👑 Espèces &amp; Virements 100% LIBRES (0% commission)</span>
+                      </li>
+                      <li className="flex items-center gap-1.5 font-semibold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                        <span>Quittances scellées certifiées QR Code pour TOUS les modes</span>
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />

@@ -28,7 +28,7 @@ export function LandingPricing() {
     },
     {
       q: 'Puis-je continuer à encaisser des loyers en espèces ou par virement ?',
-      a: 'Oui, sans aucune restriction ni commission. Si un locataire vous paie en espèces ou par virement bancaire classique, vous enregistrez simplement l\'encaissement à 0 FCFA et la quittance certifiée avec QR Code est générée immédiatement.',
+      a: 'En Formule Découverte (jusqu’à 2 baux) et en Formule Entreprise & Pro (baux illimités), vous encaissez les espèces et virements en totale liberté à 0% de commission avec quittance certifiée. En Formule Sérénité (0 FCFA fixe), tous les encaissements sont 100% automatisés par Mobile Money afin de garantir le prélèvement de la commission de 2%.',
     },
     {
       q: 'Quels sont les pays et devises couverts ?',
@@ -208,31 +208,31 @@ export function LandingPricing() {
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
+                  <span><strong>Encaissements 100% Mobile Money automatisés</strong></span>
+                </li>
+                <li className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-bold bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-lg border border-amber-200 dark:border-amber-900/50">
+                  <span className="material-symbols-outlined text-[16px] text-amber-600 shrink-0">shield_lock</span>
+                  <span>Espèces non autorisées (réservées au Pack Pro)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span><strong>Split Payment automatique</strong> (Wave, MTN, Moov, Orange, Celtiis)</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
-                  <span>Reversement instantané de <strong>98% net</strong> sur votre wallet</span>
+                  <span>Reversement instantané de <strong>98% net</strong> sur votre compte</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
-                  <span><strong>Gestion complète des pannes</strong> (photos, devis &amp; artisans)</span>
+                  <span>Quittance certifiée QR Code pour tout loyer Mobile Money</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
-                  <span><strong>Gestion automatisée des préavis</strong> &amp; restitution caution 30j</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
-                  <span>Émission &amp; scellement automatique de la quittance</span>
+                  <span><strong>Gestion des pannes &amp; préavis</strong> sous 30 jours</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span>Relances automatiques par WhatsApp &amp; SMS</span>
-                </li>
-                <li className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
-                  <span>Passeport Solvabilité locataire en direct</span>
                 </li>
               </ul>
             </div>
@@ -280,6 +280,14 @@ export function LandingPricing() {
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
                   <span><strong>Accès complet garanti 30 jours</strong> avec baux illimités</span>
+                </li>
+                <li className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300 font-bold bg-indigo-50 dark:bg-indigo-950/40 px-2 py-0.5 rounded-lg border border-indigo-200 dark:border-indigo-900/50">
+                  <span className="material-symbols-outlined text-[16px] text-orange-500 shrink-0">local_fire_department</span>
+                  <span>👑 Espèces &amp; Virements 100% LIBRES (0% commission)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>
+                  <span>Quittances certifiées QR Code pour TOUS les modes</span>
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-[16px] text-emerald-500 shrink-0">check_circle</span>

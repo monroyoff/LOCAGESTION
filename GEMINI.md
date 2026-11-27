@@ -24,6 +24,7 @@
 16. [Certification TWA Android, Google Play Store & Digital Asset Links](#16-certification-twa-android-google-play-store--digital-asset-links)
 17. [Pérennité du Catalogue d'Annonces & Restitution Multi-Baux Intégrale](#17-pérennité-du-catalogue-dannonces--restitution-multi-baux-intégrale)
 18. [Règle d'Or d'Élimination à 100 % des Fuites de Bande Passante & Protection du Quota Vercel](#18-règle-dor-délimination-à-100--des-fuites-de-bande-passante--protection-du-quota-vercel)
+19. [Règle d'Or Anti-Contournement de la Formule Sérénité & Cloisonnement Espèces / Mobile Money](#19-règle-dor-anti-contournement-de-la-formule-sérénité--cloisonnement-espèces--mobile-money)
 
 ---
 
@@ -610,6 +611,32 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
 3. ✅ **Fréquence :** Aucun `setInterval` régulier n'a-t-il une période agressive inférieure à 45 secondes pour la synchronisation générale ?
 4. ✅ **Headers Edge :** Le fichier `vercel.json` maintient-il la mise en cache CDN Edge des assets et routes appropriées ?
 5. ✅ **Zéro boucle :** Aucun composant React ne déclenche-t-il de `SyncService.sync()` ou `push()` à l'intérieur d'un rendu non stabilisé (`useEffect` sans dépendances appropriées) ?
+
+---
+
+## 19. Règle d'Or Anti-Contournement de la Formule Sérénité & Cloisonnement Espèces / Mobile Money
+
+> **RÈGLE COMMERCIALE & ARCHITECTURALE ESSENTIELLE POUR LA VIABILITÉ ÉCONOMIQUE DE LOCAGESTION**  
+> **La Formule Sérénité (0 FCFA d'abonnement fixe par mois) tire son modèle de rémunération de la commission de 2% prélevée sur chaque loyer réglé via la passerelle Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis Cash, Carte Bancaire). Tout modèle IA et tout développeur doit impérativement respecter les règles de cloisonnement ci-dessous.**
+
+### 🛑 1. Vulnérabilité de Contournement Neutralisée
+- **Faille prévenue :** Un bailleur ayant atteint le plafond de 2 baux en Formule Découverte active la Formule Sérénité à 0 FCFA pour débloquer la signature de baux illimités (3 baux et plus). S'il s'arrange ensuite avec ses locataires pour percevoir les loyers en espèces (« de la main à la main ») ou par virement bancaire personnel en dehors de LOCAGESTION, il profiterait d'un accès illimité à vie sans que la plateforme ne perçoive le moindre centime.
+- **Principe de cloisonnement strict :**
+  - **Formule Découverte (0 FCFA / 1 à 2 baux max) :** Tous les modes de paiement (Espèces, Virement et Mobile Money) sont tolérés sans commission pour permettre au bailleur de tester la plateforme.
+  - **Formule Sérénité (0 FCFA fixe / Baux Illimités) :** STRICTEMENT RÉSERVÉE aux encaissements automatisés par Mobile Money via la passerelle intégrée. L'enregistrement manuel de paiements en espèces (`especes`) ou virements bancaires hors-plateforme (`virement`) est **rigoureusement verrouillé et désactivé** (`PlanService.canRecordPaymentMethod`). Les quittances scellées avec QR code de vérification sont émises exclusivement pour les loyers acquittés via la plateforme.
+  - **Formule Entreprise & Pro (15 000 FCFA / 30 jours) :** Encaissements en **Espèces, Chèques, Virements et tous canaux 100% LIBRES & ILLIMITÉS à 0% de commission plateforme**. Quittances certifiées scellées illimitées pour l'ensemble des modes de paiement.
+
+### ⚡ 2. Implémentation & Garde-Fous Techniques
+1. **`PlanService.canRecordPaymentMethod(userId, method)` :**
+   - Si `plan === 'serenite'` et que la méthode sélectionnée est `'especes'` ou `'virement'`, renvoie `{ allowed: false, isSereniteRestricted: true, reason }`.
+2. **Modal d'Action Rapide (`QuickActionModal.tsx`) :**
+   - Lorsque le bailleur en Sérénité sélectionne « Espèces » ou « Virement » lors de l'enregistrement d'un loyer, une alerte pédagogique ambrée s'affiche immédiatement.
+   - Le bouton de soumission est désactivé avec la mention *« Passez en Pro ou Mobile Money »*.
+   - Un bouton d'action directe permet d'ouvrir `UpgradePlanModal` pour souscrire au Pack Pro (15 000 FCFA), ou de basculer instantanément sur Mobile Money (Wave).
+3. **Tableau de Bord des Paiements (`/payments`) :**
+   - Un bandeau pédagogique rappelle au bailleur en Sérénité que ses encaissements et quittances sont automatisés à 100% via Mobile Money, avec un raccourci pour débloquer les espèces en passant en Pro.
+4. **Landing Page & Grille Tarifaire (`LandingPricing.tsx` & `UpgradePlanModal.tsx`) :**
+   - Affichage transparent dans les cartes de prix et la FAQ de la règle : Sérénité = 100% Mobile Money automatisé (espèces non autorisées), Pro = espèces et virements libres à 0% de commission.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

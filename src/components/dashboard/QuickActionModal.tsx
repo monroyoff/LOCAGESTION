@@ -9,12 +9,16 @@ import {
   CheckCircle2,
   Sparkles,
   ArrowRight,
+  ShieldAlert,
+  Flame,
 } from 'lucide-react';
 import { formatFCFA } from '@/lib/money/format';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { LeaseService } from '@/lib/services/lease-service';
 import { PropertyService } from '@/lib/services/property-service';
 import { AuthService } from '@/lib/services/auth-service';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import { Property } from '@/lib/types';
 
 interface QuickActionModalProps {
@@ -35,10 +39,17 @@ export function QuickActionModal({
   const [propertyChoice, setPropertyChoice] = useState('');
   const [unitChoice, setUnitChoice] = useState('');
   const [propertiesList, setPropertiesList] = useState<{ id: string; name: string }[]>([]);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const currentUser = AuthService.getCurrentUser();
+  const currentPlan = PlanService.getUserPlan(currentUser?.id);
+  const isMethodRestricted =
+    actionType === 'new_payment' &&
+    (method === 'especes' || method === 'virement') &&
+    currentPlan === 'serenite';
 
   useEffect(() => {
     try {
-      const currentUser = AuthService.getCurrentUser();
       const allProps = PropertyService.getPropertiesForUser(currentUser, false);
       if (allProps.length > 0) {
         setPropertiesList(allProps.map((p) => ({ id: p.id, name: p.name })));
@@ -55,6 +66,15 @@ export function QuickActionModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (actionType === 'new_payment') {
+      const check = PlanService.canRecordPaymentMethod(currentUser?.id, method);
+      if (!check.allowed) {
+        notifySave(
+          check.reason || 'Mode de paiement non autorisé sous votre formule actuelle.',
+          'Formule Sérénité • Espèces non autorisées'
+        );
+        setShowUpgradeModal(true);
+        return;
+      }
       const msg = `Encaissement de ${formatFCFA(amount)} (${periodChoice}) enregistré avec succès pour ${tenantName || 'le locataire'}.`;
       onSuccess(msg);
       notifySave(msg, 'Encaissement enregistré !');
@@ -216,6 +236,40 @@ export function QuickActionModal({
                 </div>
               </div>
 
+              {/* Alerte Anti-Contournement Formule Sérénité */}
+              {isMethodRestricted && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 text-amber-950 dark:text-amber-100 text-xs space-y-2.5 animate-in fade-in duration-200">
+                  <div className="flex items-start gap-2.5">
+                    <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <strong className="block font-bold text-slate-900 dark:text-white text-xs">
+                        Formule Sérénité : Règlements par Mobile Money uniquement
+                      </strong>
+                      <p className="mt-1 text-[11px] leading-relaxed text-slate-700 dark:text-slate-300">
+                        La Formule Sérénité (0 FCFA fixe) repose sur l&apos;encaissement automatisé par Mobile Money (Wave, MoMo, Moov, Orange, Celtiis) avec prélèvement de la commission de 2%. L&apos;enregistrement manuel de règlements en espèces ou virements hors-plateforme sur vos baux illimités est réservé à la <strong>Formule Entreprise &amp; Pro (15 000 FCFA / 30 jours, 0% commission)</strong>.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pt-1 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={() => setShowUpgradeModal(true)}
+                      className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-[11px] shadow-sm flex items-center gap-1.5 cursor-pointer"
+                    >
+                      <Flame className="w-3.5 h-3.5 text-orange-400" />
+                      <span>Passer à la Formule Pro (15 000 FCFA)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMethod('wave')}
+                      className="px-3 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-950 font-bold text-[11px] cursor-pointer"
+                    >
+                      Basculer sur Mobile Money (Wave)
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div>
                 <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center justify-between">
                   <span>Période concernée (Mois du loyer) *</span>
@@ -330,24 +384,46 @@ export function QuickActionModal({
           )}
 
           {/* Modal Footer Actions */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="py-2.5 px-5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-pink-glow transition-all flex items-center gap-1.5"
-            >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>Valider & Générer</span>
-            </button>
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-between gap-2 flex-wrap">
+            <div className="text-[11px] text-amber-700 font-bold flex items-center gap-1">
+              {isMethodRestricted && (
+                <>
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Espèces réservées à la Formule Pro</span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                disabled={isMethodRestricted}
+                className={`py-2.5 px-5 rounded-xl text-white text-xs font-bold transition-all flex items-center gap-1.5 ${
+                  isMethodRestricted
+                    ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                    : 'bg-brand-500 hover:bg-brand-600 shadow-pink-glow cursor-pointer'
+                }`}
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>{isMethodRestricted ? 'Passez en Pro ou Mobile Money' : 'Valider & Générer'}</span>
+              </button>
+            </div>
           </div>
         </form>
       </div>
+
+      {/* Modal d'upgrade vers la Formule Pro */}
+      <UpgradePlanModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        initialPlanTab="pro"
+      />
     </div>
   );
 }

@@ -24,6 +24,7 @@ import {
   AlertCircle,
   FileText,
   Home,
+  Flame,
 } from 'lucide-react';
 import { formatFCFA, getPaymentMethodLabel } from '@/lib/money/format';
 import { PaymentTransaction, UserSpace } from '@/lib/types';
@@ -33,6 +34,8 @@ import { WhatsAppReminderModal } from '@/components/dashboard/WhatsAppReminderMo
 import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { VerifyPaymentModal } from '@/components/payments/VerifyPaymentModal';
 import { PaymentService } from '@/lib/services/payment-service';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import { downloadCSV } from '@/lib/export/csv-export';
 import { notifySave } from '@/lib/notifications/action-notifier';
 import { Footer } from '@/components/layout/Footer';
@@ -76,6 +79,10 @@ function PaymentsPageContent() {
   const [reminderPayment, setReminderPayment] = useState<PaymentTransaction | null>(null);
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  const currentSub = PlanService.getUserSubscription(user?.id);
+  const isSerenite = currentSub.plan === 'serenite';
 
   const loadAllPayments = () => {
     setVerifiedPayments(PaymentService.getVerifiedPaymentsForLandlord(user));
@@ -232,6 +239,36 @@ function PaymentsPageContent() {
               </button>
             </div>
           </div>
+
+          {/* Bannière d'information Formule Sérénité */}
+          {isSerenite && (
+            <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-indigo-500/10 border border-emerald-500/30 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-700 flex items-center justify-center shrink-0">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="text-xs">
+                  <div className="font-extrabold text-slate-900 flex items-center gap-2">
+                    <span>Formule Sérénité active (0 FCFA fixe)</span>
+                    <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      100% Mobile Money
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 mt-0.5">
+                    Vos encaissements et quittances scellées sont automatisés par Mobile Money (2% commission). Pour enregistrer manuellement des espèces ou virements sans commission, passez en Formule Pro.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowUpgradeModal(true)}
+                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+              >
+                <Flame className="w-3.5 h-3.5 text-orange-400" />
+                <span>Débloquer les Espèces (Pack Pro)</span>
+              </button>
+            </div>
+          )}
 
           {/* Onglets Principaux : Tous les Encaissements vs Paiements à vérifier */}
           <div className="flex items-center gap-2 border-b border-slate-200/80 pb-2">
@@ -496,6 +533,13 @@ function PaymentsPageContent() {
           <span>{toastMessage}</span>
         </div>
       )}
+
+      {/* Modal d'upgrade vers Formule Pro */}
+      <UpgradePlanModal
+        isOpen={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        initialPlanTab="pro"
+      />
     </div>
   );
 }

@@ -28,27 +28,27 @@ export const PLANS_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
       'États des lieux contradictoires avec photos',
       'Signalement des pannes & modèles de préavis',
       'Émission de quittances numériques scellées',
-      'Encaissements manuels gratuits (espèces / virement)',
+      'Tous modes de paiement autorisés (Espèces, Virement & Mobile Money)',
     ],
   },
   serenite: {
     id: 'serenite',
     name: 'Formule Sérénité',
-    tagline: 'Encaissement automatisé Mobile Money',
+    tagline: 'Encaissement 100% Mobile Money automatisé',
     price: '2%',
     priceDetail: '/ loyer Mobile Money',
     maxActiveLeases: Infinity,
     isPopular: true,
     features: [
-      'Baux signés illimités (aucun plafond)',
-      'Split Payment automatique (Wave, MTN, Moov, Orange, Celtiis)',
-      'Reversement instantané de 98% net sur votre wallet/compte',
-      'Gestion complète des pannes & interventions d’urgence (photos, suivi artisans)',
-      'Gestion automatisée des préavis de départ & restitution caution sous 30 jours',
-      'Génération & scellement automatique de la quittance',
+      'Baux & Contrats signés ILLIMITÉS (aucun plafond)',
+      'Encaissements 100% Mobile Money automatisés (Wave, MoMo, Moov, Orange, Celtiis)',
+      '⚠️ Règlements en espèces & manuels non autorisés (réservés à la Formule Pro)',
+      'Split Payment automatique (reversement instantané de 98% net sur votre compte)',
+      'Quittances officielles scellées avec QR Code de certification pour chaque loyer Mobile Money',
+      'Gestion complète des pannes & interventions d’urgence (photos, artisans)',
+      'Gestion des préavis de départ & restitution caution sous 30 jours',
       'Relances automatiques par WhatsApp & SMS',
-      'Passeport Solvabilité locataire en direct',
-      '0 FCFA d’abonnement fixe par mois',
+      '0 FCFA d’abonnement fixe par mois (2% prélevés uniquement sur loyer perçu)',
     ],
   },
   pro: {
@@ -59,12 +59,14 @@ export const PLANS_CONFIG: Record<SubscriptionPlan, PlanConfig> = {
     priceDetail: '/ mois (validité 30 jours)',
     maxActiveLeases: Infinity,
     features: [
-      'Baux & lots illimités pendant 30 jours',
+      'Baux, lots & résidences illimités (validité 30 jours)',
+      '👑 Encaissements en Espèces, Chèques & Virements 100% LIBRES & ILLIMITÉS (0% commission)',
+      'Tous les canaux Mobile Money inclus sans commission plateforme',
+      'Quittances scellées certifiées avec QR Code pour TOUS les modes (y compris Espèces)',
       'Maintenance multi-lots & carnet d’artisans centralisé',
       'Préavis de résiliation, mises en demeure & contentieux huissier (OHADA)',
       'Gestion multi-utilisateurs & collaborateurs délégués',
       'Console Démarcheur & Mandats certifiés',
-      'Commission dégressive négociée sur volume',
       'Exports comptables & DGI / IFU automatisés',
       'Chargé de compte dédié & support prioritaire 7j/7',
       'Alertes automatiques avant fin d’abonnement (J-2, J-1, J)',
@@ -257,6 +259,34 @@ export const PlanService = {
     }
 
     return { allowed: true, currentPlan: 'decouverte', activeCount, maxAllowed, subscription: sub };
+  },
+
+  /**
+   * Vérifie si un mode de paiement peut être enregistré selon la formule du bailleur.
+   * Règle d'or anti-contournement : La Formule Sérénité (0 FCFA fixe) tire sa viabilité
+   * de la commission de 2% sur les encaissements automatisés par Mobile Money.
+   * Pour éviter qu'un bailleur ne perçoive les loyers en espèces ou virements personnels
+   * hors-plateforme tout en restant en Sérénité, les modes espèces et virements manuels
+   * sont réservés à la Formule Entreprise & Pro (0% de commission sur tous les canaux).
+   */
+  canRecordPaymentMethod(userId: string | undefined, method: string): {
+    allowed: boolean;
+    reason?: string;
+    isSereniteRestricted?: boolean;
+  } {
+    const plan = this.getUserPlan(userId);
+    const isCashOrManual = method === 'especes' || method === 'virement';
+
+    if (plan === 'serenite' && isCashOrManual) {
+      return {
+        allowed: false,
+        isSereniteRestricted: true,
+        reason:
+          'La Formule Sérénité (0 FCFA fixe) est strictement réservée aux encaissements automatisés par Mobile Money (Wave, MoMo, Moov, Orange, Celtiis). Pour enregistrer manuellement des règlements en espèces ou virements bancaires hors-plateforme sur vos baux illimités, activez la Formule Entreprise & Pro (15 000 FCFA / 30 jours) à 0% de commission.',
+      };
+    }
+
+    return { allowed: true };
   },
 
   /**
