@@ -25,6 +25,7 @@
 17. [Pérennité du Catalogue d'Annonces & Restitution Multi-Baux Intégrale](#17-pérennité-du-catalogue-dannonces--restitution-multi-baux-intégrale)
 18. [Règle d'Or d'Élimination à 100 % des Fuites de Bande Passante & Protection du Quota Vercel](#18-règle-dor-délimination-à-100--des-fuites-de-bande-passante--protection-du-quota-vercel)
 19. [Règle d'Or Anti-Contournement de la Formule Sérénité & Cloisonnement Espèces / Mobile Money](#19-règle-dor-anti-contournement-de-la-formule-sérénité--cloisonnement-espèces--mobile-money)
+20. [Règle d'Or de Gratuité Intégrale pour Locataires & Démarcheurs et Exclusivité des Formules aux Bailleurs](#20-règle-dor-de-gratuité-intégrale-pour-locataires--démarcheurs-et-exclusivité-des-formules-aux-bailleurs)
 
 ---
 
@@ -650,6 +651,35 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
    - Décomposition mathématique scellée : 2 % conservés par LOCAGESTION (commission plateforme Sérénité) et 98 % nets à reverser aux bailleurs partenaires (reversement programmé dès le 7 du mois).
    - Gestion des déboursements classiques (retraits et virements vers les comptes Wave, MTN, Moov ou bancaires des bailleurs) pendant la suspension temporaire de l'API Payouts automatisée de FedaPay.
    - Scellement des preuves de virement (référence de transaction, opérateur, date/heure, administrateur) et notification officielle automatique délivrée au bailleur dans sa cloche.
+
+---
+
+## 20. Règle d'Or de Gratuité Intégrale pour Locataires & Démarcheurs et Exclusivité des Formules aux Bailleurs
+
+> **RÈGLE MÉTIER & COMMERCIALE FONDAMENTALE INVIOLABLE**  
+> **La plateforme LOCAGESTION reste et demeure 100 % ENTIÈREMENT GRATUITE DANS SON INTÉGRALITÉ pour tous les Locataires et tous les Démarcheurs (agents immobiliers indépendants publiant des annonces de mandats). Les formules tarifaires et forfaits d'abonnement (Découverte 0 FCFA, Sérénité 2%, Entreprise & Pro 5 000 FCFA) sont destinées EXCLUSIVEMENT aux BAILLEURS (propriétaires et gestionnaires de parcs immobiliers).**
+
+### 1. Gratuité Perpétuelle du Locataire (`role: 'locataire'`)
+- Accès illimité et permanent au Portail Résidentiel (`/portal`).
+- Recherche géolocalisée et consultation d'annonces.
+- Signature électronique certifiée du contrat de bail conforme OHADA.
+- Paiement de loyer sécurisé par Mobile Money (Wave, MTN, Moov, Orange, Celtiis) ou déclaration de virement.
+- Émission et téléchargement illimités des Quittances Officielles PDF certifiées avec QR Code scellé.
+- Téléversement contradictoire des États des Lieux avec photos horodatées.
+- Passeport Solvabilité certifié gratuit (démarrage à 100/100).
+- Signalement des pannes et messagerie directe avec le bailleur.
+- **Zéro abonnement, zéro frais d'inscription, zéro commission prélevée sur le locataire.**
+
+### 2. Gratuité Perpétuelle du Démarcheur (`role: 'demarcheur'`)
+- Accès illimité et sans abonnement au Portail Annonces (`/listings`).
+- Publication, modification, mise en pause et suppression de mandats immobiliers sans limite de quota d'annonces.
+- Organisation des visites et messagerie en direct avec les candidats locataires.
+- Seul le service optionnel de mise en avant promotionnelle (Boost FedaPay Live : 1 000 FCFA, 2 500 FCFA ou 4 500 FCFA) est facturé à l'acte s'il souhaite sponsoriser une annonce spécifique.
+- **Aucun abonnement mensuel ni formule de gestion locative n'est imposé au démarcheur.**
+
+### 3. Exclusivité Stricte des Formules aux Bailleurs (`role: 'bailleur'`)
+- Les formules d'abonnement (Formule Découverte 0 FCFA pour 2 baux, Formule Sérénité 2 % / loyer perçu, Formule Entreprise & Pro 5 000 FCFA / 30 jours) s'adressent **exclusivement aux propriétaires et gestionnaires bailleurs** pour la gestion de leurs baux, l'émission des quittances propriétaires et le recouvrement.
+- Dans l'interface utilisateur, la Sidebar, le Header, les profils et la console Super-Admin (`/admin`), aucun bouton ni statut de surclassement de formule de bailleur ne doit être présenté aux profils Locataires ou Démarcheurs.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

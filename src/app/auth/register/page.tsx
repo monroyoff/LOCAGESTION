@@ -709,6 +709,14 @@ export default function RegisterPage() {
                 <p className="text-xs text-slate-400 mt-1">
                   Sélectionnez votre espace en premier pour configurer immédiatement votre tableau de bord.
                 </p>
+
+                {/* Mention Officielle de Gratuité Locataires & Démarcheurs */}
+                <div className="mt-3 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-start gap-2.5">
+                  <span className="text-emerald-400 font-bold text-sm shrink-0">✨</span>
+                  <p className="text-xs text-emerald-200 leading-relaxed">
+                    <strong>Information essentielle :</strong> La plateforme LOCAGESTION reste et demeure <strong>entièrement gratuite dans son intégralité pour les locataires et les démarcheurs</strong>. Les formules tarifaires de gestion s'adressent exclusivement aux bailleurs.
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
@@ -738,8 +746,9 @@ export default function RegisterPage() {
                       Propriétaire ou gestionnaire de biens immobiliers, baux et encaissements de loyers.
                     </p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-white/5 text-[10px] font-bold text-brand-400">
-                    Tableau de bord & Baux
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-brand-400">
+                    <span>Tableau de bord &amp; Baux</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30">Formules Bailleurs</span>
                   </div>
                 </button>
 
@@ -769,8 +778,9 @@ export default function RegisterPage() {
                       Résident occupant, paiement de loyer, quittances certifiées et suivi des pannes.
                     </p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-white/5 text-[10px] font-bold text-emerald-400">
-                    Portail Résident & Reçus
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-emerald-400">
+                    <span>Portail Résident</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">100% Gratuit</span>
                   </div>
                 </button>
 
@@ -800,8 +810,9 @@ export default function RegisterPage() {
                       Agent immobilier de terrain, publication d’annonces et organisation des visites.
                     </p>
                   </div>
-                  <div className="mt-4 pt-3 border-t border-white/5 text-[10px] font-bold text-amber-400">
-                    Annonces & Visites vérifiées
+                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-[10px] font-bold text-amber-400">
+                    <span>Mandats &amp; Annonces</span>
+                    <span className="text-[9px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">100% Gratuit</span>
                   </div>
                 </button>
               </div>

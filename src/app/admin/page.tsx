@@ -1889,24 +1889,65 @@ export default function AdminDashboardPage() {
 
                       {/* Actions Admin sur l'utilisateur */}
                       <div className="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
-                        {/* Bouton Formule & Compte Super-Admin */}
+                        {/* Bouton Formule / Dossier selon Rôle */}
                         <button
                           type="button"
                           onClick={() => {
                             setSelectedUserForDetail(u);
-                            setUserModalTab('formule');
+                            setUserModalTab(
+                              u.role === 'bailleur'
+                                ? 'formule'
+                                : u.role === 'locataire'
+                                ? 'locataire_dossier'
+                                : 'demarcheur_dossier'
+                            );
                           }}
-                          className="px-3 py-1.5 rounded-xl bg-indigo-600/25 hover:bg-indigo-600/40 text-indigo-300 border border-indigo-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
-                          title="Gérer la formule, l'historique et inspecter ce compte"
+                          className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 ${
+                            u.role === 'bailleur'
+                              ? 'bg-indigo-600/25 hover:bg-indigo-600/40 text-indigo-300 border-indigo-500/40'
+                              : u.role === 'locataire'
+                              ? 'bg-emerald-600/25 hover:bg-emerald-600/40 text-emerald-300 border-emerald-500/40'
+                              : 'bg-amber-600/25 hover:bg-amber-600/40 text-amber-300 border-amber-500/40'
+                          }`}
+                          title={
+                            u.role === 'bailleur'
+                              ? "Gérer la formule bailleur, l'historique et inspecter ce compte"
+                              : u.role === 'locataire'
+                              ? "Consulter le dossier résident 100% gratuit"
+                              : "Consulter les mandats démarcheur 100% gratuit"
+                          }
                         >
-                          <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                          <span>Formule &amp; Compte</span>
+                          {u.role === 'bailleur' ? (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                              <span>Formule &amp; Compte</span>
+                            </>
+                          ) : u.role === 'locataire' ? (
+                            <>
+                              <Home className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Dossier Résident (Gratuit)</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                              <span>Mandats (Gratuit)</span>
+                            </>
+                          )}
                         </button>
 
                         {/* Bouton fiche complète */}
                         <button
                           type="button"
-                          onClick={() => setSelectedUserForDetail(u)}
+                          onClick={() => {
+                            setSelectedUserForDetail(u);
+                            setUserModalTab(
+                              u.role === 'bailleur'
+                                ? 'formule'
+                                : u.role === 'locataire'
+                                ? 'locataire_dossier'
+                                : 'demarcheur_dossier'
+                            );
+                          }}
                           className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -2706,9 +2747,20 @@ export default function AdminDashboardPage() {
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-base font-black text-white">{selectedUserForDetail.name}</h3>
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                      selectedUserForDetail.role === 'bailleur'
+                        ? 'bg-brand-500/20 text-brand-300 border-brand-500/30'
+                        : selectedUserForDetail.role === 'locataire'
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                    }`}>
                       {selectedUserForDetail.role}
                     </span>
+                    {selectedUserForDetail.role !== 'bailleur' && (
+                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        100% Gratuit à vie
+                      </span>
+                    )}
                     {selectedUserForDetail.matricule && (
                       <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full bg-indigo-950/60 text-indigo-300 border border-indigo-700/50">
                         {selectedUserForDetail.matricule}

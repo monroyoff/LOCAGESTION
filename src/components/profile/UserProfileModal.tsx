@@ -575,8 +575,8 @@ export function UserProfileModal({
             </button>
           </div>
 
-          {/* Formule d’Abonnement & Avantages du Compte (Accès Surclassement 1-Clic) */}
-          {(profile.role === 'bailleur' || profile.role === 'demarcheur') && (
+          {/* Formule d’Abonnement (Bailleurs) OU Statut 100% Gratuit (Locataires & Démarcheurs) */}
+          {profile.role === 'bailleur' ? (
             <div className={`p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md transition-all ${
               userSub?.plan === 'pro'
                 ? userSub.isExpired
@@ -605,7 +605,7 @@ export function UserProfileModal({
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
-                      Formule Active du Compte
+                      Formule Active • Gestion Bailleur
                     </span>
                     <span className={`text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider ${
                       userSub?.plan === 'pro'
@@ -665,6 +665,40 @@ export function UserProfileModal({
                 </span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
+            </div>
+          ) : (
+            <div className="p-4 rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-teal-950/40 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-11 h-11 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-inner">
+                  <Sparkles className="w-5 h-5" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500 text-white">
+                      100% Gratuit à vie
+                    </span>
+                    <span className="text-xs font-bold text-slate-300">
+                      {profile.role === 'locataire' ? 'Espace Locataire & Résident' : 'Espace Démarcheur & Mandats'}
+                    </span>
+                  </div>
+                  <h4 className="text-sm sm:text-base font-black text-white tracking-tight mt-0.5">
+                    {profile.role === 'locataire'
+                      ? 'Plateforme entièrement gratuite pour les locataires'
+                      : 'Plateforme entièrement gratuite pour les démarcheurs'}
+                  </h4>
+                  <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-2">
+                    {profile.role === 'locataire'
+                      ? 'Paiements sécurisés, quittances certifiées avec QR Code, passeport de solvabilité et suivi des pannes sans aucun frais d’accès ni abonnement.'
+                      : 'Publication et gestion de vos annonces de mandats, prises de rendez-vous de visites et messagerie directe 100% sans frais. Les formules payantes sont réservées exclusivement aux bailleurs gérant des baux.'}
+                  </p>
+                </div>
+              </div>
+              <div className="shrink-0 flex items-center">
+                <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-black flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span>Aucun abonnement requis</span>
+                </span>
+              </div>
             </div>
           )}
 

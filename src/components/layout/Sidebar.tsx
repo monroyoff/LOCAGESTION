@@ -32,6 +32,7 @@ import {
   ArrowLeft,
   Globe,
   Zap,
+  CheckCircle2,
 } from 'lucide-react';
 import { UserSpace, UserSubscriptionDetails } from '@/lib/types';
 import { PlanService } from '@/lib/services/plan-service';
@@ -1132,8 +1133,8 @@ export function Sidebar({
                   <span className="text-brand-400 font-bold group-hover:underline">Modifier</span>
                 </p>
 
-                {/* Formule Active & Accès Surclassement à tout moment */}
-                {(isLandlord || isDemarcheur) && (
+                {/* Formule Active (Bailleur uniquement) ou Statut 100% Gratuit (Locataire & Démarcheur) */}
+                {isLandlord ? (
                   <div
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1148,7 +1149,7 @@ export function Sidebar({
                         ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-200 hover:bg-emerald-900/80'
                         : 'bg-amber-950/80 border-amber-500/40 text-amber-200 hover:bg-amber-900/80'
                     }`}
-                    title="Formule actuelle de votre compte. Cliquez pour surclasser ou gérer."
+                    title="Formule actuelle de votre compte bailleur. Cliquez pour surclasser ou gérer."
                   >
                     <div className="flex items-center gap-1.5 truncate">
                       {userSub?.plan === 'pro' ? (
@@ -1174,6 +1175,18 @@ export function Sidebar({
                     </div>
                     <span className="text-[9px] font-black underline shrink-0 ml-1">
                       {userSub?.plan === 'pro' && !userSub.isExpired ? 'Gérer' : 'Surclasser'}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="mt-2 flex items-center justify-between px-2.5 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-950/40 text-emerald-300 text-[10px] font-bold">
+                    <div className="flex items-center gap-1.5 truncate">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+                      <span className="truncate">
+                        {isTenant ? 'Locataire • 100% Gratuit' : 'Démarcheur • 100% Gratuit'}
+                      </span>
+                    </div>
+                    <span className="text-[9px] font-black text-emerald-400/90 shrink-0 ml-1">
+                      À vie
                     </span>
                   </div>
                 )}

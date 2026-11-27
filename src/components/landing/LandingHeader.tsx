@@ -111,13 +111,13 @@ export function LandingHeader({ activePath = 'accueil' }: LandingHeaderProps) {
       description: 'Logements géolocalisés avec Cash Power & forage',
     },
     {
-      label: 'Tarifs & Modèle',
+      label: 'Tarifs & Formules',
       shortLabel: 'Tarifs',
       path: 'tarifs',
       href: '#tarifs',
       icon: 'payments',
       iconBg: 'bg-amber-500/15 text-amber-500',
-      description: '100% transparent, sans frais cachés',
+      description: '100% gratuit locataires & démarcheurs • Formules Bailleurs',
     },
     {
       label: 'Application Mobile',

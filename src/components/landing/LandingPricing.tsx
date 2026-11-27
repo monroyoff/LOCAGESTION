@@ -19,8 +19,12 @@ export function LandingPricing() {
 
   const faqs = [
     {
-      q: 'Y a-t-il des frais fixes ou d\'engagement caché ?',
-      a: 'Absolument aucun. Vous pouvez créer votre compte et gérer vos biens à 0 FCFA/mois. Vous ne réglez la commission Split Payment (2%) que si un locataire règle son loyer directement via la passerelle Mobile Money.',
+      q: 'La plateforme est-elle payante pour les locataires ou les démarcheurs ?',
+      a: 'Absolument pas ! LOCAGESTION reste et demeure 100 % entièrement gratuite dans son intégralité pour les locataires et pour les démarcheurs (agents immobiliers indépendants publiant des annonces de mandats). Aucun abonnement ni frais d\'accès ne leur est appliqué. Les formules tarifaires présentées ci-dessous s\'adressent exclusivement aux propriétaires bailleurs pour la gestion de leurs contrats de bail et l\'encaissement des loyers.',
+    },
+    {
+      q: 'Y a-t-il des frais fixes ou d\'engagement caché pour les bailleurs ?',
+      a: 'Absolument aucun. Vous pouvez créer votre compte bailleur et gérer vos biens à 0 FCFA/mois. Vous ne réglez la commission Split Payment (2%) que si un locataire règle son loyer directement via la passerelle Mobile Money.',
     },
     {
       q: 'Comment fonctionne le reversement sur mon compte bailleur ?',
@@ -45,14 +49,47 @@ export function LandingPricing() {
         {/* En-tête de section */}
         <div className="text-center max-w-3xl mx-auto flex flex-col items-center">
           <span className="px-space-md py-1 rounded-full bg-secondary-container/20 text-secondary font-label-sm text-label-sm font-bold uppercase mb-space-sm border border-secondary/25 shadow-2xs">
-            Tarification Transparente &amp; Modèle Split Payment
+            Formules Bailleurs &amp; Tarification Transparente
           </span>
           <h2 className="font-headline-lg text-headline-lg-mobile sm:text-headline-lg text-on-surface font-extrabold tracking-tight mb-space-sm">
-            Payez Uniquement aux Résultats, Sans Frais Cachés
+            Formules de Gestion Locative Destinées Uniquement aux Bailleurs
           </h2>
           <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-            Démarrez 100% gratuitement. Bénéficiez de l'encaissement automatisé par Mobile Money avec prélèvement instantané de commission, ou gérez vos encaissements manuels en toute liberté.
+            Gérez votre parc immobilier en toute sérénité. Encaissez vos loyers par Mobile Money, virement ou espèces avec quittances certifiées et sécurité juridique OHADA.
           </p>
+        </div>
+
+        {/* 🌟 BANNIÈRE CLAIRE & OFFICIELLE : GRATUITÉ INTÉGRALE POUR LOCATAIRES ET DÉMARCHEURS */}
+        <div className="p-space-md sm:p-space-lg rounded-3xl bg-gradient-to-r from-emerald-500/15 via-teal-500/10 to-emerald-500/5 border-2 border-emerald-500/40 shadow-md">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                <span className="material-symbols-outlined text-[28px]">verified</span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-emerald-500 text-white px-2.5 py-0.5 rounded-full shadow-2xs">
+                    Règle d’Or • 100 % Gratuit à Vie
+                  </span>
+                  <h3 className="font-extrabold text-base sm:text-lg text-on-surface">
+                    Gratuité Totale &amp; Intégrale pour les Locataires et les Démarcheurs
+                  </h3>
+                </div>
+                <p className="text-xs sm:text-sm text-on-surface-variant leading-relaxed max-w-4xl">
+                  La plateforme <strong>LOCAGESTION reste et demeure entièrement gratuite dans son intégralité</strong> pour tous les <strong>locataires</strong> (recherche de logements, paiement par Mobile Money, quittances certifiées avec QR Code, suivi des pannes, passeport de solvabilité) et pour tous les <strong>démarcheurs &amp; agents immobiliers</strong> (publication de mandats, gestion d’annonces, mise en relation). <strong>Aucun abonnement ni frais d’accès ne leur est demandé.</strong> Les formules tarifaires ci-dessous sont <strong>destinées uniquement aux propriétaires et gestionnaires bailleurs</strong> pour l'administration de leur patrimoine locatif.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0 w-full md:w-auto">
+              <Link
+                href="/auth/register"
+                className="w-full md:w-auto inline-flex items-center justify-center gap-2 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md hover:brightness-105 active:scale-95 transition-all text-center"
+              >
+                <span>Accès Gratuit Locataire / Démarcheur</span>
+                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+              </Link>
+            </div>
+          </div>
         </div>
 
         {/* Bannière Pédagogique : Le Split Payment Mobile Money en 3 Étapes */}
@@ -268,7 +305,7 @@ export function LandingPricing() {
 
               <h3 className="text-xl font-bold text-on-surface">Formule Entreprise &amp; Pro</h3>
               <p className="text-xs text-on-surface-variant mt-1 mb-space-md">
-                Pour les administrateurs de biens, démarcheurs certifiés et cabinets immobiliers.
+                Pour les propriétaires bailleurs à fort patrimoine, agences de gestion locative et administrateurs de biens.
               </p>
 
               <div className="flex items-baseline gap-1 my-space-md pb-space-md border-b border-surface-container-high/60">

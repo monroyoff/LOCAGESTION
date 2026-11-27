@@ -202,6 +202,9 @@ export function UpgradePlanModal({
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-700">
+                  Formules Bailleurs
+                </span>
                 {isPro ? (
                   <span
                     className={`px-2.5 py-0.5 rounded-full font-bold text-[10px] uppercase tracking-wider ${
@@ -268,6 +271,19 @@ export function UpgradePlanModal({
             </div>
           ) : (
             <>
+              {/* Note d'Éligibilité Rôle : Gratuité pour Locataires & Démarcheurs */}
+              {user?.role && user.role !== 'bailleur' && (
+                <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-800 dark:text-emerald-200 text-xs flex items-start gap-2.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Votre compte {user.role === 'locataire' ? 'Locataire' : 'Démarcheur'} bénéficie de la gratuité intégrale à vie.</strong>
+                    <p className="mt-0.5 text-[11px] opacity-90 leading-relaxed">
+                      La plateforme LOCAGESTION est 100% gratuite pour les locataires et démarcheurs. Ces formules de gestion s'adressent exclusivement aux propriétaires bailleurs pour l'administration de leurs baux.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Alerte Expiration ou Approche d'échéance J-2, J-1, J */}
               {isPro && (daysLeft <= 2 || isExpired) && (
                 <div
