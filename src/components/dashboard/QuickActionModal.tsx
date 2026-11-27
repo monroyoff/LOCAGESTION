@@ -170,8 +170,48 @@ export function QuickActionModal({
           </button>
         </div>
 
-        {/* Modal Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        {/* Modal Content */}
+        {actionType === 'new_payment' && currentPlan === 'serenite' ? (
+          <div className="p-6 text-center space-y-4">
+            <div className="w-16 h-16 rounded-full bg-amber-500/10 border-2 border-amber-500/30 text-amber-600 flex items-center justify-center mx-auto">
+              <ShieldAlert className="w-8 h-8 stroke-[2.2]" />
+            </div>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                Formule Sérénité • Encaissement Bloqué
+              </span>
+              <h4 className="text-base font-extrabold text-slate-900 mt-2.5">
+                Encaissement Manuel Non Autorisé
+              </h4>
+              <p className="text-xs text-slate-600 leading-relaxed mt-2 max-w-sm mx-auto">
+                La <strong>Formule Sérénité (0 FCFA fixe)</strong> repose exclusivement sur l’encaissement automatisé par Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis Cash) avec 2% de commission.
+              </p>
+              <p className="text-xs text-slate-600 leading-relaxed mt-1.5 max-w-sm mx-auto">
+                Pour enregistrer manuellement des encaissements en espèces ou virements bancaires hors-plateforme sur vos baux illimités, activez la <strong>Formule Entreprise &amp; Pro (15 000 FCFA / 30 jours)</strong> à 0% de commission.
+              </p>
+            </div>
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition-all cursor-pointer"
+              >
+                Fermer
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowUpgradeModal(true);
+                }}
+                className="w-full sm:w-auto py-2.5 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md shadow-indigo-600/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Flame className="w-4 h-4 text-orange-400" />
+                <span>Passer à la Formule Pro (15 000 FCFA)</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {actionType === 'new_payment' && (
             <>
               <div>
@@ -416,6 +456,7 @@ export function QuickActionModal({
             </div>
           </div>
         </form>
+        )}
       </div>
 
       {/* Modal d'upgrade vers la Formule Pro */}

@@ -25,6 +25,7 @@ import {
   FileText,
   Home,
   Flame,
+  ShieldAlert,
 } from 'lucide-react';
 import { formatFCFA, getPaymentMethodLabel } from '@/lib/money/format';
 import { PaymentTransaction, UserSpace } from '@/lib/types';
@@ -120,7 +121,16 @@ function PaymentsPageContent() {
     }
 
     if (actionParam === 'new' || actionParam === 'declare' || actionParam === 'new_payment') {
-      setQuickAction('new_payment');
+      const check = PlanService.canLandlordRecordManualPayment(user?.id);
+      if (!check.allowed) {
+        notifySave(
+          check.reason || 'Encaissement manuel réservé à la Formule Pro.',
+          'Formule Sérénité • Encaissement bloqué'
+        );
+        setShowUpgradeModal(true);
+      } else {
+        setQuickAction('new_payment');
+      }
     }
   }, [statusParam, tabParam, verifyParam, actionParam, user]);
 
@@ -231,10 +241,30 @@ function PaymentsPageContent() {
 
               <button
                 type="button"
-                onClick={() => setQuickAction('new_payment')}
-                className="py-2.5 px-4 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer"
+                onClick={() => {
+                  const check = PlanService.canLandlordRecordManualPayment(user?.id);
+                  if (!check.allowed) {
+                    notifySave(
+                      check.reason || 'Encaissement manuel réservé à la Formule Pro.',
+                      'Formule Sérénité • Encaissement bloqué'
+                    );
+                    setShowUpgradeModal(true);
+                    return;
+                  }
+                  setQuickAction('new_payment');
+                }}
+                className={`py-2.5 px-4 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isSerenite
+                    ? 'bg-slate-100 border border-slate-300 text-slate-700 hover:border-amber-400'
+                    : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95'
+                }`}
+                title={
+                  isSerenite
+                    ? 'Formule Sérénité : Encaissement manuel bloqué (100% Mobile Money). Cliquez pour passer en Pro.'
+                    : 'Encaisser un loyer'
+                }
               >
-                <Plus className="w-4 h-4" />
+                {isSerenite ? <ShieldAlert className="w-4 h-4 text-amber-600" /> : <Plus className="w-4 h-4" />}
                 <span>+ Encaisser un loyer</span>
               </button>
             </div>

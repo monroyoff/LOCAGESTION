@@ -71,6 +71,7 @@ export function Header({
   const [searchVal, setSearchVal] = useState('');
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+  const [upgradeInitialTab, setUpgradeInitialTab] = useState<'serenite' | 'pro'>('pro');
 
   // Notifications Bailleur
   const [notifications, setNotifications] = useState<LandlordNotification[]>([]);
@@ -738,15 +739,38 @@ export function Header({
               <button
                 type="button"
                 onClick={() => {
+                  const check = PlanService.canLandlordRecordManualPayment(user?.id);
+                  if (!check.allowed) {
+                    notifySave(
+                      check.reason || 'Encaissement manuel réservé à la Formule Pro.',
+                      'Formule Sérénité • Encaissement bloqué'
+                    );
+                    setUpgradeInitialTab('pro');
+                    setIsUpgradeModalOpen(true);
+                    return;
+                  }
                   if (onOpenQuickAction) {
                     onOpenQuickAction('new_payment');
                   } else {
                     router.push('/payments?action=new');
                   }
                 }}
-                className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-bold shadow-md shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                className={`hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                  userSub?.plan === 'serenite'
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:border-amber-400'
+                    : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-md shadow-emerald-500/20 active:scale-95'
+                }`}
+                title={
+                  userSub?.plan === 'serenite'
+                    ? 'Formule Sérénité : Encaissement manuel bloqué (100% Mobile Money). Cliquez pour passer en Pro.'
+                    : 'Encaisser un loyer'
+                }
               >
-                <Receipt className="w-4 h-4" />
+                {userSub?.plan === 'serenite' ? (
+                  <ShieldAlert className="w-4 h-4 text-amber-600" />
+                ) : (
+                  <Receipt className="w-4 h-4" />
+                )}
                 <span>Encaisser loyer</span>
               </button>
 
@@ -820,6 +844,7 @@ export function Header({
       <UpgradePlanModal
         isOpen={isUpgradeModalOpen}
         onClose={() => setIsUpgradeModalOpen(false)}
+        initialPlanTab={upgradeInitialTab}
         onSuccess={() => {
           setIsUpgradeModalOpen(false);
           router.push('/leases/new');

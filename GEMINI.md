@@ -627,16 +627,17 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
   - **Formule Entreprise & Pro (15 000 FCFA / 30 jours) :** Encaissements en **Espèces, Chèques, Virements et tous canaux 100% LIBRES & ILLIMITÉS à 0% de commission plateforme**. Quittances certifiées scellées illimitées pour l'ensemble des modes de paiement.
 
 ### ⚡ 2. Implémentation & Garde-Fous Techniques
-1. **`PlanService.canRecordPaymentMethod(userId, method)` :**
-   - Si `plan === 'serenite'` et que la méthode sélectionnée est `'especes'` ou `'virement'`, renvoie `{ allowed: false, isSereniteRestricted: true, reason }`.
+1. **Verrouillage Intégral du Bouton « Encaisser Loyer » (`PlanService.canLandlordRecordManualPayment`) :**
+   - Dès lors qu'un bailleur est en Formule Sérénité, tout clic sur le bouton **« Encaisser loyer »** (dans le Header, dans `/payments` ou dans `/tenants`) est **immédiatement refusé et bloqué à la source**.
+   - Le système affiche la notification de blocage officielle :
+     > *« La Formule Sérénité (0 FCFA fixe) repose exclusivement sur l’encaissement automatisé par Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis). L’encaissement manuel de loyers est strictement réservé à la Formule Entreprise & Pro (15 000 FCFA / 30 jours, 0% de commission). »*
+   - La modal d'activation de la Formule Pro (`UpgradePlanModal` avec onglet Pro pré-sélectionné) s'ouvre automatiquement pour permettre un surclassement instantané.
 2. **Modal d'Action Rapide (`QuickActionModal.tsx`) :**
-   - Lorsque le bailleur en Sérénité sélectionne « Espèces » ou « Virement » lors de l'enregistrement d'un loyer, une alerte pédagogique ambrée s'affiche immédiatement.
-   - Le bouton de soumission est désactivé avec la mention *« Passez en Pro ou Mobile Money »*.
-   - Un bouton d'action directe permet d'ouvrir `UpgradePlanModal` pour souscrire au Pack Pro (15 000 FCFA), ou de basculer instantanément sur Mobile Money (Wave).
+   - Si la modal est invoquée avec l'action `new_payment` sous Formule Sérénité, elle affiche directement un écran de blocage hermétique avec bouclier d'alerte, explication détaillée et bouton de bascule vers le Pack Pro.
 3. **Tableau de Bord des Paiements (`/payments`) :**
-   - Un bandeau pédagogique rappelle au bailleur en Sérénité que ses encaissements et quittances sont automatisés à 100% via Mobile Money, avec un raccourci pour débloquer les espèces en passant en Pro.
+   - Un bandeau pédagogique rappelle au bailleur en Sérénité que ses encaissements et quittances sont automatisés à 100% via Mobile Money, avec un raccourci pour débloquer les encaissements manuels en passant en Pro.
 4. **Landing Page & Grille Tarifaire (`LandingPricing.tsx` & `UpgradePlanModal.tsx`) :**
-   - Affichage transparent dans les cartes de prix et la FAQ de la règle : Sérénité = 100% Mobile Money automatisé (espèces non autorisées), Pro = espèces et virements libres à 0% de commission.
+   - Affichage transparent dans les cartes de prix et la FAQ de la règle : Sérénité = 100% Mobile Money automatisé (encaissements manuels bloqués), Pro = tous canaux libres à 0% de commission.
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

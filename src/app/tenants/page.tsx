@@ -60,6 +60,8 @@ import { QuickActionModal } from '@/components/dashboard/QuickActionModal';
 import { ConfirmTerminateLeaseModal } from '@/components/leases/ConfirmTerminateLeaseModal';
 import { generateLeasePDF } from '@/lib/export/pdf-download';
 import { LeaseService, Lease } from '@/lib/services/lease-service';
+import { PlanService } from '@/lib/services/plan-service';
+import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import {
   AuthService,
   areEmailsEqual,
@@ -172,6 +174,7 @@ export default function TenantsPage() {
 
   // Modals state
   const [quickAction, setQuickAction] = useState<'new_lease' | 'new_payment' | 'new_property' | null>(null);
+  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
   const [receiptPayment, setReceiptPayment] = useState<any | null>(null);
   const [reminderPayment, setReminderPayment] = useState<any | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -1465,7 +1468,18 @@ export default function TenantsPage() {
                             </span>
                             <button
                               type="button"
-                              onClick={() => setQuickAction('new_payment')}
+                              onClick={() => {
+                                const check = PlanService.canLandlordRecordManualPayment(user?.id);
+                                if (!check.allowed) {
+                                  notifySave(
+                                    check.reason || 'Encaissement manuel réservé à la Formule Pro.',
+                                    'Formule Sérénité • Encaissement bloqué'
+                                  );
+                                  setIsUpgradeModalOpen(true);
+                                  return;
+                                }
+                                setQuickAction('new_payment');
+                              }}
                               className="text-xs font-bold text-brand-600 hover:text-brand-700 cursor-pointer"
                             >
                               + Encaisser une mensualité
@@ -1877,6 +1891,13 @@ export default function TenantsPage() {
           }
           setLeaseToTerminate(null);
         }}
+      />
+
+      {/* Modale d'Upgrade Formule Pro */}
+      <UpgradePlanModal
+        isOpen={isUpgradeModalOpen}
+        onClose={() => setIsUpgradeModalOpen(false)}
+        initialPlanTab="pro"
       />
     </div>
   );

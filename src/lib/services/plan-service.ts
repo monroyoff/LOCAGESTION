@@ -290,6 +290,27 @@ export const PlanService = {
   },
 
   /**
+   * Vérifie si le bailleur peut déclencher l'action d'encaissement manuel de loyer.
+   * Règle d'or n° 19 : En Formule Sérénité, le bouton « Encaisser Loyer » est TOTALEMENT BLOQUÉ.
+   * Tout encaissement passe à 100% par la passerelle Mobile Money automatisée (2% commission).
+   * L'encaissement manuel (espèces, virements, etc.) est réservé à la Formule Entreprise & Pro.
+   */
+  canLandlordRecordManualPayment(userId: string | undefined): {
+    allowed: boolean;
+    reason?: string;
+  } {
+    const plan = this.getUserPlan(userId);
+    if (plan === 'serenite') {
+      return {
+        allowed: false,
+        reason:
+          'La Formule Sérénité (0 FCFA fixe) repose exclusivement sur l’encaissement automatisé par Mobile Money (Wave, MTN MoMo, Moov Money, Orange Money, Celtiis). L’encaissement manuel de loyers est strictement réservé à la Formule Entreprise & Pro (15 000 FCFA / 30 jours, 0% de commission).',
+      };
+    }
+    return { allowed: true };
+  },
+
+  /**
    * Active la Formule Sérénité pour le bailleur
    */
   activateSerenitePlan(userId?: string): { success: boolean; message: string } {
