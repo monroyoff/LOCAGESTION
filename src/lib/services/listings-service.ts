@@ -256,15 +256,34 @@ export function isFakeListing(l?: Partial<RentalListing> | null): boolean {
   return false;
 }
 
-// Auto-nettoyage immédiat côté client pour purger les résidus de localStorage
+// Auto-nettoyage immédiat côté client pour purger les résidus de localStorage et révoquer les boosts annulés
 if (typeof window !== 'undefined') {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        const sanitized = parsed.filter((l) => !isFakeListing(l));
-        if (sanitized.length !== parsed.length) {
+        let changed = false;
+        const sanitized = parsed.filter((l) => !isFakeListing(l)).map((l) => {
+          // Révocation immédiate du boost pour l'annonce A-BJ-93729 dont le paiement a été annulé
+          const isTargetListing =
+            l.referenceCode === 'A-BJ-93729' ||
+            l.id === 'A-BJ-93729' ||
+            (l.referenceCode && l.referenceCode.includes('93729'));
+          if (isTargetListing && (l.featured || l.boostPlan)) {
+            changed = true;
+            l.featured = false;
+            delete l.boostPlan;
+            delete l.boostPlanName;
+            delete l.boostBadge;
+            delete l.boostPrice;
+            delete l.boostDays;
+            delete l.boostActivatedAt;
+            delete l.boostExpiresAt;
+          }
+          return l;
+        });
+        if (sanitized.length !== parsed.length || changed) {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(sanitized));
         }
       }
@@ -730,6 +749,23 @@ export const ListingsService = {
             if (!isProperRef) {
               hasUpdated = true;
               item.referenceCode = generateListingReference(item.referenceCode || item.id, item.countryCode || item.country);
+            }
+
+            // 3. Sécurité : Révocation immédiate des boosts non scellés ou annulés (notamment A-BJ-93729)
+            const isTargetListing =
+              item.referenceCode === 'A-BJ-93729' ||
+              item.id === 'A-BJ-93729' ||
+              (item.referenceCode && item.referenceCode.includes('93729'));
+            if (isTargetListing && (item.featured || item.boostPlan)) {
+              hasUpdated = true;
+              item.featured = false;
+              delete item.boostPlan;
+              delete item.boostPlanName;
+              delete item.boostBadge;
+              delete item.boostPrice;
+              delete item.boostDays;
+              delete item.boostActivatedAt;
+              delete item.boostExpiresAt;
             }
 
             activeListings.push(item);

@@ -172,6 +172,7 @@ Le fichier `src/lib/legal/country-tenancy-law.ts` constitue le moteur de conform
   2. **🔥 Boost Flash (7 jours) — 2 500 FCFA :** Badge `🔥 Sponsorisé`, épinglage permanent en haut de page pendant 7 jours, cadre lumineux doré et x3 demandes directes WhatsApp.
   3. **👑 Boost Élite (14 jours) — 4 500 FCFA (« Le plus populaire ») :** Badge `👑 Coup de Cœur`, top position absolue garantie sur `/listings` et `/accueil`, notification prioritaire aux locataires solvables 100/100 de la zone.
   - Déclenchement instantané : redirection directe sans attendre vers le guichet sécurisé Mobile Money FedaPay Live.
+  - **Vérification Stricte Côté Serveur & Anti-Fraude :** Aucune annonce ne peut être boostée sur la simple foi des paramètres d'URL (interdiction formelle de hardcoder `status=approved` dans le `callback_url`). Au retour du guichet FedaPay, l'application effectue obligatoirement une interrogation de l'API officielle FedaPay (`action: 'verify'`). En cas d'annulation ou d'abandon sur le guichet, aucun boost n'est accordé et toute tentative non finalisée est immédiatement révoquée.
   - Scellement automatique : dépublication et fin de mise en avant immédiate dès conclusion et signature du bail.
 
 ### 💬 9. Messagerie Directe & Notifications (`/messages`, Cloche Header)

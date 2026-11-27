@@ -933,6 +933,19 @@ export const LeaseService = {
       let parsed: LandlordNotification[] = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(parsed)) parsed = [];
 
+      // Purge des notifications de boost non scellées ou annulées (ex: A-BJ-93729)
+      parsed = parsed.filter((n) => {
+        if (
+          n.message &&
+          n.message.includes('93729') &&
+          (n.title?.includes('mise en avant') || n.title?.includes('Boost') || n.id?.includes('notif-boost-'))
+        ) {
+          needsSave = true;
+          return false;
+        }
+        return true;
+      });
+
       // Migration automatique des anciennes notifications ayant "À l'instant"
       let needsSave = false;
       parsed = parsed.map((n) => {

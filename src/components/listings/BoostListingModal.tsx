@@ -107,7 +107,7 @@ export function BoostListingModal({
         : 'bj';
 
       const origin = typeof window !== 'undefined' ? window.location.origin : 'https://locagestion.site';
-      const callbackUrl = `${origin}/listings?fedapay_ref=success&boost_listing_id=${listing.id}&pack_id=${selectedPack.id}&days=${selectedPack.days}&amount=${selectedPack.price}&status=approved`;
+      const callbackUrl = `${origin}/listings?fedapay_boost_check=${encodeURIComponent(listing.id)}&pack_id=${selectedPack.id}&expected_price=${selectedPack.price}`;
 
       // Sauvegarder l'intention de boost localement au cas où le retour perdrait les paramètres
       if (typeof window !== 'undefined') {
@@ -164,24 +164,6 @@ export function BoostListingModal({
       setIsLoading(false);
       setErrorMessage(err.message || 'Erreur réseau lors de la connexion au guichet de paiement.');
     }
-  };
-
-  // Simulation directe pour test instantané en local ou démo
-  const handleSimulateActivation = () => {
-    setIsLoading(true);
-    setLoadingText('Activation immédiate de la mise en avant...');
-    setTimeout(() => {
-      const updated = ListingsService.applyBoost(listing.id, selectedPack.id);
-      setIsLoading(false);
-      setIsSuccess(true);
-      notifySave(
-        `L’annonce « ${listing.title} » bénéficie désormais du pack ${selectedPack.name} (${selectedPack.badge}) !`,
-        'Boost Activé ⭐'
-      );
-      if (updated && onBoostActivated) {
-        onBoostActivated(updated);
-      }
-    }, 600);
   };
 
   return (
@@ -463,18 +445,6 @@ export function BoostListingModal({
                     </>
                   )}
                 </button>
-
-                {/* SIMULATION TEST DIRECTE (DÉMO / SANS DÉBIT) */}
-                <div className="text-center pt-1">
-                  <button
-                    type="button"
-                    onClick={handleSimulateActivation}
-                    disabled={isLoading}
-                    className="text-[11px] font-bold text-slate-500 hover:text-amber-700 transition-colors cursor-pointer inline-flex items-center gap-1"
-                  >
-                    <span>⚡ Tester l'activation immédiate (Mode Démo / Test)</span>
-                  </button>
-                </div>
               </div>
             </>
           )}

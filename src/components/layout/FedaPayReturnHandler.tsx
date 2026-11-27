@@ -5,6 +5,7 @@ import { useSpace } from '@/lib/context/space-context';
 import { PlanService } from '@/lib/services/plan-service';
 import { ListingsService, BOOST_PACKS } from '@/lib/services/listings-service';
 import { notifySave } from '@/lib/notifications/action-notifier';
+import { formatFCFA } from '@/lib/money/format';
 
 const REDEEMED_TX_KEY_PREFIX = 'locagestion:redeemed_tx:';
 
@@ -21,19 +22,29 @@ export function FedaPayReturnHandler() {
 
         // 1. Détection des retours de boost d'annonce
         const isBoostCheck =
+          urlParams.has('fedapay_boost_check') ||
           urlParams.has('boost_listing_id') ||
-          urlParams.get('type') === 'boost' ||
-          (urlParams.get('fedapay_ref') === 'success' && urlParams.has('pack_id'));
+          urlParams.get('type') === 'boost';
 
         if (isBoostCheck) {
-          const boostListingId = urlParams.get('boost_listing_id') || urlParams.get('listing_id');
+          const boostListingId =
+            urlParams.get('fedapay_boost_check') ||
+            urlParams.get('boost_listing_id') ||
+            urlParams.get('listing_id');
           const packId = (urlParams.get('pack_id') || 'boost_7d') as 'flash_weekend' | 'boost_7d' | 'boost_14d';
+          const expectedPrice = Number(urlParams.get('expected_price') || urlParams.get('amount') || 0);
           const rawStatus = (urlParams.get('status') || urlParams.get('payment_status') || '').toLowerCase();
-          const txId = urlParams.get('id') || urlParams.get('tx_id') || urlParams.get('transaction_id') || `tx-boost-${Date.now()}`;
+          const txId =
+            urlParams.get('id') ||
+            urlParams.get('tx_id') ||
+            urlParams.get('transaction_id');
 
-          // Nettoyage de l'URL
+          // Nettoyage immédiat et strict de l'URL pour empêcher toute réexécution au rechargement
+          urlParams.delete('fedapay_boost_check');
           urlParams.delete('boost_listing_id');
+          urlParams.delete('listing_id');
           urlParams.delete('pack_id');
+          urlParams.delete('expected_price');
           urlParams.delete('days');
           urlParams.delete('fedapay_ref');
           urlParams.delete('status');
@@ -47,21 +58,110 @@ export function FedaPayReturnHandler() {
           const cleanUrl = window.location.pathname + (cleanQuery ? `?${cleanQuery}` : '') + window.location.hash;
           window.history.replaceState({}, '', cleanUrl);
 
+          // 1. Détection prioritaire de l'annulation par l'utilisateur sur le guichet FedaPay
           if (rawStatus === 'canceled' || rawStatus === 'declined') {
-            notifySave('⚠️ Paiement de la mise en avant annulé.', 'Paiement Annulé');
+            if (boostListingId) {
+              ListingsService.cancelBoost(boostListingId);
+            }
+            notifySave(
+              '⚠️ Paiement annulé. Aucun débit n’a été effectué et l’annonce n’a pas été mise en avant.',
+              'Paiement Annulé'
+            );
             return;
           }
 
-          if (boostListingId) {
-            const pack = BOOST_PACKS.find((p) => p.id === packId) || BOOST_PACKS[1];
-            const updated = ListingsService.applyBoost(boostListingId, packId, txId);
-            if (updated) {
-              notifySave(
-                `🎉 Félicitations ! Votre annonce « ${updated.title} » est désormais en vedette (${pack.name}) avec le badge ${pack.badge} !`,
-                'Boost Activé ⭐'
-              );
-              window.dispatchEvent(new CustomEvent('locagestion:listings_changed'));
+          // 2. Si aucun ID de transaction n'est retourné par FedaPay -> Annulation de sécurité
+          if (!txId) {
+            if (boostListingId) {
+              ListingsService.cancelBoost(boostListingId);
             }
+            notifySave(
+              'Opération non finalisée. Aucun paiement validé détecté pour cette mise en avant.',
+              'Paiement Annulé'
+            );
+            return;
+          }
+
+          // 3. Protection anti-rejeu (Replay Attack) : vérifier si ce txId a déjà été validé
+          const alreadyRedeemed = localStorage.getItem(`${REDEEMED_TX_KEY_PREFIX}${txId}`);
+          if (alreadyRedeemed || processedTxRef.current.has(txId)) {
+            console.warn('[FedaPay Boost] Transaction déjà traitée précédemment:', txId);
+            return;
+          }
+          processedTxRef.current.add(txId);
+
+          // 4. VÉRIFICATION STRICTE CÔTÉ SERVEUR SUR L'API OFFICIELLE FEDAPAY
+          const verifyRes = await fetch('/api/payments/fedapay', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify', transactionId: txId }),
+          });
+
+          const verifyData = await verifyRes.json();
+          const pack = BOOST_PACKS.find((p) => p.id === packId) || BOOST_PACKS[1];
+          const targetPrice = expectedPrice > 0 ? expectedPrice : pack.price;
+
+          // 5. Validation de la réponse officielle FedaPay
+          if (verifyData.success && verifyData.status === 'approved') {
+            const paidAmount = Number(verifyData.amount || verifyData.transaction?.amount || 0);
+            if (paidAmount < targetPrice) {
+              console.error('[FedaPay Boost Security] Montant payé insuffisant:', paidAmount, 'attendu:', targetPrice);
+              if (boostListingId) {
+                ListingsService.cancelBoost(boostListingId);
+              }
+              notifySave(
+                'Erreur financière : le montant réglé est inférieur au tarif du pack sélectionné.',
+                'Paiement Non Conforme'
+              );
+              return;
+            }
+
+            // Scellement anti-rejeu
+            localStorage.setItem(
+              `${REDEEMED_TX_KEY_PREFIX}${txId}`,
+              JSON.stringify({
+                txId,
+                type: 'boost',
+                listingId: boostListingId,
+                packId,
+                amount: paidAmount,
+                date: new Date().toISOString(),
+                userId: user?.id,
+              })
+            );
+
+            // Activation certifiée du boost
+            if (boostListingId) {
+              const updated = ListingsService.applyBoost(boostListingId, packId, txId);
+              if (updated) {
+                notifySave(
+                  `🎉 Félicitations ! Votre paiement de ${formatFCFA(paidAmount)} a été vérifié. Votre annonce « ${updated.title} » est désormais en vedette (${pack.name}) !`,
+                  'Boost Activé ⭐'
+                );
+                window.dispatchEvent(new CustomEvent('locagestion:listings_changed'));
+              }
+            }
+          } else if (verifyData.status === 'canceled' || verifyData.status === 'declined') {
+            if (boostListingId) {
+              ListingsService.cancelBoost(boostListingId);
+            }
+            notifySave(
+              '⚠️ Paiement annulé. Aucun débit n’a été réalisé.',
+              'Paiement Annulé'
+            );
+          } else if (verifyData.status === 'pending') {
+            notifySave(
+              '⏳ Paiement en attente de confirmation par votre opérateur Mobile Money. La mise en avant s’activera dès validation bancaire.',
+              'Paiement en Attente'
+            );
+          } else {
+            if (boostListingId) {
+              ListingsService.cancelBoost(boostListingId);
+            }
+            notifySave(
+              'La transaction n’a pas pu être validée par les services de paiement FedaPay. L’annonce n’a pas été boostée.',
+              'Paiement Non Validé'
+            );
           }
           return;
         }
