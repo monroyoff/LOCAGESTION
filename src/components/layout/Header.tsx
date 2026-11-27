@@ -39,6 +39,7 @@ import {
 import { PlanService } from '@/lib/services/plan-service';
 import { UpgradePlanModal } from '@/components/plans/UpgradePlanModal';
 import { UserSubscriptionDetails } from '@/lib/types';
+import { SoundService } from '@/lib/services/sound-service';
 import {
   TenantNotificationService,
   TenantNotification,
@@ -83,13 +84,29 @@ export function Header({
 
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef<HTMLDivElement | null>(null);
+  const prevUnreadRef = useRef<number | null>(null);
+
+  const isLandlordView = isLandlord || isDemarcheur || isAdmin || activeSpace !== 'locataire';
 
   const updateNotifications = () => {
     PlanService.checkAndGenerateSubscriptionAlerts(user);
     setUserSub(PlanService.getUserSubscription(user?.id));
-    setNotifications(LeaseService.getLandlordNotifications(user));
-    setTenantNotifs(TenantNotificationService.getNotifications(user));
+    const nextLandlordNotifs = LeaseService.getLandlordNotifications(user);
+    const nextTenantNotifs = TenantNotificationService.getNotifications(user);
+    setNotifications(nextLandlordNotifs);
+    setTenantNotifs(nextTenantNotifs);
     setUnreadAlertsCount(ModerationService.getUnreadAlertsCount());
+
+    const totalUnread = isLandlordView
+      ? nextLandlordNotifs.filter((n) => !n.read).length
+      : nextTenantNotifs.filter((n) => !n.read).length;
+
+    if (prevUnreadRef.current !== null && totalUnread > prevUnreadRef.current) {
+      try {
+        SoundService.playNotificationSound();
+      } catch {}
+    }
+    prevUnreadRef.current = totalUnread;
   };
 
   useEffect(() => {
@@ -136,22 +153,26 @@ export function Header({
         bc?.close();
       } catch {}
     };
-  }, [user]);
+  }, [user, isLandlordView]);
 
-  // Fermeture du menu de notifications au clic extérieur
+  // Fermeture du menu de notifications au clic extérieur (Desktop & Mobile)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
         setIsNotifOpen(false);
       }
     };
     if (isNotifOpen) {
       document.addEventListener('mousedown', handleClickOutside);
+      document.addEventListener('touchstart', handleClickOutside, { passive: true });
     }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [isNotifOpen]);
 
-  const unreadCount = (isLandlord || isDemarcheur)
+  const unreadCount = isLandlordView
     ? notifications.filter((n) => !n.read).length
     : tenantNotifs.filter((n) => !n.read).length;
 
@@ -164,7 +185,7 @@ export function Header({
   }, [tenantNotifs]);
 
   const handleMarkAllRead = () => {
-    if (isLandlord || isDemarcheur) {
+    if (isLandlordView) {
       LeaseService.markNotificationsAsRead();
       updateNotifications();
     } else {
@@ -404,10 +425,10 @@ export function Header({
           </button>
 
           {/* Cloche de Notifications Universelle (Bailleur & Locataire) */}
-          <div className="relative shrink-0" ref={notifRef}>
+          <div className={`relative shrink-0 ${isNotifOpen ? 'z-50' : ''}`} ref={notifRef}>
             <button
               type="button"
-              onClick={() => setIsNotifOpen(!isNotifOpen)}
+              onClick={() => setIsNotifOpen((prev) => !prev)}
               className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:text-brand-600 hover:border-brand-300 shadow-sm transition-colors cursor-pointer relative"
               aria-label={isTenant ? 'Notifications Locataire' : isDemarcheur ? 'Notifications Démarcheur' : 'Notifications Bailleur'}
               title={isTenant ? 'Notifications Locataire' : isDemarcheur ? 'Notifications Démarcheur' : 'Notifications Bailleur'}
@@ -422,12 +443,12 @@ export function Header({
 
             {/* Popover des Notifications Universel */}
             {isNotifOpen && (
-              <div className="fixed sm:absolute top-16 sm:top-full right-2 sm:right-0 mt-2 w-[calc(100vw-1rem)] sm:w-96 max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute top-full right-0 mt-2 w-[calc(100vw-1.5rem)] sm:w-96 max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="p-4 bg-slate-900 text-white flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Bell className="w-4 h-4 text-amber-400" />
                     <span className="text-xs font-black tracking-tight">
-                      {isTenant ? 'Notifications Locataire' : isDemarcheur ? 'Notifications Démarcheur' : 'Notifications Bailleur'}
+                      {isTenant ? 'Notifications Locataire' : isDemarcheur ? 'Notifications Démarcheur' : isAdmin ? 'Notifications Administration' : 'Notifications Bailleur'}
                     </span>
                     {unreadCount > 0 && (
                       <span className="text-[10px] font-black px-2 py-0.2 rounded-full bg-amber-500 text-white">
@@ -447,7 +468,7 @@ export function Header({
                 </div>
 
                 <div className="max-h-[30rem] overflow-y-auto divide-y divide-slate-100 p-1">
-                  {(isLandlord || isDemarcheur) ? (
+                  {isLandlordView ? (
                     sortedNotifications.length === 0 ? (
                       <div className="p-6 text-center text-slate-400 text-xs">
                         <CheckCircle2 className="w-8 h-8 text-slate-300 mx-auto mb-2 opacity-50" />

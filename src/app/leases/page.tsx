@@ -117,7 +117,7 @@ export default function LeasesPage() {
           LeaseService.markNotificationAsRead(n.id);
         }
       });
-    } catch {}
+    } catch { }
   };
 
   useEffect(() => {
@@ -137,7 +137,7 @@ export default function LeasesPage() {
         bc = new BroadcastChannel('locagestion_realtime');
         bc.onmessage = () => refreshLeases();
       }
-    } catch {}
+    } catch { }
 
     return () => {
       window.removeEventListener('locagestion:leases_updated', handleStorageUpdate);
@@ -145,7 +145,7 @@ export default function LeasesPage() {
       window.removeEventListener('storage', handleStorageUpdate);
       try {
         bc?.close();
-      } catch {}
+      } catch { }
     };
   }, [spaceCtx.user]);
 
@@ -428,26 +428,25 @@ export default function LeasesPage() {
                     </button>
                   </div>
                 ) : userSub?.plan === 'pro' ? (
-                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl text-xs border ${
-                    userSub.isExpired
-                      ? 'bg-rose-50 border-rose-300 text-rose-800'
-                      : (userSub.daysRemaining ?? 30) === 0
+                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-xl text-xs border ${userSub.isExpired
+                    ? 'bg-rose-50 border-rose-300 text-rose-800'
+                    : (userSub.daysRemaining ?? 30) === 0
                       ? 'bg-rose-50 border-rose-300 text-rose-800 animate-pulse'
                       : (userSub.daysRemaining ?? 30) <= 2
-                      ? 'bg-amber-50 border-amber-300 text-amber-800'
-                      : 'bg-indigo-50 border-indigo-200 text-indigo-800'
-                  }`}>
+                        ? 'bg-amber-50 border-amber-300 text-amber-800'
+                        : 'bg-indigo-50 border-indigo-200 text-indigo-800'
+                    }`}>
                     <span className={`w-2 h-2 rounded-full ${userSub.isExpired || (userSub.daysRemaining ?? 30) === 0 ? 'bg-rose-600' : 'bg-indigo-600'}`} />
                     <span className="font-semibold">
                       {userSub.isExpired
                         ? 'Formule Pro Expirée (30j terminés)'
                         : (userSub.daysRemaining ?? 30) === 0
-                        ? '🚨 Formule Pro : Expire aujourd’hui !'
-                        : (userSub.daysRemaining ?? 30) === 1
-                        ? '⚠️ Formule Pro : Expire demain (J-1)'
-                        : (userSub.daysRemaining ?? 30) === 2
-                        ? '⏳ Formule Pro : 2 jours restants (J-2)'
-                        : `👑 Formule Entreprise & Pro : Baux illimités (${userSub.daysRemaining}j restants)`}
+                          ? '🚨 Formule Pro : Expire aujourd’hui !'
+                          : (userSub.daysRemaining ?? 30) === 1
+                            ? '⚠️ Formule Pro : Expire demain (J-1)'
+                            : (userSub.daysRemaining ?? 30) === 2
+                              ? '⏳ Formule Pro : 2 jours restants (J-2)'
+                              : `👑 Formule Entreprise & Pro : Baux illimités (${userSub.daysRemaining}j restants)`}
                     </span>
                     <button
                       type="button"
@@ -479,20 +478,18 @@ export default function LeasesPage() {
                     window.history.replaceState(null, '', nextTab === 'historique' ? '/leases?tab=historique' : '/leases');
                   }
                 }}
-                className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer border active:scale-95 ${
-                  filterTab === 'historique'
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-md'
-                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-xs'
-                }`}
+                className={`inline-flex items-center gap-2 px-3.5 py-2.5 rounded-2xl text-xs font-extrabold transition-all cursor-pointer border active:scale-95 ${filterTab === 'historique'
+                  ? 'bg-slate-900 text-white border-slate-900 shadow-md'
+                  : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200 shadow-xs'
+                  }`}
                 title="Consulter l'historique des contrats résiliés et supprimés"
               >
                 <History className={`w-4 h-4 ${filterTab === 'historique' ? 'text-amber-400' : 'text-slate-500'}`} />
                 <span>Historique de bail</span>
-                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                  filterTab === 'historique'
-                    ? 'bg-white/20 text-white'
-                    : 'bg-slate-100 text-slate-700 border border-slate-200'
-                }`}>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${filterTab === 'historique'
+                  ? 'bg-white/20 text-white'
+                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+                  }`}>
                   {resiliatedLeases.length}
                 </span>
               </button>

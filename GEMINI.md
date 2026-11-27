@@ -29,6 +29,7 @@
 21. [Règle d'Or de Transmission Instantanée & Zéro Perte des Signalements de Pannes & Incidents Locatifs](#21-règle-dor-de-transmission-instantanée--zéro-perte-des-signalements-de-pannes--incidents-locatifs)
 22. [Règle d'Or de Notification & Badge Instantanés lors de la Contresignature des Baux](#22-règle-dor-de-notification--badge-instantanés-lors-de-la-contresignature-des-baux)
 23. [Règle d'Or de Gestion de l'Historique des Baux & Déplacement Automatique des Contrats Résiliés ou Supprimés](#23-règle-dor-de-gestion-de-lhistorique-des-baux--déplacement-automatique-des-contrats-résiliés-ou-supprimés)
+24. [Règle d'Or de Fonctionnement Universel de la Cloche de Notification & Signal Sonore Instantané sur Toute la Plateforme](#24-règle-dor-de-fonctionnement-universel-de-la-cloche-de-notification--signal-sonore-instantané-sur-toute-la-plateforme)
 
 ---
 
@@ -795,6 +796,43 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
 - **Réactivation en 1 Clic :**
   - Tout contrat présent dans l'historique dispose d'un bouton d'action **« Réactiver le bail »**.
   - En un seul clic, le bail est restauré au statut `'actif'` (ou `'en_attente_signature'` si le locataire n'avait pas encore signé), `isArchived` est réinitialisé à `false`, et le bail réintègre instantanément la liste des baux vivants sans perte d'historique.
+
+---
+
+## 24. Règle d'Or de Fonctionnement Universel de la Cloche de Notification & Signal Sonore Instantané sur Toute la Plateforme
+
+> **RÈGLE CRITIQUE D'ALERTABILITÉ EN TEMPS RÉEL, DE RÉACTIVITÉ ET D'EXPÉRIENCE AUDIO-TACTILE**  
+> **La Cloche de notification (Header) et l'ensemble du système d'alerte DOIVENT fonctionner de manière infaillible, instantanée et synchrone dans TOUS les espaces (Bailleur, Locataire, Démarcheur, Administration) sur l'ensemble des terminaux (Web Desktop, Mobile PWA, TWA Android).**  
+> **TOUTE notification déclenchée ou reçue sur la plateforme (message direct, signalement de panne, contresignature de bail, déclaration de loyer, quittance émise, relance, notification d'action) DOIT OBLIGATOIREMENT émettre un carillon sonore cristallin et moderne (`SoundService`), accompagné d'une vibration haptique sur smartphone.**
+
+### 1. Infaillibilité & Zéro Blocage de la Cloche Bailleur (`LeaseService.getLandlordNotifications`)
+- **Élimination définitive des erreurs de TDZ (Temporal Dead Zone) :** Toutes les variables de synchronisation (notamment `needsSave`) doivent être impérativement déclarées et initialisées au tout début des blocs de lecture pour éviter tout `ReferenceError` silencieux qui viderait le tableau des notifications.
+- **Transparence et non-occultation des alertes :** Les notifications destinées au bailleur ne doivent jamais être masquées par des filtres trop stricts. Si un compte bailleur est nouveau, officiel ou n'a pas encore de baux rattachés, ses notifications générales, d'interventions, d'annonces ou de baux lui sont obligatoirement restituées.
+- **Popover universellement ancré :** Le menu déroulant de la cloche dans `Header.tsx` utilise un positionnement absolu (`absolute top-full right-0 mt-2 z-50`) garantissant une ouverture immédiate, sans décalage hors de l'écran ni blocage de superposition sur écran tactile mobile.
+- **Gestion tactile hybride :** La détection de fermeture au clic extérieur écoute simultanément les événements de souris (`mousedown`) et tactiles (`touchstart`) pour une réactivité immédiate sans latence.
+
+### 2. Moteur Audio & Haptique Universel (`SoundService`)
+- **Synthèse Web Audio API 100 % Autonome :**
+  - Zéro dépendance réseau et zéro latence de chargement de fichier.
+  - Génération en temps réel d'un carillon harmonique à double fréquence : Note 1 d'appel (G5 / 784 Hz) suivie de la résonance principale cristalline (C6 / 1046.5 Hz avec harmonique E6 / 2093 Hz) avec rampe d'atténuation exponentielle douce.
+- **Fallback Audio Statique & Hors-ligne :**
+  - Présence permanente du fichier binaire audio de secours `public/sounds/notification.wav` (15 Ko) servi localement en cas de blocage d'AudioContext.
+- **Déverrouillage Autoplay Transparent :**
+  - Écouteurs discrets au premier contact utilisateur (`click`, `touchstart`, `keydown`) pour débloquer immédiatement le contexte audio sans message intrusif.
+- **Rétroaction Tactile Smartphone :**
+  - Déclenchement automatique de `navigator.vibrate([60, 30, 60])` pour un retour physique immédiat en poche ou en main.
+- **Débouchage & Anti-Cacophonie :**
+  - Seuil minimal de 200ms entre deux déclenchements sonores évitant toute saturation en cas de flux d'alertes simultanées.
+
+### 3. Couverture Exhaustive sur Tous les Événements de la Plateforme
+Le son et la notification de cloche sont impérativement déclenchés lors de :
+1. **Nouveau message de discussion :** Envoi ou réception d'un message dans `/messages` (`ConversationService`).
+2. **Pannes & Interventions :** Déclaration d'un incident par un locataire (`IncidentService` / `addLandlordNotification`).
+3. **Signature de contrat de bail :** Contresignature électronique par le locataire (`signLeaseByTenant`).
+4. **Paiements & Encaissements :** Déclaration de loyer par Mobile Money / Virement ou validation de quittance.
+5. **Relances & Congés :** Émission ou réponse à un préavis de départ ou relance d'impayé.
+6. **Mises à jour temps réel multi-appareils :** Synchronisation `BroadcastChannel('locagestion_realtime')` augmentant le compteur d'alertes non lues.
+7. **Actions utilisateur & Toasts :** Sauvegardes, publications d'annonces et modifications (`notifyAction`).
 
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*

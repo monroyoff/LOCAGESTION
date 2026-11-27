@@ -5,6 +5,7 @@ import { AuthUser } from '../types';
 import { areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
 import { resolveNotificationDate, compareNotificationsDesc } from '../money/format';
 import { isUserConversationAuthor } from './conversation-service';
+import { SoundService } from './sound-service';
 
 export type LeaseStatus =
   | 'actif'
@@ -1014,6 +1015,8 @@ export const LeaseService = {
       let parsed: LandlordNotification[] = stored ? JSON.parse(stored) : [];
       if (!Array.isArray(parsed)) parsed = [];
 
+      let needsSave = false;
+
       // Purge des notifications de boost non scellées ou annulées (ex: A-BJ-93729)
       parsed = parsed.filter((n) => {
         if (
@@ -1028,7 +1031,6 @@ export const LeaseService = {
       });
 
       // Migration automatique des anciennes notifications ayant "À l'instant"
-      let needsSave = false;
       parsed = parsed.map((n) => {
         const isTimeInstant = n.time && n.time.toLowerCase().includes('instant');
         const isTimestampInstant = n.timestamp && n.timestamp.toLowerCase().includes('instant');
@@ -1129,60 +1131,60 @@ export const LeaseService = {
       const landlordLeaseIds = new Set(landlordLeases.map((l) => l.id));
 
       return parsed.filter((n) => {
-        // Notifications de souscription, activation et alertes de formules
-        if (n.type === 'subscription_activated' || n.type === 'subscription_alert' || n.type === 'subscription_expired') {
+        // Notifications universelles de formule, reversement et alertes
+        if (
+          n.type === 'subscription_activated' ||
+          n.type === 'subscription_alert' ||
+          n.type === 'subscription_expired' ||
+          n.type === 'payout_disbursed'
+        ) {
           return true;
         }
 
+        // Si la notification cible explicitement ce bailleur (par ID, matricule, email ou téléphone)
+        if (n.landlordId && user.id && n.landlordId.toLowerCase() === user.id.toLowerCase()) return true;
+        if (n.landlordId && user.matricule && n.landlordId.toLowerCase() === user.matricule.toLowerCase()) return true;
+        if (n.landlordEmail && user.email && areEmailsEqual(n.landlordEmail, user.email)) return true;
+        if (n.landlordPhone && user.phone && arePhoneNumbersEqual(n.landlordPhone, user.phone)) return true;
+        if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
+
+        // Auteur direct (Annonces et Messagerie)
+        if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
+        if (n.authorId && user.matricule && n.authorId.toLowerCase() === user.matricule.toLowerCase()) return true;
+        if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
+        if (n.authorPhone && user.phone && arePhoneNumbersEqual(n.authorPhone, user.phone)) return true;
+        if (n.authorCompany && user.companyName && n.authorCompany.trim().toLowerCase() === user.companyName.trim().toLowerCase()) return true;
+        const userName = (user.name || user.firstName || '').trim().toLowerCase();
+        if (n.authorName && userName && n.authorName.trim().toLowerCase() === userName) return true;
+
+        // Compte officiel certifié Bailleur
+        if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+
         // Demandes de visite d'annonces et messages reçus
         if (n.type === 'visit_requested' || n.type === 'message_received') {
-          if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
-          if (n.authorId && user.matricule && n.authorId.toLowerCase() === user.matricule.toLowerCase()) return true;
-          if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
-          if (n.authorPhone && user.phone && arePhoneNumbersEqual(n.authorPhone, user.phone)) return true;
-          if (n.authorCompany && user.companyName && n.authorCompany.trim().toLowerCase() === user.companyName.trim().toLowerCase()) return true;
-          const userName = (user.name || user.firstName || '').trim().toLowerCase();
-          if (n.authorName && userName && n.authorName.trim().toLowerCase() === userName) return true;
           return false;
         }
 
         // Approbation ou rejet d'annonce
         if (n.type === 'listing_approved' || n.type === 'listing_rejected') {
-          if (n.authorId && user.id && n.authorId.toLowerCase() === user.id.toLowerCase()) return true;
-          if (n.authorId && user.matricule && n.authorId.toLowerCase() === user.matricule.toLowerCase()) return true;
-          if (n.authorEmail && user.email && areEmailsEqual(n.authorEmail, user.email)) return true;
           return false;
         }
 
         // PANNES & INCIDENTS SIGNALÉS (Priorité et exhaustivité absolue pour le bailleur)
         if (n.type === 'incident_reported') {
-          if (user.role === 'admin' || areEmailsEqual(user.email, 'admin@locagestion.site')) return true;
-          if (n.landlordEmail && user.email && areEmailsEqual(n.landlordEmail, user.email)) return true;
-          if (n.landlordId && user.id && n.landlordId.toLowerCase() === user.id.toLowerCase()) return true;
-          if (n.landlordPhone && user.phone && arePhoneNumbersEqual(n.landlordPhone, user.phone)) return true;
           if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
           if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
           if (n.tenantName && landlordTenants.has(n.tenantName.toLowerCase().trim())) return true;
-          if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
-          if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
-          // Si le bailleur n'a aucun bail explicite et que l'incident n'est pas restreint à un tiers
-          if (landlordLeases.length === 0 && (!n.landlordEmail || areEmailsEqual(n.landlordEmail, 'jobovog@gmail.com') || areEmailsEqual(n.landlordEmail, user.email))) return true;
+          if (landlordLeases.length === 0 && (!n.landlordEmail || areEmailsEqual(n.landlordEmail, user.email))) return true;
           return false;
         }
 
         // BAUX CONTRESIGNÉS, TRANSMIS, RÉSILIÉS OU RÉACTIVÉS (Alerte et visibilité immédiate pour le bailleur)
         if (n.type === 'lease_signed' || n.type === 'lease_transmitted' || n.type === 'lease_terminated' || n.type === 'lease_reactivated') {
-          if (user.role === 'admin' || areEmailsEqual(user.email, 'admin@locagestion.site')) return true;
-          if (n.landlordEmail && user.email && areEmailsEqual(n.landlordEmail, user.email)) return true;
-          if (n.landlordId && user.id && n.landlordId.toLowerCase() === user.id.toLowerCase()) return true;
-          if (n.landlordPhone && user.phone && arePhoneNumbersEqual(n.landlordPhone, user.phone)) return true;
           if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
           if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
           if (n.tenantName && landlordTenants.has(n.tenantName.toLowerCase().trim())) return true;
-          if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
-          if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
-          // Si le bailleur n'a aucun bail explicite et que la notif n'est pas restreinte à un tiers
-          if (landlordLeases.length === 0 && (!n.landlordEmail || areEmailsEqual(n.landlordEmail, 'jobovog@gmail.com') || areEmailsEqual(n.landlordEmail, user.email))) return true;
+          if (landlordLeases.length === 0 && (!n.landlordEmail || areEmailsEqual(n.landlordEmail, user.email))) return true;
           return false;
         }
 
@@ -1190,8 +1192,7 @@ export const LeaseService = {
         if (n.leaseId && landlordLeaseIds.has(n.leaseId)) return true;
         if (n.property && landlordProps.has(n.property.toLowerCase().trim())) return true;
         if (n.tenantName && landlordTenants.has(n.tenantName.toLowerCase().trim())) return true;
-        if (n.emailSentTo && user.email && areEmailsEqual(n.emailSentTo, user.email)) return true;
-        if (user.email && areEmailsEqual(user.email, 'jobovog@gmail.com')) return true;
+        if (landlordLeases.length === 0 && !n.landlordEmail && !n.authorEmail) return true;
         return false;
       }).sort(compareNotificationsDesc);
     } catch (e) {
@@ -1256,6 +1257,12 @@ export const LeaseService = {
       const updated = [enriched, ...current.filter((n) => n.id !== notif.id)].sort(compareNotificationsDesc);
       localStorage.setItem(NOTIFICATIONS_STORAGE_KEY, JSON.stringify(updated));
       notifyStorageChange();
+
+      // Signal sonore universel instantané
+      try {
+        SoundService.playNotificationSound();
+      } catch {}
+
       window.dispatchEvent(new CustomEvent('locagestion:notifications_updated'));
       window.dispatchEvent(new CustomEvent('locagestion:leases_updated', { detail: { leaseId: enriched.leaseId } }));
       window.dispatchEvent(new CustomEvent('locagestion:incidents_updated'));

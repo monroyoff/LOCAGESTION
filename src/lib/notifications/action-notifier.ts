@@ -1,5 +1,7 @@
 'use client';
 
+import { SoundService } from '../services/sound-service';
+
 export type ActionToastType =
   | 'publish'
   | 'save'
@@ -62,6 +64,11 @@ export function notifyAction(
         break;
     }
   }
+
+  // Déclenchement du carillon sonore universel
+  try {
+    SoundService.playNotificationSound();
+  } catch {}
 
   window.dispatchEvent(
     new CustomEvent('locagestion:center_toast', {

@@ -3,6 +3,7 @@
 import { AuthUser } from '../types';
 import { AuthService, areEmailsEqual, arePhoneNumbersEqual } from './auth-service';
 import { resolveNotificationDate, compareNotificationsDesc } from '../money/format';
+import { SoundService } from './sound-service';
 
 export type TenantNotificationType =
   | 'receipt_issued'
@@ -397,6 +398,10 @@ export const TenantNotificationService = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem(STORAGE_KEY_TENANT_NOTIFS, JSON.stringify(updated));
+        // Signal sonore universel instantané
+        try {
+          SoundService.playNotificationSound();
+        } catch {}
         // Poussée immédiate vers le serveur central pour synchronisation mobile instantanée
         fetch('/api/sync', {
           method: 'POST',
