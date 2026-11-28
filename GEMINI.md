@@ -923,6 +923,17 @@ Le son et la notification de cloche sont impérativement déclenchés lors de :
 - **Contrôle Cryptographique & API Serveur Obligatoire (`action: 'verify'`) :** Tout retour de transaction est intercepté par le contrôleur global `FedaPayReturnHandler`. Seule une réponse officielle de l'API FedaPay avec `status === 'approved'` et un montant conforme au loyer autorise le débit et l'émission de la quittance scellée avec QR Code.
 - **Traitement Immédiat de l'Annulation Locataire :** Dès que le statut FedaPay est `canceled` ou `declined`, le système interrompt instantanément les vérifications, affiche une notification claire (*« ⚠️ Règlement annulé. Aucun débit n’a été prélevé sur votre compte Mobile Money et aucune quittance n’a été émise. »*), réinitialise le modal sur l'écran initial et ne délivre strictement aucune quittance.
 
+### 7. Clarté Mathématique des Montants & Double Bouton d'Action (Mobile Money / Espèces Orange)
+- **Normalité & Exactitude Mathématique des Montants :**
+  - **Loyer contractuel :** Le montant de base est strictement celui stipulé au bail (ex: 25 000 FCFA pour le Lot 1).
+  - **Frais opérateur Mobile Money (~2%) :** Frais marchands de la passerelle (MTN, Moov, Wave, Orange) supportés par le locataire (+500 FCFA).
+  - **Total débité du compte :** Somme intégrale prélevée sur le compte Mobile Money du locataire (25 500 FCFA).
+  - **Ventilation Formule Sérénité :** Reversement net garanti au bailleur (98% = 24 500 FCFA) et commission de service LOCAGESTION (2% = 500 FCFA). En Formule Pro (5 000 FCFA/mois souscrit par le bailleur), le reversement bailleur est de 100% (25 000 FCFA) et la commission plateforme est de 0 FCFA. Ces montants sont 100% normaux, transparents et conformes aux clauses financières de la plateforme.
+- **Double Bouton d'Action Structuré dans le Pied de Page du Modal :**
+  - **Bouton Mobile Money (Rose/Brand) :** Bouton principal `Valider & Payer {total} FCFA` (dégradé rose `from-brand-500 to-brand-600`), ouvrant la passerelle FedaPay.
+  - **Bouton Espèces / Virement (Orange Vif) :** Bouton ergonomique `Payer en espèces / virement` (dégradé orange `from-amber-500 via-orange-500 to-amber-600`, icône `Banknote`), identique en dimension et prestance au bouton de paiement Mobile Money, basculant vers la déclaration manuelle avec justificatif.
+  - **Bouton Annuler :** Bouton neutre à gauche permettant de refermer le modal sans aucune action.
+
 ---
 *Document scellé et maintenu pour le projet LOCAGESTION.*
 

@@ -18,6 +18,7 @@ import {
   ExternalLink,
   RefreshCw,
   FlaskConical,
+  Banknote,
 } from 'lucide-react';
 import { Lease } from '@/lib/services/lease-service';
 import { FedaPayService, RentSplitCalculation } from '@/lib/services/fedapay-service';
@@ -727,7 +728,9 @@ export function FedaPayCheckoutModal({
               >
                 Annuler
               </button>
+            </div>
 
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
               {onSwitchToManualDeclaration && (
                 <button
                   type="button"
@@ -735,22 +738,23 @@ export function FedaPayCheckoutModal({
                     onClose();
                     onSwitchToManualDeclaration();
                   }}
-                  className="text-[11px] text-slate-500 hover:text-brand-600 underline font-semibold transition-colors cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white font-extrabold text-xs shadow-md shadow-orange-500/20 active:scale-95 transition-all cursor-pointer"
                 >
-                  Régler en espèces / virement
+                  <Banknote className="w-4 h-4 shrink-0" />
+                  <span>Payer en espèces / virement</span>
                 </button>
               )}
-            </div>
 
-            <button
-              type="button"
-              onClick={handlePay}
-              disabled={isSubmitting || !payerPhone.trim()}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-extrabold text-xs shadow-pink-glow active:scale-95 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <span>Valider &amp; Payer {formatFCFA(split.totalTenantCharged)}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+              <button
+                type="button"
+                onClick={handlePay}
+                disabled={isSubmitting || !payerPhone.trim()}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-extrabold text-xs shadow-pink-glow active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <span>Valider &amp; Payer {formatFCFA(split.totalTenantCharged)}</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         )}
 
