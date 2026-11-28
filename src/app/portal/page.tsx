@@ -1409,9 +1409,9 @@ function TenantPortalContent() {
         return m.includes('novembre') || m.includes('octobre') || m.includes('septembre');
       }
 
-      // 4. Filtre par bail / lot sélectionné dans l'onglet quittances
+      // 4. Filtre par bail / lot sélectionné dans l'onglet quittances (Strictement baux actifs)
       if (receiptSelectedLeaseId !== 'all') {
-        const targetL = allTenantLeases.find((l) => l.id === receiptSelectedLeaseId) || myLeases.find((l) => l.id === receiptSelectedLeaseId);
+        const targetL = myLeases.find((l) => l.id === receiptSelectedLeaseId);
         if (targetL) {
           if (rec.leaseId && rec.leaseId !== targetL.id) return false;
           if (!rec.leaseId && !(rec.unitNumber === targetL.unit && rec.propertyName === targetL.property)) return false;
@@ -2708,8 +2708,8 @@ function TenantPortalContent() {
                 </span>
               </div>
 
-              {/* Filtre par Bail / Bailleur pour Locataire Multi-Baux */}
-              {allTenantLeases.length > 1 && (
+              {/* Filtre par Bail / Bailleur pour Locataire Multi-Baux (Strictement baux actifs, exclusion des résiliés) */}
+              {myLeases.length > 1 && (
                 <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[11px] font-black uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
@@ -2718,7 +2718,7 @@ function TenantPortalContent() {
                     </span>
                     <span className="text-[10px] text-slate-400">
                       {receiptSelectedLeaseId === 'all'
-                        ? 'Affichage consolidé de tous vos baux'
+                        ? 'Affichage consolidé de tous vos baux actifs'
                         : `Bail sélectionné : ${receiptSelectedLeaseId}`}
                     </span>
                   </div>
@@ -2734,13 +2734,12 @@ function TenantPortalContent() {
                     >
                       Toutes les quittances ({receiptsList.length})
                     </button>
-                    {allTenantLeases.map((l) => {
+                    {myLeases.map((l) => {
                       const count = receiptsList.filter(
                         (r) => r.leaseId === l.id || (r.unitNumber === l.unit && r.propertyName === l.property)
                       ).length;
                       const landlord = l.landlordSignature?.signedBy || l.landlordName || 'Bailleur';
                       const isSel = receiptSelectedLeaseId === l.id;
-                      const isRes = l.status === 'resilie' || l.status === 'expire';
                       return (
                         <button
                           key={l.id}
@@ -2748,19 +2747,15 @@ function TenantPortalContent() {
                           onClick={() => setReceiptSelectedLeaseId(l.id)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer border ${
                             isSel
-                              ? isRes
-                                ? 'bg-rose-700 text-white border-rose-800 shadow-xs font-black'
-                                : 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-black'
-                              : isRes
-                              ? 'bg-rose-50 hover:bg-rose-100 text-rose-800 border-rose-200'
+                              ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs font-black'
                               : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                         >
                           <span>{l.unit}</span>
                           <span className={`text-[10px] ml-1.5 px-1.5 py-0.2 rounded-full font-mono ${
-                            isSel ? 'bg-white/20 text-white' : isRes ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'
+                            isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                           }`}>
-                            {isRes ? `Résilié • ${count}` : count}
+                            {count}
                           </span>
                           <span className={`text-[10px] ml-1 hidden sm:inline ${isSel ? 'text-white/80' : 'text-slate-400'}`}>
                             ({landlord})

@@ -833,6 +833,14 @@ Avant de conclure toute tâche impliquant la synchronisation, le réseau, les ap
   - **Scellement Définitif de la Résiliation :** Un badge informatif neutre *« Résiliation définitive (> 30 j) »* s'affiche à la place du bouton, certifiant que le contrat est juridiquement forclos et ne peut plus être réactivé directement (tout renouvellement ultérieur exige l'émission d'un nouveau contrat de bail conforme).
   - **Vérification Imperméable Côté Service (`canReactivateLease`) :** `LeaseService.reactivateLease` bloque systématiquement toute tentative de réactivation dont l'horodatage excède 30 jours.
 
+### 4. Exclusion Stricte des Baux Résiliés dans l'Espace Locataire (`/portal`)
+- **Interdiction des Baux Résiliés dans la Barre de Filtre des Quittances :**
+  - Dans l'onglet *Mes Quittances & Reçus* (`/portal?tab=quittances`), la barre de filtre par lot (`Filtrer par bail / bailleur :`) est réservée **strictement et exclusivement aux baux vivants et actifs** (`myLeases`).
+  - Aucun bail résilié, expiré ou supprimé (ex: *« Studio Meublé N° 3 (25 m²) Résilié »*) ne doit apparaître parmi les filtres de quittances.
+  - Si le locataire ne détient qu'un seul bail actif, la barre de sélection multi-baux se masque automatiquement pour ne pas encombrer l'écran.
+- **Isolement Intégral dans l'Onglet Historique :**
+  - Tout contrat résilié, ainsi que ses états des lieux de sortie et photos contradictoires, est consigné exclusivement dans l'onglet dédié **« Historique des Baux »** (`/portal?tab=historique`).
+
 ---
 
 ## 24. Règle d'Or de Fonctionnement Universel de la Cloche de Notification & Signal Sonore Instantané sur Toute la Plateforme
